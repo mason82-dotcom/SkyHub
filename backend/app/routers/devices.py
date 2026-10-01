@@ -9,6 +9,7 @@ from ..common import fail, ok
 from ..config import settings
 from ..db import get_session
 from ..device_dict import DEFAULT_CAMERA, MODE_CODES, describe
+from ..dji.protocol import DjiProtocolValueError, build_video_id, validate_video_quality
 from ..models import Device, TelemetryPoint, utcnow
 from ..mqtt_bridge import bridge
 from ..state import hub
@@ -88,14 +89,12 @@ class LiveReq(BaseModel):
     quality: int = 0           # 0 auto, 1 fluessig, 2 SD, 3 HD, 4 UHD
 
 
-def _video_id(sn: str, camera: str) -> str:
-    return f"{sn}/{camera}/normal-0"
-
-
 async def _resolve(req: LiveReq, s: AsyncSession):
     dev = await s.get(Device, req.sn)
-    gw = hub.gateway_of(req.sn) or (dev.gateway_sn if dev else None)
-    cam = req.camera or (DEFAULT_CAMERA.get(dev.model_key) if dev else None)
+    if dev is None or dev.domain != 0:
+        return None, None
+    gw = hub.gateway_of(req.sn) or dev.gateway_sn
+    cam = req.camera or DEFAULT_CAMERA.get(dev.model_key)
     return gw, cam
 
 
@@ -105,11 +104,16 @@ async def live_start(req: LiveReq, user: str = Depends(require_user),
     gw, cam = await _resolve(req, s)
     if not gw or not cam:
         return fail(404, "Fluggeraet nicht verbunden oder Kamera unbekannt")
+    try:
+        quality = validate_video_quality(req.quality)
+        video_id = build_video_id(req.sn, cam)
+    except DjiProtocolValueError as exc:
+        return fail(400, f"Ungueltige DJI-Livestream-Parameter: {exc}")
     url = f"rtmp://{settings.public_host}:{settings.rtmp_port}/live/{req.sn}"
     try:
         r = await bridge.call_service(gw, "live_start_push", {
-            "url_type": 1, "url": url, "video_id": _video_id(req.sn, cam),
-            "video_quality": req.quality})
+            "url_type": 1, "url": url, "video_id": video_id,
+            "video_quality": quality})
     except TimeoutError:
         return fail(504, "Keine Antwort von der Fernsteuerung")
     result = (r.get("data") or {}).get("result", -1)
@@ -125,7 +129,11 @@ async def live_stop(req: LiveReq, user: str = Depends(require_user),
     if not gw or not cam:
         return fail(404, "Fluggeraet nicht verbunden")
     try:
-        r = await bridge.call_service(gw, "live_stop_push", {"video_id": _video_id(req.sn, cam)})
+        video_id = build_video_id(req.sn, cam)
+    except DjiProtocolValueError as exc:
+        return fail(400, f"Ungueltige DJI-Livestream-Parameter: {exc}")
+    try:
+        r = await bridge.call_service(gw, "live_stop_push", {"video_id": video_id})
     except TimeoutError:
         return fail(504, "Keine Antwort von der Fernsteuerung")
     return ok((r.get("data") or {}))

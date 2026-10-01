@@ -20,6 +20,15 @@ from .config import settings
 from .db import SessionLocal
 from .device_dict import describe, model_key
 from .dji.normalizer import normalize_dji_payload, telemetry_point_fields
+from .dji.protocol import (
+    DJI_INBOUND_SUBSCRIPTIONS,
+    classify_topic,
+    ensure_allowed_service_method,
+    events_reply_topic,
+    requests_reply_topic,
+    service_topic,
+    status_reply_topic,
+)
 from .dji.rtk import RtkFixMonitor
 from .dji.topology import parse_dji_topology_update
 from .models import Device, HmsEvent, TelemetryPoint, utcnow
@@ -27,14 +36,7 @@ from .state import hub
 
 log = logging.getLogger("skyhub.mqtt")
 
-SUBSCRIPTIONS = (
-    "sys/product/+/status",
-    "thing/product/+/osd",
-    "thing/product/+/state",
-    "thing/product/+/events",
-    "thing/product/+/requests",
-    "thing/product/+/services_reply",
-)
+SUBSCRIPTIONS = DJI_INBOUND_SUBSCRIPTIONS
 
 
 def envelope(method: str, data: dict, tid: str | None = None, bid: str | None = None) -> dict:
@@ -80,30 +82,35 @@ class MqttBridge:
 
     async def call_service(self, gateway_sn: str, method: str, data: dict,
                            timeout: float = 10.0) -> dict:
+        ensure_allowed_service_method(method)
         msg = envelope(method, data)
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self.pending[msg["tid"]] = fut
         try:
-            await self.publish(f"thing/product/{gateway_sn}/services", msg)
+            await self.publish(service_topic(gateway_sn), msg)
             return await asyncio.wait_for(fut, timeout)
         finally:
             self.pending.pop(msg["tid"], None)
 
     # ------------------------------------------------------------ dispatch
     async def dispatch(self, topic: str, raw: bytes) -> None:
-        parts = topic.split("/")
-        if len(parts) != 4:
+        classified = classify_topic(topic)
+        if classified is None:
+            log.warning("Unbekanntes/ungueltiges DJI MQTT-Topic verworfen: %s", topic)
             return
-        root, _, sn, kind = parts
+        kind, sn = classified
+
         p = json.loads(raw)
         if not isinstance(p, dict):
             return
-        if root == "sys" and kind == "status":
+        if kind == "status":
             await self.on_status(sn, p)
         elif kind == "osd":
             await self.on_osd(sn, p)
         elif kind == "state":
-            hub.state.setdefault(sn, {}).update(p.get("data") or {})
+            state_data = p.get("data") or {}
+            if isinstance(state_data, dict):
+                hub.state.setdefault(sn, {}).update(state_data)
         elif kind == "events":
             await self.on_event(sn, p)
         elif kind == "requests":
@@ -164,7 +171,7 @@ class MqttBridge:
             hub.online.add(sn)
             hub.last_seen[sn] = time.time()
             await hub.broadcast("device_online", {"sn": sn, "gateway_sn": gw})
-        await self.publish(f"sys/product/{gw}/status_reply",
+        await self.publish(status_reply_topic(gw),
                            envelope("update_topo", {"result": 0}, p.get("tid"), p.get("bid")))
 
     async def on_osd(self, sn: str, p: dict) -> None:
@@ -217,7 +224,7 @@ class MqttBridge:
         else:
             log.info("Event %s von %s", method, gw)
         if p.get("need_reply") == 1:
-            await self.publish(f"thing/product/{gw}/events_reply",
+            await self.publish(events_reply_topic(gw),
                                envelope(method, {"result": 0}, p.get("tid"), p.get("bid")))
 
     async def on_request(self, gw: str, p: dict) -> None:
@@ -228,7 +235,7 @@ class MqttBridge:
                       "app_key": settings.dji_app_key, "app_license": settings.dji_app_license}
         else:
             log.warning("Unbehandelte Request-Methode %s von %s", method, gw)
-        await self.publish(f"thing/product/{gw}/requests_reply",
+        await self.publish(requests_reply_topic(gw),
                            envelope(method, {"result": 0, "output": output},
                                     p.get("tid"), p.get("bid")))
 

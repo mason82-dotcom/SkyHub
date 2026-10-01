@@ -14,7 +14,7 @@ Drohnen: RC Pro Enterprise + M3E/M3T/M3M, RC Plus 2 + Matrice 4T.
    Neue Methoden zuerst gegen die Doku pruefen, nicht raten. Unbestaetigte Werte mit `UNVERIFIZIERT` markieren.
 6. Geraete-Keys (domain-type-sub_type) ausschliesslich in `device_dict.py`.
 7. Keine Steuerbefehle (Flug, Takeoff, RTH, DRC) ohne explizite Freigabe des Nutzers implementieren.
-8. Keinen Code aus dem eingestellten DJI-Cloud-API-Demo uebernehmen (Sicherheitsluecken lt. DJI).
+8. DJI-Cloud-API-Demo nur kontrolliert als Protokoll-/Kompatibilitaetsreferenz verwenden. Uebernahmen muessen Security-Review, aktuelle Doku-Pruefung, Tests und Herkunftsdokumentation durchlaufen. Keine Demo-Auth-, Session-, Storage-, Controller- oder Flugsteuerungsimplementierung ungeprueft uebernehmen.
 9. Vor Commit: `python -c "import app.main"` im backend/ muss laufen.
 
 ## Verifikationsstand
@@ -22,3 +22,4 @@ Drohnen: RC Pro Enterprise + M3E/M3T/M3M, RC Plus 2 + Matrice 4T.
 - FH-Clone-Referenz: reale redigierte M3M-MQTT-Evidence bestaetigt update_topo 0-77-2 und payload_index 68-0-0 am 2026-10-01.
 - NICHT getestet: kompletter SkyHub-Stack gegen echte RC/Pilot 2, STS-Upload, Livestream, Kartenelement-Format, TSA.
 - Offizielle DJI-Support-Matrix und reale Projekt-Evidence strikt getrennt behandeln.
+- DJI-Demo-Referenznutzung ist in docs/DJI_DEMO_REFERENCE.md nachvollziehbar dokumentiert.
