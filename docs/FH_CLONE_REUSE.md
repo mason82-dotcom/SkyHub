@@ -11,6 +11,9 @@ Reference snapshot:
 - DJI RTK source: ffd9bbe7a530067f363a3661b0892c14449ebf43
 - DJI normalizer source: 338768d692bf2593c51e039b284fcdcc9369672d
 - normalizer tests: 1bbf3b8d18c0b12002a62343d93cdcf1a457ce30
+- WPML KMZ reader: 30cc3b6c4eaef60ad4f91bd1c1c5ca0fdfc75491
+- WPML parser: 7ac4cb4632fab36685eecf5a7fe2c19a26ec764e
+- WPML tests: 51163733470b78d09eb71accdf953b7c40af3a59
 - M3M MQTT evidence: 2a61792a7b76bbf1f2d179b70dcd89391fc1175a
 
 ## Ported contracts
@@ -29,5 +32,9 @@ Reference snapshot:
 6. height and elevation retain separate semantics: ellipsoid altitude and
    takeoff-relative altitude respectively.
 7. Camera and gimbal data are keyed by validated DJI payload_index values.
+8. WPML KMZ archives require the exact DJI paths wpmz/template.kml and
+   wpmz/waylines.wpml, reject path traversal/duplicate entries/encryption,
+   enforce archive limits, and parse mission identity with XML rather than regex.
+9. template.kml and waylines.wpml must agree on drone and payload identity.
 
 No DJI Cloud API demo source code is imported by this reuse layer.

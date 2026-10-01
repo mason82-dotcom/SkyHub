@@ -1,7 +1,3 @@
-import re
-import zipfile
-from io import BytesIO
-
 from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import delete, func, select, update
@@ -11,14 +7,13 @@ from starlette.concurrency import run_in_threadpool
 from ..common import fail, ok
 from ..config import settings
 from ..db import get_session
+from ..dji.wpml import MAX_KMZ_INPUT_BYTES, WpmlError, read_wpml_kmz
 from ..models import Wayline, utcnow
 from ..s3util import internal_s3, presign_get
 from .auth import require_user
 
 router = APIRouter()
 P = "/wayline/api/v1/workspaces/{workspace_id}"
-TEMPLATE_TYPES = {"waypoint": 0, "mapping2d": 1, "mapping3d": 2, "mappingStrip": 4}
-
 
 def wl_dict(w: Wayline) -> dict:
     return {"id": w.id, "name": w.name, "drone_model_key": w.drone_model_key,
@@ -96,31 +91,20 @@ async def delete_wayline(workspace_id: str, wayline_id: str, user: str = Depends
 
 # ---------------- Web-UI: KMZ hochladen ----------------
 def parse_kmz(data: bytes) -> dict:
-    """Liest droneInfo/payloadInfo/templateType aus wpmz/template.kml."""
-    with zipfile.ZipFile(BytesIO(data)) as z:
-        name = next((n for n in z.namelist() if n.endswith("template.kml")), None)
-        kml = z.read(name).decode("utf-8", "replace") if name else ""
-
-    def tag(t: str) -> str | None:
-        m = re.search(rf"<wpml:{t}>\s*([^<]+?)\s*</wpml:{t}>", kml)
-        return m.group(1) if m else None
-
-    drone, sub = tag("droneEnumValue"), tag("droneSubEnumValue") or "0"
-    payload, psub = tag("payloadEnumValue"), tag("payloadSubEnumValue") or "0"
-    ttype = tag("templateType")
-    return {"drone_model_key": f"0-{drone}-{sub}" if drone else "",
-            "payload_model_keys": [f"1-{payload}-{psub}"] if payload else [],
-            "template_types": [TEMPLATE_TYPES.get(ttype, 0)] if ttype else [0]}
+    """Parse and validate a DJI WPML KMZ using the FH-Clone-derived contract."""
+    return read_wpml_kmz(data)["metadata"]
 
 
 @router.post("/api/v1/waylines/upload")
 async def upload_kmz(file: UploadFile = File(...), user: str = Depends(require_user),
                      s: AsyncSession = Depends(get_session)):
-    data = await file.read()
+    data = await file.read(MAX_KMZ_INPUT_BYTES + 1)
+    if len(data) > MAX_KMZ_INPUT_BYTES:
+        return fail(413, "KMZ-Datei ist zu gross")
     try:
         meta = parse_kmz(data)
-    except zipfile.BadZipFile:
-        return fail(400, "Keine gueltige KMZ-Datei")
+    except WpmlError as exc:
+        return fail(400, f"Ungueltige WPML/KMZ-Datei: {exc}")
     name = (file.filename or "Route").removesuffix(".kmz")
     key = f"{settings.workspace_id}/wayline/{name}.kmz"
     await run_in_threadpool(internal_s3().put_object, Bucket=settings.minio_bucket,
