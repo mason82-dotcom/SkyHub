@@ -10,6 +10,7 @@ class Hub:
     def __init__(self) -> None:
         self.clients: set[WebSocket] = set()
         self.osd: dict[str, dict] = {}
+        self.normalized: dict[str, dict] = {}
         self.state: dict[str, dict] = {}
         self.last_seen: dict[str, float] = {}
         self.online: set[str] = set()

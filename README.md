@@ -6,7 +6,7 @@ Läuft komplett im LAN (ODROID-HC4 oder Raspberry Pi 5, ARM64, Docker).
 | Hardware | Anbindung | Status |
 |---|---|---|
 | DJI RC Pro Enterprise + Mavic 3E / 3T | Pilot 2 → Cloud API | offiziell unterstützt |
-| DJI RC Pro Enterprise + Mavic 3M | Pilot 2 → Cloud API | **nicht** in der offiziellen Cloud-API-Liste – testen, sonst MSDK-Pfad (siehe docs/ARCHITEKTUR.md) |
+| DJI RC Pro Enterprise + Mavic 3M | Pilot 2 → Cloud API | reale FH-Clone MQTT-Topologie `0-77-2` + Payload `68-0-0` belegt; offizielle DJI-Support-Matrix separat bewerten |
 | DJI RC Plus 2 + Matrice 4T | Pilot 2 → Cloud API | offiziell unterstützt (ab Cloud API 1.12) |
 
 ## Funktionen (Phase 1)
@@ -41,7 +41,11 @@ Läuft komplett im LAN (ODROID-HC4 oder Raspberry Pi 5, ARM64, Docker).
 
 ## Wichtige Hinweise
 
-- **Ungetestet gegen echte Hardware.** Protokollfelder folgen der Cloud-API-Doku v1.14; nach dem ersten Kontakt mit RC/Fluggerät die MQTT-Payloads loggen und abgleichen (`mosquitto_sub -v -t '#'`).
+- **SkyHub selbst ist noch nicht als kompletter Stack gegen echte Hardware validiert.** Fuer M3M werden jedoch reale, redigierte FH-Clone-MQTT-Evidenzen vom 01.10.2026 als Referenz verwendet. Runtime-Verhalten in SkyHub muss weiterhin separat belegt werden.
 - DJI hat die Pflege der offiziellen Cloud-API-Demo am 10.04.2025 eingestellt. Dieses Projekt ist eine eigene, schlanke Neuimplementierung – nicht deren Code.
 - Nur im LAN/VPN betreiben. HTTP ohne TLS, `/api/v1/pilot/config` gibt die DJI-App-Lizenz aus (wie bei der Demo nötig für Pilot 2).
 - Datenordner `./data` gehört auf die HDD/SSD, nicht auf die SD-Karte.
+
+## Wiederverwendung aus FH-Clone
+
+Die DJI-Topologie-, Telemetrie- und RTK-Semantik wird gezielt aus dem verifizierten FH-Clone-Stand portiert. Herkunft und Abweichungen sind in `docs/FH_CLONE_REUSE.md` festgehalten.

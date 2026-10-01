@@ -19,6 +19,9 @@ import aiomqtt
 from .config import settings
 from .db import SessionLocal
 from .device_dict import describe, model_key
+from .dji.normalizer import normalize_dji_payload, telemetry_point_fields
+from .dji.rtk import RtkFixMonitor
+from .dji.topology import parse_dji_topology_update
 from .models import Device, HmsEvent, TelemetryPoint, utcnow
 from .state import hub
 
@@ -44,6 +47,7 @@ class MqttBridge:
         self.client: aiomqtt.Client | None = None
         self.pending: dict[str, asyncio.Future] = {}
         self._last_tel: dict[str, float] = {}
+        self.rtk_monitor = RtkFixMonitor()
 
     # ---------------------------------------------------------------- loop
     async def run(self) -> None:
@@ -92,6 +96,8 @@ class MqttBridge:
             return
         root, _, sn, kind = parts
         p = json.loads(raw)
+        if not isinstance(p, dict):
+            return
         if root == "sys" and kind == "status":
             await self.on_status(sn, p)
         elif kind == "osd":
@@ -108,30 +114,47 @@ class MqttBridge:
                 fut.set_result(p)
 
     async def _upsert(self, sn: str, d: dict, gateway_sn: str | None) -> str:
-        key = model_key(d.get("domain", -1), d.get("type", -1), d.get("sub_type", -1))
+        domain = d.get("domain", -1)
+        if isinstance(domain, str) and domain.isdigit():
+            domain = int(domain)
+        if isinstance(domain, bool) or not isinstance(domain, int):
+            domain = -1
+        type_ = d["type"]
+        sub_type = d["sub_type"]
+        key = model_key(domain, type_, sub_type)
         name, kind = describe(key)
         hub.kind[sn] = kind
         async with SessionLocal() as s:
             dev = await s.get(Device, sn)
             if dev is None:
-                dev = Device(sn=sn, domain=d.get("domain", -1), type=d.get("type", -1),
-                             sub_type=d.get("sub_type", -1), callsign=name)
+                dev = Device(sn=sn, domain=domain, type=type_,
+                             sub_type=sub_type, callsign=name)
                 s.add(dev)
                 log.info("Neues Geraet %s (%s, %s)", sn, name, key)
+            else:
+                if domain >= 0:
+                    dev.domain = domain
+                dev.type = type_
+                dev.sub_type = sub_type
+                dev.callsign = name
             dev.gateway_sn = gateway_sn
-            dev.thing_version = d.get("thing_version")
+            if isinstance(d.get("thing_version"), str):
+                dev.thing_version = d["thing_version"]
             dev.last_seen = utcnow()
             await s.commit()
         return key
 
     async def on_status(self, gw: str, p: dict) -> None:
-        if p.get("method") != "update_topo":
+        topology = parse_dji_topology_update(gw, p)
+        if topology is None:
+            if p.get("method") == "update_topo":
+                log.warning("Ungueltige update_topo-Identitaet von %s verworfen", gw)
             return
-        d = p.get("data") or {}
-        await self._upsert(gw, d, None)
+
+        await self._upsert(gw, topology["product"], None)
         new_subs = []
-        for sub in d.get("sub_devices") or []:
-            await self._upsert(sub["sn"], sub, gw)
+        for sub in topology["sub_devices"]:
+            await self._upsert(sub["sn"], sub["product"], gw)
             new_subs.append(sub["sn"])
         for old in set(hub.topo.get(gw, [])) - set(new_subs):
             hub.online.discard(old)
@@ -146,31 +169,41 @@ class MqttBridge:
 
     async def on_osd(self, sn: str, p: dict) -> None:
         data = p.get("data") or {}
+        if not isinstance(data, dict):
+            log.warning("Nicht-objektfoermige OSD-Daten von %s verworfen", sn)
+            return
+
+        normalized = normalize_dji_payload(p)
         hub.osd[sn] = data
+        hub.normalized[sn] = normalized
         hub.last_seen[sn] = time.time()
         if sn not in hub.online:
             hub.online.add(sn)
             await hub.broadcast("device_online", {"sn": sn})
+
+        navigation = normalized.get("navigation") or {}
+        rtk = navigation.get("rtk") if isinstance(navigation, dict) else None
+        if isinstance(rtk, dict):
+            transition = self.rtk_monitor.observe(sn, rtk)
+            if transition:
+                await hub.broadcast(f"rtk_fix_{transition['type']}", transition)
+
         is_aircraft = hub.kind.get(sn) == "aircraft"
         await hub.broadcast("device_osd" if is_aircraft else "gateway_osd",
-                            {"sn": sn, "host": data})
+                            {"sn": sn, "host": data, "normalized": normalized})
         if is_aircraft:
-            await self._store_telemetry(sn, data)
+            await self._store_telemetry(sn, normalized)
 
-    async def _store_telemetry(self, sn: str, d: dict) -> None:
-        lat, lon = d.get("latitude"), d.get("longitude")
-        if lat is None or lon is None:
+    async def _store_telemetry(self, sn: str, normalized: dict) -> None:
+        fields = telemetry_point_fields(normalized)
+        if fields is None:
             return
         now = time.time()
         if now - self._last_tel.get(sn, 0) < settings.telemetry_interval_s:
             return
         self._last_tel[sn] = now
-        bat = (d.get("battery") or {}).get("capacity_percent")
         async with SessionLocal() as s:
-            s.add(TelemetryPoint(sn=sn, lat=lat, lon=lon, height=d.get("height"),
-                                 elevation=d.get("elevation"), heading=d.get("attitude_head"),
-                                 h_speed=d.get("horizontal_speed"), v_speed=d.get("vertical_speed"),
-                                 battery=bat, mode_code=d.get("mode_code")))
+            s.add(TelemetryPoint(sn=sn, **fields))
             await s.commit()
 
     async def on_event(self, gw: str, p: dict) -> None:

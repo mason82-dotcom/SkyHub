@@ -1,0 +1,33 @@
+name: Backend validation
+
+on:
+  push:
+    branches:
+      - main
+      - "import/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12.8"
+      - name: Install backend dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+      - name: Compile backend
+        run: python -m compileall -q backend/app
+      - name: Unit tests
+        env:
+          PYTHONPATH: backend
+        run: python -m unittest discover -s backend/tests -p "test_*.py"
+      - name: Import application
+        working-directory: backend
+        run: python -c "import app.main"

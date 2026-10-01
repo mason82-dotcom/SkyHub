@@ -20,16 +20,35 @@ router = APIRouter()
 def dev_dict(d: Device) -> dict:
     name, kind = describe(d.model_key)
     osd = hub.osd.get(d.sn, {})
+    normalized = hub.normalized.get(d.sn, {})
+    flight = normalized.get("flight") or {}
+    mode = flight.get("mode") or {} if isinstance(flight, dict) else {}
+    mode_code = mode.get("code") if isinstance(mode, dict) else None
+    if mode_code is None:
+        mode_code = osd.get("mode_code")
     return {"sn": d.sn, "model_key": d.model_key, "model": name, "kind": kind,
             "callsign": d.callsign, "gateway_sn": d.gateway_sn,
             "online": d.sn in hub.online, "last_seen": d.last_seen.isoformat(),
-            "mode": MODE_CODES.get(osd.get("mode_code"), None), "osd": osd}
+            "mode": MODE_CODES.get(mode_code, None), "osd": osd,
+            "normalized": normalized}
 
 
 @router.get("/api/v1/devices")
 async def list_devices(user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
     rows = (await s.scalars(select(Device).order_by(Device.domain, Device.sn))).all()
     return ok([dev_dict(d) for d in rows])
+
+
+@router.get("/api/v1/devices/{sn}/rtk")
+async def rtk_status(sn: str, user: str = Depends(require_user),
+                     s: AsyncSession = Depends(get_session)):
+    dev = await s.get(Device, sn)
+    if dev is None:
+        return fail(404, "Geraet nicht gefunden")
+    normalized = hub.normalized.get(sn, {})
+    navigation = normalized.get("navigation") or {}
+    rtk = navigation.get("rtk") if isinstance(navigation, dict) else None
+    return ok({"sn": sn, "rtk": rtk, "online": sn in hub.online})
 
 
 @router.get("/api/v1/devices/{sn}/track")

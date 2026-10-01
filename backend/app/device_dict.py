@@ -1,15 +1,19 @@
-"""Geraetewoerterbuch nach DJI Cloud API v1.14 (domain-type-sub_type).
+"""Geraetewoerterbuch fuer DJI Cloud API product identities.
 
-UNVERIFIZIERT-Eintraege sind nicht in der offiziellen Pilot-2-Cloud-Liste
-und muessen am echten Geraet (update_topo-Log) bestaetigt werden.
+Die statischen Namen sind nur Darstellungsdaten. Runtime-Topologien werden
+fail-closed aus update_topo validiert. M3M 0-77-2 und payload 68-0-0 wurden
+am 2026-10-01 durch reale, redigierte FH-Clone MQTT-Evidence beobachtet.
+Das ist kein Ersatz fuer DJIs offizielle Support-Matrix.
 """
 
 DEVICES: dict[str, tuple[str, str]] = {
     "0-77-0": ("Mavic 3E", "aircraft"),
     "0-77-1": ("Mavic 3T", "aircraft"),
-    "0-77-2": ("Mavic 3M", "aircraft"),          # UNVERIFIZIERT
+    "0-77-2": ("Mavic 3M", "aircraft"),          # REAL-HW evidence in FH-Clone
+    "0-77-3": ("Mavic 3TA", "aircraft"),
     "0-99-0": ("Matrice 4E", "aircraft"),
     "0-99-1": ("Matrice 4T", "aircraft"),
+    "2-119-0": ("DJI RC Plus", "rc"),
     "2-144-0": ("DJI RC Pro Enterprise", "rc"),
     "2-174-0": ("DJI RC Plus 2", "rc"),
 }
@@ -18,7 +22,7 @@ DEVICES: dict[str, tuple[str, str]] = {
 DEFAULT_CAMERA: dict[str, str] = {
     "0-77-0": "66-0-0",
     "0-77-1": "67-0-0",
-    "0-77-2": "68-0-0",                           # UNVERIFIZIERT
+    "0-77-2": "68-0-0",                         # REAL-HW evidence in FH-Clone
     "0-99-0": "88-0-0",
     "0-99-1": "89-0-0",
 }
@@ -29,6 +33,7 @@ MODE_CODES: dict[int, str] = {
     4: "Auto-Start", 5: "Wegpunktflug", 6: "Panorama", 7: "Tracking",
     8: "ADS-B Ausweichen", 9: "Rueckkehr (RTH)", 10: "Landung",
     11: "Zwangslandung", 13: "Update", 14: "Getrennt", 16: "Virtual Stick",
+    18: "Airborne RTK fixing",
 }
 
 

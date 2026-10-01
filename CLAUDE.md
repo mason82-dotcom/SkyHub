@@ -19,5 +19,6 @@ Drohnen: RC Pro Enterprise + M3E/M3T/M3M, RC Plus 2 + Matrice 4T.
 
 ## Verifikationsstand
 - Getestet: Import, Routen, MQTT-Dispatch simuliert (SQLite), KMZ-Parser.
-- NICHT getestet: echte RC/Pilot 2, STS-Upload, Livestream, Kartenelement-Format, TSA.
-- Mavic 3M Keys (0-77-2 / 68-0-0) unbestaetigt.
+- FH-Clone-Referenz: reale redigierte M3M-MQTT-Evidence bestaetigt update_topo 0-77-2 und payload_index 68-0-0 am 2026-10-01.
+- NICHT getestet: kompletter SkyHub-Stack gegen echte RC/Pilot 2, STS-Upload, Livestream, Kartenelement-Format, TSA.
+- Offizielle DJI-Support-Matrix und reale Projekt-Evidence strikt getrennt behandeln.
