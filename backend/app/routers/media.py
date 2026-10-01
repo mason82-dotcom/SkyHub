@@ -5,7 +5,14 @@ from starlette.concurrency import run_in_threadpool
 
 from ..common import fail, ok
 from ..db import get_session
-from ..models import MediaFile, new_id
+from ..dji.media_contract import (
+    DjiMediaContractError,
+    validate_fast_upload_request,
+    validate_group_upload_callback,
+    validate_tiny_fingerprint_request,
+    validate_upload_callback_request,
+)
+from ..models import MediaFile
 from ..s3util import presign_get
 from ..state import hub
 from .auth import require_user
@@ -17,7 +24,11 @@ P = "/media/api/v1/workspaces/{workspace_id}"
 @router.post(P + "/fast-upload")
 async def fast_upload(workspace_id: str, body: dict = Body(default_factory=dict),
                       user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
-    exists = await s.scalar(select(MediaFile.id).where(MediaFile.fingerprint == body.get("fingerprint")))
+    try:
+        validate_fast_upload_request(body)
+    except DjiMediaContractError as exc:
+        return fail(400, f"Ungueltiger Media-Fast-Upload: {exc}")
+    exists = await s.scalar(select(MediaFile.id).where(MediaFile.fingerprint == body["fingerprint"]))
     # code != 0 -> Pilot laedt die Datei hoch
     return ok() if exists else fail(-1, "Datei nicht vorhanden")
 
@@ -25,7 +36,10 @@ async def fast_upload(workspace_id: str, body: dict = Body(default_factory=dict)
 @router.post(P + "/files/tiny-fingerprints")
 async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory=dict),
                             user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
-    tfs = body.get("tiny_fingerprints") or []
+    try:
+        tfs = validate_tiny_fingerprint_request(body)
+    except DjiMediaContractError as exc:
+        return fail(400, f"Ungueltige Tiny-Fingerprint-Anfrage: {exc}")
     rows = await s.scalars(select(MediaFile.tiny_fingerprint).where(MediaFile.tiny_fingerprint.in_(tfs)))
     return ok({"tiny_fingerprints": [r for r in rows if r]})
 
@@ -33,25 +47,34 @@ async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory
 @router.post(P + "/upload-callback")
 async def upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
                           user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
-    ext = body.get("ext") or {}
-    fp = body.get("fingerprint") or new_id()
+    try:
+        validate_upload_callback_request(body)
+    except DjiMediaContractError as exc:
+        return fail(400, f"Ungueltiger Media-Upload-Callback: {exc}")
+
+    ext = body["ext"]
+    fp = body["fingerprint"]
     if not await s.scalar(select(MediaFile.id).where(MediaFile.fingerprint == fp)):
         mf = MediaFile(fingerprint=fp,
                        tiny_fingerprint=ext.get("tinny_fingerprint") or ext.get("tiny_fingerprint"),
-                       name=body.get("name", ""), path=body.get("path"),
-                       object_key=body.get("object_key", ""), drone_sn=ext.get("sn"),
-                       drone_model_key=ext.get("drone_model_key"),
-                       payload_model_key=ext.get("payload_model_key"),
-                       is_original=bool(ext.get("is_original", True)))
+                       name=body["name"], path=body.get("path"),
+                       object_key=body["object_key"], drone_sn=ext["sn"],
+                       drone_model_key=ext["drone_model_key"],
+                       payload_model_key=ext["payload_model_key"],
+                       is_original=ext["is_original"])
         s.add(mf)
         await s.commit()
         await hub.broadcast("file_uploaded", {"name": mf.name, "sn": mf.drone_sn})
-    return ok(body.get("object_key"))
+    return ok(body["object_key"])
 
 
 @router.post(P + "/group-upload-callback")
 async def group_upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
                                 user: str = Depends(require_user)):
+    try:
+        validate_group_upload_callback(body)
+    except DjiMediaContractError as exc:
+        return fail(400, f"Ungueltiger Group-Upload-Callback: {exc}")
     return ok()
 
 

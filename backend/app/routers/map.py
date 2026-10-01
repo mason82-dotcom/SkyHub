@@ -1,18 +1,23 @@
-import time
-
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..common import fail, ok
 from ..db import get_session
+from ..dji.map_contract import (
+    DjiMapContractError,
+    SHARED_GROUP_TYPE,
+    shared_group_id,
+    validate_create_request,
+    validate_update_request,
+    validate_uuid,
+)
 from ..models import MapElement, utcnow
 from ..state import hub
 from .auth import require_user
 
 router = APIRouter()
 P = "/map/api/v1/workspaces/{workspace_id}"
-SHARED_GROUP = "shared-layer"
 
 
 def el_dict(e: MapElement) -> dict:
@@ -22,19 +27,40 @@ def el_dict(e: MapElement) -> dict:
 
 
 @router.get(P + "/element-groups")
-async def element_groups(workspace_id: str, user: str = Depends(require_user),
+async def element_groups(workspace_id: str, group_id: str | None = None,
+                         is_distributed: bool | None = None,
+                         user: str = Depends(require_user),
                          s: AsyncSession = Depends(get_session)):
-    rows = (await s.scalars(select(MapElement).where(MapElement.group_id == SHARED_GROUP))).all()
-    # type 2 = mit App geteilte Ebene (gegen Doku v1.14 pruefen)
-    return ok([{"id": SHARED_GROUP, "name": "Gemeinsame Ebene", "type": 2, "is_lock": False,
-                "create_time": int(time.time() * 1000), "elements": [el_dict(e) for e in rows]}])
+    try:
+        shared = shared_group_id(workspace_id)
+        if group_id is not None:
+            validate_uuid(group_id, "group_id")
+    except DjiMapContractError as exc:
+        return fail(400, f"Ungueltige Map-Anfrage: {exc}")
+
+    if group_id is not None and group_id != shared:
+        return ok([])
+
+    rows = (await s.scalars(select(MapElement).where(MapElement.group_id == shared))).all()
+    # DJI GroupType 2 = one APP shared element group per workspace.
+    return ok([{"id": shared, "name": "Gemeinsame Ebene", "type": SHARED_GROUP_TYPE,
+                "is_lock": False, "elements": [el_dict(e) for e in rows]}])
 
 
 @router.post(P + "/element-groups/{group_id}/elements")
 async def create_element(workspace_id: str, group_id: str, body: dict = Body(default_factory=dict),
                          user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
-    e = MapElement(id=body.get("id"), group_id=group_id, name=body.get("name", ""),
-                   resource=body.get("resource") or {})
+    try:
+        shared = shared_group_id(workspace_id)
+        validate_uuid(group_id, "group_id")
+        validate_create_request(body)
+    except DjiMapContractError as exc:
+        return fail(400, f"Ungueltiges Map-Element: {exc}")
+    if group_id != shared:
+        return fail(404, "Elementgruppe nicht gefunden")
+
+    e = MapElement(id=body["id"], group_id=group_id, name=body["name"],
+                   resource=body["resource"])
     s.add(e)
     await s.commit()
     await hub.broadcast("map_element_create", {**el_dict(e), "group_id": group_id})
@@ -44,12 +70,23 @@ async def create_element(workspace_id: str, group_id: str, body: dict = Body(def
 @router.put(P + "/elements/{element_id}")
 async def update_element(workspace_id: str, element_id: str, body: dict = Body(default_factory=dict),
                          user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+    try:
+        shared = shared_group_id(workspace_id)
+        validate_uuid(element_id, "element_id")
+    except DjiMapContractError as exc:
+        return fail(400, f"Ungueltige Map-Anfrage: {exc}")
+
     e = await s.get(MapElement, element_id)
-    if e is None:
+    if e is None or e.group_id != shared:
         return fail(404, "Element nicht gefunden")
-    e.name = body.get("name", e.name)
-    if "content" in body:
-        e.resource = {**e.resource, "content": body["content"]}
+    resource_type = e.resource.get("type") if isinstance(e.resource, dict) else None
+    try:
+        validate_update_request(body, resource_type)
+    except DjiMapContractError as exc:
+        return fail(400, f"Ungueltiges Map-Element: {exc}")
+
+    e.name = body["name"]
+    e.resource = {**e.resource, "content": body["content"]}
     e.updated = utcnow()
     await s.commit()
     await hub.broadcast("map_element_update", {**el_dict(e), "group_id": e.group_id})
@@ -59,8 +96,14 @@ async def update_element(workspace_id: str, element_id: str, body: dict = Body(d
 @router.delete(P + "/elements/{element_id}")
 async def delete_element(workspace_id: str, element_id: str, user: str = Depends(require_user),
                          s: AsyncSession = Depends(get_session)):
+    try:
+        shared = shared_group_id(workspace_id)
+        validate_uuid(element_id, "element_id")
+    except DjiMapContractError as exc:
+        return fail(400, f"Ungueltige Map-Anfrage: {exc}")
+
     e = await s.get(MapElement, element_id)
-    if e:
+    if e and e.group_id == shared:
         await s.delete(e)
         await s.commit()
         await hub.broadcast("map_element_delete", {"id": element_id, "group_id": e.group_id})

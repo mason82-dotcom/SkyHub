@@ -37,6 +37,30 @@ Reference snapshot:
 - wayline template enum:
   sample/src/main/java/com/dji/sample/wayline/model/enums/WaylineTemplateTypeEnum.java
   SHA: 760fc8dbe48a6500b7c5993c7977b7f7d4b594b3
+- STS response/token contracts:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/storage/StsCredentialsResponse.java
+  SHA: 0821274504850d3075fb80aae9c2ea4eda70c726
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/storage/CredentialsToken.java
+  SHA: c8ffc0ee7b13c9541dd6c3edde556a3afdcdd797
+- HTTP storage interface:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/storage/api/IHttpStorageService.java
+  SHA: 602a8d2775140dae7dd03e74971ef671c8d22b85
+- media HTTP/request contracts:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/media/api/IHttpMediaService.java
+  SHA: 81a23e00baf46f9d9b659d55d2c725e15c66398f
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/media/MediaUploadCallbackRequest.java
+  SHA: 6567ea331a70683acef46fa66ed3084d77777339
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/media/FolderUploadCallbackRequest.java
+  SHA: 78abab4b0c71ebbd768d82c49a4cef6f86252505
+- map HTTP/DTO contracts:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/map/api/IHttpMapService.java
+  SHA: be0530b2fa8e80f8d6f322db1bd3c90e94dcc442
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/map/GetMapElementsResponse.java
+  SHA: f2c41e1d8261d3256b23f8342e29eea228efc1d8
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/map/CreateMapElementRequest.java
+  SHA: 8c5947c170cf6c8074b3ba419c22bbc3e2f5a983
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/map/UpdateMapElementRequest.java
+  SHA: 1c712be3c0ac01ed2df806e540c4d785b54cabef
 
 ## What SkyHub reuses
 
@@ -46,7 +70,11 @@ SkyHub implements its own Python code for:
 - the documented livestream URL-type and quality value domains;
 - validation of DJI serial, payload_index, and video_id shapes;
 - a fail-closed allowlist around the currently implemented server-to-device
-  service calls.
+  service calls;
+- the DJI STS credential safety margin and POST-only STS endpoint contract;
+- strict UUID/GeoJSON-like validation for Pilot map groups and elements;
+- required Media fast-upload, upload-callback, tiny-fingerprint and
+  group-upload callback fields before persistence.
 
 These are protocol contracts and independently implemented validation rules.
 The original Java application code is not vendored into SkyHub.
