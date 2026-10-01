@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyHub &ndash; Pilot-Anmeldung</title>
+<style>
+  :root { --ink:#1b2a38; --paper:#e9eef2; --mag:#a3246f; --ok:#2e7d4f; --bad:#b3261e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.4 "Barlow Semi Condensed", "Roboto Condensed", sans-serif;
+         background:var(--paper); color:var(--ink); }
+  main { max-width:520px; margin:0 auto; padding:24px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  p.sub { margin:0 0 20px; color:#4b5d6c; }
+  label { display:block; font-weight:600; margin:12px 0 4px; }
+  input { width:100%; font:inherit; padding:12px; border:2px solid #b8c4ce; border-radius:6px; }
+  input:focus { outline:none; border-color:var(--mag); }
+  button { width:100%; margin-top:20px; padding:14px; font:inherit; font-weight:700; font-size:18px;
+           color:#fff; background:var(--mag); border:0; border-radius:6px; }
+  button.secondary { background:#fff; color:var(--ink); border:2px solid #b8c4ce; }
+  ul { list-style:none; padding:0; margin:20px 0 0; }
+  li { padding:8px 0; border-bottom:1px solid #cfd8df; display:flex; justify-content:space-between; }
+  .ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; }
+  #msg { margin-top:12px; min-height:1.4em; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">SkyHub</h1>
+  <p class="sub">Verbindung von DJI Pilot 2 zum lokalen Leitstand</p>
+
+  <section id="login">
+    <label for="u">Benutzer</label><input id="u" autocomplete="username">
+    <label for="p">Passwort</label><input id="p" type="password" autocomplete="current-password">
+    <button id="go">Verbinden</button>
+    <div id="msg"></div>
+  </section>
+
+  <section id="status" hidden>
+    <ul id="comp"></ul>
+    <button class="secondary" id="back">Zur&uuml;ck zu Pilot 2</button>
+  </section>
+</main>
+<script>
+(function () {
+  var B = window.djiBridge;
+  var $ = function (id) { return document.getElementById(id); };
+  var cfg = null;
+
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (!B || typeof B[fn] !== "function") return { code: -1, message: "djiBridge fehlt: " + fn };
+    var r = B[fn].apply(B, args);
+    try { return typeof r === "string" ? JSON.parse(r) : r; } catch (e) { return { code: -1, message: String(r) }; }
+  }
+  function row(name, res) {
+    var li = document.createElement("li");
+    var ok = res && res.code === 0;
+    li.innerHTML = "<span>" + name + "</span><span class='" + (ok ? "ok'>OK" : "bad'>Fehler") + "</span>";
+    if (!ok) li.title = JSON.stringify(res);
+    $("comp").appendChild(li);
+    return ok;
+  }
+  function load(name, params) {
+    return row(name, call("platformLoadComponent", name, JSON.stringify(params || {})));
+  }
+
+  window.skyhubThingConnected = function (connected) {
+    row("MQTT-Verbindung", { code: connected ? 0 : -1 });
+  };
+  window.skyhubLiveStatus = function () {};
+
+  fetch("/api/v1/pilot/config").then(function (r) { return r.json(); }).then(function (j) {
+    cfg = j.data; $("title").textContent = cfg.platform_name;
+    if (!B) $("msg").innerHTML = "<span class='bad'>Diese Seite muss in DJI Pilot 2 ge&ouml;ffnet werden.</span>";
+  });
+
+  $("go").onclick = function () {
+    $("msg").textContent = "Anmelden...";
+    fetch("/api/v1/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: $("u").value, password: $("p").value }) })
+    .then(function (r) { return r.json(); }).then(function (j) {
+      if (j.code !== 0) { $("msg").innerHTML = "<span class='bad'>" + j.message + "</span>"; return; }
+      var d = j.data;
+      $("login").hidden = true; $("status").hidden = false;
+      row("Lizenz", call("platformVerifyLicense", cfg.app_id, cfg.app_key, cfg.app_license));
+      row("Workspace", call("platformSetWorkspaceId", d.workspace_id));
+      call("platformSetInformation", cfg.platform_name, cfg.workspace_name, "On-Premise");
+      load("api", { host: d.api_host, token: d.access_token });
+      load("thing", { host: d.mqtt_addr, username: d.mqtt_username, password: d.mqtt_password,
+                      connectCallback: "skyhubThingConnected" });
+      load("ws", { host: d.ws_host, token: d.access_token });
+      load("map", { userName: d.username, elementPreName: "PILOT" });
+      load("tsa", {});
+      load("media", { autoUploadPhoto: true, autoUploadPhotoType: 0, autoUploadVideo: false });
+      load("mission", {});
+      load("liveshare", { videoPublishType: "video-demand-aux-manual", statusCallback: "skyhubLiveStatus" });
+    }).catch(function (e) { $("msg").innerHTML = "<span class='bad'>Server nicht erreichbar: " + e + "</span>"; });
+  };
+  $("back").onclick = function () { call("platformStopSelf"); };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+.env
+data/
+mosquitto/config/passwd
+__pycache__/
+*.pyc

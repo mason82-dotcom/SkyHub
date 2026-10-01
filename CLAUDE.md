@@ -1,0 +1,23 @@
+# CLAUDE.md - SkyHub OnPrem (harte Projektregeln)
+
+## Zweck
+Self-hosted Leitstand fuer DJI Enterprise via DJI Cloud API (Pilot 2 -> MQTT/HTTP).
+Zielhardware Server: ODROID-HC4 / Raspberry Pi 5 (ARM64, Docker).
+Drohnen: RC Pro Enterprise + M3E/M3T/M3M, RC Plus 2 + Matrice 4T.
+
+## Regeln
+1. Alle Versionen strikt gepinnt (Docker-Tags und requirements.txt). Kein `latest`, kein `^`/`~`/`>=`.
+2. Secrets nur in `.env` (gitignored). `.env.example` immer aktuell halten.
+3. Quelldateien ASCII-only. Deutsche UI-Texte in HTML ueber Entities (&auml; &ouml; &uuml; &szlig;).
+4. DJI-Antwortformat immer `{"code","message","data"}` ueber `common.ok()/fail()`; Fehler = HTTP 200 + code != 0.
+5. MQTT-Topics/Methoden NUR gemaess Cloud-API-Doku v1.14 (developer.dji.com/doc/cloud-api-tutorial).
+   Neue Methoden zuerst gegen die Doku pruefen, nicht raten. Unbestaetigte Werte mit `UNVERIFIZIERT` markieren.
+6. Geraete-Keys (domain-type-sub_type) ausschliesslich in `device_dict.py`.
+7. Keine Steuerbefehle (Flug, Takeoff, RTH, DRC) ohne explizite Freigabe des Nutzers implementieren.
+8. Keinen Code aus dem eingestellten DJI-Cloud-API-Demo uebernehmen (Sicherheitsluecken lt. DJI).
+9. Vor Commit: `python -c "import app.main"` im backend/ muss laufen.
+
+## Verifikationsstand
+- Getestet: Import, Routen, MQTT-Dispatch simuliert (SQLite), KMZ-Parser.
+- NICHT getestet: echte RC/Pilot 2, STS-Upload, Livestream, Kartenelement-Format, TSA.
+- Mavic 3M Keys (0-77-2 / 68-0-0) unbestaetigt.
