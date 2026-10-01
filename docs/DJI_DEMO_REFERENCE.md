@@ -73,6 +73,20 @@ Reference snapshot:
 - DJI device enum reference:
   cloud-sdk/src/main/java/com/dji/sdk/cloudapi/device/DeviceEnum.java
   SHA: cab8c7035b81b11a2ee5efbd79cf83ec078eee4b
+- config request/response contracts:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/config/RequestsConfigRequest.java
+  SHA: c25d86198c8a61b9f993464e9755068c607d0b24
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/config/ProductConfigResponse.java
+  SHA: f3a9bd279b541100f3e2972b890d13e24defa261
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/config/ConfigTypeEnum.java
+  SHA: f8bf6d04b7ea07c0c18b3ebc7a3b5fed27bb275d
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/config/ConfigScopeEnum.java
+  SHA: bc7004f5ea061c700ef1b583bd701c28118078a2
+- request method/storage-config reference:
+  cloud-sdk/src/main/java/com/dji/sdk/mqtt/requests/RequestsMethodEnum.java
+  SHA: 5304a7a56a13d0037f170b9170e36096a68f2f09
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/media/StorageConfigGet.java
+  SHA: d8f964f5a38b2359a1849dce53208b9a41859c76
 
 ## What SkyHub reuses
 
@@ -87,7 +101,9 @@ SkyHub implements its own Python code for:
 - strict UUID/GeoJSON-like validation for Pilot map groups and elements;
 - required Media fast-upload, upload-callback, tiny-fingerprint and
   group-upload callback fields before persistence;
-- TSA topology DTO field names and numeric device identity fields.
+- TSA topology DTO field names and numeric device identity fields;
+- config request validation and the direct config reply shape;
+- MQTT storage_config_get for media with the documented result/output wrapper.
 
 These are protocol contracts and independently implemented validation rules.
 The original Java application code is not vendored into SkyHub.
@@ -111,3 +127,11 @@ behavior. The Demo is a compatibility reference, not a production baseline.
 
 Upstream license:
 https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/LICENSE
+
+## Current DJI documentation cross-check
+
+On 2026-10-01 the implementation was cross-checked against DJI Cloud API 1.14
+documentation for the MQTT `config` and `storage_config_get` request/reply
+contracts. The current documentation confirms that successful `config`
+responses place app/NTP fields directly in `data`, while
+`storage_config_get` uses `data.result` and `data.output`.

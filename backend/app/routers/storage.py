@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from ..common import fail, ok
 from ..config import settings
-from ..dji.storage_contract import STS_DURATION_SECONDS, exposed_sts_ttl
+from ..dji.storage_contract import STS_DURATION_SECONDS, build_sts_response
 from ..s3util import assume_role
 from .auth import require_user
 
@@ -17,13 +17,11 @@ def get_sts(workspace_id: str, user: str = Depends(require_user)):
         c = assume_role(STS_DURATION_SECONDS)
     except Exception as e:
         return fail(500, f"STS fehlgeschlagen: {e}")
-    return ok({
-        "bucket": settings.minio_bucket,
-        "credentials": {"access_key_id": c["AccessKeyId"],
-                        "access_key_secret": c["SecretAccessKey"],
-                        "security_token": c["SessionToken"], "expire": exposed_sts_ttl(c)},
-        "endpoint": settings.minio_public_endpoint,
-        "object_key_prefix": workspace_id,
-        "provider": "minio",
-        "region": "us-east-1",
-    })
+    return ok(build_sts_response(
+        c,
+        bucket=settings.minio_bucket,
+        endpoint=settings.minio_public_endpoint,
+        object_key_prefix=workspace_id,
+        provider="minio",
+        region="us-east-1",
+    ))

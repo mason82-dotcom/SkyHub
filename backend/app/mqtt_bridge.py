@@ -19,6 +19,7 @@ import aiomqtt
 from .config import settings
 from .db import SessionLocal
 from .device_dict import describe, model_key
+from .dji.config_contract import DjiConfigContractError, build_product_config, validate_config_request
 from .dji.normalizer import normalize_dji_payload, telemetry_point_fields
 from .dji.protocol import (
     DJI_INBOUND_SUBSCRIPTIONS,
@@ -30,8 +31,15 @@ from .dji.protocol import (
     status_reply_topic,
 )
 from .dji.rtk import RtkFixMonitor
+from .dji.storage_contract import (
+    DjiStorageContractError,
+    STS_DURATION_SECONDS,
+    build_sts_response,
+    validate_storage_config_request,
+)
 from .dji.topology import parse_dji_topology_update
 from .models import Device, HmsEvent, TelemetryPoint, utcnow
+from .s3util import assume_role
 from .state import hub
 
 log = logging.getLogger("skyhub.mqtt")
@@ -229,15 +237,50 @@ class MqttBridge:
 
     async def on_request(self, gw: str, p: dict) -> None:
         method = p.get("method", "")
-        output: dict = {}
+        data = p.get("data")
+
         if method == "config":
-            output = {"ntp_server_host": "pool.ntp.org", "app_id": settings.dji_app_id,
-                      "app_key": settings.dji_app_key, "app_license": settings.dji_app_license}
+            try:
+                validate_config_request(data)
+                reply_data = build_product_config(
+                    ntp_server_host="pool.ntp.org",
+                    ntp_server_port=123,
+                    app_id=settings.dji_app_id,
+                    app_key=settings.dji_app_key,
+                    app_license=settings.dji_app_license,
+                )
+            except DjiConfigContractError as exc:
+                log.warning("Ungueltiger config-Request von %s: %s", gw, exc)
+                reply_data = {"result": -1, "output": "invalid config request"}
+
+        elif method == "storage_config_get":
+            try:
+                validate_storage_config_request(data)
+                credentials = await asyncio.to_thread(assume_role, STS_DURATION_SECONDS)
+                storage = build_sts_response(
+                    credentials,
+                    bucket=settings.minio_bucket,
+                    endpoint=settings.minio_public_endpoint,
+                    object_key_prefix=settings.workspace_id,
+                    provider="minio",
+                    region="us-east-1",
+                )
+                reply_data = {"result": 0, "output": storage}
+            except DjiStorageContractError as exc:
+                log.warning("Ungueltiger storage_config_get von %s: %s", gw, exc)
+                reply_data = {"result": -1, "output": "invalid storage request"}
+            except Exception:
+                log.exception("STS fuer storage_config_get von %s fehlgeschlagen", gw)
+                reply_data = {"result": -1, "output": "storage credentials unavailable"}
+
         else:
             log.warning("Unbehandelte Request-Methode %s von %s", method, gw)
-        await self.publish(requests_reply_topic(gw),
-                           envelope(method, {"result": 0, "output": output},
-                                    p.get("tid"), p.get("bid")))
+            reply_data = {"result": -1, "output": "unsupported request method"}
+
+        await self.publish(
+            requests_reply_topic(gw),
+            envelope(method, reply_data, p.get("tid"), p.get("bid")),
+        )
 
     # ------------------------------------------------------------ watchdog
     async def watchdog(self) -> None:
