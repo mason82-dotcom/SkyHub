@@ -134,7 +134,7 @@
 
   function placeMarker(sn) {
     var d = devices[sn], o = (d && d.osd) || {};
-    if (!o.latitude || !o.longitude) return;
+    if (o.latitude == null || o.longitude == null) return;
     var ll = [o.latitude, o.longitude];
     if (!markers[sn]) markers[sn] = L.marker(ll, { icon: icon(o.attitude_head, d.kind) }).addTo(map).bindTooltip(d.model);
     else { markers[sn].setLatLng(ll); markers[sn].setIcon(icon(o.attitude_head, d.kind)); }

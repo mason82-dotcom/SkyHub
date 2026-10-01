@@ -159,7 +159,7 @@ class MqttBridge:
 
     async def _store_telemetry(self, sn: str, d: dict) -> None:
         lat, lon = d.get("latitude"), d.get("longitude")
-        if not lat or not lon:
+        if lat is None or lon is None:
             return
         now = time.time()
         if now - self._last_tel.get(sn, 0) < settings.telemetry_interval_s:
