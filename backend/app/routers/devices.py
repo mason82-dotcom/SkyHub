@@ -10,6 +10,7 @@ from ..config import settings
 from ..db import get_session
 from ..device_dict import DEFAULT_CAMERA, MODE_CODES, describe
 from ..dji.protocol import DjiProtocolValueError, build_video_id, validate_video_quality
+from ..dji.tsa_contract import DjiTsaContractError, build_device_topology
 from ..models import Device, TelemetryPoint, utcnow
 from ..mqtt_bridge import bridge
 from ..state import hub
@@ -68,18 +69,25 @@ async def topologies(workspace_id: str, user: str = Depends(require_user),
     rows = {d.sn: d for d in (await s.scalars(select(Device))).all()}
 
     def node(d: Device) -> dict:
-        return {"sn": d.sn, "device_callsign": d.callsign, "online_status": d.sn in hub.online,
-                "device_model": {"domain": str(d.domain), "type": d.type,
-                                 "sub_type": d.sub_type, "key": d.model_key},
-                "icon_urls": {"normal_icon_url": "", "selected_icon_url": ""},
-                "user_callsign": "", "user_id": "", "bound_status": True,
-                "model": describe(d.model_key)[0]}
+        fallback, _ = describe(d.model_key)
+        return build_device_topology(
+            sn=d.sn,
+            callsign=d.callsign,
+            domain=d.domain,
+            type_=d.type,
+            sub_type=d.sub_type,
+            online=d.sn in hub.online,
+            fallback_callsign=fallback,
+        )
 
     out = []
-    for gw, subs in hub.topo.items():
-        if gw in rows:
-            out.append({"hosts": [node(rows[x]) for x in subs if x in rows],
-                        "parents": [node(rows[gw])]})
+    try:
+        for gw, subs in hub.topo.items():
+            if gw in rows:
+                out.append({"hosts": [node(rows[x]) for x in subs if x in rows],
+                            "parents": [node(rows[gw])]})
+    except DjiTsaContractError as exc:
+        return fail(500, f"Ungueltige persistierte DJI-Topologie: {exc}")
     return ok({"list": out})
 
 

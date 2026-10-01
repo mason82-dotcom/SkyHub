@@ -61,6 +61,18 @@ Reference snapshot:
   SHA: 8c5947c170cf6c8074b3ba419c22bbc3e2f5a983
   cloud-sdk/src/main/java/com/dji/sdk/cloudapi/map/UpdateMapElementRequest.java
   SHA: 1c712be3c0ac01ed2df806e540c4d785b54cabef
+- TSA topology contracts:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/tsa/api/IHttpTsaService.java
+  SHA: 6e9a2d82f707c6938f8052ff7d206eff21f52ac4
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/tsa/DeviceTopology.java
+  SHA: 437783db969ab1f3e0b3e56c148f7bec0fc5ce77
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/tsa/TopologyDeviceModel.java
+  SHA: 770c28b0caa75e3ab4aa47ebaf15597df44714ab
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/tsa/TopologyResponse.java
+  SHA: 352b947c055108f413f285b4e8b5031f91e5ea91
+- DJI device enum reference:
+  cloud-sdk/src/main/java/com/dji/sdk/cloudapi/device/DeviceEnum.java
+  SHA: cab8c7035b81b11a2ee5efbd79cf83ec078eee4b
 
 ## What SkyHub reuses
 
@@ -74,7 +86,8 @@ SkyHub implements its own Python code for:
 - the DJI STS credential safety margin and POST-only STS endpoint contract;
 - strict UUID/GeoJSON-like validation for Pilot map groups and elements;
 - required Media fast-upload, upload-callback, tiny-fingerprint and
-  group-upload callback fields before persistence.
+  group-upload callback fields before persistence;
+- TSA topology DTO field names and numeric device identity fields.
 
 These are protocol contracts and independently implemented validation rules.
 The original Java application code is not vendored into SkyHub.
