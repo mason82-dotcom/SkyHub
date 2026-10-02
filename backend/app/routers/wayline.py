@@ -10,7 +10,7 @@ from ..db import get_session
 from ..dji.wpml import MAX_KMZ_INPUT_BYTES, WpmlError, read_wpml_kmz
 from ..models import Wayline, utcnow
 from ..s3util import internal_s3, presign_get
-from .auth import require_user
+from .auth import require_user, require_workspace_user
 
 router = APIRouter()
 P = "/wayline/api/v1/workspaces/{workspace_id}"
@@ -24,7 +24,7 @@ def wl_dict(w: Wayline) -> dict:
 
 @router.get(P + "/waylines")
 async def list_waylines(workspace_id: str, page: int = 1, page_size: int = 10,
-                        favorited: bool | None = None, user: str = Depends(require_user),
+                        favorited: bool | None = None, user: str = Depends(require_workspace_user),
                         s: AsyncSession = Depends(get_session)):
     q = select(Wayline)
     if favorited is not None:
@@ -38,13 +38,13 @@ async def list_waylines(workspace_id: str, page: int = 1, page_size: int = 10,
 
 @router.get(P + "/waylines/duplicate-names")
 async def duplicate_names(workspace_id: str, name: list[str] = Query(default=[]),
-                          user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                          user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     rows = await s.scalars(select(Wayline.name).where(Wayline.name.in_(name)))
     return ok(list(rows))
 
 
 @router.get(P + "/waylines/{wayline_id}/url")
-async def wayline_url(workspace_id: str, wayline_id: str, user: str = Depends(require_user),
+async def wayline_url(workspace_id: str, wayline_id: str, user: str = Depends(require_workspace_user),
                       s: AsyncSession = Depends(get_session)):
     w = await s.get(Wayline, wayline_id)
     if w is None:
@@ -54,7 +54,7 @@ async def wayline_url(workspace_id: str, wayline_id: str, user: str = Depends(re
 
 @router.post(P + "/upload-callback")
 async def upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
-                          user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                          user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     meta = body.get("metadata") or {}
     w = Wayline(name=body.get("name", "Route"), object_key=body.get("object_key", ""),
                 drone_model_key=meta.get("drone_model_key", ""),
@@ -67,7 +67,7 @@ async def upload_callback(workspace_id: str, body: dict = Body(default_factory=d
 
 @router.post(P + "/favorites")
 async def add_fav(workspace_id: str, id: list[str] = Query(default=[]),
-                  user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                  user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     await s.execute(update(Wayline).where(Wayline.id.in_(id)).values(favorited=True))
     await s.commit()
     return ok()
@@ -75,14 +75,14 @@ async def add_fav(workspace_id: str, id: list[str] = Query(default=[]),
 
 @router.delete(P + "/favorites")
 async def del_fav(workspace_id: str, id: list[str] = Query(default=[]),
-                  user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                  user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     await s.execute(update(Wayline).where(Wayline.id.in_(id)).values(favorited=False))
     await s.commit()
     return ok()
 
 
 @router.delete(P + "/waylines/{wayline_id}")
-async def delete_wayline(workspace_id: str, wayline_id: str, user: str = Depends(require_user),
+async def delete_wayline(workspace_id: str, wayline_id: str, user: str = Depends(require_workspace_user),
                          s: AsyncSession = Depends(get_session)):
     await s.execute(delete(Wayline).where(Wayline.id == wayline_id))
     await s.commit()

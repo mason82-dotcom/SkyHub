@@ -55,11 +55,22 @@
   }
   function row(name, res) {
     var li = document.createElement("li");
+    var label = document.createElement("span");
+    var status = document.createElement("span");
     var ok = res && res.code === 0;
-    li.innerHTML = "<span>" + name + "</span><span class='" + (ok ? "ok'>OK" : "bad'>Fehler") + "</span>";
+    label.textContent = name;
+    status.className = ok ? "ok" : "bad";
+    status.textContent = ok ? "OK" : "Fehler";
+    li.appendChild(label);
+    li.appendChild(status);
     if (!ok) li.title = JSON.stringify(res);
     $("comp").appendChild(li);
     return ok;
+  }
+  function showError(message) {
+    var msg = $("msg");
+    msg.textContent = message;
+    msg.className = "bad";
   }
   function load(name, params) {
     return row(name, call("platformLoadComponent", name, JSON.stringify(params || {})));
@@ -72,7 +83,7 @@
 
   fetch("/api/v1/pilot/config").then(function (r) { return r.json(); }).then(function (j) {
     cfg = j.data; $("title").textContent = cfg.platform_name;
-    if (!B) $("msg").innerHTML = "<span class='bad'>Diese Seite muss in DJI Pilot 2 ge&ouml;ffnet werden.</span>";
+    if (!B) showError("Diese Seite muss in DJI Pilot 2 geoeffnet werden.");
   });
 
   $("go").onclick = function () {
@@ -80,22 +91,22 @@
     fetch("/api/v1/login", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: $("u").value, password: $("p").value }) })
     .then(function (r) { return r.json(); }).then(function (j) {
-      if (j.code !== 0) { $("msg").innerHTML = "<span class='bad'>" + j.message + "</span>"; return; }
+      if (j.code !== 0) { showError(j.message); return; }
       var d = j.data;
       $("login").hidden = true; $("status").hidden = false;
-      row("Lizenz", call("platformVerifyLicense", cfg.app_id, cfg.app_key, cfg.app_license));
+      row("Lizenz", call("platformVerifyLicense", d.app_id, d.app_key, d.app_license));
       row("Workspace", call("platformSetWorkspaceId", d.workspace_id));
       call("platformSetInformation", cfg.platform_name, cfg.workspace_name, "On-Premise");
       load("api", { host: d.api_host, token: d.access_token });
       load("thing", { host: d.mqtt_addr, username: d.mqtt_username, password: d.mqtt_password,
                       connectCallback: "skyhubThingConnected" });
-      load("ws", { host: d.ws_host, token: d.access_token });
+      load("ws", { host: d.ws_host, token: d.ws_token });
       load("map", { userName: d.username, elementPreName: "PILOT" });
       load("tsa", {});
       load("media", { autoUploadPhoto: true, autoUploadPhotoType: 0, autoUploadVideo: false });
       load("mission", {});
       load("liveshare", { videoPublishType: "video-demand-aux-manual", statusCallback: "skyhubLiveStatus" });
-    }).catch(function (e) { $("msg").innerHTML = "<span class='bad'>Server nicht erreichbar: " + e + "</span>"; });
+    }).catch(function (e) { showError("Server nicht erreichbar: " + e); });
   };
   $("back").onclick = function () { call("platformStopSelf"); };
 })();

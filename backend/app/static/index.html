@@ -89,7 +89,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
-  var token = null, devices = {}, markers = {}, track = null, liveSn = null, selSn = null;
+  var token = null, workspaceId = null, devices = {}, markers = {}, track = null, liveSn = null, selSn = null;
   var $ = function (id) { return document.getElementById(id); };
 
   var map = L.map("map").setView([51.16, 10.45], 6);
@@ -150,22 +150,35 @@
   function scheduleRender() { if (!renderPending) { renderPending = true; setTimeout(function () { renderPending = false; render(); }, 500); } }
 
   function connectWs() {
-    var ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/api/v1/ws?x-auth-token=" + token);
-    ws.onopen = function () { $("conn").textContent = "Live verbunden"; };
-    ws.onclose = function () { $("conn").textContent = "Getrennt, verbinde neu..."; setTimeout(connectWs, 3000); };
-    ws.onmessage = function (ev) {
-      var m = JSON.parse(ev.data), d = m.data || {};
-      if (m.biz_code === "device_osd" || m.biz_code === "gateway_osd") {
-        if (!devices[d.sn]) { loadDevices(); return; }
-        devices[d.sn].osd = d.host; devices[d.sn].online = true; placeMarker(d.sn); scheduleRender();
-      } else if (m.biz_code === "device_online" || m.biz_code === "device_offline") {
-        loadDevices();
-      } else if (m.biz_code === "file_uploaded") { loadMedia(); }
-    };
+    api("/api/v1/ws-ticket", { method: "POST" }).then(function (ticket) {
+      if (ticket.code !== 0 || !ticket.data || !ticket.data.ws_token) {
+        throw new Error(ticket.message || "WS-Ticket fehlt");
+      }
+      var url = (location.protocol === "https:" ? "wss://" : "ws://") + location.host +
+        "/api/v1/ws?x-auth-token=" + encodeURIComponent(ticket.data.ws_token);
+      var ws = new WebSocket(url);
+      ws.onopen = function () { $("conn").textContent = "Live verbunden"; };
+      ws.onclose = function () {
+        $("conn").textContent = "Getrennt, verbinde neu...";
+        setTimeout(connectWs, 3000);
+      };
+      ws.onmessage = function (ev) {
+        var m = JSON.parse(ev.data), d = m.data || {};
+        if (m.biz_code === "device_osd" || m.biz_code === "gateway_osd") {
+          if (!devices[d.sn]) { loadDevices(); return; }
+          devices[d.sn].osd = d.host; devices[d.sn].online = true; placeMarker(d.sn); scheduleRender();
+        } else if (m.biz_code === "device_online" || m.biz_code === "device_offline") {
+          loadDevices();
+        } else if (m.biz_code === "file_uploaded") { loadMedia(); }
+      };
+    }).catch(function () {
+      $("conn").textContent = "WS-Verbindung fehlgeschlagen, neuer Versuch...";
+      setTimeout(connectWs, 3000);
+    });
   }
 
   function loadWaylines() {
-    api("/wayline/api/v1/workspaces/x/waylines?page_size=100").then(function (j) {
+    api("/wayline/api/v1/workspaces/" + encodeURIComponent(workspaceId) + "/waylines?page_size=100").then(function (j) {
       var l = (j.data && j.data.list) || [];
       $("wlList").innerHTML = l.length ? l.map(function (w) {
         return "<div class='item'><b>" + w.name + "</b><br><small>" + w.drone_model_key + " &middot; " + new Date(w.update_time).toLocaleString("de-DE") + "</small></div>";
@@ -232,7 +245,7 @@
       body: JSON.stringify({ username: $("lu").value, password: $("lp").value }) })
     .then(function (r) { return r.json(); }).then(function (j) {
       if (j.code !== 0) { $("loginMsg").textContent = j.message; return; }
-      token = j.data.access_token; $("login").remove();
+      token = j.data.access_token; workspaceId = j.data.workspace_id; $("login").remove();
       loadDevices().then(connectWs);
     });
   };

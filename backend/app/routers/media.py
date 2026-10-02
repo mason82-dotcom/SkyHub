@@ -15,7 +15,7 @@ from ..dji.media_contract import (
 from ..models import MediaFile
 from ..s3util import presign_get
 from ..state import hub
-from .auth import require_user
+from .auth import require_user, require_workspace_user
 
 router = APIRouter()
 P = "/media/api/v1/workspaces/{workspace_id}"
@@ -23,7 +23,7 @@ P = "/media/api/v1/workspaces/{workspace_id}"
 
 @router.post(P + "/fast-upload")
 async def fast_upload(workspace_id: str, body: dict = Body(default_factory=dict),
-                      user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                      user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         validate_fast_upload_request(body)
     except DjiMediaContractError as exc:
@@ -35,7 +35,7 @@ async def fast_upload(workspace_id: str, body: dict = Body(default_factory=dict)
 
 @router.post(P + "/files/tiny-fingerprints")
 async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory=dict),
-                            user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                            user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         tfs = validate_tiny_fingerprint_request(body)
     except DjiMediaContractError as exc:
@@ -46,7 +46,7 @@ async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory
 
 @router.post(P + "/upload-callback")
 async def upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
-                          user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                          user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         validate_upload_callback_request(body)
     except DjiMediaContractError as exc:
@@ -70,7 +70,7 @@ async def upload_callback(workspace_id: str, body: dict = Body(default_factory=d
 
 @router.post(P + "/group-upload-callback")
 async def group_upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
-                                user: str = Depends(require_user)):
+                                user: str = Depends(require_workspace_user)):
     try:
         validate_group_upload_callback(body)
     except DjiMediaContractError as exc:

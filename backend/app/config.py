@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     admin_password: str = "change-me"
     jwt_secret: str = "change-me"
     jwt_ttl_hours: int = 168
+    ws_token_ttl_seconds: int = 120
 
     mqtt_host: str = "mosquitto"
     mqtt_port: int = 1883

@@ -14,7 +14,7 @@ from ..dji.tsa_contract import DjiTsaContractError, build_device_topology
 from ..models import Device, TelemetryPoint, utcnow
 from ..mqtt_bridge import bridge
 from ..state import hub
-from .auth import require_user
+from .auth import require_user, require_workspace_user
 
 router = APIRouter()
 
@@ -63,7 +63,7 @@ async def track(sn: str, minutes: int = 60, user: str = Depends(require_user),
 
 
 @router.get("/manage/api/v1/workspaces/{workspace_id}/devices/topologies")
-async def topologies(workspace_id: str, user: str = Depends(require_user),
+async def topologies(workspace_id: str, user: str = Depends(require_workspace_user),
                      s: AsyncSession = Depends(get_session)):
     """Fuer das TSA-Modul in Pilot 2 (andere Teilnehmer auf der Karte)."""
     rows = {d.sn: d for d in (await s.scalars(select(Device))).all()}

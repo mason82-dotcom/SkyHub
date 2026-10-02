@@ -14,7 +14,7 @@ from ..dji.map_contract import (
 )
 from ..models import MapElement, utcnow
 from ..state import hub
-from .auth import require_user
+from .auth import require_workspace_user
 
 router = APIRouter()
 P = "/map/api/v1/workspaces/{workspace_id}"
@@ -29,7 +29,7 @@ def el_dict(e: MapElement) -> dict:
 @router.get(P + "/element-groups")
 async def element_groups(workspace_id: str, group_id: str | None = None,
                          is_distributed: bool | None = None,
-                         user: str = Depends(require_user),
+                         user: str = Depends(require_workspace_user),
                          s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
@@ -49,7 +49,7 @@ async def element_groups(workspace_id: str, group_id: str | None = None,
 
 @router.post(P + "/element-groups/{group_id}/elements")
 async def create_element(workspace_id: str, group_id: str, body: dict = Body(default_factory=dict),
-                         user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                         user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
         validate_uuid(group_id, "group_id")
@@ -69,7 +69,7 @@ async def create_element(workspace_id: str, group_id: str, body: dict = Body(def
 
 @router.put(P + "/elements/{element_id}")
 async def update_element(workspace_id: str, element_id: str, body: dict = Body(default_factory=dict),
-                         user: str = Depends(require_user), s: AsyncSession = Depends(get_session)):
+                         user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
         validate_uuid(element_id, "element_id")
@@ -94,7 +94,7 @@ async def update_element(workspace_id: str, element_id: str, body: dict = Body(d
 
 
 @router.delete(P + "/elements/{element_id}")
-async def delete_element(workspace_id: str, element_id: str, user: str = Depends(require_user),
+async def delete_element(workspace_id: str, element_id: str, user: str = Depends(require_workspace_user),
                          s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
