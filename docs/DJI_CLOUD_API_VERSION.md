@@ -77,6 +77,7 @@ The following SkyHub areas are already checked against current DJI contracts:
 - TSA topology DTO structure;
 - Map group/element contracts;
 - Livestream video_id/payload_index/quality contracts;
-- WPML/KMZ parsing (combined with FH-Clone validation rules).
+- WPML/KMZ parsing (combined with FH-Clone validation rules);
+- Pilot 2 Wayline list/filter/favorite/upload-callback contracts, including v1.16.1 query fields.
 
 The remaining real-hardware acceptance tests are tracked in PR #1.
