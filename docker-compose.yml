@@ -25,7 +25,12 @@ services:
       - ./data/mosquitto:/mosquitto/data
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    build:
+      context: ./minio
+      args:
+        MINIO_VERSION: RELEASE.2024-12-18T13-15-44Z
+        MC_VERSION: RELEASE.2024-11-21T17-21-54Z
+    image: skyhub-minio:RELEASE.2024-12-18T13-15-44Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -37,14 +42,15 @@ services:
     volumes:
       - ./data/minio:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9000/minio/health/live >/dev/null"]
       interval: 5s
+      timeout: 3s
       retries: 30
 
   minio-init:
-    # Reuse the pinned MinIO server image: it already contains /usr/bin/mc.
-    # This avoids a second, now-unreliable public mc image registry.
-    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    # Reuse the locally built image, which contains both minio and mc.
+    image: skyhub-minio:RELEASE.2024-12-18T13-15-44Z
+    pull_policy: never
     depends_on:
       minio:
         condition: service_healthy
