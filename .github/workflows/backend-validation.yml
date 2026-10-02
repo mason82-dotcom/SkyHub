@@ -33,3 +33,38 @@ jobs:
       - name: Import application
         working-directory: backend
         run: python -c "import app.main"
+      - name: Prepare Compose validation environment
+        run: |
+          cat > .env <<'EOF'
+          PUBLIC_HOST=127.0.0.1
+          HTTP_PORT=8080
+          WORKSPACE_ID=e3dea0f5-37f2-4d79-ae58-490af3228069
+          WORKSPACE_NAME=CI
+          PLATFORM_NAME=SkyHub CI
+          DJI_APP_ID=ci-app-id
+          DJI_APP_KEY=ci-app-key
+          DJI_APP_LICENSE=ci-app-license
+          ADMIN_USER=admin
+          ADMIN_PASSWORD=ci-admin-password
+          JWT_SECRET=ci-jwt-secret-0123456789abcdef0123456789abcdef
+          JWT_TTL_HOURS=1
+          WS_TOKEN_TTL_SECONDS=120
+          MQTT_BACKEND_USER=backend
+          MQTT_BACKEND_PASSWORD=ci-backend-password
+          MQTT_PILOT_USER=pilot
+          MQTT_PILOT_PASSWORD=ci-pilot-password
+          POSTGRES_USER=skyhub
+          POSTGRES_PASSWORD=ci-postgres-password
+          POSTGRES_DB=skyhub
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=ci-minio-root-password
+          MINIO_BUCKET=skyhub
+          MINIO_STS_USER=pilot-uploader
+          MINIO_STS_PASSWORD=ci-minio-sts-password
+          TELEMETRY_INTERVAL_S=1.0
+          OFFLINE_TIMEOUT_S=30
+          EOF
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+      - name: Build backend container
+        run: docker compose build backend
