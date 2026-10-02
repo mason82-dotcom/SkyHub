@@ -170,3 +170,11 @@ SkyHub therefore does not enforce older Demo-derived assumptions that every
 resource must contain a full Feature/geometry/properties object or that every
 Pilot element identifier must be a UUID. Present geometry data is still
 validated for safe numeric coordinates and bounded string fields.
+
+## Current-documentation override: Pilot livestream
+
+The retired Demo exposed additional livestream URL types. Current official
+Pilot-to-Cloud `live_start_push` documentation lists Agora (0), RTMP (1) and
+GB28181 (3). SkyHub targets the Pilot 2/RC path and uses RTMP only; RTSP/WHIP
+are therefore not advertised by the Pilot contract table. Current Pilot lens
+types are `normal`, `thermal`, `wide` and `zoom`.

@@ -1,11 +1,9 @@
 """DJI Cloud API wire-level contracts used by SkyHub.
 
-This module is a security-reviewed Python interpretation of protocol constants
-and value domains from the retired MIT-licensed DJI Cloud API Demo. It does not
-import the demo's server, authentication, storage, controller, or control code.
-
-Reference snapshot:
-  dji-sdk/DJI-Cloud-API-Demo@bef525cb92772b06786c1e033719a6fa1b94bcc5
+Current official DJI Cloud API documentation is normative. The retired
+MIT-licensed DJI Cloud API Demo is only a historical compatibility reference.
+SkyHub does not import its server, authentication, storage, controller, or
+control code.
 """
 from __future__ import annotations
 
@@ -17,12 +15,11 @@ DJI_CLOUD_API_VERSION: Final[str] = "1.16.1"
 SERIAL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9]+$")
 PAYLOAD_INDEX_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\d+-\d+-\d+$")
 
+# Current Pilot-to-Cloud live_start_push URL types.
 LIVE_URL_TYPES: Final[dict[int, str]] = {
     0: "agora",
     1: "rtmp",
-    2: "rtsp",
     3: "gb28181",
-    4: "whip",
 }
 
 VIDEO_QUALITIES: Final[dict[int, str]] = {
@@ -38,7 +35,6 @@ VIDEO_TYPES: Final[frozenset[str]] = frozenset({
     "wide",
     "thermal",
     "normal",
-    "ir",
 })
 
 SKYHUB_ALLOWED_SERVICE_METHODS: Final[frozenset[str]] = frozenset({

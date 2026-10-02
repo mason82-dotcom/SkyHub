@@ -80,7 +80,8 @@ The following SkyHub areas are already checked against current DJI contracts:
   string `domain/type/sub_type`, and `user_id/user_callsign`);
 - Map group/element contracts using current optional nested resource/content
   fields and ID-shaped responses for create/update/delete;
-- Livestream video_id/payload_index/quality contracts;
+- Pilot livestream `video_id`/`payload_index`/quality contracts and current
+  `live_start_push` URL types (Agora, RTMP, GB28181);
 - WPML/KMZ parsing (combined with FH-Clone validation rules);
 - Pilot 2 Wayline list/filter/favorite/upload-callback contracts, including v1.16.1 query fields.
 

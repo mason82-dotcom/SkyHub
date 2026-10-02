@@ -52,6 +52,12 @@ class DjiProtocolTests(unittest.TestCase):
             build_video_id("BAD/SN", "68-0-0")
         with self.assertRaises(DjiProtocolValueError):
             build_video_id("AIRCRAFT123", "bad-camera")
+        self.assertEqual(
+            build_video_id("AIRCRAFT123", "67-0-0", video_type="thermal"),
+            "AIRCRAFT123/67-0-0/thermal-0",
+        )
+        with self.assertRaises(DjiProtocolValueError):
+            build_video_id("AIRCRAFT123", "67-0-0", video_type="ir")
 
     def test_outgoing_service_topic_is_serial_safe(self):
         self.assertEqual(service_topic("RC123"), "thing/product/RC123/services")
