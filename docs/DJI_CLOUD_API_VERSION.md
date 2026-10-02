@@ -73,7 +73,9 @@ The following SkyHub areas are already checked against current DJI contracts:
 - MQTT status/OSD/state/events/requests/services-reply topic shapes;
 - product config reply and storage_config_get response separation;
 - HTTP STS response structure;
-- Media upload/fast-upload callbacks;
+- Media fast-upload, tiny-fingerprint and upload-callback contracts, including
+  the current optional ext/fingerprint/metadata fields and object-shaped
+  upload-callback response;
 - TSA topology DTO structure;
 - Map group/element contracts;
 - Livestream video_id/payload_index/quality contracts;

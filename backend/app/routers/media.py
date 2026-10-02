@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +10,7 @@ from ..db import get_session
 from ..dji.media_contract import (
     DjiMediaContractError,
     validate_fast_upload_request,
+    media_storage_identity,
     validate_group_upload_callback,
     validate_tiny_fingerprint_request,
     validate_upload_callback_request,
@@ -35,7 +38,7 @@ async def fast_upload(workspace_id: str, body: dict = Body(default_factory=dict)
 
 
 @router.post(P + "/files/tiny-fingerprints")
-async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory=dict),
+async def tiny_fingerprints(workspace_id: str, body: Any = Body(default_factory=list),
                             user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         tfs = validate_tiny_fingerprint_request(body)
@@ -49,29 +52,36 @@ async def tiny_fingerprints(workspace_id: str, body: dict = Body(default_factory
 async def upload_callback(workspace_id: str, body: dict = Body(default_factory=dict),
                           user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
-        validate_upload_callback_request(body)
-    except DjiMediaContractError as exc:
+        parsed = validate_upload_callback_request(body)
+        validate_workspace_object_key(parsed["object_key"], workspace_id)
+    except (DjiMediaContractError, DjiStorageContractError) as exc:
         return fail(400, f"Ungueltiger Media-Upload-Callback: {exc}")
 
-    try:
-        validate_workspace_object_key(body["object_key"], workspace_id)
-    except DjiStorageContractError as exc:
-        return fail(400, f"Ungueltiger Media-Objektschluessel: {exc}")
+    # result != 0 reports that Pilot failed to upload the file. Acknowledge the
+    # callback, but do not create a database record for an object that is absent.
+    if parsed["result"] != 0:
+        return ok({"object_key": parsed["object_key"]})
 
-    ext = body["ext"]
-    fp = body["fingerprint"]
-    if not await s.scalar(select(MediaFile.id).where(MediaFile.fingerprint == fp)):
-        mf = MediaFile(fingerprint=fp,
-                       tiny_fingerprint=ext.get("tinny_fingerprint") or ext.get("tiny_fingerprint"),
-                       name=body["name"], path=body.get("path"),
-                       object_key=body["object_key"], drone_sn=ext["sn"],
-                       drone_model_key=ext["drone_model_key"],
-                       payload_model_key=ext["payload_model_key"],
-                       is_original=ext["is_original"])
+    ext = parsed["ext"]
+    storage_identity = media_storage_identity(parsed)
+    if not await s.scalar(
+        select(MediaFile.id).where(MediaFile.fingerprint == storage_identity)
+    ):
+        mf = MediaFile(
+            fingerprint=storage_identity,
+            tiny_fingerprint=ext.get("tinny_fingerprint") or ext.get("tiny_fingerprint"),
+            name=parsed["name"],
+            path=parsed.get("path"),
+            object_key=parsed["object_key"],
+            drone_sn=ext.get("sn"),
+            drone_model_key=ext.get("drone_model_key"),
+            payload_model_key=ext.get("payload_model_key"),
+            is_original=ext.get("is_original", True),
+        )
         s.add(mf)
         await s.commit()
         await hub.broadcast("file_uploaded", {"name": mf.name, "sn": mf.drone_sn})
-    return ok(body["object_key"])
+    return ok({"object_key": parsed["object_key"]})
 
 
 @router.post(P + "/group-upload-callback")

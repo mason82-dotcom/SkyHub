@@ -96,6 +96,7 @@ class DjiDemoContractTests(unittest.TestCase):
         ext = media_ext()
         ext["file_group_id"] = GROUP
         body = {
+            "result": 0,
             "ext": ext,
             "fingerprint": "ABCDEF123",
             "name": "DJI_TEST.JPG",

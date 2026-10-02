@@ -138,3 +138,16 @@ the normative project baseline was advanced to **DJI Cloud API v1.16.1**
 contracts were retained because the current official documentation preserves
 their validated response shapes. Future protocol changes must be checked
 against v1.16.1 or a newer official DJI release before implementation.
+
+## Current-documentation override: Media callback
+
+The retired Demo was useful for identifying Media DTO names, but current DJI
+Cloud API documentation is less restrictive for the Pilot media upload
+callback. In the current contract, `result`, `name` and `object_key` are
+the key required fields; `ext`, `fingerprint`, `metadata`, `path` and
+`sub_file_type` are optional. SkyHub follows the current DJI documentation,
+not the older Demo implementation's stronger assumptions.
+
+The tiny-fingerprint endpoint is documented with an array-of-strings request
+body. SkyHub accepts that shape and retains the older object wrapper only as a
+backward-compatibility input.
