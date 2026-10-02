@@ -25,7 +25,7 @@ services:
       - ./data/mosquitto:/mosquitto/data
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
