@@ -121,7 +121,8 @@ a separate security review and explicit project decision:
 - arbitrary aircraft-control or DRC command paths;
 - deployment/security defaults from the retired sample application.
 
-For protocol behavior, current DJI documentation remains the primary reference.
+For protocol behavior, DJI Cloud API v1.16.1 and any newer official DJI
+documentation remain the primary reference.
 FH-Clone real-hardware evidence is used independently to verify observed device
 behavior. The Demo is a compatibility reference, not a production baseline.
 
@@ -130,8 +131,10 @@ https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/LICENSE
 
 ## Current DJI documentation cross-check
 
-On 2026-10-01 the implementation was cross-checked against DJI Cloud API 1.14
-documentation for the MQTT `config` and `storage_config_get` request/reply
-contracts. The current documentation confirms that successful `config`
-responses place app/NTP fields directly in `data`, while
-`storage_config_get` uses `data.result` and `data.output`.
+The implementation was originally cross-checked against older DJI Cloud API
+documentation while the baseline import was being stabilized. On 2026-10-02
+the normative project baseline was advanced to **DJI Cloud API v1.16.1**
+(released 2025-12-17). Existing MQTT `config` and `storage_config_get`
+contracts were retained because the current official documentation preserves
+their validated response shapes. Future protocol changes must be checked
+against v1.16.1 or a newer official DJI release before implementation.

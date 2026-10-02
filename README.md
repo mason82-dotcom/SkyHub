@@ -1,6 +1,6 @@
 # SkyHub OnPrem
 
-Selbst gehosteter Leitstand im Stil von FlightHub 2 auf Basis der **DJI Cloud API** (Pilot-2-Anbindung).
+Selbst gehosteter Leitstand im Stil von FlightHub 2 auf Basis der **DJI Cloud API v1.16.1** (Pilot-2-Anbindung).
 Läuft komplett im LAN (ODROID-HC4 oder Raspberry Pi 5, ARM64, Docker).
 
 | Hardware | Anbindung | Status |
@@ -43,7 +43,7 @@ Läuft komplett im LAN (ODROID-HC4 oder Raspberry Pi 5, ARM64, Docker).
 
 - **SkyHub selbst ist noch nicht als kompletter Stack gegen echte Hardware validiert.** Fuer M3M werden jedoch reale, redigierte FH-Clone-MQTT-Evidenzen vom 01.10.2026 als Referenz verwendet. Runtime-Verhalten in SkyHub muss weiterhin separat belegt werden.
 - DJI hat die Pflege der offiziellen Cloud-API-Demo am 10.04.2025 eingestellt. SkyHub uebernimmt daraus keinen Server-Stack; ausgewaehlte Protokollvertraege werden nach Security-Review als Kompatibilitaetsreferenz in eigener Python-Implementierung genutzt.
-- Nur im LAN/VPN betreiben. HTTP ohne TLS, `/api/v1/pilot/config` gibt die DJI-App-Lizenz aus (wie bei der Demo nötig für Pilot 2).
+- Nur im LAN/VPN betreiben, solange TLS noch nicht aktiviert ist. Die oeffentliche Pilot-Bootstrap-Konfiguration enthaelt keine DJI-App-Lizenzdaten; diese werden erst nach erfolgreichem Login ausgegeben.
 - Datenordner `./data` gehört auf die HDD/SSD, nicht auf die SD-Karte.
 
 ## Wiederverwendung aus FH-Clone
@@ -58,3 +58,12 @@ und `video_id`/`payload_index`-Formate. Authentifizierung, Sessions, Storage,
 Controller und Flugsteuerungslogik der Demo werden nicht uebernommen.
 
 Details: `docs/DJI_DEMO_REFERENCE.md` und `THIRD_PARTY_NOTICES.md`.
+
+## DJI Cloud API Zielversion
+
+Normative Protokollbasis ist **DJI Cloud API v1.16.1** (Release 2025-12-17).
+FH-Clone dient als Real-Hardware-Evidence, die eingestellte DJI-Demo nur als
+historische Referenzimplementierung. Bei Widerspruechen hat die aktuelle
+offizielle DJI-Dokumentation Vorrang.
+
+Details: `docs/DJI_CLOUD_API_VERSION.md`.

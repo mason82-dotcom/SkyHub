@@ -2,6 +2,8 @@
 
 SkyHub intentionally reuses protocol knowledge and validation rules from the
 owner's FH-Clone project while keeping the SkyHub runtime Python/FastAPI based.
+DJI Cloud API v1.16.1 is the normative protocol baseline; FH-Clone evidence is
+used to confirm observed hardware behavior where appropriate.
 
 Reference snapshot:
 

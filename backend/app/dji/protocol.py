@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from typing import Final
 
+DJI_CLOUD_API_VERSION: Final[str] = "1.16.1"
+
 SERIAL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9]+$")
 PAYLOAD_INDEX_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\d+-\d+-\d+$")
 
