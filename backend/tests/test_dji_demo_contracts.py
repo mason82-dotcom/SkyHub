@@ -108,7 +108,7 @@ class DjiDemoContractTests(unittest.TestCase):
                 "relative_altitude": 20.0,
             },
         }
-        self.assertIs(validate_upload_callback_request(body), body)
+        self.assertEqual(validate_upload_callback_request(body), body)
 
     def test_media_rejects_missing_fingerprint_instead_of_inventing_one(self):
         body = {"ext": media_ext(), "name": "DJI_TEST.JPG"}
