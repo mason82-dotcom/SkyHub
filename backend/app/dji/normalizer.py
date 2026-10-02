@@ -60,6 +60,7 @@ def normalize_dji_payload(payload: Any) -> dict[str, Any]:
         "roll_deg": _first_number(_field(host, source, "attitude_roll"), _field(host, source, "roll")),
     }
     mode_code = _number(_field(host, source, "mode_code"))
+    mode_reason_code = _number(_field(host, source, "mode_code_reason"))
 
     position_state = _record(host.get("position_state")) or _record(source.get("position_state")) or {}
     gnss = {
@@ -78,6 +79,7 @@ def normalize_dji_payload(payload: Any) -> dict[str, Any]:
         *velocity.values(),
         *attitude.values(),
         mode_code,
+        mode_reason_code,
         *gnss.values(),
     ]
     if any(value is not None for value in flight_values):
@@ -158,7 +160,7 @@ def normalize_dji_payload(payload: Any) -> dict[str, Any]:
             "altitude": altitude,
             "velocity": velocity,
             "attitude": attitude,
-            "mode": {"code": mode_code},
+            "mode": {"code": mode_code, "reason_code": mode_reason_code},
         },
         "navigation": {
             "gnss": gnss,
