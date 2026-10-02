@@ -60,6 +60,11 @@ class MqttAclContractTests(unittest.TestCase):
         self.assertIn("--env-file .env", source)
         self.assertIn("/mosquitto/config/acl.template > /mosquitto/config/acl.tmp", source)
         self.assertIn("mv /mosquitto/config/acl.tmp /mosquitto/config/acl", source)
+        self.assertIn("chown 1883:1883 /mosquitto/config/passwd", source)
+        self.assertIn("chmod 0640 /mosquitto/config/passwd", source)
+        self.assertIn("chown 1883:1883 /mosquitto/config/acl.tmp", source)
+        self.assertIn("chmod 0640 /mosquitto/config/acl.tmp", source)
+        self.assertNotIn("chmod 0700 /mosquitto/config/passwd", source)
         self.assertNotIn(". ./.env", source)
         self.assertNotIn("source .env", source)
 

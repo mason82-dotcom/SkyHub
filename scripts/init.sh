@@ -40,10 +40,12 @@ docker run --rm \
 
     mosquitto_passwd -b -c /mosquitto/config/passwd       "$MQTT_BACKEND_USER" "$MQTT_BACKEND_PASSWORD"
     mosquitto_passwd -b /mosquitto/config/passwd       "$MQTT_PILOT_USER" "$MQTT_PILOT_PASSWORD"
-    chmod 0700 /mosquitto/config/passwd
+    chown 1883:1883 /mosquitto/config/passwd
+    chmod 0640 /mosquitto/config/passwd
 
     sed       -e "s/__BACKEND_USER__/$MQTT_BACKEND_USER/g"       -e "s/__PILOT_USER__/$MQTT_PILOT_USER/g"       /mosquitto/config/acl.template > /mosquitto/config/acl.tmp
-    chmod 0644 /mosquitto/config/acl.tmp
+    chown 1883:1883 /mosquitto/config/acl.tmp
+    chmod 0640 /mosquitto/config/acl.tmp
     mv /mosquitto/config/acl.tmp /mosquitto/config/acl
   '
 
