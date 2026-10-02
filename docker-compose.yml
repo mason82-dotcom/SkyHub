@@ -42,7 +42,9 @@ services:
       retries: 30
 
   minio-init:
-    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # Reuse the pinned MinIO server image: it already contains /usr/bin/mc.
+    # This avoids a second, now-unreliable public mc image registry.
+    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
     depends_on:
       minio:
         condition: service_healthy
