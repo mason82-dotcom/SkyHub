@@ -21,9 +21,12 @@ async def lifespan(app: FastAPI):
     validate_runtime_settings(settings)
     await init_db()
     tasks = [asyncio.create_task(bridge.run()), asyncio.create_task(bridge.watchdog())]
-    yield
-    for t in tasks:
-        t.cancel()
+    try:
+        yield
+    finally:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 app = FastAPI(title="SkyHub OnPrem", lifespan=lifespan)

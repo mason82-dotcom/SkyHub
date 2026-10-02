@@ -70,3 +70,14 @@ def build_sts_response(
         "provider": provider,
         "region": region,
     }
+
+
+def validate_workspace_object_key(object_key: Any, workspace_id: str) -> str:
+    if not isinstance(object_key, str) or not object_key:
+        raise DjiStorageContractError("object_key must be a non-empty string")
+    if len(object_key) > 512 or "\x00" in object_key:
+        raise DjiStorageContractError("object_key is invalid or too long")
+    prefix = f"{workspace_id}/"
+    if not object_key.startswith(prefix) or object_key == prefix:
+        raise DjiStorageContractError("object_key is outside the authorized workspace prefix")
+    return object_key

@@ -56,6 +56,8 @@ async def rtk_status(sn: str, user: str = Depends(require_user),
 @router.get("/api/v1/devices/{sn}/track")
 async def track(sn: str, minutes: int = 60, user: str = Depends(require_user),
                 s: AsyncSession = Depends(get_session)):
+    if minutes < 1 or minutes > 1440:
+        return fail(400, "minutes muss zwischen 1 und 1440 liegen")
     since = utcnow() - timedelta(minutes=minutes)
     rows = (await s.scalars(select(TelemetryPoint).where(TelemetryPoint.sn == sn,
             TelemetryPoint.ts >= since).order_by(TelemetryPoint.ts))).all()

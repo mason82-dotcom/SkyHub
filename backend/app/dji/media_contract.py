@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .protocol import validate_serial
+from .protocol import DjiProtocolValueError, validate_serial
 
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -13,10 +13,12 @@ class DjiMediaContractError(ValueError):
     pass
 
 
-def _required_string(obj: dict[str, Any], key: str) -> str:
+def _required_string(obj: dict[str, Any], key: str, max_length: int | None = None) -> str:
     value = obj.get(key)
     if not isinstance(value, str) or value == "":
         raise DjiMediaContractError(f"{key} must be a non-empty string")
+    if max_length is not None and len(value) > max_length:
+        raise DjiMediaContractError(f"{key} is too long")
     return value
 
 
@@ -30,12 +32,15 @@ def _required_bool(obj: dict[str, Any], key: str) -> bool:
 def _validate_fast_ext(ext: Any) -> dict[str, Any]:
     if not isinstance(ext, dict):
         raise DjiMediaContractError("ext must be an object")
-    _required_string(ext, "drone_model_key")
-    _required_string(ext, "payload_model_key")
+    _required_string(ext, "drone_model_key", 32)
+    _required_string(ext, "payload_model_key", 32)
     tiny = ext.get("tinny_fingerprint", ext.get("tiny_fingerprint"))
-    if not isinstance(tiny, str) or tiny == "":
-        raise DjiMediaContractError("tinny_fingerprint must be a non-empty string")
-    validate_serial(_required_string(ext, "sn"))
+    if not isinstance(tiny, str) or tiny == "" or len(tiny) > 256:
+        raise DjiMediaContractError("tinny_fingerprint must be a non-empty string up to 256 chars")
+    try:
+        validate_serial(_required_string(ext, "sn", 64))
+    except DjiProtocolValueError as exc:
+        raise DjiMediaContractError("sn is not a valid DJI serial") from exc
     _required_bool(ext, "is_original")
     return ext
 
@@ -44,11 +49,11 @@ def validate_fast_upload_request(body: Any) -> dict[str, Any]:
     if not isinstance(body, dict):
         raise DjiMediaContractError("request body must be an object")
     _validate_fast_ext(body.get("ext"))
-    _required_string(body, "fingerprint")
-    _required_string(body, "name")
+    _required_string(body, "fingerprint", 128)
+    _required_string(body, "name", 256)
     path = body.get("path")
-    if path is not None and not isinstance(path, str):
-        raise DjiMediaContractError("path must be a string or null")
+    if path is not None and (not isinstance(path, str) or len(path) > 512):
+        raise DjiMediaContractError("path must be a string up to 512 chars or null")
     return body
 
 
@@ -58,6 +63,10 @@ def validate_tiny_fingerprint_request(body: Any) -> list[str]:
     values = body.get("tiny_fingerprints")
     if not isinstance(values, list) or any(not isinstance(value, str) or value == "" for value in values):
         raise DjiMediaContractError("tiny_fingerprints must be a list of non-empty strings")
+    if len(values) > 1000:
+        raise DjiMediaContractError("tiny_fingerprints contains too many values")
+    if any(len(value) > 256 for value in values):
+        raise DjiMediaContractError("tiny_fingerprint is too long")
     return values
 
 
@@ -73,7 +82,7 @@ def validate_upload_callback_request(body: Any) -> dict[str, Any]:
 
     _required_string(body, "fingerprint")
     _required_string(body, "name")
-    _required_string(body, "object_key")
+    _required_string(body, "object_key", 512)
 
     sub_file_type = body.get("sub_file_type")
     if isinstance(sub_file_type, bool) or sub_file_type not in (0, 1):

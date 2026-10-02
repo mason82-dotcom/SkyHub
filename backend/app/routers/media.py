@@ -12,6 +12,7 @@ from ..dji.media_contract import (
     validate_tiny_fingerprint_request,
     validate_upload_callback_request,
 )
+from ..dji.storage_contract import DjiStorageContractError, validate_workspace_object_key
 from ..models import MediaFile
 from ..s3util import presign_get
 from ..state import hub
@@ -52,6 +53,11 @@ async def upload_callback(workspace_id: str, body: dict = Body(default_factory=d
     except DjiMediaContractError as exc:
         return fail(400, f"Ungueltiger Media-Upload-Callback: {exc}")
 
+    try:
+        validate_workspace_object_key(body["object_key"], workspace_id)
+    except DjiStorageContractError as exc:
+        return fail(400, f"Ungueltiger Media-Objektschluessel: {exc}")
+
     ext = body["ext"]
     fp = body["fingerprint"]
     if not await s.scalar(select(MediaFile.id).where(MediaFile.fingerprint == fp)):
@@ -82,6 +88,8 @@ async def group_upload_callback(workspace_id: str, body: dict = Body(default_fac
 @router.get("/api/v1/media")
 async def list_media(limit: int = 100, user: str = Depends(require_user),
                      s: AsyncSession = Depends(get_session)):
+    if limit < 1 or limit > 500:
+        return fail(400, "limit muss zwischen 1 und 500 liegen")
     rows = (await s.scalars(select(MediaFile).order_by(MediaFile.created.desc()).limit(limit))).all()
     out = []
     for m in rows:

@@ -70,13 +70,21 @@ class DjiProtocolValueError(ValueError):
 
 
 def validate_serial(value: str) -> str:
-    if not isinstance(value, str) or not SERIAL_PATTERN.fullmatch(value):
+    if (
+        not isinstance(value, str)
+        or len(value) > 64
+        or not SERIAL_PATTERN.fullmatch(value)
+    ):
         raise DjiProtocolValueError("invalid DJI serial number")
     return value
 
 
 def validate_payload_index(value: str) -> str:
-    if not isinstance(value, str) or not PAYLOAD_INDEX_PATTERN.fullmatch(value):
+    if (
+        not isinstance(value, str)
+        or len(value) > 32
+        or not PAYLOAD_INDEX_PATTERN.fullmatch(value)
+    ):
         raise DjiProtocolValueError("invalid DJI payload_index")
     return value
 
