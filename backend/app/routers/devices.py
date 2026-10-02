@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..common import fail, ok
 from ..config import settings
 from ..db import get_session
-from ..device_dict import DEFAULT_CAMERA, MODE_CODES, describe
+from ..device_dict import DEFAULT_CAMERA, MODE_CODES, describe, support_source
 from ..dji.protocol import DjiProtocolValueError, build_video_id, validate_video_quality
 from ..dji.tsa_contract import DjiTsaContractError, build_device_topology
 from ..models import Device, TelemetryPoint, utcnow
@@ -29,6 +29,7 @@ def dev_dict(d: Device) -> dict:
     if mode_code is None:
         mode_code = osd.get("mode_code")
     return {"sn": d.sn, "model_key": d.model_key, "model": name, "kind": kind,
+            "support_source": support_source(d.model_key),
             "callsign": d.callsign, "gateway_sn": d.gateway_sn,
             "online": d.sn in hub.online, "last_seen": d.last_seen.isoformat(),
             "mode": MODE_CODES.get(mode_code, None), "osd": osd,

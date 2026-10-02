@@ -47,6 +47,25 @@ SkyHub currently targets Pilot 2 / RC-based operation plus the existing
 on-premise services. Therefore the v1.16/v1.16.1 Dock-specific control
 capabilities are not enabled simply by advancing the protocol baseline.
 
+## Current product-support snapshot
+
+The official DJI Cloud API product-support page was last checked by this project
+on 2026-10-02; the page itself showed an update date of 2026-03-19.
+
+SkyHub passively recognizes the official v1.16.1 aircraft/RC/Dock identity
+enumerations currently listed there, including Matrice 400, M350 RTK, M300 RTK,
+M30/M30T, M3E/M3T/M3TA, M3D/M3TD, M4E/M4T, M4D/M4TD, RC Plus/Plus 2,
+RC Pro Enterprise, Smart Controller Enterprise and Dock 1/2/3.
+
+M3M (0-77-2) remains intentionally outside the official registry because the
+current DJI support page does not enumerate it. SkyHub keeps M3M in a separate
+real-hardware-evidence registry backed by FH-Clone captures.
+
+For aircraft with integrated cameras, the documented payload identities are
+stored as default camera IDs. Aircraft with interchangeable payloads such as
+M300 RTK, M350 RTK and Matrice 400 deliberately receive no guessed default
+camera.
+
 ## Current implementation status
 
 The following SkyHub areas are already checked against current DJI contracts:
