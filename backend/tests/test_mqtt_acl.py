@@ -57,10 +57,11 @@ class MqttAclContractTests(unittest.TestCase):
     def test_init_validates_distinct_mqtt_users_and_generates_acl(self):
         source = INIT.read_text(encoding="utf-8")
         self.assertIn('MQTT_BACKEND_USER" != "$MQTT_PILOT_USER', source)
-        self.assertIn("acl.template > mosquitto/config/acl.tmp", source)
-        self.assertIn("mv mosquitto/config/acl.tmp mosquitto/config/acl", source)
-        self.assertNotIn("'$MQTT_BACKEND_USER'", source)
-        self.assertNotIn("'$MQTT_PILOT_USER'", source)
+        self.assertIn("--env-file .env", source)
+        self.assertIn("/mosquitto/config/acl.template > /mosquitto/config/acl.tmp", source)
+        self.assertIn("mv /mosquitto/config/acl.tmp /mosquitto/config/acl", source)
+        self.assertNotIn(". ./.env", source)
+        self.assertNotIn("source .env", source)
 
 
 if __name__ == "__main__":
