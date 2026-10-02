@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyHub Leitstand</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    --paper:#e9eef2; --ink:#1b2a38; --muted:#5a6c7b; --rule:#c6d1da;
+    --mag:#a3246f; --amber:#d98e04; --ok:#2e7d4f; --bad:#b3261e;
+    --font:"Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; }
+  body { font:15px/1.35 var(--font); color:var(--ink); background:var(--paper);
+         display:grid; grid-template-columns:320px 1fr; }
+  aside { border-right:2px solid var(--ink); display:flex; flex-direction:column; min-height:0; }
+  header { padding:14px 16px 10px; border-bottom:1px solid var(--rule); }
+  header h1 { margin:0; font-size:22px; letter-spacing:.01em; }
+  header p { margin:2px 0 0; color:var(--muted); font-size:13px; }
+  nav { display:flex; border-bottom:1px solid var(--rule); }
+  nav button { flex:1; padding:9px; font:inherit; font-weight:600; background:none; border:0;
+               border-bottom:3px solid transparent; color:var(--muted); cursor:pointer; }
+  nav button[aria-selected=true] { color:var(--ink); border-bottom-color:var(--mag); }
+  .pane { overflow:auto; flex:1; }
+  .dev { padding:12px 16px; border-bottom:1px solid var(--rule); cursor:pointer; }
+  .dev:hover, .dev.sel { background:#dde5eb; }
+  .dev .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .dev b { font-size:17px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#9aa8b4; margin-right:6px; }
+  .dot.on { background:var(--ok); }
+  .dev .tele { display:grid; grid-template-columns:repeat(3,1fr); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .dev .tele span { font-size:12px; color:var(--muted); display:block; }
+  .dev .act { margin-top:8px; display:flex; gap:6px; }
+  .btn { font:inherit; font-weight:600; padding:5px 10px; border:1.5px solid var(--ink); background:#fff;
+         border-radius:4px; cursor:pointer; color:var(--ink); }
+  .btn.primary { background:var(--mag); border-color:var(--mag); color:#fff; }
+  .btn:focus-visible, input:focus-visible { outline:3px solid var(--amber); outline-offset:1px; }
+  .empty { padding:20px 16px; color:var(--muted); }
+  .item { padding:10px 16px; border-bottom:1px solid var(--rule); }
+  .item a { color:var(--mag); }
+  #map { height:100%; }
+  #video { position:fixed; right:16px; bottom:16px; width:min(560px, 46vw); aspect-ratio:16/9;
+           background:#000; border:2px solid var(--ink); z-index:1000; display:none; }
+  #video iframe { width:100%; height:100%; border:0; }
+  #video .close { position:absolute; top:6px; right:6px; z-index:2; }
+  #login { position:fixed; inset:0; background:var(--paper); display:grid; place-items:center; z-index:2000; }
+  #login form { width:320px; }
+  #login h1 { font-size:40px; margin:0 0 4px; }
+  #login label { display:block; margin:12px 0 4px; font-weight:600; }
+  #login input { width:100%; font:inherit; padding:10px; border:2px solid var(--rule); border-radius:4px; }
+  #login .btn { width:100%; margin-top:18px; padding:10px; }
+  #loginMsg { color:var(--bad); min-height:1.4em; margin-top:8px; }
+  .ac-icon svg { overflow:visible; }
+  @media (max-width:760px) { body { grid-template-columns:1fr; grid-template-rows:45vh 1fr; }
+    aside { border-right:0; border-bottom:2px solid var(--ink); order:2; } #video { width:calc(100vw - 32px); } }
+</style>
+</head>
+<body>
+<div id="login">
+  <form id="loginForm">
+    <h1>SkyHub</h1>
+    <p>Lokaler Leitstand f&uuml;r DJI Enterprise</p>
+    <label for="lu">Benutzer</label><input id="lu" autocomplete="username" required>
+    <label for="lp">Passwort</label><input id="lp" type="password" autocomplete="current-password" required>
+    <button class="btn primary">Anmelden</button>
+    <div id="loginMsg" role="alert"></div>
+  </form>
+</div>
+
+<aside>
+  <header><h1>SkyHub</h1><p id="conn">Nicht verbunden</p></header>
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-pane="pDev">Ger&auml;te</button>
+    <button role="tab" aria-selected="false" data-pane="pWl">Routen</button>
+    <button role="tab" aria-selected="false" data-pane="pMedia">Medien</button>
+  </nav>
+  <div class="pane" id="pDev"></div>
+  <div class="pane" id="pWl" hidden>
+    <div class="item"><label class="btn">KMZ hochladen<input type="file" accept=".kmz" id="kmz" hidden></label></div>
+    <div id="wlList"></div>
+  </div>
+  <div class="pane" id="pMedia" hidden></div>
+</aside>
+<div id="map"></div>
+<div id="video"><button class="btn close" id="vClose">Stream beenden</button><iframe allow="autoplay" title="Livebild"></iframe></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  var token = null, workspaceId = null, devices = {}, markers = {}, track = null, liveSn = null, selSn = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var map = L.map("map").setView([51.16, 10.45], 6);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
+
+  function api(path, opts) {
+    opts = opts || {}; opts.headers = Object.assign({ "x-auth-token": token }, opts.headers || {});
+    return fetch(path, opts).then(function (r) { return r.json(); });
+  }
+  function post(path, body) {
+    return api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  }
+  function fmt(v, d, u) { return (v === undefined || v === null) ? "&ndash;" : Number(v).toFixed(d) + u; }
+  function esc(v) {
+    return String(v === undefined || v === null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function safeHttpUrl(v) {
+    try {
+      var u = new URL(String(v || ""), location.origin);
+      return (u.protocol === "http:" || u.protocol === "https:") ? u.href : "#";
+    } catch (e) {
+      return "#";
+    }
+  }
+
+  function icon(heading, kind) {
+    var c = kind === "rc" ? "#1b2a38" : "#a3246f";
+    var svg = kind === "rc"
+      ? '<svg width="16" height="16"><rect x="2" y="2" width="12" height="12" fill="#fff" stroke="' + c + '" stroke-width="3"/></svg>'
+      : '<svg width="28" height="28" style="transform:rotate(' + (heading || 0) + 'deg)"><path d="M14 2 L24 25 L14 19 L4 25 Z" fill="' + c + '" stroke="#fff" stroke-width="1.5"/></svg>';
+    return L.divIcon({ className: "ac-icon", html: svg, iconSize: kind === "rc" ? [16, 16] : [28, 28],
+                       iconAnchor: kind === "rc" ? [8, 8] : [14, 14] });
+  }
+
+  function render() {
+    var list = Object.values(devices);
+    var html = list.length ? "" : "<p class='empty'>Noch keine Ger&auml;te. In Pilot 2 unter Cloud-Service &rarr; Offene Plattform die Adresse <b>" + esc(location.origin) + "/pilot</b> eintragen und anmelden.</p>";
+    list.sort(function (a, b) { return a.kind === b.kind ? 0 : a.kind === "aircraft" ? -1 : 1; });
+    list.forEach(function (d) {
+      var o = d.osd || {}, bat = o.battery ? o.battery.capacity_percent : o.capacity_percent;
+      var sn = esc(d.sn), model = esc(d.model);
+      html += "<div class='dev" + (d.sn === selSn ? " sel" : "") + "' data-sn='" + sn + "'>" +
+        "<div class='top'><b><span class='dot" + (d.online ? " on" : "") + "'></span>" + model + "</b><small>" + sn + "</small></div>" +
+        (d.kind === "aircraft" ?
+          "<div class='tele'><div><span>H&ouml;he</span>" + fmt(o.height, 0, " m") + "</div><div><span>Tempo</span>" + fmt(o.horizontal_speed, 1, " m/s") +
+          "</div><div><span>Akku</span>" + fmt(bat, 0, " %") + "</div></div>" +
+          "<div class='act'><button class='btn primary' data-live='" + sn + "'>Livebild</button><button class='btn' data-track='" + sn + "'>Flugspur 60 min</button></div>"
+        : "<div class='tele'><div><span>Akku</span>" + fmt(bat, 0, " %") + "</div></div>") +
+        "</div>";
+    });
+    $("pDev").innerHTML = html;
+  }
+
+  function placeMarker(sn) {
+    var d = devices[sn], o = (d && d.osd) || {};
+    if (o.latitude == null || o.longitude == null) return;
+    var ll = [o.latitude, o.longitude];
+    if (!markers[sn]) markers[sn] = L.marker(ll, { icon: icon(o.attitude_head, d.kind) }).addTo(map).bindTooltip(d.model);
+    else { markers[sn].setLatLng(ll); markers[sn].setIcon(icon(o.attitude_head, d.kind)); }
+  }
+
+  function loadDevices() {
+    return api("/api/v1/devices").then(function (j) {
+      devices = {}; (j.data || []).forEach(function (d) { devices[d.sn] = d; placeMarker(d.sn); }); render();
+    });
+  }
+
+  var renderPending = false;
+  function scheduleRender() { if (!renderPending) { renderPending = true; setTimeout(function () { renderPending = false; render(); }, 500); } }
+
+  function connectWs() {
+    api("/api/v1/ws-ticket", { method: "POST" }).then(function (ticket) {
+      if (ticket.code !== 0 || !ticket.data || !ticket.data.ws_token) {
+        throw new Error(ticket.message || "WS-Ticket fehlt");
+      }
+      var url = (location.protocol === "https:" ? "wss://" : "ws://") + location.host +
+        "/api/v1/ws?x-auth-token=" + encodeURIComponent(ticket.data.ws_token);
+      var ws = new WebSocket(url);
+      ws.onopen = function () { $("conn").textContent = "Live verbunden"; };
+      ws.onclose = function () {
+        $("conn").textContent = "Getrennt, verbinde neu...";
+        setTimeout(connectWs, 3000);
+      };
+      ws.onmessage = function (ev) {
+        var m = JSON.parse(ev.data), d = m.data || {};
+        if (m.biz_code === "device_osd" || m.biz_code === "gateway_osd") {
+          if (!devices[d.sn]) { loadDevices(); return; }
+          devices[d.sn].osd = d.host; devices[d.sn].online = true; placeMarker(d.sn); scheduleRender();
+        } else if (m.biz_code === "device_online" || m.biz_code === "device_offline") {
+          loadDevices();
+        } else if (m.biz_code === "file_uploaded") { loadMedia(); }
+      };
+    }).catch(function () {
+      $("conn").textContent = "WS-Verbindung fehlgeschlagen, neuer Versuch...";
+      setTimeout(connectWs, 3000);
+    });
+  }
+
+  function loadWaylines() {
+    api("/wayline/api/v1/workspaces/" + encodeURIComponent(workspaceId) + "/waylines?page_size=100").then(function (j) {
+      var l = (j.data && j.data.list) || [];
+      $("wlList").innerHTML = l.length ? l.map(function (w) {
+        return "<div class='item'><b>" + esc(w.name) + "</b><br><small>" + esc(w.drone_model_key) + " &middot; " + esc(new Date(w.update_time).toLocaleString("de-DE")) + "</small></div>";
+      }).join("") : "<p class='empty'>Keine Routen. KMZ aus Pilot 2 oder DJI Terra hochladen &ndash; sie erscheinen dann in Pilot 2 unter Flugrouten.</p>";
+    });
+  }
+  function loadMedia() {
+    api("/api/v1/media").then(function (j) {
+      var l = j.data || [];
+      $("pMedia").innerHTML = l.length ? l.map(function (m) {
+        return "<div class='item'><a href='" + esc(safeHttpUrl(m.url)) + "' target='_blank' rel='noopener'>" + esc(m.name) + "</a><br><small>" + esc(m.sn || "") + " &middot; " + esc(new Date(m.created).toLocaleString("de-DE")) + "</small></div>";
+      }).join("") : "<p class='empty'>Noch keine Medien. Pilot 2 l&auml;dt Fotos nach dem Flug automatisch hoch.</p>";
+    });
+  }
+
+  $("pDev").addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.dataset.live) {
+      t.disabled = true; t.textContent = "Starte...";
+      post("/api/v1/live/start", { sn: t.dataset.live }).then(function (j) {
+        t.disabled = false; t.textContent = "Livebild";
+        if (j.code !== 0) { alert(j.message); return; }
+        var playerUrl = safeHttpUrl(j.data.player_url);
+        if (playerUrl === "#") { alert("Ungueltige Player-URL"); return; }
+        liveSn = t.dataset.live; $("video").style.display = "block";
+        $("video").querySelector("iframe").src = playerUrl;
+      });
+    } else if (t.dataset.track) {
+      api("/api/v1/devices/" + t.dataset.track + "/track?minutes=60").then(function (j) {
+        if (track) map.removeLayer(track);
+        var pts = (j.data || []).map(function (p) { return [p[0], p[1]]; });
+        if (!pts.length) { alert("Keine Flugdaten in den letzten 60 Minuten."); return; }
+        track = L.polyline(pts, { color: "#d98e04", weight: 4 }).addTo(map); map.fitBounds(track.getBounds(), { padding: [40, 40] });
+      });
+    } else {
+      var row = t.closest(".dev"); if (!row) return;
+      selSn = row.dataset.sn; render();
+      if (markers[selSn]) map.setView(markers[selSn].getLatLng(), 16);
+    }
+  });
+
+  $("vClose").onclick = function () {
+    if (liveSn) post("/api/v1/live/stop", { sn: liveSn });
+    liveSn = null; $("video").style.display = "none"; $("video").querySelector("iframe").src = "about:blank";
+  };
+
+  document.querySelectorAll("nav button").forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll("nav button").forEach(function (x) { x.setAttribute("aria-selected", x === b); $(x.dataset.pane).hidden = x !== b; });
+      if (b.dataset.pane === "pWl") loadWaylines(); if (b.dataset.pane === "pMedia") loadMedia();
+    };
+  });
+
+  $("kmz").onchange = function () {
+    var f = this.files[0]; if (!f) return;
+    var fd = new FormData(); fd.append("file", f);
+    api("/api/v1/waylines/upload", { method: "POST", body: fd }).then(function (j) {
+      if (j.code !== 0) alert(j.message); loadWaylines();
+    });
+    this.value = "";
+  };
+
+  $("loginForm").onsubmit = function (e) {
+    e.preventDefault();
+    fetch("/api/v1/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: $("lu").value, password: $("lp").value }) })
+    .then(function (r) { return r.json(); }).then(function (j) {
+      if (j.code !== 0) { $("loginMsg").textContent = j.message; return; }
+      token = j.data.access_token; workspaceId = j.data.workspace_id; $("login").remove();
+      loadDevices().then(connectWs);
+    });
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+name: Backend validation
+
+on:
+  push:
+    branches:
+      - main
+      - "import/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12.8"
+      - name: Install backend dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+      - name: Shell syntax
+        run: sh -n scripts/init.sh scripts/minio-init.sh
+      - name: Compile backend
+        run: python -m compileall -q backend/app
+      - name: Unit tests
+        env:
+          PYTHONPATH: backend
+        run: python -m unittest discover -s backend/tests -p "test_*.py"
+      - name: Import application
+        working-directory: backend
+        run: python -c "import app.main"
+      - name: Prepare Compose validation environment
+        run: |
+          cat > .env <<'EOF'
+          PUBLIC_HOST=127.0.0.1
+          HTTP_PORT=8080
+          WORKSPACE_ID=e3dea0f5-37f2-4d79-ae58-490af3228069
+          WORKSPACE_NAME=CI
+          PLATFORM_NAME=SkyHub CI
+          DJI_APP_ID=ci-app-id
+          DJI_APP_KEY=ci-app-key
+          DJI_APP_LICENSE=ci-app-license
+          ADMIN_USER=admin
+          ADMIN_PASSWORD=ci-admin-password
+          JWT_SECRET=ci-jwt-secret-0123456789abcdef0123456789abcdef
+          JWT_TTL_HOURS=1
+          WS_TOKEN_TTL_SECONDS=120
+          MQTT_BACKEND_USER=backend
+          MQTT_BACKEND_PASSWORD=ci-backend-password
+          MQTT_PILOT_USER=pilot
+          MQTT_PILOT_PASSWORD=ci-pilot-password
+          POSTGRES_USER=skyhub
+          POSTGRES_PASSWORD=ci-postgres-password
+          POSTGRES_DB=skyhub
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=ci-minio-root-password
+          MINIO_BUCKET=skyhub
+          MINIO_STS_USER=pilot-uploader
+          MINIO_STS_PASSWORD=ci-minio-sts-password
+          TELEMETRY_INTERVAL_S=1.0
+          OFFLINE_TIMEOUT_S=30
+          EOF
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+      - name: Build backend container
+        run: docker compose build backend
+      - name: Generate MQTT credentials and ACL
+        run: ./scripts/init.sh
+      - name: Start Compose smoke stack
+        run: docker compose up -d --build
+      - name: Wait for backend health
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8080/healthz
+      - name: Wait for backend readiness
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8080/readyz
+      - name: Show Compose status
+        if: always()
+        run: docker compose ps
+      - name: Show Compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - name: Stop Compose smoke stack
+        if: always()
+        run: docker compose down
