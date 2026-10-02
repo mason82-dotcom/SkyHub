@@ -65,23 +65,41 @@ class DjiDemoContractTests(unittest.TestCase):
         }
         self.assertIs(validate_create_request(body), body)
 
-    def test_map_rejects_wrong_geometry_for_resource_type(self):
-        body = {
+    def test_map_create_accepts_current_optional_resource_fields(self):
+        minimal = {
+            "id": ELEMENT,
+            "name": "Leeres Element",
+            "resource": {},
+        }
+        self.assertIs(validate_create_request(minimal), minimal)
+
+        # Current DJI WebSocket examples are not fully consistent about
+        # resource.type versus geometry.type, so SkyHub preserves both values.
+        mixed = {
             "id": ELEMENT,
             "name": "Linie",
             "resource": {
-                "type": 1,
-                "content": point_content(),
+                "type": 0,
+                "content": {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[8.5, 49.1], [8.6, 49.2]],
+                    },
+                },
             },
         }
-        with self.assertRaises(DjiMapContractError):
-            validate_create_request(body)
+        self.assertIs(validate_create_request(mixed), mixed)
 
-    def test_map_update_requires_reference_shape(self):
-        body = {"name": "Neu", "content": point_content()}
-        self.assertIs(validate_update_request(body, 0), body)
-        with self.assertRaises(DjiMapContractError):
-            validate_update_request({"name": "Neu"}, 0)
+    def test_map_update_allows_name_or_content_independently(self):
+        with_name = {"name": "Neu"}
+        self.assertIs(validate_update_request(with_name, 0), with_name)
+
+        with_content = {"content": point_content()}
+        self.assertIs(validate_update_request(with_content, 0), with_content)
+
+        empty = {}
+        self.assertIs(validate_update_request(empty, 0), empty)
 
     def test_media_fast_upload_contract(self):
         body = {

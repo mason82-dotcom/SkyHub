@@ -160,3 +160,13 @@ fields. Current official DJI Pilot-to-Cloud documentation uses
 `sub_type`, and includes `user_id` plus `user_callsign` in topology
 devices. SkyHub therefore follows the current official HTTP schema here and
 does not preserve the older Demo representation.
+
+## Current-documentation override: Map elements
+
+Current DJI map schemas require `id`, `name` and `resource` for create,
+while nested resource/content fields are optional. Update allows `name` and
+`content` independently and both update/delete return an ID-shaped response.
+SkyHub therefore does not enforce older Demo-derived assumptions that every
+resource must contain a full Feature/geometry/properties object or that every
+Pilot element identifier must be a UUID. Present geometry data is still
+validated for safe numeric coordinates and bounded string fields.

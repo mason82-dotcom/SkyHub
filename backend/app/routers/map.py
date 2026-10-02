@@ -9,8 +9,8 @@ from ..dji.map_contract import (
     SHARED_GROUP_TYPE,
     shared_group_id,
     validate_create_request,
+    validate_identifier,
     validate_update_request,
-    validate_uuid,
 )
 from ..models import MapElement, utcnow
 from ..state import hub
@@ -34,7 +34,7 @@ async def element_groups(workspace_id: str, group_id: str | None = None,
     try:
         shared = shared_group_id(workspace_id)
         if group_id is not None:
-            validate_uuid(group_id, "group_id")
+            validate_identifier(group_id, "group_id", 64)
     except DjiMapContractError as exc:
         return fail(400, f"Ungueltige Map-Anfrage: {exc}")
 
@@ -52,7 +52,7 @@ async def create_element(workspace_id: str, group_id: str, body: dict = Body(def
                          user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
-        validate_uuid(group_id, "group_id")
+        validate_identifier(group_id, "group_id", 64)
         validate_create_request(body)
     except DjiMapContractError as exc:
         return fail(400, f"Ungueltiges Map-Element: {exc}")
@@ -72,7 +72,7 @@ async def update_element(workspace_id: str, element_id: str, body: dict = Body(d
                          user: str = Depends(require_workspace_user), s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
-        validate_uuid(element_id, "element_id")
+        validate_identifier(element_id, "element_id", 64)
     except DjiMapContractError as exc:
         return fail(400, f"Ungueltige Map-Anfrage: {exc}")
 
@@ -85,12 +85,14 @@ async def update_element(workspace_id: str, element_id: str, body: dict = Body(d
     except DjiMapContractError as exc:
         return fail(400, f"Ungueltiges Map-Element: {exc}")
 
-    e.name = body["name"]
-    e.resource = {**e.resource, "content": body["content"]}
+    if "name" in body:
+        e.name = body["name"]
+    if "content" in body:
+        e.resource = {**e.resource, "content": body["content"]}
     e.updated = utcnow()
     await s.commit()
     await hub.broadcast("map_element_update", {**el_dict(e), "group_id": e.group_id})
-    return ok()
+    return ok({"id": e.id})
 
 
 @router.delete(P + "/elements/{element_id}")
@@ -98,7 +100,7 @@ async def delete_element(workspace_id: str, element_id: str, user: str = Depends
                          s: AsyncSession = Depends(get_session)):
     try:
         shared = shared_group_id(workspace_id)
-        validate_uuid(element_id, "element_id")
+        validate_identifier(element_id, "element_id", 64)
     except DjiMapContractError as exc:
         return fail(400, f"Ungueltige Map-Anfrage: {exc}")
 
@@ -107,4 +109,4 @@ async def delete_element(workspace_id: str, element_id: str, user: str = Depends
         await s.delete(e)
         await s.commit()
         await hub.broadcast("map_element_delete", {"id": element_id, "group_id": e.group_id})
-    return ok()
+    return ok({"id": element_id})
