@@ -151,3 +151,12 @@ not the older Demo implementation's stronger assumptions.
 The tiny-fingerprint endpoint is documented with an array-of-strings request
 body. SkyHub accepts that shape and retains the older object wrapper only as a
 backward-compatibility input.
+
+## Current-documentation override: TSA topology
+
+The retired Demo DTO used `device_model_key` and numeric device identity
+fields. Current official DJI Pilot-to-Cloud documentation uses
+`device_model.key` and string values for `domain`, `type` and
+`sub_type`, and includes `user_id` plus `user_callsign` in topology
+devices. SkyHub therefore follows the current official HTTP schema here and
+does not preserve the older Demo representation.

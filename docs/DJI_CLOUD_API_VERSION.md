@@ -76,7 +76,8 @@ The following SkyHub areas are already checked against current DJI contracts:
 - Media fast-upload, tiny-fingerprint and upload-callback contracts, including
   the current optional ext/fingerprint/metadata fields and object-shaped
   upload-callback response;
-- TSA topology DTO structure;
+- TSA topology HTTP structure using current DJI fields (`device_model.key`,
+  string `domain/type/sub_type`, and `user_id/user_callsign`);
 - Map group/element contracts;
 - Livestream video_id/payload_index/quality contracts;
 - WPML/KMZ parsing (combined with FH-Clone validation rules);
