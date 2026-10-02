@@ -5,6 +5,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 COMPOSE = ROOT / "docker-compose.yml"
 DOCKERFILE = ROOT / "minio" / "Dockerfile"
+INIT = ROOT / "scripts" / "minio-init.sh"
 
 
 class MinioSourceBuildTests(unittest.TestCase):
@@ -36,6 +37,11 @@ class MinioSourceBuildTests(unittest.TestCase):
         dockerfile = DOCKERFILE.read_text(encoding="utf-8")
         self.assertIn("COPY --from=build /out/minio /usr/local/bin/minio", dockerfile)
         self.assertIn("COPY --from=build /out/mc /usr/local/bin/mc", dockerfile)
+
+    def test_bucket_init_uses_one_idempotent_flag_form(self):
+        source = INIT.read_text(encoding="utf-8")
+        self.assertIn('mc mb --ignore-existing "local/$MINIO_BUCKET"', source)
+        self.assertNotIn("--ignore-existing -p", source)
 
 
 if __name__ == "__main__":

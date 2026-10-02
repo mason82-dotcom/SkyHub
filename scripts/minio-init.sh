@@ -3,7 +3,7 @@ set -e
 until mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
   echo "warte auf MinIO..."; sleep 2
 done
-mc mb --ignore-existing -p "local/$MINIO_BUCKET"
+mc mb --ignore-existing "local/$MINIO_BUCKET"
 if mc admin user info local "$MINIO_STS_USER" >/dev/null 2>&1; then
   echo "MinIO user $MINIO_STS_USER existiert bereits"
 else
