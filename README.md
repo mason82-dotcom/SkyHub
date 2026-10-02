@@ -67,3 +67,17 @@ historische Referenzimplementierung. Bei Widerspruechen hat die aktuelle
 offizielle DJI-Dokumentation Vorrang.
 
 Details: `docs/DJI_CLOUD_API_VERSION.md`.
+
+
+## Betriebspruefung
+
+SkyHub stellt zwei lokale Diagnose-Endpunkte bereit:
+
+- `GET /healthz` — Prozess laeuft und meldet die aktive DJI-Cloud-API-Zielversion.
+- `GET /readyz` — Backend ist erst bereit, wenn PostgreSQL und die MQTT-Verbindung
+  zum Broker funktionieren.
+
+Die GitHub-CI validiert nicht nur Python und Docker Compose, sondern startet
+auch den Compose-Stack, erzeugt die Mosquitto-ACL und wartet auf
+`/healthz` sowie `/readyz`. Reale RC-/Pilot-2-, STS-Upload- und
+Livestream-Hardwaretests bleiben separate Abnahmeschritte.

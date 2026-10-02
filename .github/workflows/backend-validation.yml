@@ -68,3 +68,26 @@ jobs:
         run: docker compose config --quiet
       - name: Build backend container
         run: docker compose build backend
+      - name: Generate MQTT credentials and ACL
+        run: ./scripts/init.sh
+      - name: Start Compose smoke stack
+        run: docker compose up -d --build
+      - name: Wait for backend health
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8080/healthz
+      - name: Wait for backend readiness
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8080/readyz
+      - name: Show Compose status
+        if: always()
+        run: docker compose ps
+      - name: Show Compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - name: Stop Compose smoke stack
+        if: always()
+        run: docker compose down
