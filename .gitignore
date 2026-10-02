@@ -1,5 +1,6 @@
 .env
 data/
 mosquitto/config/passwd
+mosquitto/config/acl
 __pycache__/
 *.pyc
