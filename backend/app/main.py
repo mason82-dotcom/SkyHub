@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .config import settings, validate_runtime_settings
 from .db import init_db
 from .mqtt_bridge import bridge
 from .routers import auth, devices, map, media, storage, wayline, ws
@@ -17,6 +18,7 @@ STATIC = Path(__file__).parent / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_runtime_settings(settings)
     await init_db()
     tasks = [asyncio.create_task(bridge.run()), asyncio.create_task(bridge.watchdog())]
     yield
