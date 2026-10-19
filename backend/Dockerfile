@@ -1,12 +1,11 @@
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install --production
-
-COPY . .
-
+FROM node:22-alpine
+ENV NODE_ENV=production
+WORKDIR /app/backend
+COPY backend/package*.json ./
+RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+COPY backend/server.js backend/dji.js ./
+COPY backend/test ./test
+COPY frontend/public /app/frontend/public
 EXPOSE 4000
-
+USER node
 CMD ["node", "server.js"]
