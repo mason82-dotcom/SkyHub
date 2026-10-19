@@ -16,3 +16,7 @@ jobs:
           node --check backend/server.js
           node --check backend/dji.js
           node --test backend/test/*.test.js
+      - name: Validate isolated Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+      - name: Build the SkyHub Next container
+        run: docker build -f backend/Dockerfile -t skyhub-next:test .
