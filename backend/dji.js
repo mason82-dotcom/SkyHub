@@ -18,9 +18,12 @@ function model(device) {
     type: Number.isInteger(device.type) ? device.type : null,
     subType: Number.isInteger(device.sub_type) ? device.sub_type : null,
     // Pilot 2 and dock schemas differ: thing_version or version.
-    thingVersion: typeof (device.thing_version ?? device.version) === 'string' &&
-      (device.thing_version ?? device.version).length <= 32
-      ? (device.thing_version ?? device.version) : null
+    thingVersion: (() => {
+      const version = device.thing_version ?? device.version;
+      if (typeof version === 'string' && version.length <= 32) return version;
+      if (Number.isInteger(version) && version >= 0 && version < 10000) return String(version);
+      return null;
+    })()
   };
 }
 function parseTopic(topic) {
@@ -64,7 +67,8 @@ function extractTopology(data) {
     children:data.sub_devices.slice(0,100).filter(d=>d && serial(d.sn)).map(d=>({
       sn:d.sn,
       model:model(d),
-      index:typeof d.index==='string' && d.index.length<=16 ? d.index : null
+      index:(typeof d.index==='string' && d.index.length<=16) ||
+        (Number.isInteger(d.index) && d.index>=0 && d.index<1000) ? String(d.index) : null
     }))
   };
 }
