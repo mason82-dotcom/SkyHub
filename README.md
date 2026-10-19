@@ -18,7 +18,7 @@
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
-Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. MQTT_BROKER_URL, MQTT_USER und MQTT_PASSWORD an den **bestehenden** Broker anpassen; Port 1884 ist ausschließlich ein Beispiel. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports.
+Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. MQTT_BROKER_URL, MQTT_USER und MQTT_PASSWORD an den **bestehenden** Broker anpassen; Port 1884 ist ausschließlich ein Beispiel. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports.
 
 Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfiguration:
 
