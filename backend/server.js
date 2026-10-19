@@ -10,7 +10,7 @@ const {Server}=require('socket.io');
 const {parseMessage,fresh}=require('./dji');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
-if(!secret || secret.length<24){
+if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
   console.error('SKYHUB_VIEW_TOKEN (minimum 24 characters) is mandatory');
   process.exit(1);
 }
