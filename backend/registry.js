@@ -1,6 +1,7 @@
 'use strict';
 
 const { fresh } = require('./dji');
+const { resolveDeviceModel, category } = require('./catalog');
 
 function createRegistry(limit = 200) {
   const devices = new Map();
@@ -8,7 +9,8 @@ function createRegistry(limit = 200) {
   function safeDevice(d, now = Date.now()) {
     return {
       sn: d.sn, role: d.role, gatewaySn: d.gatewaySn,
-      model: d.model, topologyOnline: d.topologyOnline,
+      model: d.model, modelName: resolveDeviceModel(d.model),
+      deviceCategory: category(d.model.domain), topologyOnline: d.topologyOnline,
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
@@ -19,11 +21,13 @@ function createRegistry(limit = 200) {
     if (devices.has(sn)) return devices.get(sn);
     if (devices.size >= limit) devices.delete(devices.keys().next().value);
     const d = {
-      sn, role: 'unknown', gatewaySn: null, model: {type:null,subType:null},
+      sn, role: 'unknown', gatewaySn: null,
+      model: {domain:null,type:null,subType:null,thingVersion:null},
       topologyOnline: null, children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastByChannel: Object.create(null),
-      telemetry: { latitude:null,longitude:null,altitude:null,battery:null,heading:null }
+      telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
+        heading:null,horizontalSpeed:null,verticalSpeed:null }
     };
     devices.set(sn, d);
     return d;
