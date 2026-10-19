@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL mit PostGIS für Geodaten, Telemetrie & Medien
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: skyhub_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: skyhub
+      POSTGRES_PASSWORD: secure_local_db_password_123
+      POSTGRES_DB: skyhub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - skyhub-net
+
+  # 2. Redis 7 Alpine für In-Memory OSD Telemetrie-Caching & Pilot 2 Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: skyhub_redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel notice
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - skyhub-net
+
+  # 3. MinIO S3 Objektspeicher für KMZ-Flugpläne, R-JPEG & Multispektral-Bilder
+  minio:
+    image: minio/minio:RELEASE.2023-09-04T19-57-37Z
+    container_name: skyhub_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: skyhub_minio_admin
+      MINIO_ROOT_PASSWORD: secure_minio_password_123
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # MinIO Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - skyhub-net
+
+  # 4. EMQX MQTT 5.0 Broker für DJI IoT Thing Model
+  emqx:
+    image: emqx/emqx:5.3.0
+    container_name: skyhub_emqx
+    restart: always
+    environment:
+      - EMQX_ALLOW_ANONYMOUS=true
+      - EMQX_DEFAULT_USER_USERNAME=admin
+      - EMQX_DEFAULT_USER_PASSWORD=public
+    ports:
+      - "1883:1883"   # MQTT TCP
+      - "8883:8883"   # MQTT SSL
+      - "8083:8083"   # MQTT WebSocket
+      - "18083:18083" # EMQX Dashboard
+    networks:
+      - skyhub-net
+
+  # 5. SkyHub Backend Server
+  backend:
+    build: ./backend
+    container_name: skyhub_backend
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgres://skyhub:secure_local_db_password_123@postgres:5432/skyhub_db
+      - REDIS_URL=redis://redis:6379
+      - MQTT_BROKER_URL=mqtt://emqx:1883
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=skyhub_minio_admin
+      - S3_SECRET_KEY=secure_minio_password_123
+      - S3_BUCKET_NAME=skyhub-media
+      - DISABLE_AUTH=true  # Für lokale Netzwerke (192.168.178.*)
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - emqx
+    networks:
+      - skyhub-net
+
+volumes:
+  pgdata:
+  redis_data:
+  minio_data:
+
+networks:
+  skyhub-net:
+    driver: bridge

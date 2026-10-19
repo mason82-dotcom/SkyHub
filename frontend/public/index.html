@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyHub Enterprise Command Center v2</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; }
+        #app-header { height: 50px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #334155; }
+        #app-header h1 { font-size: 18px; margin: 0; color: #38bdf8; }
+        .status-badge { background: #16a34a; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        #main-container { display: flex; height: calc(100vh - 50px); }
+        #map-viewport { flex: 1; height: 100%; }
+        #side-panel { width: 360px; background: #1e293b; border-left: 1px solid #334155; padding: 15px; overflow-y: auto; }
+        .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .card h3 { margin-top: 0; font-size: 14px; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid #1e293b; padding-bottom: 6px; }
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+        .telemetry-val { font-size: 16px; font-weight: bold; color: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div id="app-header">
+        <h1>🚁 SkyHub Command Center v2 (Zero-Auth Local Edition)</h1>
+        <div class="status-badge">MQTT 5.0 LIVE</div>
+    </div>
+    <div id="main-container">
+        <div id="map-viewport"></div>
+        <div id="side-panel">
+            <div class="card">
+                <h3>Drohnen Telemetrie (Mavic 3 Series)</h3>
+                <div class="telemetry-grid">
+                    <div>Höhe: <div class="telemetry-val" id="tele-alt">-- m</div></div>
+                    <div>Akku: <div class="telemetry-val" id="tele-bat">-- %</div></div>
+                    <div>Breite: <div class="telemetry-val" id="tele-lat">--</div></div>
+                    <div>Länge: <div class="telemetry-val" id="tele-lng">--</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Spezial-Module (v2)</h3>
+                <p style="font-size: 12px; color: #94a3b8;">
+                    ✓ M3T Radiometrische Isothermen-Overlays<br>
+                    ✓ M3M NDVI / ISO-XML Landwirtschafts-Exporter<br>
+                    ✓ M3E WebODM Photogrammetrie-Pipeline
+                </p>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map-viewport').setView([51.1657, 10.4515], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+    </script>
+</body>
+</html>
