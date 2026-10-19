@@ -44,7 +44,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10
       <div class="tile"><small>Bekannte Geräte</small><strong id="count">0</strong></div>
       <div class="tile"><small>Frische Telemetrie</small><strong id="live">0</strong></div>
     </div>
-    <h2>DJI Geräte und Telemetrie</h2>
+    <h2>DJI Geräte · Topologie · Live-Telemetrie</h2>
     <div id="devices"><p class="muted">Mit Zugriffstoken verbinden.</p></div>
   </aside>
 </main>
@@ -70,17 +70,23 @@ function update(){
   for(const d of data){
     const card=document.createElement('div');card.className='device';
     const head=document.createElement('div');head.className='head';
-    const name=document.createElement('strong');name.textContent=d.sn;
+    const name=document.createElement('strong');
+    name.textContent=d.modelName ? d.modelName+' · '+d.sn : d.sn;
     const state=document.createElement('span');state.className='state'+(fresh(d)?'':' stale');
-    state.textContent=fresh(d)?'● Live':'● Veraltet';
+    state.textContent=fresh(d)?'● OSD frisch':d.topologyOnline===true?'● Verbunden, kein frisches OSD':'● OSD veraltet';
     head.append(name,state);card.append(head);
     const grid=document.createElement('div');grid.className='metrics';
     const t=d.telemetry||{};
-    for(const [key,value] of [['Höhe',show(t.altitude,' m')],['Akku',show(t.battery,' %')],['Breite',show(t.latitude)],['Länge',show(t.longitude)]]){
+    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],['Breite',show(t.latitude)],['Länge',show(t.longitude)]]){
       const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
       caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
     }
-    card.append(grid);root.append(card);
+    card.append(grid);
+    const meta=document.createElement('small');
+    meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
+      (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
+      (d.firmwareVersion?' · FW '+d.firmwareVersion:'');
+    card.append(meta);root.append(card);
     if(map && typeof t.latitude==='number' && typeof t.longitude==='number' &&
        Math.abs(t.latitude)<=90 && Math.abs(t.longitude)<=180){
       const pos=[t.latitude,t.longitude];
