@@ -11,6 +11,7 @@ const {parseMessage}=require('./dji');
 const {classifyMessage}=require('./message-guard');
 const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
+const {createShapeCatalog}=require('./mqtt-shape');
 const {createRegistry}=require('./registry');
 const {pilotConfiguration}=require('./pilot-config');
 const {createStatusReply}=require('./topology-ack');
@@ -39,6 +40,7 @@ const registry=createRegistry();
 let mqttConnected=false;
 let mqttSubscribed=false;
 const mqttStats=createMqttMetrics();
+const mqttShapes=createShapeCatalog();
 const topologyAckEnabled=process.env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
 const topologyAckCredentials={
   username:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'',
@@ -55,6 +57,8 @@ if(topologyAckEnabled && (!topologyAckCredentials.username ||
 let topologyAckConnected=false;
 let topologyAckSent=0;
 let topologyAckFailed=0;
+let topologyAckSkipped=0;
+let topologyAckLastAt=null;
 let topologyAckClient=null;
 
 app.disable('x-powered-by');
@@ -99,6 +103,7 @@ function onMessage(topic,payload,packet){
     const parsed=parseMessage(topic,payload);
     if(!parsed)return;
     const observedAt=Date.now();
+    mqttShapes.record(parsed,observedAt);
     const decision=classifyMessage(parsed,packet,observedAt);
     if(!decision.accept){mqttStats.rejected(decision.reason);return;}
     const result=registry.ingest(parsed,observedAt);
@@ -111,8 +116,12 @@ function onMessage(topic,payload,packet){
       if(reply && topologyAckClient && topologyAckConnected){
         topologyAckClient.publish(reply.topic,reply.payload,{qos:1,retain:false},err=>{
           if(err){topologyAckFailed++;console.error('[topology ack] publish failed');}
-          else topologyAckSent++;
+          else {topologyAckSent++;topologyAckLastAt=Date.now();}
         });
+      }else{
+        // Without status_reply Pilot 2 keeps resending update_topo and withholds OSD.
+        topologyAckSkipped++;
+        console.error('[topology ack] skipped: '+(reply?'publisher not connected':'reply validation failed'));
       }
     }
     for(const item of result.updates){
@@ -198,13 +207,16 @@ app.get('/api/health',(req,res)=>res.json({
   subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true,
   mqttBrokerPort:broker.port,topologyReplyEnabled:topologyAckEnabled,
   topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
-  topologyReplyErrors:topologyAckFailed,...mqttStats.snapshot()
+  topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
+  topologyReplyLastAt:topologyAckLastAt,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
 app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
   lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));
 app.get('/api/events',(req,res)=>res.json(registry.events()));
+// Field names per channel/method as actually received; no values or serial numbers.
+app.get('/api/diagnostics/mqtt-shapes',(req,res)=>res.json(mqttShapes.snapshot()));
 app.get('/api/drone/:sn/telemetry',(req,res)=>{
   const d=registry.get(req.params.sn);
   if(!d)return res.status(404).json({error:'Device not observed'});

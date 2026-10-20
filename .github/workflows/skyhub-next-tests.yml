@@ -25,6 +25,7 @@ jobs:
           node --check backend/dji.js
           node --check backend/mqtt-metrics.js
           node --check backend/topology-ack.js
+          node --check backend/mqtt-shape.js
           node --check frontend/public/pilot-login.js
           node --check scripts/pi-mqtt-osd-check.js
       - name: Unit tests (no broker or DJI hardware)
