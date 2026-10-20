@@ -40,13 +40,15 @@ def configured(value: str | None) -> bool:
 
 
 def replace_or_append(lines: list[str], key: str, value: str) -> list[str]:
-    pattern = re.compile(r"^\\s*" + re.escape(key) + r"\\s*=")
+    pattern = re.compile(r"^\s*" + re.escape(key) + r"\s*=")
     matching = [i for i, line in enumerate(lines) if pattern.match(line)]
     if len(matching) > 1:
         raise ValueError(f"Ambiguous duplicate key: {key}")
     if matching:
         lines[matching[0]] = key + "=" + value + "\n"
     else:
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
         lines.append(key + "=" + value + "\n")
     return lines
 
