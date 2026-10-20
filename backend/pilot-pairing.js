@@ -22,14 +22,26 @@ function createPilotPairing({store,ttlMs=300000,maxPending=5,randomBytes=crypto.
   function prune(now){
     for(const [id,item] of pending)if(item.expiresAt<=now)pending.delete(id);
   }
-  function start(userAgent,now=Date.now()){
+  // Pilot 2 loads the page twice per open and reloads it: reuse the open code of
+  // the same client, and displace the oldest unapproved code instead of locking out.
+  function start(userAgent,now=Date.now(),clientKey=null){
     prune(now);
-    if(pending.size>=maxPending)return null;
+    if(clientKey){
+      for(const [id,item] of pending){
+        if(item.clientKey===clientKey && !item.approved)
+          return {pairingId:id,code:item.code,expiresAt:item.expiresAt};
+      }
+    }
+    if(pending.size>=maxPending){
+      const oldest=[...pending].find(([,item])=>!item.approved);
+      if(!oldest)return null;
+      pending.delete(oldest[0]);
+    }
     const codes=new Set([...pending.values()].map(item=>item.code));
     let code;
     do{code=String(randomInt(0,1000000)).padStart(6,'0');}while(codes.has(code));
     const id=randomBytes(16).toString('hex');
-    const item={code,model:deviceModel(userAgent),createdAt:now,expiresAt:now+ttlMs,approved:false};
+    const item={code,model:deviceModel(userAgent),clientKey,createdAt:now,expiresAt:now+ttlMs,approved:false};
     pending.set(id,item);
     return {pairingId:id,code,expiresAt:item.expiresAt};
   }

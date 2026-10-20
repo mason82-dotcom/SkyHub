@@ -302,7 +302,10 @@
           show('unpair',true);
           return connectWithToken(result.deviceToken);
         }
+        // Pilot 2 runs a second page instance; it may already have received the token.
+        const stored=storageGet(TOKEN_KEY);
         stopPairing();
+        if(stored){show('unpair',true);return connectWithToken(stored);}
         show('pairNew',true);
         status('Kopplungscode abgelaufen. Bitte neuen Code anfordern.');
       }catch(_){pollPairing(id);}

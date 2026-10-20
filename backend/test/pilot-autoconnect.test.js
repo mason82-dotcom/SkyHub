@@ -147,3 +147,13 @@ test('fresh OSD after a SkyHub restart counts as an active session, no rebuild',
   assert.equal(page.calls.unload,0);
   assert.match(page.el('result').textContent,/Sitzung aktiv · OSD empfangen/);
 });
+
+test('second Pilot page instance uses the token its sibling already stored',async()=>{
+  const store=storage();
+  const page=await openPage({store,pairStatus:'expired'});
+  store.setItem('skyhub.pilot.deviceToken',DEVICE_TOKEN);
+  await page.timers.find(t=>t.ms===2000).callback();
+  await page.settle();
+  assert.equal(page.requests.find(r=>r.url==='/api/pilot/bootstrap').auth,'Bearer '+DEVICE_TOKEN);
+  assert.doesNotMatch(page.el('result').textContent,/abgelaufen/);
+});

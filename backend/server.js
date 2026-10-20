@@ -224,7 +224,8 @@ app.post('/api/pilot/bootstrap',async(req,res)=>{
 app.post('/api/pilot/pair',(req,res)=>{
   if(!pilotGuard(req,res))return;
   if(redis.status!=='ready')return res.status(503).json({error:'Pairing store unavailable'});
-  const started=pairing.start(req.headers['user-agent']);
+  const userAgent=String(req.headers['user-agent']||'').slice(0,300);
+  const started=pairing.start(userAgent,Date.now(),req.ip+'|'+userAgent);
   if(!started)return res.status(429).json({error:'Too many pending pairings'});
   console.log('[pilot pairing] code issued; approve with scripts/pi-pilot-pair.js');
   res.json(started);

@@ -46,10 +46,13 @@ test('approved pairing hands out the device token once and stores only its hash'
 test('pairing codes expire and pending pairings are bounded',async()=>{
   const pairing=createPilotPairing({store:memoryStore(),ttlMs:1000,maxPending:2});
   const first=pairing.start(UA,0);
-  assert.ok(pairing.start(UA,0));
-  assert.equal(pairing.start(UA,0),null);
-  assert.equal(pairing.approve(first.code,2000),false);
-  assert.equal((await pairing.poll(first.pairingId,2000)).status,'expired');
+  const second=pairing.start(UA,0);
+  // Full: the oldest unapproved code is displaced instead of locking the RC out.
+  const third=pairing.start(UA,0);
+  assert.ok(third);
+  assert.equal((await pairing.poll(first.pairingId,1)).status,'expired');
+  assert.equal(pairing.approve(second.code,2000),false);
+  assert.equal((await pairing.poll(second.pairingId,2000)).status,'expired');
   assert.ok(pairing.start(UA,2000));
   assert.equal((await pairing.poll('../../etc',2000)).status,'unknown');
 });
@@ -66,4 +69,17 @@ test('pending list and device list contain no pairing IDs or tokens; revoke work
   assert.equal(await pairing.revoke('zz'),false);
   assert.equal(await pairing.revoke(devices[0].id),true);
   assert.equal(await pairing.verify(deviceToken),null);
+});
+
+test('the same client gets its open code back on page reloads and double loads',()=>{
+  const pairing=createPilotPairing({store:memoryStore(),maxPending:2});
+  const a=pairing.start(UA,0,'192.168.178.50|'+UA);
+  const b=pairing.start(UA,1,'192.168.178.50|'+UA);
+  assert.deepEqual(b,a);
+  for(let i=0;i<10;i++)pairing.start(UA,2,'192.168.178.50|'+UA);
+  assert.equal(pairing.pending(3).length,1);
+  const other=pairing.start(UA,4,'192.168.178.51|'+UA);
+  assert.notEqual(other.code,a.code);
+  pairing.approve(a.code,5);
+  assert.notEqual(pairing.start(UA,6,'192.168.178.50|'+UA).pairingId,a.pairingId);
 });
