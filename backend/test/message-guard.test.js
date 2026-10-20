@@ -6,9 +6,10 @@ const {createRegistry}=require('../registry');
 const {classifyMessage,MAX_OSD_AGE_MS,MAX_OTHER_AGE_MS,MAX_FUTURE_SKEW_MS}=require('../message-guard');
 
 const now=1760000001000;
+const NO_TIMESTAMP=Symbol('no timestamp');
 const packet=(data,timestamp=now,channel='osd')=>{
   const env={data};
-  if(timestamp!==undefined)env.timestamp=timestamp;
+  if(timestamp!==NO_TIMESTAMP)env.timestamp=timestamp;
   return parseMessage('thing/product/AIR01/'+channel,Buffer.from(JSON.stringify(env)));
 };
 
@@ -36,7 +37,7 @@ test('non-OSD state channel allows a longer asynchronous delivery window',()=>{
 });
 
 test('timestampless historical compatibility is explicitly unverified',()=>{
-  const msg=packet({battery_percentage:30},undefined);
+  const msg=packet({battery_percentage:30},NO_TIMESTAMP);
   assert.equal(msg.timestamp,null);
   assert.deepEqual(classifyMessage(msg,{},now),{
     accept:true,reason:null,timestampVerified:false
@@ -56,7 +57,7 @@ test('out-of-order and duplicate source timestamps cannot mutate the registry',(
   assert.equal(duplicate.dropReason,'duplicate');
   assert.deepEqual([registry.get('AIR01',now+100).telemetry.latitude,
     registry.get('AIR01',now+100).telemetry.longitude],[49,8]);
-  const missing=registry.ingest(packet({latitude:52,longitude:11},undefined),now+200);
+  const missing=registry.ingest(packet({latitude:52,longitude:11},NO_TIMESTAMP),now+200);
   assert.equal(missing.dropReason,'missing_timestamp_after_verified');
 });
 
@@ -76,7 +77,7 @@ test('verified source timestamps control both OSD and GPS freshness',()=>{
 
 test('timestampless packets never claim verified source time',()=>{
   const registry=createRegistry();
-  registry.ingest(packet({latitude:49,longitude:8},undefined),now);
+  registry.ingest(packet({latitude:49,longitude:8},NO_TIMESTAMP),now);
   const d=registry.get('AIR01',now+1);
   assert.equal(d.telemetryTimeVerified,false);
   assert.equal(d.positionTimeVerified,false);
