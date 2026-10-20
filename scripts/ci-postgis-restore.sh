@@ -49,7 +49,13 @@ network="$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$CID")"
 
 ready=0
 for _ in $(seq 1 60); do
-  if docker exec "$CID" pg_isready -q -U "$TEST_USER" -d "$SOURCE_DB" >/dev/null 2>&1; then
+  # pg_isready can report the temporary initdb server before PostGIS entrypoint
+  # scripts finish, causing a concurrent CREATE EXTENSION postgis race.
+  if docker logs "$CID" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then
+    if ! docker exec "$CID" pg_isready -q -U "$TEST_USER" -d "$SOURCE_DB" >/dev/null 2>&1; then
+      sleep 1
+      continue
+    fi
     ready=1
     break
   fi
