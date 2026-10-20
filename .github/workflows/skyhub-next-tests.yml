@@ -1,0 +1,31 @@
+name: SkyHub Next unit checks
+
+on:
+  push:
+    branches:
+      - "develop/**"
+      - "feature/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax and static checks
+        run: |
+          node --check backend/server.js
+          node --check backend/dji.js
+          node --check backend/mqtt-metrics.js
+          node --check backend/topology-ack.js
+          node --check frontend/public/pilot-login.js
+          node --check scripts/pi-mqtt-osd-check.js
+      - name: Unit tests (no broker or DJI hardware)
+        run: node --test backend/test/*.test.js
