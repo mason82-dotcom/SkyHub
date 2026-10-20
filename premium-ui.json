@@ -3,5 +3,6 @@
   "sourceRoots": ["frontend/public"],
   "locale": "de-DE",
   "canonicalMap": "UX-CONTRACT.md",
-  "requiredCapabilities": ["Form"]
+  "requiredCapabilities": ["Form", "Select/Listbox"],
+  "ownership": {"Select/Listbox": "native"}
 }

@@ -13,11 +13,20 @@
 3. Eine Markerwahl markiert die zugehörige Gerätekarte und scrollt die Geräteliste zum Eintrag. Der Button in jeder passenden Gerätekarte bietet dieselbe Kartenfunktion per Tastatur.
 4. Fehlende Karte, fehlende Positionen und getrennte Live-Verbindung werden als Text angezeigt. Die Liste bleibt bei Kartenfehlern nutzbar. Historische Spurpunkte mit `(0, 0)` bleiben unsichtbar.
 5. Der Token bleibt nur im Seitenspeicher; keine URL-, Local-Storage- oder Log-Ausgabe. Der Heimnetz-Zugang ist laut Backend nur lesend.
+6. Bei überlappenden Verbindungsversuchen gilt nur der neueste Versuch; verspätete Antworten und Socket-Ereignisse älterer Versuche dürfen Anzeige und Status nicht überschreiben.
+
+## Geräteliste
+
+- Jede Karte zeigt zuerst Modell, Kennung, OSD-Zustand, Akku, relative Höhe, Position und die höchste aktive HMS-Warnung. Die vollständigen Messwerte, technischen Angaben und HMS-Einträge liegen in einer nativen Aufklappansicht. Ihr Zustand bleibt bei Telemetrie-Updates erhalten.
+- Die lokale Suche gleicht Modell, Geräte- und Gateway-Kennung sowie Rolle ab. Der native Statusfilter wirkt nur auf die Liste; Marker und „Alle Positionen zeigen“ bleiben eine Gesamtsicht. Eine Markerwahl setzt verdeckende Filter zurück und zeigt das gewählte Gerät.
+- „Aktive HMS-Warnungen“ umfasst Stufen 1 und 2, solange die HMS-Meldung frisch ist. „OSD unter 15 Sekunden“ verlangt frische OSD-Telemetrie und ein nicht getrenntes Fluggerät. Ohne Treffer werden Suche und Filter mit einem Button zurückgesetzt.
+- Such- und Filterwerte bleiben während Live-Updates im Seitenspeicher erhalten. Sie werden wegen möglicher Gerätekennungen nicht in URL oder Browser-Speicher geschrieben. Der native Filter nutzt die Popup- und Tastaturbedienung des Browsers.
 
 ## Canonical UI Map
 
 | Capability | Canonical owner | Source of truth | Allowed variants | Verification |
 | --- | --- | --- | --- | --- |
 | Form | `frontend/public/pilot-login.html` für Pilot-Kopplung; Dashboard-Token in `index.html` | `backend/pilot-pairing.js`, `backend/server.js` | Pilot-Kopplung / lesendes Dashboard | Pilot- und HTTP-Zugriffstests |
+| Select/Listbox | Nativer `<select id="deviceFilter">` in `frontend/public/index.html` | Gerätelisten-Vertrag oben | Einzelauswahl für lokalen Statusfilter | Browser: Tastatur, schmale Ansicht, Popup |
 
 Weitere Standardkomponenten entstehen erst mit einem tatsächlichen zweiten Workflow. Neue Schreibaktionen benötigen vor der UI-Umsetzung einen expliziten Rollen-, Fehler- und Bestätigungsvertrag; die lesende Karte definiert dafür keine Freigabe.

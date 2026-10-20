@@ -55,7 +55,7 @@ Bedienelemente haben 8-Pixel-Radius, Geräte- und Kennzahlkarten 10 Pixel. Die A
 
 ## Components
 
-Primäre Aktionen sind beschriftete Buttons mit Hover-, deaktiviertem und sichtbarem Tastaturfokus. Geräteaktionen erklären, dass die **letzte** Position gezeigt wird. Fehlende oder ungültige Positionen erzeugen keine Kartenaktion. Lade-, Fehler- und Leerzustände werden in Text benannt. Kartenmarker sind zusätzliche Zeiger; die Liste bleibt die Tastaturalternative. Bewegung dient nur Kartenpositionierung durch eine bewusste Nutzeraktion.
+Primäre Aktionen sind beschriftete Buttons mit Hover-, deaktiviertem und sichtbarem Tastaturfokus. Gerätekarten zeigen zunächst drei kurze Messwerte und aktive Warnungen; technische Details öffnen sich über ein natives Disclosure. Die lokale Suche hat einen eigenen Löschbutton, der Statusfilter ist ein nativer Select. Geräteaktionen erklären, dass die **letzte** Position gezeigt wird. Fehlende oder ungültige Positionen erzeugen keine Kartenaktion. Lade-, Fehler- und Leerzustände werden in Text benannt. Kartenmarker sind zusätzliche Zeiger; die Liste bleibt die Tastaturalternative. Bewegung dient nur Kartenpositionierung durch eine bewusste Nutzeraktion.
 
 ## Do's and Don'ts
 

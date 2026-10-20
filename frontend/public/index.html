@@ -11,9 +11,9 @@ header{height:66px;display:flex;align-items:center;justify-content:space-between
 h1{margin:0;font-size:20px;letter-spacing:.04em}h1 span{color:var(--blue)}small,.muted{color:var(--muted)}
 .auth{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth input{min-width:205px}
 [hidden]{display:none!important}
-input,button{padding:9px 11px;border:1px solid #40576d;border-radius:8px;background:#1b2b3d;color:white}
+input,button,select{padding:9px 11px;border:1px solid #40576d;border-radius:8px;background:#1b2b3d;color:white}
 button{background:#087d96;font-weight:700;cursor:pointer}button:hover{background:#099ab8}
-button:focus-visible,input:focus-visible{outline:2px solid #85e3fa;outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #85e3fa;outline-offset:2px}
 button:disabled{cursor:not-allowed;opacity:.6}
 main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 66px)}
 #map{width:100%;height:100%;min-height:350px}
@@ -23,25 +23,40 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 
 .map-tools button{text-align:left;font-size:12px}
 .map-note{border:1px solid var(--edge);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.35}
 aside{background:var(--panel);border-left:1px solid var(--edge);padding:14px;overflow:auto}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tile,.device{border:1px solid var(--edge);border-radius:10px;background:#14263a;padding:11px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tile,.device{border:1px solid var(--edge);border-radius:10px;background:#14263a;padding:10px}
 .device.selected{border-color:var(--blue);box-shadow:inset 3px 0 var(--blue)}
 .device .map-action{margin-top:10px;background:#203c50;color:#d9f7ff;font-size:12px}
-.tile strong{display:block;font-size:25px;margin-top:3px}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10px;color:var(--muted)}
+.device .quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:11px 0 5px}
+.quick div{min-width:0}.quick dt{font-size:11px;color:var(--muted)}.quick dd{margin:2px 0 0;font-weight:700;overflow-wrap:anywhere}
+.device details{margin-top:9px;border-top:1px solid var(--edge);padding-top:8px}
+.device summary{cursor:pointer;color:#bceafa;font-size:12px;list-style-position:inside}
+.device details[open] summary{margin-bottom:8px}
+.device .meta{display:block;margin-top:10px;line-height:1.5;overflow-wrap:anywhere}
+.warning-preview{margin:8px 0 0;color:#ffd6ad;font-size:12px;line-height:1.4}
+.finder{display:grid;gap:6px;margin:8px 0}.finder label{font-size:12px;color:var(--muted)}
+.finder-search{display:flex;gap:6px}.finder-search input{flex:1;min-width:0;width:100%}.finder-search button{background:#203c50}
+.finder-search input::-webkit-search-cancel-button{display:none}
+.finder select{width:100%}.finder-note{margin:0;color:var(--muted);font-size:11px}
+.result-count{font-size:12px;color:var(--muted);margin:0 0 9px}
+.empty-results{border:1px dashed var(--edge);border-radius:10px;padding:12px;line-height:1.5}
+.empty-results button{display:block;margin-top:9px;font-size:12px}
+.tile small{display:block;font-size:11px;line-height:1.25;min-height:28px}.tile strong{display:block;font-size:22px;margin-top:3px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8px;color:var(--muted)}
 #devices{display:grid;gap:8px}.device .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;overflow-wrap:anywhere}
+.device h3{margin:0;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
 .device .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .device .metrics strong{display:block;margin-top:2px}
 .state{font-size:12px;color:#84dfb8;white-space:nowrap}.state.stale{color:#efb77b}
-.notice{border:1px solid #655338;border-radius:8px;padding:10px;color:#dfc69f;font-size:12px;line-height:1.5;margin-bottom:12px}
+.notice{border:1px solid #655338;border-radius:8px;padding:8px 10px;color:#dfc69f;font-size:12px;line-height:1.4;margin-bottom:9px}
 #message{font-size:12px;color:var(--muted)}
-.tile.wide{grid-column:1/-1}.tile strong.alert{color:#ff8a7a}
+.tile strong.alert{color:#ff8a7a}
 .hms{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 .hms li{border-left:3px solid #6f8396;padding:4px 0 4px 8px;font-size:12px;line-height:1.4}
 .hms li.l1{border-color:#f0b84a}.hms li.l2{border-color:#ff6b5b}
 .hms li small{display:block}
 .toggle{display:flex;gap:8px;align-items:center;margin-top:9px;font-size:12px;color:var(--muted)}
 .toggle input{min-width:0;padding:0}.hms-head{margin-top:10px;font-size:12px;color:var(--muted)}
-@media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:45vh}aside{border-left:0}.map-shell{min-height:45vh}}
+@media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
 </style>
 </head>
 <body>
@@ -62,14 +77,30 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10
     </div>
   </section>
   <aside>
-    <div class="notice">Nur Monitoring. Keine Flugsteuerung. Nicht empfangene Messwerte erscheinen als —. Die Karte benötigt eine Internetverbindung.</div>
+    <div class="notice">Lesende Ansicht · keine Flugsteuerung. Fehlende Werte: —. Karte benötigt Internet.</div>
     <div class="grid">
-      <div class="tile"><small>Bekannte Geräte</small><strong id="count">0</strong></div>
-      <div class="tile"><small>Frische Telemetrie</small><strong id="live">0</strong></div>
-      <div class="tile wide"><small>Aktive HMS-Warnungen (Stufe 2)</small><strong id="hmsCount">0</strong></div>
+      <div class="tile"><small>Geräte</small><strong id="count">0</strong></div>
+      <div class="tile"><small>OSD &lt;15 s</small><strong id="live">0</strong></div>
+      <div class="tile"><small>HMS Stufe 2</small><strong id="hmsCount">0</strong></div>
     </div>
     <label class="toggle"><input type="checkbox" id="showTrack" checked> Flugspur der letzten 60 Minuten anzeigen</label>
-    <h2>DJI Geräte · Topologie · Live-Telemetrie</h2>
+    <h2>Geräte im Überblick</h2>
+    <div class="finder">
+      <label for="deviceSearch">Geräte suchen</label>
+      <div class="finder-search">
+        <input id="deviceSearch" type="search" placeholder="Modell oder Kennung" autocomplete="off">
+        <button id="clearSearch" type="button" aria-label="Gerätesuche löschen" hidden disabled>Löschen</button>
+      </div>
+      <label for="deviceFilter">Anzeigen</label>
+      <select id="deviceFilter">
+        <option value="all">Alle Geräte</option>
+        <option value="fresh">OSD unter 15 Sekunden</option>
+        <option value="warnings">Aktive HMS-Warnungen</option>
+        <option value="position">Mit Kartenposition</option>
+      </select>
+      <p class="finder-note">Karte bleibt ungefiltert.</p>
+    </div>
+    <p id="resultCount" class="result-count" role="status">0 Geräte</p>
     <div id="devices"><p class="muted">Mit Zugriffstoken verbinden.</p></div>
   </aside>
 </main>
@@ -84,7 +115,9 @@ const map=window.L?L.map('map').setView([51.1657,10.4515],6):null;
 if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'© OpenStreetMap',maxZoom:19,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
 const records=new Map(),markers=new Map(),tracks=new Map();
-let socket=null,centered=false,authToken=null,selectedSn=null;
+let socket=null,centered=false,authToken=null,selectedSn=null,connectAttempt=0;
+const expanded=new Set();
+let listState='loading',composingSearch=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
 const fresh=d=>Number.isFinite(d.lastTelemetryAt)&&Date.now()>=d.lastTelemetryAt&&Date.now()-d.lastTelemetryAt<15000;
 // HMS lists are pushed repeatedly while alerts are active; older lists are stale.
@@ -100,6 +133,17 @@ const validPosition=d=>{
     Math.abs(t.latitude)<=90&&Math.abs(t.longitude)<=180&&
     (t.latitude!==0||t.longitude!==0)&&Number.isFinite(d.lastPositionAt);
 };
+const searchText=d=>[d.modelName,d.sn,d.gatewaySn,d.role].filter(Boolean).join(' ').toLocaleLowerCase('de');
+function visibleDevice(d){
+  const query=el('deviceSearch').value.trim().toLocaleLowerCase('de');
+  if(query&&!searchText(d).includes(query))return false;
+  switch(el('deviceFilter').value){
+    case 'fresh':return fresh(d)&&d.aircraftConnected!==false;
+    case 'warnings':return activeHms(d).some(a=>Number.isInteger(a.level)&&a.level>=1);
+    case 'position':return validPosition(d);
+    default:return true;
+  }
+}
 function focusDevice(sn){
   const d=records.get(sn);
   if(!map||!d||!validPosition(d))return;
@@ -107,6 +151,18 @@ function focusDevice(sn){
   map.setView([d.telemetry.latitude,d.telemetry.longitude],Math.max(map.getZoom(),14));
   centered=true;
   update();
+}
+function revealDevice(sn){
+  const d=records.get(sn);
+  if(!d)return;
+  if(!visibleDevice(d)){
+    el('deviceSearch').value='';
+    el('deviceFilter').value='all';
+  }
+  focusDevice(sn);
+  for(const card of el('devices').querySelectorAll('.device')){
+    if(card.dataset.deviceSn===sn){card.scrollIntoView({block:'nearest'});break;}
+  }
 }
 function fitDevices(){
   if(!map)return;
@@ -120,27 +176,81 @@ function fitDevices(){
 }
 function update(){
   const data=[...records.values()].sort((a,b)=>(b.lastSeenAt||0)-(a.lastSeenAt||0));
+  const root=el('devices');
   const focusedSn=document.activeElement?.dataset?.focusSn;
+  const focusedDetailsSn=document.activeElement?.dataset?.detailsSn;
+  for(const details of root.querySelectorAll('details[data-device-sn]')){
+    if(details.open)expanded.add(details.dataset.deviceSn);
+    else expanded.delete(details.dataset.deviceSn);
+  }
   el('count').textContent=data.length;
   el('live').textContent=data.filter(fresh).length;
   const warnings=data.reduce((n,d)=>n+activeHms(d).filter(a=>a.level===2).length,0);
   el('hmsCount').textContent=warnings;
   el('hmsCount').className=warnings?'alert':'';
-  const root=el('devices');root.replaceChildren();
-  if(!data.length){const p=document.createElement('p');p.className='muted';p.textContent='Noch keine Telemetrie empfangen.';root.append(p);}
-  for(const d of data){
-    const card=document.createElement('div');card.className='device'+(selectedSn===d.sn?' selected':'');
+  for(const sn of expanded)if(!records.has(sn))expanded.delete(sn);
+  if(selectedSn&&!records.has(selectedSn))selectedSn=null;
+  const visible=data.filter(visibleDevice);
+  const queryPresent=Boolean(el('deviceSearch').value);
+  el('clearSearch').hidden=!queryPresent;
+  el('clearSearch').disabled=!queryPresent;
+  const resultText=data.length?visible.length+' von '+data.length+' '+(data.length===1?'Gerät':'Geräten'):'0 Geräte';
+  if(el('resultCount').textContent!==resultText)el('resultCount').textContent=resultText;
+  root.replaceChildren();
+  if(!data.length){
+    const p=document.createElement('p');p.className='muted';
+    p.textContent=listState==='loading'?'Lade Geräte…':listState==='auth-required'?
+      'Zugriffstoken eingeben, um Geräte zu laden.':listState==='error'?
+      'Geräte konnten nicht geladen werden. Erneut verbinden.':'Noch keine Geräte empfangen.';
+    root.append(p);
+  }else if(!visible.length){
+    const box=document.createElement('div');box.className='empty-results';
+    const p=document.createElement('p');p.textContent='Keine Geräte passen zur Suche oder zum Filter.';
+    const reset=document.createElement('button');reset.type='button';reset.textContent='Suche und Filter zurücksetzen';
+    reset.addEventListener('click',()=>{
+      el('deviceSearch').value='';el('deviceFilter').value='all';update();el('deviceSearch').focus();
+    });
+    box.append(p,reset);root.append(box);
+  }
+  for(const d of visible){
+    const card=document.createElement('article');card.className='device'+(selectedSn===d.sn?' selected':'');
     card.dataset.deviceSn=d.sn;
     const head=document.createElement('div');head.className='head';
-    const name=document.createElement('strong');
+    const name=document.createElement('h3');
     name.textContent=d.modelName ? d.modelName+' · '+d.sn : d.sn;
     const state=document.createElement('span');state.className='state'+(fresh(d)&&d.aircraftConnected!==false?'':' stale');
     state.textContent=d.aircraftConnected===false?'● Fluggerät nicht verbunden':fresh(d)?(d.telemetryTimeVerified===false?
       '● OSD empfangen · Zeit ungeprüft':'● OSD frisch'):
       d.topologyOnline===true?'● Topologie gemeldet · OSD veraltet':'● OSD veraltet';
     head.append(name,state);card.append(head);
-    const grid=document.createElement('div');grid.className='metrics';
     const t=d.telemetry||{};
+    const quick=document.createElement('dl');quick.className='quick';
+    const quickValues=[['Akku',show(t.battery,' %')],['Höhe rel.',show(t.altitude,' m')],
+      ['Position',!validPosition(d)?'fehlt':positionFresh(d)?(d.positionTimeVerified===false?'Zeit offen':'frisch'):
+        Number.isFinite(d.lastPositionAt)?Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt']];
+    for(const [label,value] of quickValues){
+      const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
+      term.textContent=label;description.textContent=value;item.append(term,description);quick.append(item);
+    }
+    card.append(quick);
+    const important=activeHms(d).filter(a=>Number.isInteger(a.level)&&a.level>=1)
+      .sort((a,b)=>b.level-a.level);
+    if(important.length){
+      const preview=document.createElement('p');preview.className='warning-preview';
+      const first=important[0];
+      preview.textContent=(HMS_LEVEL[first.level]||'HMS')+': '+
+        (first.text&&(first.text.de||first.text.en)||'Unbekannter HMS-Code')+
+        (important.length>1?' · '+(important.length-1)+' weitere':'');
+      card.append(preview);
+    }
+    const details=document.createElement('details');details.dataset.deviceSn=d.sn;details.open=expanded.has(d.sn);
+    const summary=document.createElement('summary');summary.dataset.detailsSn=d.sn;
+    summary.textContent='Messwerte und Gerätedetails';details.append(summary);
+    details.addEventListener('toggle',()=>{
+      if(!details.isConnected)return;
+      if(details.open)expanded.add(d.sn);else expanded.delete(d.sn);
+    });
+    const grid=document.createElement('div');grid.className='metrics';
     const rtk=['nicht gestartet','fixiert gerade','Fix','Fix fehlgeschlagen'];
     // Optional DJI fields are only shown when the device actually reports them.
     const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
@@ -155,29 +265,23 @@ function update(){
       const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
       caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
     }
-    card.append(grid);
+    details.append(grid);
     const meta=document.createElement('small');
+    meta.className='meta';
     meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
       (d.topologyRestored?' · Topologie aus Speicher':'')+
       (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
       (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
-      ' · GPS '+(positionFresh(d)?(d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
+      ' · GPS '+(!validPosition(d)?'keine gültige Position':positionFresh(d)?
+        (d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
         Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'nicht empfangen');
-    card.append(meta);
-    if(map&&validPosition(d)){
-      const action=document.createElement('button');action.type='button';action.className='map-action';
-      action.dataset.focusSn=d.sn;
-      action.textContent='Letzte Position auf Karte zeigen';
-      action.setAttribute('aria-label','Letzte Position von '+(d.modelName||d.sn)+' auf Karte zeigen');
-      action.addEventListener('click',()=>focusDevice(d.sn));
-      card.append(action);
-    }
+    details.append(meta);
     if(Array.isArray(d.hms)&&Number.isFinite(d.lastHmsAt)){
       const head=document.createElement('div');head.className='hms-head';
       const age=Math.max(0,Math.round((Date.now()-d.lastHmsAt)/1000));
       head.textContent=hmsFresh(d)?(d.hms.length?'HMS · '+d.hms.length+' aktiv':'HMS · keine Meldungen'):
         'HMS · Stand vor '+age+' s (veraltet)';
-      card.append(head);
+      details.append(head);
       if(hmsFresh(d)&&d.hms.length){
         const list=document.createElement('ul');list.className='hms';
         for(const a of [...d.hms].sort((x,y)=>(y.level??-1)-(x.level??-1))){
@@ -190,10 +294,22 @@ function update(){
           code.textContent=(HMS_LEVEL[a.level]||'Stufe ?')+' · '+a.code;
           item.append(code);list.append(item);
         }
-        card.append(list);
+        details.append(list);
       }
     }
+    card.append(details);
+    if(map&&validPosition(d)){
+      const action=document.createElement('button');action.type='button';action.className='map-action';
+      action.dataset.focusSn=d.sn;
+      action.textContent='Letzte Position auf Karte zeigen';
+      action.setAttribute('aria-label','Letzte Position von '+(d.modelName||d.sn)+' auf Karte zeigen');
+      action.addEventListener('click',()=>focusDevice(d.sn));
+      card.append(action);
+    }
     root.append(card);
+  }
+  for(const d of data){
+    const t=d.telemetry||{};
     if(map && validPosition(d)){
       const pos=[t.latitude,t.longitude];
       const markerColor=positionFresh(d)&&d.positionTimeVerified===true?'#47c3e7':'#748697';
@@ -206,12 +322,7 @@ function update(){
         const marker=L.circleMarker(pos,style).addTo(map);
         const safeLabel=document.createElement('span');
         marker.bindTooltip(safeLabel);markers.set(d.sn,marker);tooltips.set(d.sn,safeLabel);
-        marker.on('click',()=>{
-          focusDevice(d.sn);
-          root.querySelectorAll('.device').forEach(item=>{
-            if(item.dataset.deviceSn===d.sn)item.scrollIntoView({block:'nearest'});
-          });
-        });
+        marker.on('click',()=>revealDevice(d.sn));
       }else{
         markers.get(d.sn).setLatLng(pos);
         markers.get(d.sn).setStyle(style);
@@ -230,33 +341,49 @@ function update(){
     count?count+' '+(count===1?'Position':'Positionen')+' verfügbar · WGS84 · zuletzt gemeldet':
     'Keine gültige Position verfügbar. Gerätedaten bleiben in der Liste sichtbar.';
   if(el('mapNote').textContent!==mapMessage)el('mapNote').textContent=mapMessage;
+  if(focusedDetailsSn){for(const summary of root.querySelectorAll('summary')){
+    if(summary.dataset.detailsSn===focusedDetailsSn){summary.focus({preventScroll:true});break;}
+  }}
   if(focusedSn){for(const button of root.querySelectorAll('.map-action')){
     if(button.dataset.focusSn===focusedSn){button.focus({preventScroll:true});break;}
   }}
 }
 // token===null: token-free read-only access from the configured home network.
 async function connect(token=el('token').value.trim(),quiet=false){
-  if(token!==null && !token){el('message').textContent='Token fehlt';return false;}
-  if(socket){socket.disconnect();socket=null;}
+  if(token!==null && !token){el('message').textContent='Zugriffstoken eingeben';return false;}
+  const attempt=++connectAttempt;
+  if(socket){const previous=socket;socket=null;previous.disconnect();}
+  listState='loading';update();
   if(!quiet)el('message').textContent='Verbinde…';
   try{
     const res=await fetch('/api/devices',{headers:token?{Authorization:'Bearer '+token}:{},cache:'no-store'});
-    if(!res.ok)throw new Error('API HTTP '+res.status);
-    records.clear();for(const d of await res.json())records.set(d.sn,d);
+    if(attempt!==connectAttempt)return false;
+    if(!res.ok)throw new Error(res.status===401?'Zugriffstoken erforderlich oder ungültig':
+      res.status===403?'Zugriff verweigert':'Geräte konnten nicht geladen werden (HTTP '+res.status+')');
+    const devices=await res.json();
+    if(attempt!==connectAttempt)return false;
+    records.clear();for(const d of devices)records.set(d.sn,d);
     for(const line of tracks.values())line.remove();tracks.clear();
     selectedSn=null;centered=false;
+    listState='ready';
     update();
     authToken=token;
     loadTracks();
     const label=token?'Live verbunden':'Live verbunden (Heimnetz)';
-    socket=io({auth:token?{token}:{},reconnectionDelayMax:5000});
-    socket.on('connect',()=>{el('message').textContent=label;});
-    socket.on('connect_error',()=>{el('message').textContent='WebSocket nicht verbunden';});
-    socket.on('disconnect',()=>{el('message').textContent='Verbindung getrennt';});
-    socket.on('snapshot',list=>{records.clear();for(const d of list)records.set(d.sn,d);update();});
-    socket.on('device_update',d=>{records.set(d.sn,d);update();});
+    const current=io({auth:token?{token}:{},reconnectionDelayMax:5000});
+    socket=current;
+    current.on('connect',()=>{if(socket===current)el('message').textContent=label;});
+    current.on('connect_error',()=>{if(socket===current)el('message').textContent='WebSocket nicht verbunden';});
+    current.on('disconnect',()=>{if(socket===current)el('message').textContent='Verbindung getrennt';});
+    current.on('snapshot',list=>{if(socket!==current)return;records.clear();for(const d of list)records.set(d.sn,d);update();});
+    current.on('device_update',d=>{if(socket!==current)return;records.set(d.sn,d);update();});
     return true;
-  }catch(err){if(!quiet)el('message').textContent=err.message;return false;}
+  }catch(err){
+    if(attempt!==connectAttempt)return false;
+    listState=quiet?'auth-required':'error';update();
+    if(!quiet)el('message').textContent=err.message;
+    return false;
+  }
 }
 // Persisted track (PostGIS, movement-filtered, no 0/0) for devices with a known position.
 async function loadTracks(){
@@ -284,12 +411,21 @@ async function loadTracks(){
 }
 el('showTrack').addEventListener('change',loadTracks);
 el('fitDevices').addEventListener('click',fitDevices);
+el('deviceSearch').addEventListener('compositionstart',()=>{composingSearch=true;});
+el('deviceSearch').addEventListener('compositionend',()=>{composingSearch=false;update();});
+el('deviceSearch').addEventListener('input',()=>{if(!composingSearch)update();});
+el('clearSearch').addEventListener('click',()=>{
+  el('deviceSearch').value='';update();el('deviceSearch').focus();
+});
+el('deviceFilter').addEventListener('change',update);
 setInterval(()=>{if(socket)loadTracks();},30000);
 el('connect').addEventListener('click',()=>connect());
 el('connect').disabled=false;
 el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
 // In the home network the dashboard opens without a token; elsewhere the field stays.
+const initialAttempt=connectAttempt+1;
 connect(null,true).then(ok=>{
+  if(connectAttempt!==initialAttempt)return;
   if(ok){el('token').hidden=true;el('connect').hidden=true;}
   else el('message').textContent='Nicht verbunden';
 });
