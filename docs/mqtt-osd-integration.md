@@ -57,6 +57,26 @@ Pilot credentials stay in WebView memory only; `thingGetConfigs()` is never call
 - `state`: `dongle_infos`
 - `status/update_topo`: `domain, type, sub_type, thing_version, sub_devices, device_secret, nonce` (secrets are never stored)
 
+### Restart test 2026-10-20: Pilot 2 and RC restarted after pairing
+
+Setup: RC Pro Enterprise paired (device token), Mavic 3M on, EMQX hardened (authentication + `{deny, all}` ACL), topology acknowledgement enabled. Evidence from the Caddy access log, `emqx ctl clients list`, broker metrics and the SkyHub health/events API:
+
+| Time (CEST) | Event |
+|---|---|
+| 22:54:24 | Last Pilot page open before the restart: bootstrap with the stored device token, no pairing code |
+| 22:55:39 | Last OSD; the RC goes offline (Pilot/RC restart) |
+| 22:56:47 | RC reconnects to EMQX with the Pilot account; all 14 subscriptions granted |
+| 22:56:50-51 | 3 × `update_topo`, each acknowledged with `status_reply` |
+| from 22:56:52 | OSD from RC and Mavic 3M fresh again; live topology (not restored) with the aircraft as child; 8 HMS alerts active |
+
+Findings:
+- **Pilot 2 restores the cloud connection on its own.** No request to `/pilot-login` or `/api/pilot/*` after 22:54:24: Pilot keeps the thing module configuration and MQTT credentials across restarts. The pairing page is only needed for first setup or after the cloud module was unloaded.
+- No new pairing code; the device stays paired.
+- Broker hardening holds: authentication successes 112 → 113 (the RC), 0 failures, no authorization denials.
+- Outage from last OSD to first acknowledged topology: about 70 s.
+
+Still untested on hardware: the in-flight (`_in_the_sky`) HMS texts.
+
 ## Device-side JSBridge diagnostics
 
 The DJI Pilot 2 login page now includes **DJI-Status prüfen**.

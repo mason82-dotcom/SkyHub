@@ -348,3 +348,13 @@ brauchen das Token. Akzeptiert werden nur private Netze von /16 bis /32
 außerhalb der Docker-Bereiche (172.16.0.0/12). Leer lassen, um das Token immer
 zu verlangen. Die Kartenkacheln senden einen Referer
 (`strict-origin-when-cross-origin`), wie es die OSM-Nutzungsregeln verlangen.
+
+## Neustart-Test (20.10.2026)
+
+Nach einem Neustart von Pilot 2 und RC hat sich die gekoppelte RC ohne neuen
+Kopplungscode und ohne Öffnen der Cloud-Seite selbst wieder mit EMQX verbunden
+(Anmeldung mit Passwort, alle Abos genehmigt). Ihre Topologie wurde sofort
+bestätigt, OSD von RC und Mavic 3M lief nach rund 70 s wieder. Pilot 2 behält
+die Cloud-Verbindung samt Zugangsdaten über Neustarts; die Pilot-Seite ist nur
+für die Ersteinrichtung nötig. Details:
+[MQTT/OSD-Integration](docs/mqtt-osd-integration.md#restart-test-2026-10-20-pilot-2-and-rc-restarted-after-pairing).
