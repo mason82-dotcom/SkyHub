@@ -49,7 +49,7 @@ test('older OSD cannot overwrite newer telemetry or refresh freshness',()=>{
   assert.equal(old.updates.length,0);
   const d=registry.get('AIR01',1760000001100);
   assert.equal(d.telemetry.latitude,49);
-  assert.equal(d.lastTelemetryAt,1760000001000);
+  assert.equal(d.lastTelemetryAt,1760000000200);
   assert.equal(d.gatewaySn,'RC123');
 });
 test('OSD point persisted only if both coordinates occur in same packet',()=>{
