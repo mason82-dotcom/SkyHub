@@ -82,7 +82,7 @@ test('isolated PostgreSQL CAS, group lock, workspace boundaries and atomic audit
     // Audit failure must abort element insert, not commit a partial write.
     await client.query(
       "CREATE FUNCTION reject_audit() RETURNS trigger LANGUAGE plpgsql AS "+
-      "$$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$");
+      "$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END; $");
     await client.query(
       'CREATE TRIGGER reject_audit BEFORE INSERT ON dji_map_element_audit '+
       'FOR EACH ROW EXECUTE FUNCTION reject_audit()');
