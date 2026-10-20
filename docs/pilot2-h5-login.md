@@ -83,6 +83,52 @@ dem gesonderten Start von SkyHub Next sinnvoll. Der bisherige Endpunkt
 `http://192.168.178.63:4000/pilot-login` bleibt unverändert und
 liefert weiterhin `Cannot GET`, solange die alte App dort läuft.
 
+## Caddy-TLS-Ausgangslage (20.10.2026)
+
+Die Pi-Diagnose weist `caddy v2.11.4` im Host-Netzwerk nach, mit
+Listenern `:443` und `:9443`. Ein expliziter Host ist
+`rpi5.fritz.box`; die Zertifikatsautomatisierung verwendet den
+`internal`-Issuer (Caddy Local Authority).
+
+**Achtung:** Das Zertifikat der privaten Caddy-CA ist auf der DJI-RC
+nicht automatisch vertrauenswürdig. Dass HTTPS-Port 443 lauscht und
+das Zertifikat auf dem Pi akzeptiert wird, belegt nicht die erfolgreiche
+Validierung durch DJI Pilot 2. Android WebView und System-Trust-Store
+können abweichen. DJI dokumentiert generell eine H5-HTTPS-Seite;
+Cloud-API-1.18-Hardwareverhalten ist vor produktivem Betrieb zu prüfen.
+
+Lesender Zertifikatstest auf dem Raspberry Pi:
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git pull --ff-only
+bash scripts/pi-tls-audit.sh rpi5.fritz.box 192.168.178.63 443
+```
+
+Das Skript zeigt ausschließlich Subject, Issuer, Gültigkeitszeitraum
+und Subject Alternative Names des bereits servierten Zertifikats sowie
+die **Pi-seitige** `curl`-Trust-Prüfung. Es liest keine privaten
+Schlüssel, übermittelt keine Lizenzen, schreibt keine Caddyfile und
+benutzt ausdrücklich nicht `curl -k`.
+
+**Empfohlene Betriebsvariante:** Sofern eine eigene öffentliche DNS-Domain
+vorhanden ist, einen eigenen SkyHub-Hostnamen mit einem öffentlich
+vertrauenswürdigen Zertifikat verwenden, z. B. durch ACME DNS-01 und
+Split-DNS im LAN. DNS-01 muss den Caddy-Dienst nicht automatisch ins
+Internet freigeben. Ein eigener öffentlicher DNS-Name wurde bisher
+nicht bestätigt; deshalb darf keine Beispiel-Domain als funktionierende
+Adresse übernommen werden.
+
+Ohne eigene Domain kann eine interne CA grundsätzlich verwendet werden,
+aber nur nach explizitem Vertrauensnachweis in der tatsächlich verwendeten
+DJI-Pilot-2-Webview. Ein bloßes Installieren des Root-Zertifikats im
+Android-Benutzerspeicher ist **kein Garant**, dass die Webview es
+akzeptiert.
+
+Keinen Caddy-Reload oder Eingriff in bestehende Dienste vornehmen,
+bevor eine konkrete Domain, TLS-Vertrauenskette und isolierte Reverse-
+Proxy-Route freigegeben sind. MQTT bleibt separat auf `1884`.
+
 ## Offene Hardwarevalidierung
 
 - DJI Pilot 2: Firmware- und modellabhängige JSBridge-Callback-Signatur
