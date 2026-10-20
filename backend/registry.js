@@ -14,7 +14,9 @@ function createRegistry(limit = 200) {
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
-      fresh: fresh(d.lastTelemetryAt, now), telemetry: { ...d.telemetry }
+      lastPositionAt: d.lastPositionAt,
+      fresh: fresh(d.lastTelemetryAt, now),
+      positionFresh: fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry }
     };
   }
   function ensure(sn) {
@@ -25,7 +27,8 @@ function createRegistry(limit = 200) {
       model: {domain:null,type:null,subType:null,thingVersion:null},
       topologyOnline: null, children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
-      lastTelemetryAt: null, lastByChannel: Object.create(null),
+      lastTelemetryAt: null, lastPositionAt: null,
+      lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
         heading:null,horizontalSpeed:null,verticalSpeed:null }
     };
@@ -53,7 +56,16 @@ function createRegistry(limit = 200) {
     if (message.telemetry) {
       const values = Object.entries(message.telemetry).filter(([,v]) => v !== null);
       if (values.length) {
-        for (const [key, value] of values) d.telemetry[key] = value;
+        // A GPS fix is atomic: never synthesize coordinates from separate OSD packets.
+        // Other readings can be merged individually without changing GPS age.
+        for (const [key, value] of values) {
+          if (key !== 'latitude' && key !== 'longitude') d.telemetry[key] = value;
+        }
+        if (message.telemetry.latitude !== null && message.telemetry.longitude !== null) {
+          d.telemetry.latitude = message.telemetry.latitude;
+          d.telemetry.longitude = message.telemetry.longitude;
+          d.lastPositionAt = now;
+        }
         d.lastTelemetryAt = now;
       }
       // Both coordinates must be present in the SAME genuine OSD packet.
