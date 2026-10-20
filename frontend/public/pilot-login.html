@@ -20,8 +20,9 @@
     input{width:100%;padding:12px 14px;border:1px solid #64748b;border-radius:8px;background:#0b1527;color:white;font-size:16px}
     button{border:0;border-radius:8px;padding:12px 20px;background:#38bdf8;color:#071321;font-size:16px;font-weight:700;margin-top:14px}
     button:disabled{background:#627083;color:#e2e8f0;opacity:.65}
-    button[hidden]{display:none}
+    button[hidden],.warning[hidden]{display:none}
     #result{white-space:pre-wrap;overflow-wrap:anywhere;color:#d7e5f4;min-height:50px;font-size:14px}
+    #diagnostics{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;color:#b9cbe0;font-family:inherit;font-size:12px;line-height:1.4;}
     .warning{color:#ffda85}
 
 /* SKYHUB_DJI_COMPACT_V1 */
@@ -104,6 +105,8 @@ main > p.detail:last-child {
     <input id="access" type="password" autocomplete="off" spellcheck="false" placeholder="Pilot-Zugangstoken eingeben">
     <button id="start" type="button" disabled>DJI Cloud verbinden</button>
     <button id="retry" type="button" hidden disabled>MQTT erneut verbinden</button>
+    <button id="diagnose" type="button">DJI-Status prüfen</button>
+    <pre id="diagnostics" aria-label="DJI-Statusdiagnose"></pre>
     <p class="warning" id="security">Die Übermittlung der Zugangsdaten erfordert HTTPS.</p>
     <p id="result" role="status" aria-live="polite"></p>
   </section>
