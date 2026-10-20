@@ -14,16 +14,48 @@ Differences intentionally preserved:
 - Pilot 2 is configured only through the existing authenticated HTTPS `POST /api/pilot/bootstrap`.
 - DJI Cloud API message guards, topic allowlists, timestamp checks and GPS integrity tests continue to apply.
 
-## Pilot 2 connection sequence
+## Pilot 2 connection sequence (handshake)
 
-1. Authenticate the SkyHub Pilot page using the existing access token.
-2. `platformVerifyLicense`, `platformSetWorkspaceId`, `platformSetInformation`.
-3. `platformLoadComponent('thing', ...) ` asks DJI Pilot 2 to load/configure MQTT.
-4. Evaluate the actual `thingGetConnectState()` result, including a JSON-string result of the form `{"code":0,"data":false}`.
-5. When disconnected or indeterminate, the operator may select **MQTT erneut verbinden**, which explicitly invokes `thingConnect(username, password, callback)` once.
-6. A successful Bridge return only means the request was accepted. **Only a positive subsequent state check** can confirm Pilot's self-reported connection; current broker observations and fresh OSD are separate evidence.
+Reconstructed from the Caddy access log, EMQX client list and SkyHub counters on 2026-10-20:
 
-The retry button does not run an automatic reconnect loop. Pilot credentials are kept only in the active WebView memory for the explicit retry and discarded when a positive state is confirmed. Nothing is written to browser storage.
+1. Pilot 2 opens `https://rpi5.fritz.box/pilot-login` (Caddy routes `/pilot-login*` and `/api/pilot/*` to 4001).
+2. The page calls `GET /api/pilot/status`, then `POST /api/pilot/bootstrap` (Bearer token) for DJI app credentials and the Pilot MQTT login.
+3. JSBridge: `platformVerifyLicense` → `platformSetWorkspaceId` → `platformSetInformation` → `platformLoadComponent('thing', {host, username, password, connectCallback})`.
+4. Pilot 2 opens an MQTT session (client ID = RC serial), subscribes to its reply/service topics and publishes `update_topo` on `sys/product/{sn}/status`.
+5. **SkyHub must answer `sys/product/{sn}/status_reply` with `result: 0`.** Only after that did the RC Pro publish OSD (observed: reply at 22:07:54, first OSD 2 s later, ~0.5 Hz).
+
+Problems found and fixed:
+- **No reply → no OSD.** `update_topo` was repeated and then the RC fell silent while the MQTT session stayed open. Fixed by enabling the topology publisher.
+- **Reloading `thing` on an open session does nothing.** A second bootstrap at 21:59 did not create a new MQTT session and therefore no new `update_topo`; an unacknowledged session stayed stuck.
+- **Pilot 2 reloads the page ~12 s after each bootstrap.** The old page then waited for the manual token again, so every open required typing it.
+
+### Device pairing instead of a manual token
+
+The page now pairs each RC once:
+1. Unpaired RC: the page calls `POST /api/pilot/pair` and shows a 6-digit code.
+2. On the Pi: `node scripts/pi-pilot-pair.js 123456` (or list with no argument). Approval goes to `/api/pilot-admin/*`, which requires the view token and is **not** routed by Caddy (loopback/SSH tunnel only).
+3. The RC polls `GET /api/pilot/pair/{id}` and receives its own 256-bit device token **once**. It is kept in the Pilot WebView `localStorage` (as in DJI's demo auto-login); the server stores only its SHA-256 hash in Redis (`skyhub:pilot:devices`).
+4. Every later open runs the handshake automatically with the device token. Revoke with `node scripts/pi-pilot-pair.js --revoke <id>`; the page then discards the token and shows a new code.
+
+Pairing codes expire after 5 minutes, at most 5 are pending, start/poll require HTTPS. The shared `SKYHUB_PILOT_ACCESS_TOKEN` remains as a manual fallback under "Manuell mit Zugangstoken verbinden" and is never stored.
+
+### Idempotent handshake
+
+On every open the page:
+- verifies the license only if `platformIsVerified()` is not already true;
+- sets workspace and platform information (idempotent);
+- loads `thing` only if it is not loaded;
+- if loaded and disconnected: one automatic `thingConnect`, at most once per minute across reloads;
+- if loaded and connected: asks `GET /api/pilot/session?gateway={rc_sn}` (device token) whether SkyHub acknowledged this RC's topology or receives fresh OSD from it. If neither holds after 15 s, it rebuilds the cloud session once (`platformUnloadComponent('thing')` + load), at most once per 10 minutes, so Pilot 2 publishes a fresh `update_topo`. A manual **Cloud-Sitzung neu aufbauen** button covers later cases.
+
+Pilot credentials stay in WebView memory only; `thingGetConfigs()` is never called.
+
+### Observed RC Pro Enterprise payloads
+
+`GET /api/diagnostics/mqtt-shapes` on the live RC (no aircraft):
+- `osd`: `app_version, capacity_percent, height, latitude, longitude, wireless_link`
+- `state`: `dongle_infos`
+- `status/update_topo`: `domain, type, sub_type, thing_version, sub_devices, device_secret, nonce` (secrets are never stored)
 
 ## Device-side JSBridge diagnostics
 

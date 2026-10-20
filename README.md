@@ -283,3 +283,16 @@ Lage, Home-Distanz, Restflugzeit, RC-Funkqualität.
 und hat `{allow, all}` als ACL. Die vorgesehene Publish-only-Beschränkung des
 Topologie-Publishers wird dadurch noch nicht durchgesetzt. Details und
 Vorgehen: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
+
+**Ergebnis nach Aktivierung der Topologie-Bestätigung (22:07):** Die RC Pro
+sendet OSD (Akku, Position, Ellipsoidhöhe, Funkqualität), frisch und zeitlich
+verifiziert.
+
+## Pilot 2 ohne manuelles Token
+
+Die Seite `/pilot-login` koppelt jede RC einmalig: Sie zeigt einen 6-stelligen
+Code, der auf dem Pi mit `node scripts/pi-pilot-pair.js <code>` bestätigt
+wird. Danach verbindet sich die RC bei jedem Öffnen automatisch, lädt das
+Cloud-Modul nur bei Bedarf und baut eine unbestätigte Sitzung selbst neu auf.
+Übersicht und Widerruf: `node scripts/pi-pilot-pair.js` bzw. `--revoke <id>`.
+Details: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md#pilot-2-connection-sequence-handshake).
