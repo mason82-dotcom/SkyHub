@@ -143,3 +143,38 @@ test('DJI Bridge error messages cannot expose vendor-supplied secrets in status'
   assert.match(pilot.el('result').textContent,/DJI Bridge-Code 401/);
   assert.doesNotMatch(pilot.el('result').textContent,/PRIVATE_KEY_SHOULD_NOT_DISPLAY/);
 });
+
+test('diagnostics distinguishes license verification, thing module, and MQTT state',async()=>{
+  const pilot=await createPilot();
+  pilot.bridge.platformIsVerified=()=>JSON.stringify({code:0,data:true});
+  pilot.bridge.platformIsComponentLoaded=name=>{
+    assert.equal(name,'thing');
+    return JSON.stringify({code:0,data:true});
+  };
+  pilot.el('diagnose').listeners.click();
+  const details=pilot.el('diagnostics').textContent;
+  assert.match(details,/DJI-Lizenz geprüft: ja/);
+  assert.match(details,/Thing-Modul geladen: ja/);
+  assert.match(details,/MQTT verbunden \(DJI\): nein/);
+});
+
+test('diagnostics redacts vendor errors and never reads thingGetConfigs credentials',async()=>{
+  const pilot=await createPilot();
+  let configReads=0;
+  pilot.bridge.platformIsVerified=()=>JSON.stringify({
+    code:32,data:true,message:'SECRET_VENDOR_MESSAGE'
+  });
+  pilot.bridge.platformIsComponentLoaded=()=>true;
+  pilot.bridge.thingGetConfigs=()=>{configReads++;return 'SECRET_MQTT_PASSWORD';};
+  pilot.el('diagnose').listeners.click();
+  const details=pilot.el('diagnostics').textContent;
+  assert.match(details,/DJI-Lizenz geprüft: DJI-Fehlercode 32/);
+  assert.match(details,/Thing-Modul geladen: ja/);
+  assert.equal(configReads,0);
+  assert.doesNotMatch(details,/SECRET_VENDOR_MESSAGE|SECRET_MQTT_PASSWORD/);
+});
+
+test('HTTPS advisory hidden on secure Pilot 2 page',async()=>{
+  const pilot=await createPilot();
+  assert.equal(pilot.el('security').hidden,true);
+});
