@@ -17,6 +17,12 @@
 7. Der Flugspur-Schalter zeigt direkt darunter den Zustand des lesenden 60-Minuten-Abrufs: Laden, sichtbare Spuren, keine gespeicherte Spur oder Abruffehler. Eine sichtbare Linie benötigt mindestens zwei gültige Punkte. Nach einem Fehler bleiben vorhandene Linien sichtbar und „Erneut laden“ bietet einen direkten Wiederholungsweg.
 8. Ausschalten und ein neuer Verbindungsversuch brechen laufende Spurabrufe ab und entfernen bisherige Linien. Verspätete Antworten dürfen weder Linien noch Status eines neueren Abrufs überschreiben. Der regelmäßige Abruf aktualisiert den Status bei Erfolg oder Fehler, ohne jeden Zwischenabruf anzukündigen.
 
+## Datenpfad-Diagnose
+
+- Der zugeklappte Block „Datenpfad“ nutzt ausschließlich den öffentlichen, aggregierten Health-Endpunkt. Seine Kurzzeile und die Details unterscheiden MQTT-Verbindung, Abonnement, beobachtete DJI-OSD-Pakete und tatsächlich übernommene Messwerte. Eine MQTT-Verbindung allein meldet keine aktive Telemetrie.
+- Der Spurspeicher nennt getrennt „nicht konfiguriert“, „Datenbank noch nicht bereit“, den letzten fehlgeschlagenen Schreibversuch oder bestätigte Spurpunkte seit Backend-Start. „Bereit“ ohne bestätigten Punkt ist kein Nachweis einer gespeicherten Flugspur.
+- Der Abruf läuft beim Laden und alle 30 Sekunden; „Jetzt prüfen“ wiederholt ihn manuell. Bei Abruffehlern werden frühere Erfolgsmeldungen durch „Diagnose nicht erreichbar“ und unbekannte Detailwerte ersetzt. Zeiten sind relativ und beziehen sich auf Backend-Ereignisse, nicht auf die DJI-Quellzeit.
+
 ## Geräteliste
 
 - Jede Karte zeigt zuerst Modell, Kennung, OSD-Zustand, Akku, relative Höhe, Position und die höchste aktive HMS-Warnung. Die vollständigen Messwerte, technischen Angaben und HMS-Einträge liegen in einer nativen Aufklappansicht. Ihr Zustand bleibt bei Telemetrie-Updates erhalten.

@@ -43,6 +43,12 @@ verwertbaren, vom Registry übernommenen OSD-Messwert. Diese drei Zustände
 sind ausdrücklich **nicht** gleichzusetzen. Die Zähler der Health-API
 enthalten keine Seriennummern, Nutzdaten oder Anmeldedaten.
 
+Das Dashboard zeigt diese Trennung im kompakten, aufklappbaren Block
+„Datenpfad“. Dort bedeutet „DJI-OSD beobachtet“ zunächst nur ein Paket auf
+einem erkannten OSD-Topic; „Messwert übernommen“ setzt einen verwertbaren
+Registry-Update voraus. Der Spurspeicher meldet bestätigte Schreibvorgänge
+seit Backend-Start getrennt von bloßer Datenbankbereitschaft.
+
 ### ARM64-PostGIS auf dem Raspberry Pi
 
 Der Pi benötigt das lokale PostGIS-Image aus

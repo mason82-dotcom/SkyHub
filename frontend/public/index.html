@@ -59,6 +59,12 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .track-feedback{display:flex;align-items:center;gap:7px;margin-top:5px;font-size:11px;color:var(--muted)}
 .track-feedback span{flex:1;line-height:1.35}.track-feedback.error{color:#efb77b}
 .track-feedback button{padding:3px 7px;font-size:11px;background:#203c50}
+.health-panel{margin-top:9px;border:1px solid var(--edge);border-radius:8px;background:#14263a;padding:7px 9px;font-size:12px}
+.health-panel summary{cursor:pointer;color:#bceafa;line-height:1.4}
+.health-panel[open] summary{margin-bottom:8px}
+.health-panel dl{display:grid;grid-template-columns:auto 1fr;gap:5px 9px;margin:0;line-height:1.4}
+.health-panel dt{color:var(--muted)}.health-panel dd{margin:0;overflow-wrap:anywhere}
+.health-panel button{margin-top:9px;padding:4px 8px;font-size:11px;background:#203c50}
 @media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
 </style>
 </head>
@@ -86,6 +92,16 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <div class="tile"><small>OSD &lt;15 s</small><strong id="live">0</strong></div>
       <div class="tile"><small>HMS Stufe 2</small><strong id="hmsCount">0</strong></div>
     </div>
+    <details class="health-panel">
+      <summary>Datenpfad · <span id="healthSummary" role="status">wird geprüft</span></summary>
+      <dl>
+        <dt>MQTT</dt><dd id="healthMqtt">—</dd>
+        <dt>DJI-OSD</dt><dd id="healthOsd">—</dd>
+        <dt>Messwerte</dt><dd id="healthTelemetry">—</dd>
+        <dt>Spurspeicher</dt><dd id="healthStorage">—</dd>
+      </dl>
+      <button id="checkHealth" type="button" disabled>Jetzt prüfen</button>
+    </details>
     <label class="toggle"><input type="checkbox" id="showTrack" checked> Flugspur der letzten 60 Minuten anzeigen</label>
     <div id="trackFeedback" class="track-feedback"><span id="trackStatus" role="status">Flugspur wird nach Verbindung geladen.</span><button id="retryTracks" type="button" hidden disabled>Erneut laden</button></div>
     <h2>Geräte im Überblick</h2>
@@ -121,6 +137,7 @@ if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 const records=new Map(),markers=new Map(),tracks=new Map();
 let socket=null,centered=false,authToken=null,selectedSn=null,connectAttempt=0;
 let trackLoadId=0,trackController=null;
+let healthController=null;
 const expanded=new Set();
 let listState='loading',composingSearch=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
@@ -409,6 +426,61 @@ function removeTrack(sn){
   const line=tracks.get(sn);
   if(line){line.remove();tracks.delete(sn);}
 }
+function healthAge(value){
+  if(!Number.isFinite(value)||value<=0)return 'noch nicht';
+  const seconds=Math.floor((Date.now()-value)/1000);
+  if(seconds< -5)return 'Zeit unklar';
+  if(seconds<60)return 'vor '+Math.max(0,seconds)+' s';
+  if(seconds<3600)return 'vor '+Math.floor(seconds/60)+' min';
+  if(seconds<86400)return 'vor '+Math.floor(seconds/3600)+' h';
+  return 'vor '+Math.floor(seconds/86400)+' Tagen';
+}
+function renderHealth(data){
+  const observed=healthAge(data.mqttLastObservedOsdAt);
+  const telemetry=healthAge(data.mqttLastTelemetryAt);
+  el('healthMqtt').textContent=!data.mqtt?'Getrennt':data.subscribed?'Verbunden · abonniert':
+    'Verbunden · Abonnement offen';
+  el('healthOsd').textContent=observed==='noch nicht'?'Noch kein OSD-Paket beobachtet':
+    'Paket '+observed+' beobachtet';
+  el('healthTelemetry').textContent=telemetry==='noch nicht'?'Noch kein Messwert übernommen':
+    'Messwert '+telemetry+' übernommen';
+  el('healthStorage').textContent=!data.postgresConfigured?'Nicht konfiguriert':
+    !data.postgresMigrationReady?'Datenbank noch nicht bereit':
+    Number.isFinite(data.trackLastWriteErrorAt)&&
+      (!Number.isFinite(data.trackLastWriteAt)||data.trackLastWriteErrorAt>data.trackLastWriteAt)?
+      'Letzter Schreibversuch fehlgeschlagen':
+      Number.isSafeInteger(data.trackPointsStored)&&data.trackPointsStored>0?
+        data.trackPointsStored+' Spurpunkte bestätigt (seit Start)':
+        'Bereit · noch kein Spurpunkt bestätigt';
+  el('healthSummary').textContent=!data.mqtt?'MQTT getrennt':!data.subscribed?
+    'MQTT verbunden · Abonnement offen':observed==='noch nicht'?
+    'MQTT verbunden · noch kein OSD':telemetry==='noch nicht'?
+    'OSD '+observed+' · noch keine Messwerte':
+    'OSD '+observed+' · Messwerte '+telemetry;
+}
+async function loadHealth(){
+  if(healthController)return;
+  const controller=new AbortController();
+  healthController=controller;
+  el('checkHealth').disabled=true;
+  const timeout=setTimeout(()=>controller.abort(),8000);
+  try{
+    const res=await fetch('/api/health',{cache:'no-store',signal:controller.signal});
+    if(!res.ok)throw new Error('health request failed');
+    const data=await res.json();
+    if(!data||typeof data.mqtt!=='boolean'||typeof data.subscribed!=='boolean'){
+      throw new Error('invalid health response');
+    }
+    renderHealth(data);
+  }catch(_){
+    el('healthSummary').textContent='Diagnose nicht erreichbar';
+    for(const id of ['healthMqtt','healthOsd','healthTelemetry','healthStorage'])el(id).textContent='—';
+  }finally{
+    clearTimeout(timeout);
+    healthController=null;
+    el('checkHealth').disabled=false;
+  }
+}
 async function loadTracks({background=false}={}){
   cancelTrackLoad();
   if(!map){setTrackStatus('Flugspuren benötigen die Karte.');return;}
@@ -462,6 +534,7 @@ async function loadTracks({background=false}={}){
 }
 el('showTrack').addEventListener('change',loadTracks);
 el('retryTracks').addEventListener('click',()=>loadTracks());
+el('checkHealth').addEventListener('click',loadHealth);
 el('fitDevices').addEventListener('click',fitDevices);
 el('deviceSearch').addEventListener('compositionstart',()=>{composingSearch=true;});
 el('deviceSearch').addEventListener('compositionend',()=>{composingSearch=false;update();});
@@ -471,6 +544,8 @@ el('clearSearch').addEventListener('click',()=>{
 });
 el('deviceFilter').addEventListener('change',update);
 setInterval(()=>{if(socket)loadTracks({background:true});},30000);
+setInterval(loadHealth,30000);
+loadHealth();
 el('connect').addEventListener('click',()=>connect());
 el('connect').disabled=false;
 el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
