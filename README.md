@@ -45,3 +45,16 @@ Diese Befehle starten keine SkyHub-Container. Die Compose-Konfigurationsprüfung
 Das Root-Compose verwendet den Projektnamen `skyhub-next`, standardmäßig **127.0.0.1:4001** für das Backend und den vorhandenen Pi-EMQX auf **Hostport 1884**. Ein separates EMQX wird **nicht** gestartet; Port **4000** gehört bis zu einem ausdrücklich freigegebenen Cutover dem bisherigen Dienst. `.env` bleibt lokal und darf nicht versioniert werden. `.env.example` enthält nur Platzhalter und ist keine startfertige Konfiguration.
 
 **Nicht** `docker compose up` im Archiv `stacks/legacy-skyhub/` ausführen und keine Docker-Container oder Datenvolumes im Rahmen eines Repo-Cleanups ersetzen. Produktivmigration und DJI-Hardwareabnahme sind getrennte Arbeitsschritte: [Legacy-Migration](docs/legacy-migration.md).
+
+## Fortgesetzte Roadmap: DJI-Karte und PostGIS (P1/P2)
+
+Der konsolidierte Root-Stack enthält die isoliert getesteten PostGIS- und Backup-/Restore-Prüfungen sowie eine standardmäßig deaktivierte DJI-Kartengruppen-GET-Route. Die serverseitige Pilot-Workspace-Bindung erlaubt ausschließlich lesenden Zugriff auf verteilte Gruppen. Die Mutationsengine samt revisionsbasierten Transaktionen und Audit ist **nur ein interner Entwurf**, nicht vom Backend geladen. Weder DJI-Karten-Schreib-APIs noch Missionen sind freigeschaltet.
+
+- [DJI-Cloud-API-Referenz und Meilensteine](docs/dji-reference-roadmap.md)
+- [DJI-Map-Elementvertrag](docs/dji-map-element-contract.md)
+- [Workspace-Berechtigungen und Pilot-RBAC](docs/dji-map-access.md)
+- [Interner Mutationsvertrag und Audit (kein Live-Schreibpfad)](docs/dji-map-mutation-contract.md)
+- [Isolierte PostGIS- und Dump-/Restore-Tests](docs/postgis-isolated-validation.md)
+- [Entwicklungsplan und Fortschritt](docs/entwicklungsplan-2026-10-20.md)
+
+**Pi-Update:** Ein Git-Merge ist kein Deployment. Vor einem Update auf dem Pi lokale `.env`, Overrides und persistente PostGIS-Daten sichern, nur das bestehende Backend aktualisieren und danach über `/api/health` prüfen. Keine Compose-Volumes löschen, keine Legacy-Dienste starten und keine offenen DJI-Feature-Flags ungeprüft aktivieren.

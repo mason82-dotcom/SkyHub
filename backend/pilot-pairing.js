@@ -6,6 +6,7 @@ const crypto=require('crypto');
 // device token. Only SHA-256 hashes of device tokens are stored.
 const TOKEN=/^[0-9a-f]{64}$/;
 const PAIRING_ID=/^[0-9a-f]{32}$/;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function hash(token){return crypto.createHash('sha256').update(token).digest('hex');}
 
@@ -15,7 +16,7 @@ function deviceModel(userAgent){
   return match?match[1]:'Unbekanntes Gerät';
 }
 
-function createPilotPairing({store,ttlMs=300000,maxPending=5,randomBytes=crypto.randomBytes,
+function createPilotPairing({store,workspaceId=null,ttlMs=300000,maxPending=5,randomBytes=crypto.randomBytes,
   randomInt=crypto.randomInt}={}){
   if(!store)throw new Error('Pairing store required');
   const pending=new Map();
@@ -63,7 +64,12 @@ function createPilotPairing({store,ttlMs=300000,maxPending=5,randomBytes=crypto.
     pending.delete(id);
     const deviceToken=randomBytes(32).toString('hex');
     const key=hash(deviceToken);
-    await store.set(key,JSON.stringify({id:key.slice(0,12),model:item.model,createdAt:now,lastUsedAt:null}));
+    // Bind new paired devices to the server-configured workspace, never to
+    // client input. Legacy unscoped devices remain valid for bootstrap but
+    // cannot access DJI map groups until paired again.
+    const device={id:key.slice(0,12),model:item.model,createdAt:now,lastUsedAt:null};
+    if(typeof workspaceId==='string'&&UUID.test(workspaceId))device.workspaceId=workspaceId;
+    await store.set(key,JSON.stringify(device));
     return {status:'approved',deviceToken};
   }
   async function verify(token,now=Date.now()){

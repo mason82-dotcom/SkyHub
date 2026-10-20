@@ -31,6 +31,15 @@ function createTrackPolicy({limit=200}={}){
       if(!last.has(point.deviceSn) && last.size>=limit)last.delete(last.keys().next().value);
       last.set(point.deviceSn,{latitude:point.latitude,longitude:point.longitude,altitude:point.altitude,at});
       return true;
+    },
+    // A failed database write must not suppress the next stationary sample.
+    // Keep a newer accepted point if another write was already dispatched.
+    rollback(point,at){
+      const current=last.get(point.deviceSn);
+      if(current && current.at===at && current.latitude===point.latitude &&
+          current.longitude===point.longitude && current.altitude===point.altitude){
+        last.delete(point.deviceSn);
+      }
     }
   };
 }

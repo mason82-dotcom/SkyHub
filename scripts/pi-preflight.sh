@@ -15,6 +15,7 @@ listening() {
 }
 
 result=0
+next_port_ok=0
 printf '%s\n' '=== SkyHub Raspberry Pi preflight (read-only) ==='
 # Source timestamps require a correct host clock; checking NTP is read-only.
 if command -v timedatectl >/dev/null 2>&1; then
@@ -53,6 +54,11 @@ if command -v docker >/dev/null 2>&1; then
     if docker ps --filter 'name=^/skyhub_backend$' --format '{{.Names}}' | grep -qx skyhub_backend; then
       printf '%s\n' 'INFO: Existing skyhub_backend is running; do not replace its HTTP port.'
     fi
+    next_mapping="$(docker port skyhub-next-backend-1 4000/tcp 2>/dev/null || true)"
+    if printf '%s\n' "$next_mapping" | grep -qx '127.0.0.1:4001'; then
+      next_port_ok=1
+      printf '%s\n' 'INFO: skyhub-next-backend-1 publishes container TCP 4000 on loopback TCP 4001.'
+    fi
   else
     printf '%s\n' 'WARNING: Docker daemon is not accessible to this user; container mapping not verified.'
     result=1
@@ -63,13 +69,22 @@ else
 fi
 
 if listening 4000; then
-  printf '%s\n' 'INFO: TCP 4000 is occupied by the existing deployment; SkyHub Next must not bind it.'
+  printf '%s\n' 'INFO: TCP 4000 has a listener; identify its owner before any port change.'
 fi
 if listening 4001; then
-  printf '%s\n' 'ERROR: TCP 4001 is already occupied; choose another free SKYHUB_HTTP_PORT before deployment.' >&2
-  result=1
+  if [ "$next_port_ok" -eq 1 ]; then
+    printf '%s\n' 'OK: TCP 4001 is occupied by the existing loopback-bound SkyHub Next backend.'
+  else
+    printf '%s\n' 'ERROR: TCP 4001 is occupied but not confirmed as the SkyHub Next loopback mapping.' >&2
+    result=1
+  fi
 else
-  printf '%s\n' 'OK: TCP 4001 has no listener currently (does not reserve the port).'
+  if [ "$next_port_ok" -eq 1 ]; then
+    printf '%s\n' 'ERROR: Docker reports a SkyHub Next mapping, but no TCP 4001 listener was found.' >&2
+    result=1
+  else
+    printf '%s\n' 'OK: TCP 4001 has no listener currently (does not reserve the port).'
+  fi
 fi
 
 if [ "$result" -eq 0 ]; then

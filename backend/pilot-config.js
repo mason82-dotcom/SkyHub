@@ -61,7 +61,7 @@ function pilotConfiguration(env) {
         description:'DJI Enterprise Command Center'
       };
     },
-    accessToken
+    accessToken,workspaceId
   };
 }
 module.exports={pilotConfiguration};

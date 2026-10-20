@@ -33,6 +33,10 @@ jobs:
           for file in backend/*.js scripts/*.js frontend/public/*.js; do
             node --check "$file"
           done
+      - name: Install locked backend test dependencies
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Validate delivered inline dashboard scripts
+        run: node scripts/check-dashboard-inline.js
       - name: Backend unit tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
 
@@ -50,6 +54,8 @@ jobs:
 
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
+      - name: Validate explicit ARM64 PostGIS overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.arm64.yml --env-file .env.example config --quiet
       - name: Assert Pi MQTT endpoint on port 1884
         run: |
           node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const b=x.services.backend.environment; if(b.MQTT_BROKER_URL!=="mqtt://host.docker.internal:1884" || b.SKYHUB_MQTT_REQUIRED_PORT!=="1884") process.exit(1);'
@@ -65,4 +71,52 @@ jobs:
       - name: Smoke-test bundled runtime modules in the image
         run: |
           docker run --rm --network none --entrypoint node skyhub-next:test \
-            -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config"].forEach(require)'
+            -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store","./map-element-permissions","./map-element-mutation"].forEach(require)'
+
+  isolated-postgis-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgis:
+        image: postgis/postgis:15-3.5
+        env:
+          POSTGRES_USER: skyhub_test
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: skyhub_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U skyhub_test -d skyhub_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked test dependencies
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Run real SQL and PostGIS integration in dedicated test database
+        env:
+          SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:55432/skyhub_test
+        run: node --test backend/test/postgis.integration.test.js backend/test/map-element-mutation.integration.test.js
+
+  isolated-postgis-backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and fail-closed invocation checks
+        run: |
+          bash -n scripts/ci-postgis-restore.sh
+          if SKYHUB_CI_RESTORE_TEST= bash scripts/ci-postgis-restore.sh; then
+            echo "Restore guard unexpectedly permitted execution" >&2
+            exit 1
+          else
+            test "$?" -eq 2
+          fi
+      - name: Run actual pg_dump and pg_restore against isolated ephemeral PostGIS
+        env:
+          SKYHUB_CI_RESTORE_TEST: isolated
+        run: bash scripts/ci-postgis-restore.sh
