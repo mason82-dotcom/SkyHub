@@ -25,6 +25,16 @@ CI: .github/workflows/skyhub-next-tests.yml, separater Job isolated-postgis-inte
 
 ## Einschränkungen / verbleibende Abnahme
 
-Ein erfolgreicher Transaktions-Rollback beweist DDL-Verhalten in einer **isolierten** Datenbank, nicht das Wiederherstellen eines externen PostgreSQL-Dumps oder ein unterbrechungsfreies Live-Upgrade. Vor Aktivierung fehlen weiterhin ein echter Dump-/Restore-Probelauf mit einer separat geklonten Datenbank, ein Berechtigungsmodell für Pilot-/Workspace-Rollen, Hardwarevalidierung der Pilot-2-Kartenelementanzeige und eine Entscheidung über Backup/Schema-Migrationsbetrieb. Kein automatisches Anwenden von 001_dji_map_elements.sql beim Serverstart.
+Der Transaktions-Rollback-Test beweist das isolierte DDL-Verhalten. Der separate pg_dump/pg_restore-Test (unten) ergänzt einen tatsächlichen Archiv-Restore mit **synthetischen** Daten. Beide ersetzen weder die Wiederherstellungsprobe eines realitätsnahen, anonymisierten Bestands noch die Prüfung von RPO/RTO, Version-Upgrades oder ein unterbrechungsfreies Live-Upgrade. Vor Aktivierung fehlen weiterhin ein Berechtigungsmodell für Pilot-/Workspace-Rollen, die Hardwarevalidierung der Pilot-2-Kartenelementanzeige und die Entscheidung über Backup/Schema-Migrationsbetrieb. Kein automatisches Anwenden von 001_dji_map_elements.sql beim Serverstart.
 
 Der parallel offene Cleanup-PR #4 betrifft main und ist separat zu integrieren. Die CI-Dateien beider Linien werden beim Zusammenführen fachlich konsolidiert, nicht unbesehen überschrieben.
+
+## Getrennter Backup-/Restore-Test mit echtem Archiv (P1)
+
+Der CI-Job `isolated-postgis-backup-restore` führt `scripts/ci-postgis-restore.sh` aus. Das Skript startet ausschließlich einen **selbst erzeugten kurzlebigen PostGIS-15-Container** mit `--network none`, ohne Host-Ports und mit temporärem Datenverzeichnis (`tmpfs`). Das Skript akzeptiert **keine** Datenbank-URL und **keine** bereits existierenden Container als Ziele. Voraussetzung sind `GITHUB_ACTIONS=true`, `CI=true` und `SKYHUB_CI_RESTORE_TEST=isolated`; bei geerbter `DATABASE_URL` oder `SKYHUB_TEST_DATABASE_URL` wird abgebrochen.
+
+Nach abgeschlossenem Init-Prozess und PostGIS-Bereitschaft werden Root-Schema und der unveränderte DJI-Migrationsentwurf in der synthetischen Datenbank `skyhub_test` geladen. Synthetische Mehr-Workspace-Gruppen, GeoJSON-Kartenelemente und PostGIS-Flugspuren bilden den Testbestand. Ein echtes `pg_dump --format=custom` wird mit `pg_restore --list` geprüft und danach in die separate Testdatenbank `skyhub_restore_test` eingespielt.
+
+Mit `tests/fixtures/postgis-restore-verify.sql` werden vor und nach dem Restore dieselben Invarianten geprüft: Gruppen/Elemente mit getrennten Workspace-IDs, leere App-Shared-Gruppe, vollständige GeoJSON-Geometrie und Zeitstempel, Flugspur und WGS84-Geometrie, GIST-Index sowie zusammengesetzter Workspace-Fremdschlüssel. Beim Verlassen des Skripts werden Container, Datenverzeichnis und Archiv gelöscht.
+
+**Abnahmegrenze:** Dieser Test belegt ein echtes `pg_dump`/`pg_restore` für rein synthetische Daten, nicht die Wiederherstellbarkeit der produktiven Raspberry-Pi-Datenbank, verschlüsselter Offsite-Backups, externer Medienbestände oder eines gleichzeitigen Live-Betriebs. Für produktive Einsätze bleiben ein separater Restore einer sicher anonymisierten Sicherung, Aufbewahrung, RPO/RTO und Berechtigungsfreigaben offen.
