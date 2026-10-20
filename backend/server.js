@@ -91,6 +91,8 @@ const pool=process.env.DATABASE_URL?
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
 
 function onMessage(topic,payload,packet){
+  // Passive transport diagnostics, without recording device IDs or payloads.
+  mqttStats.observed(topic);
   // A retained MQTT delivery is not evidence of a currently connected DJI device.
   if(packet?.retain===true){mqttStats.rejected('retained');return;}
   try {
