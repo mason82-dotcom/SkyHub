@@ -2,7 +2,9 @@
 
 Stand: 21.10.2026. Referenzversion ist **DJI Cloud API 1.18**, laut [offizieller chinesischer Release-Seite](https://developer.dji.com/doc/cloud-api-tutorial/cn/) am 13.10.2026 veröffentlicht. Die englische DJI-Startseite zeigt noch einen älteren Versionsstand. Die 1.18-Release-Liste nennt neue O4-Ground-Station- und Dock-Funktionen; Änderungen am Pilot-2-Kartenelementvertrag werden dort nicht genannt. Das ist ein Abgleich der Release-Liste, keine Behauptung, dass jede Kartenelement-Implementierung bereits auf Pilot 2 abgenommen wurde.
 
-Der reine Normalisierer `backend/map-element-contract.js` verarbeitet eine bereits geparste Antwort des DJI-Cloud-API-Endpunkts `GET /map/api/v1/workspaces/{workspace_id}/element-groups`. Er hat keinen Netzwerk-, Datenbank- oder MQTT-Zugriff und ist noch nicht in die laufende API eingebunden.
+DJI Pilot 2 ruft beim SkyHub-Cloud-Server `GET /map/api/v1/workspaces/{workspace_id}/element-groups` auf; SkyHub muss die Gruppen aus seiner eigenen Ablage liefern. DJI stellt dafür keinen separaten Cloud-GET-Dienst bereit, den SkyHub als Client abfragen könnte. Der Pilot-2-Workflow benötigt außerdem die passende App-Shared-Gruppe und reagiert auf WebSocket-Aktualisierungen mit einem erneuten Gruppenabruf.
+
+Der reine Normalisierer `backend/map-element-contract.js` prüft und normalisiert eine bereits geparste Hülle in genau diesem Antwortformat. Er hat keinen Netzwerk-, Datenbank- oder MQTT-Zugriff und ist weder ein DJI-Client noch in die laufende API eingebunden. Eine spätere SkyHub-Route muss Berechtigung, Workspace-Zuordnung, Speicherung und Antwort erst selbst sicherstellen.
 
 ## Eingang und Ausgabe
 
