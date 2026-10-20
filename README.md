@@ -375,6 +375,9 @@ für die Ersteinrichtung nötig. Details:
 
 ## Flugspur und Speicherung (PostGIS)
 
+Lesender Pi-Befund zu Datenbank und optionalem MinIO:
+[Speicherprüfung vom 20.10.2026](docs/storage-audit-2026-10-20.md).
+
 Validierte GPS-Punkte werden nur gespeichert, wenn sich das Gerät um ≥ 2 m
 horizontal oder vertikal bewegt hat, sonst höchstens einmal pro Minute.
 Punkte bei 0/0 (DJI ohne Positions-Fix) werden nie gespeichert; die
