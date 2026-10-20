@@ -121,3 +121,25 @@ test('successful thingConnect result alone does not claim MQTT online',async()=>
   assert.doesNotMatch(pilot.el('result').textContent,/VERBUNDEN\./);
   assert.match(pilot.el('result').textContent,/gestartet/);
 });
+
+test('reconnect schedules a status check even without a DJI callback',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.fireTimer();
+  pilot.el('retry').listeners.click();
+  assert.equal(pilot.timers.length,2);
+  pilot.setMqttState(JSON.stringify({code:0,data:true}));
+  pilot.timers[1].callback();
+  assert.equal(pilot.el('retry').hidden,true);
+  assert.match(pilot.el('result').textContent,/VERBUNDEN/);
+});
+
+test('DJI Bridge error messages cannot expose vendor-supplied secrets in status',async()=>{
+  const pilot=await createPilot();
+  pilot.bridge.platformVerifyLicense=()=>JSON.stringify({
+    code:401,message:'PRIVATE_KEY_SHOULD_NOT_DISPLAY'
+  });
+  await pilot.connect();
+  assert.match(pilot.el('result').textContent,/DJI Bridge-Code 401/);
+  assert.doesNotMatch(pilot.el('result').textContent,/PRIVATE_KEY_SHOULD_NOT_DISPLAY/);
+});
