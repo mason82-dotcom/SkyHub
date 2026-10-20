@@ -45,7 +45,7 @@ LANGUAGE plpgsql AS $skyhub$
 BEGIN
   RAISE EXCEPTION 'DJI map audit history is immutable' USING ERRCODE = '42501';
   RETURN NULL;
-END
+END;
 $skyhub$;
 
 DROP TRIGGER IF EXISTS dji_map_audit_no_rewrite ON dji_map_element_audit;
