@@ -24,6 +24,8 @@ jobs:
       - name: Syntax and static checks
         run: |
           node --check backend/server.js
+          node --check backend/map-element-permissions.js
+          node --check backend/map-element-mutation.js
           node --check backend/dji.js
           node --check backend/mqtt-config.js
           node --check backend/mqtt-metrics.js
@@ -67,7 +69,7 @@ jobs:
       - name: Build backend image from locked dependencies
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules
-        run: docker run --rm --network none --entrypoint node skyhub-next:test -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store"].forEach(require)'
+        run: docker run --rm --network none --entrypoint node skyhub-next:test -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store","./map-element-permissions","./map-element-mutation"].forEach(require)'
 
   isolated-postgis-integration:
     runs-on: ubuntu-latest
@@ -96,7 +98,7 @@ jobs:
       - name: Run real SQL and PostGIS integration in dedicated test database
         env:
           SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:55432/skyhub_test
-        run: node --test backend/test/postgis.integration.test.js
+        run: node --test backend/test/postgis.integration.test.js backend/test/map-element-mutation.integration.test.js
 
   isolated-postgis-backup-restore:
     runs-on: ubuntu-latest

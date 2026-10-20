@@ -102,6 +102,14 @@ test('DJI map-group route requires HTTPS, the configured workspace and x-auth-to
     {https:true,xAuthToken:PILOT_TOKEN})).status,404);
   assert.equal((await request(path+'?is_distributed=unknown',
     {https:true,xAuthToken:PILOT_TOKEN})).status,400);
+  // The shared Pilot credential is not an operator/admin grant.
+  assert.equal((await request(path+'?is_distributed=false',
+    {https:true,xAuthToken:PILOT_TOKEN})).status,403);
+  assert.equal((await request(path+'?is_distributed=false&role=admin',
+    {https:true,xAuthToken:PILOT_TOKEN})).status,403);
+  assert.equal((await request(path,{https:true,xAuthToken:VIEW_TOKEN})).status,401);
+  assert.equal((await request(path,{https:true,lan:'192.168.178.70'})).status,401);
+  assert.equal((await request(path,{method:'POST',https:true,xAuthToken:PILOT_TOKEN})).status,404);
   // DATABASE_URL is unset in this suite, so the guarded route cannot contact Postgres.
   assert.equal((await request(path,{https:true,xAuthToken:PILOT_TOKEN})).status,503);
 });

@@ -23,6 +23,7 @@ const {createTrackStore,retentionDays}=require('./track-store');
 const {createTrackRecorder}=require('./track-recorder');
 const {createMapElementStore}=require('./map-element-store');
 const {createMapElementHandler}=require('./map-element-api');
+const {mapPrincipal}=require('./map-element-permissions');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -127,7 +128,7 @@ redis.connect()
     if(topologyRestored)console.log('[topology] restored '+topologyRestored+' devices from Redis');
   })
   .catch(err=>console.error('[redis connect]',err.message));
-const pairing=createPilotPairing({store:redisStore(redis)});
+const pairing=createPilotPairing({store:redisStore(redis),workspaceId:pilot.workspaceId});
 const pool=process.env.DATABASE_URL?
   new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:3000}):null;
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
@@ -273,11 +274,24 @@ async function pilotAuthorizedToken(token){
   if(redis.status!=='ready')return false;
   return Boolean(await pairing.verify(token));
 }
+// Map scope is distinct from bootstrap/session access. A previously paired RC
+// without stored workspace binding can still bootstrap, but cannot read any
+// map groups until it is paired again for this workspace.
+async function mapElementPrincipal(token){
+  if(typeof token!=='string'||!token)return null;
+  const a=Buffer.from(token),b=Buffer.from(pilot.accessToken);
+  if(a.length===b.length&&crypto.timingSafeEqual(a,b))
+    return mapPrincipal('pilot',pilot.workspaceId);
+  if(redis.status!=='ready')return null;
+  const device=await pairing.verify(token);
+  return device&&device.workspaceId===pilot.workspaceId?
+    mapPrincipal('pilot',device.workspaceId):null;
+}
 if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'&&pilot.ready){
   app.get('/map/api/v1/workspaces/:workspaceId/element-groups',createMapElementHandler({
     store:pool?createMapElementStore(pool):null,
     workspaceId:pilot.workspaceId,
-    authorize:pilotAuthorizedToken
+    authorize:mapElementPrincipal
   }));
 }else if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'){
   console.error('[map elements] disabled: Pilot 2 configuration is incomplete');

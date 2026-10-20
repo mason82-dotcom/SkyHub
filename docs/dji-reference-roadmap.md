@@ -37,3 +37,11 @@ Zur P1/P2-Grenze wurde ein optionaler PostGIS-Integrationstest mit dedizierter C
 ## P1 Backup-/Restore-Absicherung für DJI-Kartenelemente
 
 Für den bislang ausstehenden Wiederherstellungsnachweis wurde ein CI-isolierter `pg_dump`/`pg_restore`-Durchlauf mit synthetischen Kartenelementen aus zwei Workspaces und PostGIS-Flugspur ergänzt. Die aus dem Dump frisch wiederhergestellte Datenbank wird auf workspace-gebundene Gruppen, Geometrie, Indexe und Fremdschlüssel geprüft. Diese technische Absicherung ändert **nicht** die Roadmap-Freigabeschranken: echtes Backup-/Recovery-Verfahren für einen anonymisierten Pi-Datenbestand, Rollen-/Berechtigungsentscheidung und Pilot-2-Hardwareabnahme sind weiterhin offen. Details unter [PostGIS-Validierung](postgis-isolated-validation.md).
+
+## P2 · Workspace-Rollen und DJI-Kartengruppen (21.10.2026)
+
+Der [Workspace-Rollenvertrag](dji-map-access.md) ist als isoliertes, fehlertolerantes RBAC-Modul umgesetzt und mit Unit-, Handler- und HTTP-Tests abgesichert. Der produktiv vorgesehene Tokenresolver gibt ausschließlich **Pilot-Read-Only** zurück, erlaubt nur `is_distributed=true` und bindet neue RC-Kopplungen an den serverseitigen Workspace. Ältere Kopplungen ohne Workspace-Zuordnung bleiben zum Bootstrap gültig, nicht aber für Kartenelemente. Operator/Admin werden derzeit **nicht** als reale Rollen ausgegeben. Create/Update/Delete und WebSocket-Refresh bleiben deaktiviert. Der Pilot-2-Hardwaretest und eine spätere Freigabe konkreter Operatorrollen stehen aus.
+
+## P2 · Konfliktfeste Schreibtransaktionen als isolierter Entwurf (21.10.2026)
+
+Nach dem Read-only-RBAC-Schutz ist ein [interner Mutationsvertrag](dji-map-mutation-contract.md) für DJI-Kartenelemente ergänzt: eine additive, **nicht angewendete** Revisions-/Auditmigration, ein vom Server entkoppelter Transaktionsbaustein mit gruppenweiser SQL-Sperre, Versionsvergleich (CAS), Rollback bei fehlerhaftem Audit und eigene PostgreSQL-Integrationstests. Weder die tatsächliche Operator-/Admin-Authentifizierung noch HTTP-Create/Update/Delete oder DJI-WebSocket-Synchronisation ist aktiviert. Diese P2-Arbeit ist Vorbereitung; hardwaregetestete und autorisierte Schreibpfade bleiben weitere Meilensteine.

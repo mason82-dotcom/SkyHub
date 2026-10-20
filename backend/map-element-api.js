@@ -1,5 +1,6 @@
 'use strict';
 
+const {mapAccess}=require('./map-element-permissions');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function createMapElementHandler({store,workspaceId,authorize}){
@@ -7,11 +8,11 @@ function createMapElementHandler({store,workspaceId,authorize}){
   return async function getElementGroups(req,res){
     if(!req.secure)return res.status(403).json({error:'HTTPS required'});
     const token=req.headers?.['x-auth-token'];
-    let authorized=false;
-    try{authorized=await authorize(token);}catch(_err){
+    let principal=null;
+    try{principal=await authorize(token);}catch(_err){
       return res.status(503).json({error:'Authorization unavailable'});
     }
-    if(!authorized)return res.status(401).json({error:'Unauthorized'});
+    if(!principal)return res.status(401).json({error:'Unauthorized'});
     if(typeof workspaceId!=='string'||!UUID.test(workspaceId)||req.params?.workspaceId!==workspaceId)
       return res.status(404).json({error:'Workspace not found'});
 
@@ -23,6 +24,10 @@ function createMapElementHandler({store,workspaceId,authorize}){
     const isDistributed=rawDistribution===undefined?true:
       rawDistribution==='true'?true:rawDistribution==='false'?false:null;
     if(isDistributed===null)return res.status(400).json({error:'Invalid is_distributed'});
+    // A valid token is not a blanket grant. Pilot RCs can only read published
+    // groups in their own workspace; private groups never reach SQL for them.
+    if(!mapAccess(principal,{workspaceId,action:'read',isDistributed}))
+      return res.status(403).json({error:'Forbidden'});
     if(!store)return res.status(503).json({error:'Map element storage unavailable'});
     try{
       return res.json(await store.readResponse(workspaceId,{groupId,isDistributed}));
