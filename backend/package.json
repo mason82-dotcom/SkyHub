@@ -1,8 +1,8 @@
 {
   "name": "skyhub-backend",
-  "version": "3.1.0",
+  "version": "0.1.0",
   "private": true,
-  "description": "Authenticated read-only DJI MQTT operations API",
+  "description": "DJI Cloud API prototype with authenticated MQTT telemetry and optional topology acknowledgements",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
