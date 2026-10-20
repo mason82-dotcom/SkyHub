@@ -55,6 +55,22 @@ test('invalid filters and unavailable storage fail without leaking errors',async
   assert.doesNotMatch(JSON.stringify(failedRead.body),/password|private/);
 });
 
+test('repeated query filters are rejected before storage access',async()=>{
+  let reads=0;
+  const handler=createMapElementHandler({workspaceId:WORKSPACE,
+    authorize:async()=>true,
+    store:{readResponse:async()=>{reads++;return {code:0,data:[]};}}});
+  for(const query of [
+    {group_id:['shared','private']},
+    {is_distributed:['true','false']}
+  ]){
+    const res=response();
+    await handler(request({query}),res);
+    assert.equal(res.statusCode,400);
+  }
+  assert.equal(reads,0);
+});
+
 test('authorization backend failures return a redacted service error',async()=>{
   const handler=createMapElementHandler({workspaceId:WORKSPACE,
     authorize:async()=>{throw Error('private redis details');},store:null});

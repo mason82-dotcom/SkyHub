@@ -6,6 +6,7 @@ const path=require('node:path');
 
 const ddl=fs.readFileSync(path.resolve(__dirname,'../db/migrations/001_dji_map_elements.sql'),'utf8');
 const server=fs.readFileSync(path.resolve(__dirname,'../server.js'),'utf8');
+const envExample=fs.readFileSync(path.resolve(__dirname,'../../.env.example'),'utf8');
 
 test('DJI map element storage draft is workspace-scoped and separate from annotations',()=>{
   assert.match(ddl,/PRIMARY KEY \(workspace_id, group_id\)/);
@@ -23,4 +24,9 @@ test('DJI map element storage draft is workspace-scoped and separate from annota
 test('DJI map element migration draft is not run at server startup',()=>{
   assert.match(ddl,/Draft only: not loaded by server startup/);
   assert.doesNotMatch(server,/001_dji_map_elements\.sql/);
+});
+
+test('DJI map-group endpoint stays disabled in the example configuration',()=>{
+  assert.match(envExample,/^SKYHUB_DJI_MAP_ELEMENTS_ENABLED=false$/m);
+  assert.match(server,/SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'&&pilot\.ready/);
 });
