@@ -56,6 +56,66 @@ aus. Es ermittelt Containerzustand, Restart-Policies, Mount-Typen,
 freigegebene Ports und HTTP-Antworten. Vor weiteren Schritten die
 vollständige Diagnose auswerten, insbesondere DB- und Redis-Abhängigkeiten.
 
+## Auditergebnis 20.10.2026: 49 Tests erfolgreich, Secrets noch unvollständig
+
+Der Pi hat **49/49 Node-Tests bestanden**. Der alte
+`skyhub_backend` läuft mit Restart-Policy `always`, ebenso
+`skyhub_emqx`, `skyhub_postgres` und `skyhub_redis`.
+Host-Port `4000` bleibt belegt, `4001` frei.
+Der alte HTTP-Server liefert für `/`, `/pilot-login`
+und `/api/health` jeweils 404. SkyHub Next hat noch keine
+laufenden Container. Docker Compose kann seine Konfiguration
+syntaktisch auswerten.
+
+Die lokale, private `.env` hat Modus 600. Die drei DJI-Lizenzfelder
+sind gesetzt, aber `SKYHUB_VIEW_TOKEN`, `SKYHUB_DB_PASSWORD`,
+`MQTT_USER` und `MQTT_PASSWORD` sind noch Platzhalter.
+`SKYHUB_PILOT_ENABLED=false` bleibt korrekt.
+
+### Neue lokale Staging-Secrets sicher erzeugen
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git pull --ff-only
+python3 scripts/pi-prepare-staging-env.py
+python3 scripts/pi-prepare-staging-env.py --apply
+```
+
+Der erste Befehl des Scripts ist nur ein Dry-Run. `--apply` erstellt
+ein privates Backup der bestehenden `.env` unter
+`~/Projekte/_backups/skyhub-env-*/skyhub-next.env` und ersetzt **nur**
+fehlende oder mit `REPLACE_` beginnende Werte von
+`SKYHUB_VIEW_TOKEN` und `SKYHUB_DB_PASSWORD` durch jeweils
+kryptographisch zufällige 64-stellige Hex-Strings. Bereits
+konfigurierte DJI-Lizenzwerte, andere Zugangsdaten, Netzwerkadressen
+und der `SKYHUB_PILOT_ENABLED`-Status bleiben vollständig unangetastet.
+Das Script druckt keine Geheimnisse und startet keinen Dienst.
+
+`MQTT_USER` und `MQTT_PASSWORD` müssen **gültige Zugangsdaten des
+bestehenden EMQX auf Host-Port 1884** enthalten. Ein zufällig erzeugtes
+Passwort funktioniert nicht, solange das passende Brokerkonto noch
+nicht provisioniert wurde. Empfohlen wird ein separates Subscribe-only-
+EMQX-Konto für das neue Backend und separat später ein Pilot-2-Account.
+Nie die Credentials im Chat oder in GitHub veröffentlichen.
+
+### Vor dem Backup die Daten- und Speichergrößen lesen
+
+```bash
+df -h ~/Projekte ~/Projekte/_backups
+findmnt -T ~/Projekte/_backups -o SOURCE,TARGET,FSTYPE
+docker exec skyhub_postgres sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -XAtqc "SELECT pg_database_size(current_database())"'
+docker exec skyhub_redis redis-cli INFO persistence \
+  | grep -E '^(aof_enabled|rdb_last_bgsave_status|rdb_last_save_time):'
+```
+
+Diese Abfragen sind lesend und zeigen keine Passwörter.
+Für die spätere Datenbanksicherung ein separates
+`pg_dump -Fc` verwenden und über `pg_restore -l` auf Lesbarkeit
+prüfen. Redis und etwaige Medienobjekte müssen separat bewertet
+werden. Der Backup-Speicherort sollte nicht auf einem instabilen
+NVMe-Dateisystem liegen.
+
 ## B. Datenbestand vollständig sichern (erst nach Auditergebnis)
 
 1. Eine lokale, nur für `mason` lesbare Backup-Ablage auf einem
