@@ -10,6 +10,8 @@ Der reine Normalisierer `backend/map-element-contract.js` prüft und normalisier
 
 `backend/db/migrations/001_dji_map_elements.sql` ist ein additiver, noch nicht angewendeter Entwurf. Gruppen und Elemente werden zusammengesetzt nach Workspace, Gruppe und DJI-ID abgegrenzt; Geometrie wird als JSONB gespeichert, damit GeoJSON und optionale Höhenwerte erhalten bleiben. Die Fremdschlüsseldefinition löscht Elemente nicht kaskadierend. Das SQL ist weder Teil des Serverstarts noch gegen eine Datenbank ausgeführt. Vor einer Integration braucht es eine isolierte PostGIS-Migration samt Backup-/Wiederherstellungstest und eine Berechtigungsentscheidung.
 
+`backend/map-element-store.js` stellt darauf aufbauend einen unverbundenen Leseadapter bereit. Er akzeptiert nur UUID-Workspace-IDs, nutzt einen parametrisierten `SELECT`, erhält leere Gruppen und prüft die gespeicherten Geometrien vor der Antwort erneut mit dem Normalisierer. Der Adapter ist nicht in `server.js` eingebunden; seine Tests verwenden einen Fake-Pool und führen kein SQL gegen die produktive Datenbank aus.
+
 ## Eingang und Ausgabe
 
 - Erwartet wird die DJI-Hülle `{code: 0, data: [...]}`. Eine fehlerhafte Hülle oder Gruppe wird abgewiesen. Gruppen brauchen ID und Elementliste. Fehlende optionale Namen fallen auf die ID zurück; unbekannter Typ und Sperrstatus bleiben `null`. Typ `2` bezeichnet die App-Shared-Gruppe, die Pilot für die Synchronisierung benötigt.
