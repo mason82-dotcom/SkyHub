@@ -20,6 +20,7 @@ const {createTopologyStore}=require('./topology-store');
 const {createLanAccess}=require('./lan-access');
 const {createTrackPolicy}=require('./track-policy');
 const {createTrackStore,retentionDays}=require('./track-store');
+const {createTrackRecorder}=require('./track-recorder');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -90,8 +91,10 @@ function authorized(value){
   return a.length===b.length && crypto.timingSafeEqual(a,b);
 }
 // Token-free viewing from the configured home LAN: read-only, never pairing administration.
+const lanReadPaths=new Set(['/devices','/topology','/events','/diagnostics/mqtt-shapes']);
 function lanView(req){
-  return req.method==='GET' && !req.path.startsWith('/pilot-admin') &&
+  const readPath=lanReadPaths.has(req.path) || /^\/drone\/[^/]+\/(track|telemetry)$/.test(req.path);
+  return req.method==='GET' && readPath &&
     lanAccess.allows(req.socket.remoteAddress,req.headers['x-forwarded-for']);
 }
 function auth(req,res,next){
@@ -128,16 +131,21 @@ const pool=process.env.DATABASE_URL?
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
 const trackPolicy=createTrackPolicy();
 const trackStore=createTrackStore(pool);
-let trackStored=0,trackSkipped=0;
+const trackRecorder=createTrackRecorder({store:trackStore,policy:trackPolicy,enabled:Boolean(pool),
+  onWriteError:()=>console.error('[postgres insert] failed')});
 async function pruneTracks(){
   try{
-    const removed=await trackStore.prune(trackRetentionDays);
+    const removed=await trackRecorder.prune(trackRetentionDays);
     if(removed)console.log('[track] removed '+removed+' points older than '+trackRetentionDays+' days');
   }catch(err){console.error('[track prune]',err.message);}
 }
-trackStore.migrate()
-  .then(pruneTracks)
-  .catch(err=>console.error('[track migrate]',err.message));
+async function initializeTracks(){
+  if(!pool || trackRecorder.snapshot().postgresMigrationReady)return;
+  try{await trackRecorder.migrate();await pruneTracks();}
+  catch(_err){console.error('[track migrate] failed; will retry');}
+}
+initializeTracks();
+setInterval(initializeTracks,60000).unref();
 setInterval(pruneTracks,3600000).unref();
 
 function onMessage(topic,payload,packet){
@@ -188,14 +196,10 @@ function onMessage(topic,payload,packet){
     // Persist only movement or a 60 s heartbeat, never 0/0 without a fix (track-policy.js).
     if(pool && result.point){
       const sampleAt=parsed.timestamp===null?observedAt:Math.min(parsed.timestamp,observedAt);
-      if(trackPolicy.shouldStore(result.point,sampleAt)){
-        const t=parsed.telemetry;
-        trackStored++;
-        trackStore.insert({...result.point,sourceTs:sampleAt,timeVerified:parsed.timestamp!==null,
-          heightEllipsoid:t.heightEllipsoid,gpsSatellites:t.gpsSatellites,rtkSatellites:t.rtkSatellites,
-          rtkFixState:t.rtkFixState,positionQuality:t.positionQuality})
-          .catch(err=>console.error('[postgres insert]',err.message));
-      }else trackSkipped++;
+      const t=parsed.telemetry;
+      trackRecorder.record(result.point,sampleAt,{sourceTs:sampleAt,timeVerified:parsed.timestamp!==null,
+        heightEllipsoid:t.heightEllipsoid,gpsSatellites:t.gpsSatellites,rtkSatellites:t.rtkSatellites,
+        rtkFixState:t.rtkFixState,positionQuality:t.positionQuality});
     }
   }catch(_err){
     // Parsing errors may contain snippets of sensitive DJI messages. Never log them.
@@ -311,7 +315,7 @@ app.get('/api/health',(req,res)=>res.json({
   topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
   topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
   topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,
-  lanViewEnabled:lanAccess.enabled,trackPointsStored:trackStored,trackPointsSkipped:trackSkipped,
+  lanViewEnabled:lanAccess.enabled,...trackRecorder.snapshot(),
   trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
@@ -355,7 +359,8 @@ app.post('/api/mission/create',(req,res)=>res.status(501).json({
 app.use(express.static(path.resolve(__dirname,'../frontend/public'),{index:'index.html'}));
 app.use((req,res)=>res.status(404).json({error:'Not found'}));
 const port=Number(process.env.PORT||4000);
-server.listen(port,'0.0.0.0',()=>console.log('[skyhub] Port '+port+' / read-only'));
+const listenAddress=process.env.NODE_ENV==='test'?'127.0.0.1':'0.0.0.0';
+server.listen(port,listenAddress,()=>console.log('[skyhub] Port '+server.address().port+' / read-only'));
 function stop(){
   client.end(true);if(topologyAckClient)topologyAckClient.end(true);
   io.close();server.close();
@@ -363,3 +368,4 @@ function stop(){
 }
 process.once('SIGTERM',stop);
 process.once('SIGINT',stop);
+module.exports={server,stop};

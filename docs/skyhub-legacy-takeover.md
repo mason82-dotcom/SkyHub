@@ -1,19 +1,18 @@
 # SkyHub – kontrollierte Übernahme des bisherigen Dienstes (Port 4000)
 
-Status: **Vorbereitung, noch kein Cutover auf dem Raspberry Pi ausgeführt.**
+Status am 20.10.2026: **Historischer Cutover-Entwurf, keine aktuelle Ausführungsanweisung.** SkyHub Next läuft inzwischen auf `127.0.0.1:4001` mit eigenen Postgres- und Redis-Containern; `skyhub_backend` erschien bei der letzten lesenden Containerliste nicht. Der genaue Zustand von Port 4000 und des alten Containers muss vor jeder weiteren Planung neu ermittelt werden. Die folgenden Audit- und Staging-Befunde entstanden vor dem Start von SkyHub Next und sind ausdrücklich keine Aussagen über die aktuelle `.env`, Broker-ACL oder Datenbestände. Siehe [Bestandsaufnahme](entwicklungsplan-2026-10-20.md).
 
 ## Ziel
 
-- Der bestehende SkyHub-HTTP-Endpunkt `192.168.178.63:4000` soll
-  zukünftig vom **MQTT-integrity-v3**-Backend beantwortet werden.
+- Der frühere Plan sah vor, den SkyHub-HTTP-Endpunkt
+  `192.168.178.63:4000` durch das Root-Backend zu ersetzen.
 - `GET /pilot-login` und `GET /api/pilot/status` werden bereitgestellt.
 - DJI Pilot 2 spricht später weiter mit **EMQX auf Pi-Port 1884**.
 - Die bestehenden Container `skyhub_emqx`, `skyhub_redis`,
   `skyhub_postgres` und Caddy werden **nicht** automatisch gestoppt,
   neu erstellt oder ersetzt.
-- Der alte Backend-Container `skyhub_backend` wird bei einem
-  freigegebenen Cutover ausschließlich **gestoppt, nicht gelöscht**.
-  Seine ursprüngliche Restart-Policy muss für den Rückweg erfasst werden.
+- Vor einer neuen Port-4000-Planung sind Existenz, Zustand und Restart-Policy
+  des alten Backend-Containers lesend neu zu prüfen.
 - Das neue System nutzt isolierte Datenvolumes und ein eigenes
   Compose-Projekt `skyhub-next`. Dies ist **noch keine Migration**
   alter PostgreSQL-, Redis- oder Medienbestände.
@@ -29,25 +28,23 @@ Status: **Vorbereitung, noch kein Cutover auf dem Raspberry Pi ausgeführt.**
   können deshalb neu konfiguriert werden müssen.
 - Die neue PostGIS-/Redis-Datenhaltung besitzt eigene Volumes. Historische
   Aufzeichnungen und Medien sind **nicht automatisch vorhanden**.
-- Der neue Cloud-H5-Endpunkt ist **standardmäßig deaktiviert**. Auf
+- Der neue Cloud-H5-Endpunkt ist im Compose-Default **deaktiviert**; der
+  tatsächliche Wert der lokalen `.env` wird hier nicht behauptet. Auf
   `0.0.0.0:4000` darf für die Pilot-Lizenz-/MQTT-Credential-Bootstrap-
   Strecke **kein** Klartextbetrieb freigegeben werden. Bei einer
   Übernahme der alten LAN-HTTP-URL wird `SKYHUB_PILOT_ENABLED=false`
   belassen. Ein späterer aktiver H5-Login benötigt einen separaten
   Caddy-HTTPS-Zugang zu einem ausschließlich loopback-gebundenen Backend.
-- Das derzeitige Caddy-Zertifikat von `rpi5.fritz.box` wurde nur nach
+- Bei einer früheren Prüfung wurde das Caddy-Zertifikat von `rpi5.fritz.box` nur nach
   explizitem Vertrauen auf die **Caddy-Root-CA** verifiziert.
   Die RC-WebView ist noch nicht als vertrauenswürdig nachgewiesen.
-- Ein Caddy-`HTTP 302` auf `/` und `404` auf `/pilot-login` betrifft
-  vorhandene Caddy-Routen. Hier werden **keine** Caddy-Änderungen
-  vorgenommen. Ein neuer Backend-Port 4000 behebt diese HTTPS-404
-  nicht automatisch.
+- Frühere Caddy-Antworten (`302` auf `/`, `404` auf `/pilot-login`) sind
+  historische Befunde; die aktuelle Route muss separat geprüft werden.
 
-## A. Read-only Audit (jetzt ausführen)
+## A. Erneuter Read-only-Audit vor jeder neuen Port-4000-Planung
 
 ```bash
 cd ~/Projekte/SkyHub-Next
-git pull --ff-only
 bash scripts/pi-skyhub-takeover-audit.sh
 ```
 
@@ -56,9 +53,9 @@ aus. Es ermittelt Containerzustand, Restart-Policies, Mount-Typen,
 freigegebene Ports und HTTP-Antworten. Vor weiteren Schritten die
 vollständige Diagnose auswerten, insbesondere DB- und Redis-Abhängigkeiten.
 
-## Auditergebnis 20.10.2026: 49 Tests erfolgreich, Secrets noch unvollständig
+## Historisches Auditergebnis vom 20.10.2026 vor dem Next-Start
 
-Der Pi hat **49/49 Node-Tests bestanden**. Der alte
+Zum damaligen Zeitpunkt bestanden **49/49 Node-Tests**. Der alte
 `skyhub_backend` läuft mit Restart-Policy `always`, ebenso
 `skyhub_emqx`, `skyhub_postgres` und `skyhub_redis`.
 Host-Port `4000` bleibt belegt, `4001` frei.
@@ -116,7 +113,7 @@ prüfen. Redis und etwaige Medienobjekte müssen separat bewertet
 werden. Der Backup-Speicherort sollte nicht auf einem instabilen
 NVMe-Dateisystem liegen.
 
-## B. Datenbestand vollständig sichern (erst nach Auditergebnis)
+## B. Historischer Sicherungsplan (erst nach neuem Auditergebnis)
 
 1. Eine lokale, nur für `mason` lesbare Backup-Ablage auf einem
    **zuverlässig gemounteten** Medium anlegen. Vorher freien Platz,
@@ -133,9 +130,10 @@ NVMe-Dateisystem liegen.
 5. Den Caddyfile-Snapshot gesondert sichern, bevor später eine Route
    ergänzt wird.
 
-## C. Staging auf Port 4001 (nach erfolgreichem Audit und Backup)
+## C. Historischer Staging-Plan für Port 4001 (inzwischen bereits belegt)
 
-- Vor dem ersten Start `.env` ohne Ausgabe von Geheimnissen überprüfen,
+- Der erste Start ist inzwischen erfolgt. Für einen späteren erneuten Start
+  `.env` ohne Ausgabe von Geheimnissen überprüfen,
   `SKYHUB_PILOT_ENABLED=false` belassen und
   `SKYHUB_BIND_ADDRESS=127.0.0.1`,
   `SKYHUB_HTTP_PORT=4001` verwenden.
@@ -155,11 +153,12 @@ Dabei bedeuten `mqtt:true`/`subscribed:true` nur erfolgreiche
 Broker-Anmeldung und Abonnements. Es muss vor dem Cutover gesondert
 geprüft werden, ob `mqttValidTelemetryUpdates` tatsächlich steigt.
 
-## D. Wartungsfenster: Legacy-HTTP-Port 4000 übernehmen
+## D. Historischer Plan für ein Wartungsfenster auf Port 4000
 
-**Noch nicht ausführen.** Erst nach A–C und dokumentierter
-Rollback-Freigabe. Die Schritte betreffen nur das alte HTTP-Backend,
-nicht EMQX, Mosquitto, Postgres, Redis oder Caddy:
+**Diese Schritte nicht ausführen.** Sie setzen einen laufenden alten Container
+und einen freien Port 4001 voraus; beides ist nicht mehr als aktueller Zustand
+belegt. Zuerst Betriebszustand, Backup, Abhängigkeiten und Rollback neu planen
+und eine ausdrückliche Freigabe einholen. Der frühere Ablauf lautete:
 
 1. Ursprüngliche Restart-Policy von `skyhub_backend` und das
    gesicherte Docker-Inspect-Artefakt bereithalten.
@@ -176,7 +175,7 @@ nicht EMQX, Mosquitto, Postgres, Redis oder Caddy:
    `.env` dauerhaft anpassen, damit ein späteres
    `docker compose up` nicht unabsichtlich zurück auf 4001 schaltet.
 
-## E. Rollback bei Störung
+## E. Historischer Rollback-Entwurf
 
 1. Neuen Backend-Container von Port 4000 zurück auf den
    getesteten Staging-Port 4001 umstellen oder kontrolliert stoppen.

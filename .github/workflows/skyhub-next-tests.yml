@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install locked backend dependencies
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
       - name: Syntax and static checks
         run: |
           node --check backend/server.js
@@ -35,3 +37,9 @@ jobs:
           node --check scripts/pi-mqtt-osd-check.js
       - name: Unit tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
+      - name: Validate explicit ARM64 PostGIS overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.arm64.yml --env-file .env.example config --quiet
+      - name: Build backend image from locked dependencies
+        run: docker build -f backend/Dockerfile -t skyhub-next:test .
+      - name: Smoke-test bundled runtime modules
+        run: docker run --rm --network none --entrypoint node skyhub-next:test -e '["./catalog","./dji","./registry","./track-recorder"].forEach(require)'

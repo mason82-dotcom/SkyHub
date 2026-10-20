@@ -4,9 +4,11 @@
 
 **Neue Entwicklungsbasis:** Node.js/Express, Socket.IO, MQTT 5, Redis, PostGIS, MinIO und eine kompakte, statische Live-Karten-WebUI ohne Frontend-Buildprozess. Vollständig getrennt vom alten Python-SkyHub.
 
+**Pi-Iststand am 20.10.2026:** Das eigene Compose-Projekt `skyhub-next` läuft bereits auf `127.0.0.1:4001` mit separatem Postgres und Redis. Der lesend abgefragte Health-Endpunkt meldete MQTT auf Port 1884 verbunden und abonniert sowie verwertbare OSD-Nachrichten. `skyhub_backend` erschien nicht in der laufenden Containerliste. Das ist eine Momentaufnahme; vor Betriebsänderungen den Zustand erneut prüfen. [Bestandsaufnahme und Entwicklungsplan](docs/entwicklungsplan-2026-10-20.md).
+
 ## Sicherheitsmodell
 
-- SKYHUB_VIEW_TOKEN ist für alle Telemetrie-API-Routen und für Socket.IO zwingend erforderlich.
+- SKYHUB_VIEW_TOKEN ist für Telemetrie-API und Socket.IO erforderlich. Die optionale, eng begrenzte Heimnetz-Ausnahme erlaubt lesende GET-Abfragen und den Live-Socket ohne Token; Admin-Routen bleiben ausgeschlossen.
 - Web-Frontend standardmäßig nur auf 127.0.0.1:4001 des Hostsystems; für entfernten Zugriff SSH-Tunnel oder vertrauenswürdigen HTTPS-Reverse-Proxy einsetzen.
 - Keine standardmäßig veröffentlichten Postgres-, Redis- oder MinIO-Ports.
 - Kein DISABLE_AUTH; keine im Code hinterlegten Datenbank-, MQTT- oder MinIO-Kennwörter.
@@ -16,18 +18,17 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-    git clone --branch develop/skyhub-next-mqtt-integrity-v3 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
-    cp .env.example .env
 
-Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
+Die bestehende lokale `.env` und `docker-compose.override.yml` sind Pi-Konfiguration und dürfen nicht durch Beispielwerte ersetzt werden. Für eine **neue, isolierte Installation** liefert `.env.example` die Vorlage; alle `REPLACE_*`-Platzhalter müssen vor einem Start ersetzt werden. **Für diesen Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. SkyHub Next startet keinen MQTT-Broker. MinIO ist nur für eine künftige Medien-API vorgesehen und läuft nicht im Standardprofil. Der Root-Compose-Stack veröffentlicht das Backend standardmäßig auf `127.0.0.1:4001` (Container-Port 4000). Vor jeder Änderung die tatsächliche Portbelegung und den laufenden Compose-Zustand prüfen.
 
-Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfiguration:
+Lesende Prüfungen des bereits laufenden Stacks:
 
     docker compose config --quiet
-    docker compose up -d --build
-    curl -s http://127.0.0.1:4001/api/health
-    docker compose logs --tail=60 backend
+    docker compose ps
+    curl -fsS http://127.0.0.1:4001/api/health
+
+Ein Build oder `docker compose up` verändert den laufenden Dienst und gehört zu einem separat freigegebenen Deployment.
 
 Der Gesundheitsendpunkt meldet unter anderem `mqttBrokerPort: 1884`, `mqtt`,
 `subscribed`, `mqttLastMessageAt`, `mqttAcceptedMessages` und
@@ -40,34 +41,50 @@ verwertbaren, vom Registry übernommenen OSD-Messwert. Diese drei Zustände
 sind ausdrücklich **nicht** gleichzusetzen. Die Zähler der Health-API
 enthalten keine Seriennummern, Nutzdaten oder Anmeldedaten.
 
-### Bestehende Raspberry-Pi-Broker- und Porttopologie (20.10.2026)
+### ARM64-PostGIS auf dem Raspberry Pi
+
+Der Pi benötigt das lokale PostGIS-Image aus
+[`docker/postgis/Dockerfile.arm64`](docker/postgis/Dockerfile.arm64). Die
+versionierte Datei [`docker-compose.arm64.yml`](docker-compose.arm64.yml)
+stellt dafür Build, PostGIS-Initialisierung und das bestehende Volume
+`skyhub-next_pgdata_arm64` bereit. Die lokale, ignorierte
+`docker-compose.override.yml` enthält derzeit dieselben Pi-Anpassungen und
+bleibt unangetastet. Für eine explizite, reproduzierbare Prüfung ohne
+automatisches lokales Override:
+
+    docker compose -f docker-compose.yml -f docker-compose.arm64.yml --env-file .env.example config --quiet
+
+Ein Wechsel der Compose-Dateien für den laufenden Stack ist ein Deployment und
+erfordert eine separate Prüfung der effektiven Volumes und eine Freigabe.
+
+### Raspberry-Pi-Broker- und Porttopologie (Momentaufnahme 20.10.2026)
 
 Die lesend ermittelte Host-Konfiguration:
 
 - `skyhub_emqx`: Host-TCP **1884** → EMQX-Container-TCP **1883**.
 - `mosquitto`: eigenständiger Host-Broker auf TCP **1883**. Nicht mit EMQX gleichsetzen; ohne Bridge werden keine Topics synchronisiert.
-- `skyhub_backend`: bestehende produktive HTTP-Portfreigabe **4000**.
-- `skyhub-next`: bewusst eigener Compose-Projektname; geplanter **4001** am Host (Loopback), **4000** nur innerhalb des neuen Backend-Containers.
+- `skyhub_backend`: bei der letzten lesenden Containerliste **nicht laufend**; der frühere Betrieb auf Port 4000 ist historisch dokumentiert.
+- `skyhub-next`: eigenes Compose-Projekt, **4001** am Host (Loopback), **4000** innerhalb des neuen Backend-Containers; bei der letzten Prüfung laufend.
 
 Nur die EMQX-Verbindung auf Port 1884 konfigurieren; den alten Mosquitto weder stoppen noch umkonfigurieren. Dass der Port lauscht, beweist **nicht**, dass sich DJI Pilot 2 korrekt anmeldet oder dass OSD-Nachrichten ankommen.
 
-Vor der Inbetriebnahme ohne Änderungen an laufenden Diensten:
+Zur lesenden Port- und Uhrzeitprüfung:
 
     bash scripts/pi-preflight.sh
 
-### EMQX-Istzustand aus der Pi-Diagnose
+### Historischer EMQX-Befund vor dem SkyHub-Next-Start
 
 Am 20.10.2026 wurden 2 aktive Clients, 6 Subscriptions mit
 `thing/product/`-Muster und 0 `sys/product/`-Subscriptions gemeldet.
 Das beweist weder, dass die verbundenen Clients DJI-Fernsteuerungen
-sind, noch den Eingang von Telemetrie. Da SkyHub Next noch nicht läuft,
-ist sein zusätzliches `sys/product/+/status`-Abo noch nicht vorhanden.
+sind, noch den Eingang von Telemetrie. Inzwischen läuft SkyHub Next; diese
+damaligen Subscription-Zahlen sind kein aktueller Brokerstatus.
 Das bisherige Backend auf Host-Port 4000 liefert für
 `GET /api/health` die HTML-Antwort `Cannot GET /api/health`,
 weil die ältere Implementierung diesen Endpunkt nicht definiert;
 das ist kein Nachweis eines Ausfalls.
 
-Nächste **lesende** Überprüfung (vor Start der neuen Umgebung):
+Bei Bedarf **lesend** erneut prüfen:
 
     docker exec skyhub_emqx emqx ctl broker metrics | grep -E 'messages\\.(received|delivered)|packets\\.publish\\.received'
     docker exec skyhub_emqx emqx ctl clients list
@@ -101,10 +118,16 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 
 ## Tests
 
+    npm ci --prefix backend --ignore-scripts --no-audit --no-fund
     node --check backend/server.js
     node --check backend/dji.js
     node --check backend/mqtt-metrics.js
     node --test backend/test/*.test.js
+
+Der HTTP-/Socket.IO-Integrationstest in dieser Suite startet einen kurzlebigen
+Testserver auf `127.0.0.1` mit zufälligem Port. MQTT und Redis zeigen dabei
+nur auf den geschlossenen lokalen Port 1; produktive Dienste werden nicht
+angesprochen.
 
 ## Live-API
 
@@ -187,32 +210,23 @@ den expliziten Nachweis mit `/data/caddy/pki/authorities/local/root.crt`
 aus dem bestehenden Caddy-Container. Er installiert **keine** CA,
 startet/stoppt keinen Dienst und liest keine privaten Schlüssel.
 
-**Aktueller Prototypstand:** Pilot-2-H5-Anmeldung, MQTT-Integritätsprüfungen und optionaler Topologie-Antwortkanal sind im Feature-Branch zusammengeführt. Eine erfolgreiche Cloud-Bridge-/OSD-Hardwareabnahme steht weiterhin aus. Keine anderen Pi-Dienste oder Caddy-Routen durch Branchwechsel überschreiben.
+**Aktueller Prototypstand:** Pilot-2-H5-Anmeldung, MQTT-Integritätsprüfungen und Topologie-Antwortkanal sind vorhanden. Der dokumentierte RC-Neustarttest zeigte erneut OSD von RC und Mavic 3M; weitere Hardwarezustände und die Datenbank-Persistenz sind getrennt abzunehmen. Keine anderen Pi-Dienste oder Caddy-Routen durch Branchwechsel überschreiben.
 
 ## Übernahme des bisherigen SkyHub-Dienstes auf Port 4000
 
-Die Übernahme des bestehenden `skyhub_backend` wird als **kontrollierter,
-rückrollbarer Cutover** vorbereitet. Die heutige `mqtt-integrity-v3`-
-Version enthält jetzt die H5-Seite `/pilot-login`, Pilot-Konfiguration
-und TLS-geschützte Bootstrap-API aus dem früheren Entwicklungsbranch.
-Sie behält ihre strengeren MQTT-Zeitstempel-, Replay-/Retain- und
-Positionsintegritätsprüfungen. Die H5-Aktivierung bleibt **aus**.
-
-Port 4000 gehört weiterhin dem alten Backend; Port 4001 ist zunächst
-für einen isolierten Staging-Test vorgesehen. Eine neue bindende
-Konfiguration auf dem Host **wurde noch nicht ausgeführt**.
-Der alte Backend-Container bleibt bei einer späteren Umschaltung
-für den Rollback vorhanden, und die bisherigen DB-, Redis-, EMQX-
-und Medien-Container werden nicht ersetzt. Der neue SkyHub-Next-Stack
-nutzt allerdings **andere** Datenvolumes und seine API deaktiviert
-Missionsveröffentlichungen. Eine Datenmigration ist damit noch nicht erledigt.
+Der frühere Cutover-Plan wurde vor dem Start des separaten Next-Stacks erstellt.
+Heute läuft Next auf Port 4001. Ob und in welchem Zustand das alte Backend
+noch vorhanden ist, muss vor jedem Schritt neu geprüft werden; bei der letzten
+Containerliste lief es nicht. Next nutzt eigene Datenvolumes und deaktiviert
+Missionsveröffentlichungen. Eine Datenmigration ist nicht nachgewiesen.
 
 **Vor jedem Cutover ausschließlich lesend prüfen:**
 
     bash scripts/pi-skyhub-takeover-audit.sh
 
-Der Schrittplan mit Datensicherung, Staging, Portübernahme, und Rollback
-steht in [SkyHub Legacy Takeover](docs/skyhub-legacy-takeover.md).
+Der historische Schrittplan mit Datensicherung und Rollback steht in
+[SkyHub Legacy Takeover](docs/skyhub-legacy-takeover.md). Seine Betriebsbefehle
+gelten erst nach neuer Bestandsaufnahme und ausdrücklicher Freigabe.
 
 ## Aktueller Funktionsumfang und Grenzen
 
@@ -268,7 +282,7 @@ Bei getrennt gemeldetem MQTT-Status bietet DJI Pilot 2 den Button **„MQTT erne
 Nach einem kontrollierten Deployment auf dem Pi: `node scripts/pi-mqtt-osd-check.js` (Standardport 4001). Für Konfiguration, Grenzen, Quellennachweis und Prüfablauf siehe [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
 
 
-## Hardware-Befund 20.10.2026: RC Pro verbunden, kein OSD
+## Historischer Hardware-Befund 20.10.2026: RC Pro zunächst ohne OSD
 
 Die DJI RC Pro Enterprise ist als Gateway an EMQX angemeldet und sendet
 `update_topo` sowie `state`, aber **kein OSD**. SkyHub hatte nie ein
@@ -279,10 +293,10 @@ zeigt pro Kanal/Methode nur die empfangenen Feldnamen, keine Werte oder
 Seriennummern. Zusätzliche OSD-Felder: GNSS-/RTK-Satelliten und Fix-Status,
 Lage, Home-Distanz, Restflugzeit, RC-Funkqualität.
 
-**Sicherheitsbefund:** Der bestehende EMQX auf 1884 erlaubt anonyme Anmeldung
-und hat `{allow, all}` als ACL. Die vorgesehene Publish-only-Beschränkung des
-Topologie-Publishers wird dadurch noch nicht durchgesetzt. Details und
-Vorgehen: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
+**Historischer Sicherheitsbefund:** EMQX auf 1884 erlaubte damals anonyme Anmeldung
+und hatte `{allow, all}` als ACL. Später dokumentiert der Neustarttest eine
+gehärtete Anmeldung und ACL; der aktuelle Brokerzustand muss vor einer Änderung
+erneut lesend geprüft werden. Details: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
 
 **Ergebnis nach Aktivierung der Topologie-Bestätigung (22:07):** Die RC Pro
 sendet OSD (Akku, Position, Ellipsoidhöhe, Funkqualität), frisch und zeitlich
@@ -371,7 +385,16 @@ Start ergänzt, ohne Daten zu löschen. Aufbewahrung: `SKYHUB_TRACK_RETENTION_DA
 (Standard 30), stündlich bereinigt. `GET /api/drone/:sn/track?minutes=60`
 (1–1440, max. 5000 Punkte) liefert die Spur; die Karte zeigt sie (abschaltbar)
 und zoomt ohne gültige Live-Position einmal darauf. Health:
-`trackPointsStored`, `trackPointsSkipped`, `trackRetentionDays`.
+`trackPointsStored` zählt erst **bestätigte** Datenbank-Schreibvorgänge.
+`trackPointsSkipped` zählt Punkte, die der Bewegungsfilter zurückhält;
+`trackPointsUnavailable` zählt Punkte vor erfolgreicher Migration.
+`trackWritesPending`, `trackWriteErrors`, `trackLastWriteAt` und
+`trackLastWriteErrorAt` trennen laufende, erfolgreiche und fehlgeschlagene
+Writes. `postgresConfigured` und `postgresMigrationReady` zeigen Konfiguration
+und erfolgreiche Schema-Migration, aber keine dauerhafte Verbindungszusage.
+Eine fehlgeschlagene Migration wird im Hintergrund erneut versucht; ein
+fehlgeschlagener Punkt blockiert den nächsten geeigneten Punkt nicht.
+`trackRetentionDays` zeigt die Aufbewahrungsfrist.
 
 ## Ausgeschaltetes Fluggerät (mode_code 14)
 
