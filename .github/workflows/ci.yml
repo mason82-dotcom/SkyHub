@@ -40,6 +40,7 @@ jobs:
           bash -n scripts/pi-preflight.sh
           bash -n scripts/pi-tls-audit.sh
           bash -n scripts/pi-skyhub-takeover-audit.sh
+          bash -n scripts/pi-backup-legacy.sh
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules in the image
