@@ -195,6 +195,31 @@ Vor der Zusammenführung sind die Sicherheits- und Nachrichtenschutz-
 änderungen des v3-Branches unbedingt zu erhalten. Keine bestehende
 Produktivroute auf Host-Port 4000 überschreiben.
 
+## Übernahme des bisherigen SkyHub-Dienstes auf Port 4000
+
+Die Übernahme des bestehenden `skyhub_backend` wird als **kontrollierter,
+rückrollbarer Cutover** vorbereitet. Die heutige `mqtt-integrity-v3`-
+Version enthält jetzt die H5-Seite `/pilot-login`, Pilot-Konfiguration
+und TLS-geschützte Bootstrap-API aus dem früheren Entwicklungsbranch.
+Sie behält ihre strengeren MQTT-Zeitstempel-, Replay-/Retain- und
+Positionsintegritätsprüfungen. Die H5-Aktivierung bleibt **aus**.
+
+Port 4000 gehört weiterhin dem alten Backend; Port 4001 ist zunächst
+für einen isolierten Staging-Test vorgesehen. Eine neue bindende
+Konfiguration auf dem Host **wurde noch nicht ausgeführt**.
+Der alte Backend-Container bleibt bei einer späteren Umschaltung
+für den Rollback vorhanden, und die bisherigen DB-, Redis-, EMQX-
+und Medien-Container werden nicht ersetzt. Der neue SkyHub-Next-Stack
+nutzt allerdings **andere** Datenvolumes und seine API deaktiviert
+Missionsveröffentlichungen. Eine Datenmigration ist damit noch nicht erledigt.
+
+**Vor jedem Cutover ausschließlich lesend prüfen:**
+
+    bash scripts/pi-skyhub-takeover-audit.sh
+
+Der Schrittplan mit Datensicherung, Staging, Portübernahme, und Rollback
+steht in [SkyHub Legacy Takeover](docs/skyhub-legacy-takeover.md).
+
 ## Aktueller Funktionsumfang und Grenzen
 
 OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Grundlegende Gateway-/Subgerätezuordnung ist vorhanden; dauerhafter Geräte-Online-Status und zuverlässige Modellzuordnung aus allen Firmwarevarianten sind noch nicht abschließend validiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
