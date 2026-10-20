@@ -146,3 +146,34 @@ bestätigt, OSD von RC und Mavic 3M lief nach rund 70 s wieder. Pilot 2 behält
 die Cloud-Verbindung samt Zugangsdaten über Neustarts; die Pilot-Seite ist nur
 für die Ersteinrichtung nötig. Details:
 [MQTT/OSD-Integration](mqtt-osd-integration.md#restart-test-2026-10-20-pilot-2-and-rc-restarted-after-pairing).
+
+
+## Sicheres Backend-Update nach GitHub-Merge (21.10.2026)
+
+Das Repo enthält `scripts/pi-update-backend.sh` als **ausdrücklich zustimmungspflichtigen lokalen** Pi-Updatepfad. **Das GitHub-Merge allein installiert nichts auf dem Pi.** Das Skript benötigt eine bereits laufende `skyhub-next`-Compose-Installation, Linux ARM64, einen sauberen lokalen `main`-Checkout sowie einen zuvor synchronisierten `origin/main`. Es gibt weder ein hartes Zurücksetzen von lokalen Git-Dateien noch ein automatisches Überschreiben der lokalen `.env`.
+
+Auf dem Pi zunächst den lokalen Zustand nur lesend prüfen (Ausgaben vor dem Branchwechsel auf Konflikte untersuchen):
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git status --short --branch
+git remote -v
+docker compose -p skyhub-next ps
+bash scripts/pi-preflight.sh
+```
+
+**Nur bei sauberem Git-Arbeitsbaum und bestehender Next-Installation** anschließend aktualisieren:
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git fetch origin main
+git switch main
+git pull --ff-only origin main
+bash scripts/pi-update-backend.sh --apply
+```
+
+Vor der Backend-Neuerstellung kopiert das Skript `.env` und den optionalen `docker-compose.override.yml` in ein privates Sicherungsverzeichnis unter `~/Projekte/_backups/skyhub-next/`, sichert das bestehende Backend-Image unter einem Zeitstempel-Tag und erstellt einen **echten `pg_dump -Fc`** aus der bestehenden Datenbank. Bei fehlender Datenbank, fehlgeschlagenem Backup, unerwartetem Containernamen oder Preflight-Fehler wird vor der Backend-Neuerstellung abgebrochen. Es verwendet `docker compose build backend` und `docker compose up -d --no-deps --no-build backend` – nicht `docker compose down`, nicht `--remove-orphans` und **nie `-v`**. Dadurch wird nur das vorhandene Next-Backend neu erstellt. Weder die optionale DJI-Migration 001/002 noch ein DJI-Karten-Schreibpfad wird angewendet oder aktiviert. Das Health-API muss danach lesend erreichbar sein.
+
+**Grenzen:** Es werden nicht sämtliche Redis-Persistenzdateien oder MinIO-Objekte gesichert; sie werden bei diesem Backend-Update auch nicht neu gestartet. Ein `pg_dump` ist ein Datenbank-Backup, **kein** vollständiger Restore-Test auf dem Pi. Die Aufnahme der Sicherung erfolgt auf dem Pi und enthält echte sensible Daten; niemals mit Chat oder GitHub teilen. Das Skript nimmt kein neues Caddy-/EMQX-Setup vor und verlangt keinen Export von Broker- oder DJI-Geheimnissen. Es führt keinen automatischen Rollback nach einem fehlgeschlagenen Health-Test durch, bewahrt aber den vorherigen Backend-Image-Tag für eine gezielte Wiederherstellung.
+
+Bei lokal veränderten versionierten Dateien, Konflikten beim `git switch` oder einem abweichenden Compose-Layout **abbrechen, nicht `git reset --hard` oder `git clean` ausführen**. Stattdessen lokalen Stand prüfen und das Update anpassen. Nach der Installation: `docker compose -p skyhub-next logs --tail=80 backend`, `curl -fsS http://127.0.0.1:4001/api/health` und die DJI-OSD-Diagnose getrennt ausführen. Ein erfolgreicher Health-Test ersetzt keine RC-/Drohnen-Hardwareabnahme.
