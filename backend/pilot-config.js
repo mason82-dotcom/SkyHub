@@ -15,6 +15,9 @@ function pilotConfiguration(env) {
   const workspaceId=env.SKYHUB_PILOT_WORKSPACE_ID||'';
   const missing=[];
   if(!enabled)missing.push('SKYHUB_PILOT_ENABLED');
+  if(enabled && !['127.0.0.1','::1'].includes(env.SKYHUB_BIND_ADDRESS||'127.0.0.1')){
+    missing.push('SKYHUB_BIND_ADDRESS must be loopback behind a trusted HTTPS proxy');
+  }
   for(const [key,value] of Object.entries({
     SKYHUB_PILOT_ACCESS_TOKEN:accessToken,
     SKYHUB_DJI_APP_ID:appId,SKYHUB_DJI_APP_KEY:appKey,
