@@ -2,6 +2,8 @@
 
 Stand: 21.10.2026. Ausgangspunkt ist die [DJI Tutorial Reading Map](https://developer.dji.com/doc/cloud-api-tutorial/en/tutorial-map.html#tutorial-overview). Diese Einstiegsseite ist ein Wegweiser durch die Cloud API, keine Spezifikation für Kartenelemente. Für konkrete Verträge gelten die jeweils verlinkten DJI-Funktions- und API-Seiten. SkyHub Next übernimmt daraus Funktionen gezielt für den Root-Stack; `stacks/legacy-skyhub/` bleibt Referenz.
 
+**Versionsreferenz:** [DJI Cloud API 1.18](https://developer.dji.com/doc/cloud-api-tutorial/cn/), veröffentlicht am 13.10.2026. Für künftige Arbeit zuerst die aktuelle offizielle Release-Seite und die zugehörigen Funktionsseiten prüfen; die englische Startseite zeigt noch einen älteren Stand. Die 1.18-Release-Liste nennt Ground-Station- und Dock-Erweiterungen, aber keine Änderung am Pilot-2-Kartenelementvertrag. Ein Pilot-Schreibpfad bleibt bis zur gesonderten Abnahme deaktiviert.
+
 ## Fachlicher Abgleich
 
 | DJI-Referenz | Konsequenz für SkyHub Next | Stand |
@@ -15,7 +17,7 @@ Stand: 21.10.2026. Ausgangspunkt ist die [DJI Tutorial Reading Map](https://deve
 ## Priorisierte Umsetzung
 
 1. **P1 · Lesende Einsatzkarte.** Echte und zuletzt gemeldete Positionen unterscheiden, Geräte aus der Liste auf der Karte finden, alle gültigen Positionen einpassen, fehlende/ungültige Koordinaten erklären und historische `(0, 0)`-Trackpunkte nicht darstellen. Das statische Dashboard bietet dazu eine kompakte Geräteliste mit lokaler Suche, Statusfilter und aufklappbaren Messwerten. Karteninteraktion bleibt lesend; es werden keine Befehle an Fluggeräte gesendet.
-2. **P1 · DJI-Adapter entwerfen und isoliert testen.** Workspace und App-Shared-Gruppe, Element-IDs, GeoJSON-Validierung, Rollen, Sichtbarkeit und Synchronisationsereignisse als expliziten Vertrag festlegen. Die existierende `map_annotations`-Tabelle darf nicht stillschweigend als DJI-Elementgruppe behandelt werden. Migration und Wiederanlauf zuerst gegen eine separate Testdatenbank prüfen.
+2. **P1 · DJI-Adapter entwerfen und isoliert testen.** Der [lesende Elementvertrag](dji-map-element-contract.md) und sein reiner Normalisierer prüfen bereits Gruppen, IDs und GeoJSON ohne produktiven Datenpfad. Rollen, Sichtbarkeit, Schreibrechte und Synchronisationsereignisse sind weiterhin als eigener Vertrag festzulegen. Die existierende `map_annotations`-Tabelle darf nicht stillschweigend als DJI-Elementgruppe behandelt werden. Migration und Wiederanlauf zuerst gegen eine separate Testdatenbank prüfen.
 3. **P2 · Gemeinsame Kartenelemente.** Erst nach gesonderter Freigabe von Schreibrechten und Pilot-Hardwaretest: GET der Gruppen, serverseitige Create/Update/Delete-Prüfung, WebSocket-Verteilung und Konflikt-/Offline-Verhalten. Der lesende Heimnetzzugriff erhält keine Schreibrechte.
 4. **P3 · Medien und Missionen.** MinIO-Speicherort, Backup, Zugriff und Upload-Pfad klären; danach Medienbibliothek und WPML-Lebenszyklus getrennt entwickeln. Keine Mission aus einer bloßen UI-Aktion starten und keinen Status als erfolgreich anzeigen, bevor die Geräteantwort ihn bestätigt.
 

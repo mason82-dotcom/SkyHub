@@ -1,0 +1,20 @@
+# DJI-Kartenelemente: lesender Adaptervertrag
+
+Stand: 21.10.2026. Referenzversion ist **DJI Cloud API 1.18**, laut [offizieller chinesischer Release-Seite](https://developer.dji.com/doc/cloud-api-tutorial/cn/) am 13.10.2026 veröffentlicht. Die englische DJI-Startseite zeigt noch einen älteren Versionsstand. Die 1.18-Release-Liste nennt neue O4-Ground-Station- und Dock-Funktionen; Änderungen am Pilot-2-Kartenelementvertrag werden dort nicht genannt. Das ist ein Abgleich der Release-Liste, keine Behauptung, dass jede Kartenelement-Implementierung bereits auf Pilot 2 abgenommen wurde.
+
+Der reine Normalisierer `backend/map-element-contract.js` verarbeitet eine bereits geparste Antwort des DJI-Cloud-API-Endpunkts `GET /map/api/v1/workspaces/{workspace_id}/element-groups`. Er hat keinen Netzwerk-, Datenbank- oder MQTT-Zugriff und ist noch nicht in die laufende API eingebunden.
+
+## Eingang und Ausgabe
+
+- Erwartet wird die DJI-Hülle `{code: 0, data: [...]}`. Eine fehlerhafte Hülle oder Gruppe wird abgewiesen. Gruppen brauchen ID und Elementliste. Fehlende optionale Namen fallen auf die ID zurück; unbekannter Typ und Sperrstatus bleiben `null`. Typ `2` bezeichnet die App-Shared-Gruppe, die Pilot für die Synchronisierung benötigt.
+- Pro gültigem Element werden ID, Name, Geometrieart, gültige WGS84-Koordinaten im GeoJSON-Format `[Länge, Breite, optionale Höhe]`, bekannte Darstellungsattribute und Zeitstempel übernommen. Unbekannte Felder werden nicht weitergereicht. Ein fehlerhaftes oder doppelt vorhandenes Element wird gezählt und ausgelassen; andere Elemente der Gruppe bleiben erhalten.
+- Darstellungsart ist die GeoJSON-Geometrie `Point`, `LineString` oder `Polygon`. `resource.type` bleibt separat als Diagnosewert erhalten. Die DJI-Beispiele markieren Linien und Polygone teils mit `resource.type: 0`; daraus darf die Darstellungsart nicht abgeleitet werden.
+- Ein offener Polygonring wird nur in der **lesenden Kopie** geschlossen. Die Eingabe bleibt unverändert. Ungültige Koordinaten, degenerierte Linien/Flächen und unbekannte Geometrien werden ausgelassen. Grenzen: 100 Gruppen, 5000 Elemente insgesamt, 2000 Eckpunkte pro Element.
+
+## Noch nicht an die produktive API anbinden
+
+Die bestehende Tabelle `map_annotations` hat numerische IDs, keine Workspace- und Gruppenbindung sowie keinen DJI-Elementvertrag. Sie ist keine App-Shared-Gruppe. Für eine spätere Synchronisierung braucht es ein eigenes Schema mit Workspace-, Gruppen- und Element-IDs, Sperrstatus, Zeitstempeln und klarer Mandantentrennung. Migration, Schreibrechte und Hardware-Abnahme erfolgen getrennt.
+
+Der spätere Schreibpfad muss die [Create](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/https/map-elements/create.html)-, [Update](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/https/map-elements/update.html)- und [Delete](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/https/map-elements/delete.html)-Routen gegen Rollen, Gruppensperre, Workspace-Zugehörigkeit und Konflikte prüfen. Der lesende Heimnetzzugang erhält keine Schreibrechte. Nach bestätigter Speicherung müssen [WebSocket-Meldungen](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/websocket/map-elements/message-push.html) und ein erneuter Gruppenabruf bei `map_group_refresh` konsistent sein. Ereignisse dürfen keinen unbestätigten Erfolg vortäuschen.
+
+Quellen: [DJI Cloud API 1.18 Release](https://developer.dji.com/doc/cloud-api-tutorial/cn/), [Elementliste und Beispieldaten](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/https/map-elements/obtain.html), [Pilot-2-Kartenelemente](https://developer.dji.com/doc/cloud-api-tutorial/cn/feature-set/pilot-feature-set/pilot-map-elements.html), [WebSocket-Elementmeldungen](https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/pilot-to-cloud/websocket/map-elements/message-push.html).
