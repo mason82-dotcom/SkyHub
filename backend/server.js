@@ -17,6 +17,7 @@ const {pilotConfiguration}=require('./pilot-config');
 const {createStatusReply}=require('./topology-ack');
 const {createPilotPairing,redisStore}=require('./pilot-pairing');
 const {createTopologyStore}=require('./topology-store');
+const {createLanAccess}=require('./lan-access');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -31,6 +32,13 @@ try {
   process.exit(1);
 }
 const pilot=pilotConfiguration(process.env);
+let lanAccess;
+try {
+  lanAccess=createLanAccess(process.env.SKYHUB_LAN_VIEW_CIDR);
+} catch(err) {
+  console.error('[lan view]',err.message);
+  process.exit(1);
+}
 const app=express(),server=http.createServer(app);
 // Do not trust forged X-Forwarded-Proto when SkyHub occupies the legacy LAN port.
 // Trust proxy headers only when the backend is published exclusively on loopback.
@@ -78,14 +86,22 @@ function authorized(value){
   const a=Buffer.from(value),b=Buffer.from(secret);
   return a.length===b.length && crypto.timingSafeEqual(a,b);
 }
+// Token-free viewing from the configured home LAN: read-only, never pairing administration.
+function lanView(req){
+  return req.method==='GET' && !req.path.startsWith('/pilot-admin') &&
+    lanAccess.allows(req.socket.remoteAddress,req.headers['x-forwarded-for']);
+}
 function auth(req,res,next){
   const hdr=req.headers.authorization||'';
+  if(lanView(req))return next();
   if(!authorized(hdr.startsWith('Bearer ')?hdr.slice(7):'')){
     return res.status(401).json({error:'Unauthorized'});
   }
   next();
 }
-io.use((socket,next)=>authorized(socket.handshake.auth?.token)?next():next(new Error('Unauthorized')));
+io.use((socket,next)=>authorized(socket.handshake.auth?.token) ||
+  lanAccess.allows(socket.request.socket.remoteAddress,socket.handshake.headers['x-forwarded-for'])
+  ?next():next(new Error('Unauthorized')));
 io.on('connection',socket=>socket.emit('snapshot',registry.snapshot()));
 
 const redis=new Redis(process.env.REDIS_URL||'redis://redis:6379',{
@@ -274,7 +290,8 @@ app.get('/api/health',(req,res)=>res.json({
   mqttBrokerPort:broker.port,topologyReplyEnabled:topologyAckEnabled,
   topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
   topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
-  topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,...mqttStats.snapshot()
+  topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,
+  lanViewEnabled:lanAccess.enabled,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));

@@ -336,3 +336,15 @@ Ein View-Token darf nicht reichen, um ein Gerät zu koppeln und so DJI-Lizenz un
 Pilot-MQTT-Zugangsdaten zu erhalten. Das Backend bleibt auf Loopback gebunden.
 Sicherung und Validierung vor dem Reload, automatischer Rückfall bei Fehlern;
 `rollback` stellt den vorherigen Stand her, `check` testet ohne Änderungen.
+
+### Ohne Token im Heimnetz
+
+Mit `SKYHUB_LAN_VIEW_CIDR=192.168.178.0/24` in `.env` öffnet sich das Dashboard
+über Caddy :4443 ohne Token. Erlaubt sind nur lesende GET-Abfragen und der
+Live-Socket; schreibende Aufrufe brauchen weiter das Token, `/api/pilot-admin/*`
+bleibt gesperrt. Ermittelt wird der Client aus Caddys letztem
+`X-Forwarded-For`-Eintrag; SSH-Tunnel und lokale Aufrufe ohne diesen Header
+brauchen das Token. Akzeptiert werden nur private Netze von /16 bis /32
+außerhalb der Docker-Bereiche (172.16.0.0/12). Leer lassen, um das Token immer
+zu verlangen. Die Kartenkacheln senden einen Referer
+(`strict-origin-when-cross-origin`), wie es die OSM-Nutzungsregeln verlangen.

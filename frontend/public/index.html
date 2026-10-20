@@ -10,6 +10,7 @@
 header{height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;border-bottom:1px solid var(--edge)}
 h1{margin:0;font-size:20px;letter-spacing:.04em}h1 span{color:var(--blue)}small,.muted{color:var(--muted)}
 .auth{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth input{min-width:205px}
+[hidden]{display:none!important}
 input,button{padding:9px 11px;border:1px solid #40576d;border-radius:8px;background:#1b2b3d;color:white}
 button{background:#087d96;font-weight:700;cursor:pointer}button:hover{background:#099ab8}
 main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 66px)}
@@ -61,8 +62,9 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10
 'use strict';
 const el=id=>document.getElementById(id);
 const map=window.L?L.map('map').setView([51.1657,10.4515],6):null;
-if(map)L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+// OSM's tile policy requires a Referer; the page itself stays on no-referrer.
+if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {attribution:'© OpenStreetMap',maxZoom:19,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
 const records=new Map(),markers=new Map();
 let socket=null,centered=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
@@ -162,26 +164,33 @@ function update(){
     }
   }
 }
-async function connect(){
-  const token=el('token').value.trim();
-  if(!token){el('message').textContent='Token fehlt';return;}
+// token===null: token-free read-only access from the configured home network.
+async function connect(token=el('token').value.trim(),quiet=false){
+  if(token!==null && !token){el('message').textContent='Token fehlt';return false;}
   if(socket){socket.disconnect();socket=null;}
-  el('message').textContent='Verbinde…';
+  if(!quiet)el('message').textContent='Verbinde…';
   try{
-    const res=await fetch('/api/devices',{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    const res=await fetch('/api/devices',{headers:token?{Authorization:'Bearer '+token}:{},cache:'no-store'});
     if(!res.ok)throw new Error('API HTTP '+res.status);
     records.clear();for(const d of await res.json())records.set(d.sn,d);
     update();
-    socket=io({auth:{token},reconnectionDelayMax:5000});
-    socket.on('connect',()=>{el('message').textContent='Live verbunden';});
+    const label=token?'Live verbunden':'Live verbunden (Heimnetz)';
+    socket=io({auth:token?{token}:{},reconnectionDelayMax:5000});
+    socket.on('connect',()=>{el('message').textContent=label;});
     socket.on('connect_error',()=>{el('message').textContent='WebSocket nicht verbunden';});
     socket.on('disconnect',()=>{el('message').textContent='Verbindung getrennt';});
     socket.on('snapshot',list=>{for(const d of list)records.set(d.sn,d);update();});
     socket.on('device_update',d=>{records.set(d.sn,d);update();});
-  }catch(err){el('message').textContent=err.message;}
+    return true;
+  }catch(err){if(!quiet)el('message').textContent=err.message;return false;}
 }
-el('connect').addEventListener('click',connect);
+el('connect').addEventListener('click',()=>connect());
 el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+// In the home network the dashboard opens without a token; elsewhere the field stays.
+connect(null,true).then(ok=>{
+  if(ok){el('token').hidden=true;el('connect').hidden=true;}
+  else el('message').textContent='Nicht verbunden';
+});
 setInterval(update,5000);
 })();
 </script>
