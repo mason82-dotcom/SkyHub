@@ -25,6 +25,19 @@ Differences intentionally preserved:
 
 The retry button does not run an automatic reconnect loop. Pilot credentials are kept only in the active WebView memory for the explicit retry and discarded when a positive state is confirmed. Nothing is written to browser storage.
 
+## Device-side JSBridge diagnostics
+
+The DJI Pilot 2 login page now includes **DJI-Status prüfen**.
+It queries three read-only JSBridge APIs independently:
+
+- `platformIsVerified()`: did DJI itself confirm Cloud API license verification?
+- `platformIsComponentLoaded('thing')`: did Pilot 2 load the MQTT/thing module?
+- `thingGetConnectState()`: does Pilot 2 currently report an MQTT session?
+
+A return with a nonzero `code` is shown only as a bounded numeric DJI error code; the vendor `message` and all raw return objects are never displayed. The page does not call `thingGetConfigs()`, because that can contain MQTT credentials. A clean HTTPS page hides the generic yellow HTTPS requirement advisory.
+
+The presence of an active EMQX client with a matching username does not by itself identify the remote controller; it could be a separate test client. Correlate Pilot 2's reported status with broker client evidence before enabling topic publishing. The three diagnostic statuses are intentionally distinct and do not imply verified OSD delivery.
+
 ## OSD diagnostics
 
 The read-only backend additionally counts allowlisted incoming MQTT **topic deliveries before parsing**, without storing raw messages:
