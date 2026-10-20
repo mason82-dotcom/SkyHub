@@ -97,3 +97,22 @@ jobs:
         env:
           SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:55432/skyhub_test
         run: node --test backend/test/postgis.integration.test.js
+
+  isolated-postgis-backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and fail-closed invocation checks
+        run: |
+          bash -n scripts/ci-postgis-restore.sh
+          if SKYHUB_CI_RESTORE_TEST= bash scripts/ci-postgis-restore.sh; then
+            echo "Restore guard unexpectedly permitted execution" >&2
+            exit 1
+          else
+            test "$?" -eq 2
+          fi
+      - name: Run actual pg_dump and pg_restore against isolated ephemeral PostGIS
+        env:
+          SKYHUB_CI_RESTORE_TEST: isolated
+        run: bash scripts/ci-postgis-restore.sh
