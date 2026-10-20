@@ -374,10 +374,15 @@ function update(){
   for(const [sn,marker] of markers){
     if(!records.has(sn)||!validPosition(records.get(sn))){marker.remove();markers.delete(sn);tooltips.delete(sn);}
   }
-  const count=data.filter(validPosition).length;
+  const positioned=data.filter(validPosition);
+  const count=positioned.length;
+  const currentPositions=positioned.filter(d=>positionFresh(d)&&d.positionTimeVerified===true).length;
+  const unverifiedPositions=positioned.filter(d=>positionFresh(d)&&d.positionTimeVerified!==true).length;
+  const olderPositions=count-currentPositions-unverifiedPositions;
   el('fitDevices').disabled=!map||!count;
   const mapMessage=!map?'Karte konnte nicht geladen werden. Gerätedaten bleiben in der Liste verfügbar.':
-    count?count+' '+(count===1?'Position':'Positionen')+' verfügbar · WGS84 · zuletzt gemeldet':
+    count?count+' '+(count===1?'Position':'Positionen')+' · '+currentPositions+' aktuell · '+
+      unverifiedPositions+' Zeit ungeprüft · '+olderPositions+' älter · WGS84':
     'Keine gültige Position verfügbar. Gerätedaten bleiben in der Liste sichtbar.';
   if(el('mapNote').textContent!==mapMessage)el('mapNote').textContent=mapMessage;
   if(focusedDetailsSn){for(const summary of root.querySelectorAll('summary')){
