@@ -56,6 +56,9 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .hms li small{display:block}
 .toggle{display:flex;gap:8px;align-items:center;margin-top:9px;font-size:12px;color:var(--muted)}
 .toggle input{min-width:0;padding:0}.hms-head{margin-top:10px;font-size:12px;color:var(--muted)}
+.track-feedback{display:flex;align-items:center;gap:7px;margin-top:5px;font-size:11px;color:var(--muted)}
+.track-feedback span{flex:1;line-height:1.35}.track-feedback.error{color:#efb77b}
+.track-feedback button{padding:3px 7px;font-size:11px;background:#203c50}
 @media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
 </style>
 </head>
@@ -84,6 +87,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <div class="tile"><small>HMS Stufe 2</small><strong id="hmsCount">0</strong></div>
     </div>
     <label class="toggle"><input type="checkbox" id="showTrack" checked> Flugspur der letzten 60 Minuten anzeigen</label>
+    <div id="trackFeedback" class="track-feedback"><span id="trackStatus" role="status">Flugspur wird nach Verbindung geladen.</span><button id="retryTracks" type="button" hidden disabled>Erneut laden</button></div>
     <h2>Geräte im Überblick</h2>
     <div class="finder">
       <label for="deviceSearch">Geräte suchen</label>
@@ -116,6 +120,7 @@ if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'© OpenStreetMap',maxZoom:19,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
 const records=new Map(),markers=new Map(),tracks=new Map();
 let socket=null,centered=false,authToken=null,selectedSn=null,connectAttempt=0;
+let trackLoadId=0,trackController=null;
 const expanded=new Set();
 let listState='loading',composingSearch=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
@@ -352,7 +357,12 @@ function update(){
 async function connect(token=el('token').value.trim(),quiet=false){
   if(token!==null && !token){el('message').textContent='Zugriffstoken eingeben';return false;}
   const attempt=++connectAttempt;
+  cancelTrackLoad();
+  setTrackStatus('Warte auf Verbindung.');
   if(socket){const previous=socket;socket=null;previous.disconnect();}
+  records.clear();
+  for(const line of tracks.values())line.remove();tracks.clear();
+  selectedSn=null;centered=false;
   listState='loading';update();
   if(!quiet)el('message').textContent='Verbinde…';
   try{
@@ -363,8 +373,6 @@ async function connect(token=el('token').value.trim(),quiet=false){
     const devices=await res.json();
     if(attempt!==connectAttempt)return false;
     records.clear();for(const d of devices)records.set(d.sn,d);
-    for(const line of tracks.values())line.remove();tracks.clear();
-    selectedSn=null;centered=false;
     listState='ready';
     update();
     authToken=token;
@@ -381,35 +389,79 @@ async function connect(token=el('token').value.trim(),quiet=false){
   }catch(err){
     if(attempt!==connectAttempt)return false;
     listState=quiet?'auth-required':'error';update();
+    setTrackStatus('Flugspur nicht aktualisiert. Verbindung prüfen.');
     if(!quiet)el('message').textContent=err.message;
     return false;
   }
 }
 // Persisted track (PostGIS, movement-filtered, no 0/0) for devices with a known position.
-async function loadTracks(){
-  if(!map)return;
-  const show=el('showTrack').checked;
-  for(const d of records.values()){
-    const known=Number.isFinite(d.lastPositionAt)&&Date.now()-d.lastPositionAt<86400000;
-    if(!show||!known){if(tracks.has(d.sn)){tracks.get(d.sn).remove();tracks.delete(d.sn);}continue;}
+function cancelTrackLoad(){
+  trackLoadId++;
+  if(trackController){trackController.abort();trackController=null;}
+}
+function setTrackStatus(message,error=false){
+  if(el('trackStatus').textContent!==message)el('trackStatus').textContent=message;
+  el('trackFeedback').classList.toggle('error',error);
+  el('retryTracks').hidden=!error;
+  el('retryTracks').disabled=!error;
+}
+function removeTrack(sn){
+  const line=tracks.get(sn);
+  if(line){line.remove();tracks.delete(sn);}
+}
+async function loadTracks({background=false}={}){
+  cancelTrackLoad();
+  if(!map){setTrackStatus('Flugspuren benötigen die Karte.');return;}
+  if(!el('showTrack').checked){
+    for(const sn of tracks.keys())removeTrack(sn);
+    setTrackStatus('Flugspuren ausgeblendet.');
+    return;
+  }
+  const now=Date.now();
+  const eligible=[...records.values()].filter(d=>Number.isFinite(d.lastPositionAt)&&
+    now>=d.lastPositionAt&&now-d.lastPositionAt<86400000);
+  const eligibleSn=new Set(eligible.map(d=>d.sn));
+  for(const sn of tracks.keys())if(!eligibleSn.has(sn))removeTrack(sn);
+  if(!eligible.length){setTrackStatus('Keine Geräte mit gemeldeter Position.');return;}
+  if(!background||!tracks.size)setTrackStatus('Lade Flugspuren…');
+  const id=trackLoadId;
+  const controller=new AbortController();
+  trackController=controller;
+  const results=[];
+  let failures=0;
+  for(const d of eligible){
     try{
       const res=await fetch('/api/drone/'+encodeURIComponent(d.sn)+'/track?minutes=60',
-        {headers:authToken?{Authorization:'Bearer '+authToken}:{},cache:'no-store'});
-      if(!res.ok)continue;
-      const points=(await res.json()).filter(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&
+        {headers:authToken?{Authorization:'Bearer '+authToken}:{},cache:'no-store',signal:controller.signal});
+      if(!res.ok)throw new Error('track request failed');
+      const data=await res.json();
+      if(!Array.isArray(data))throw new Error('invalid track response');
+      const points=data.filter(p=>p&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&
         Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180&&(p.latitude!==0||p.longitude!==0))
         .map(p=>[p.latitude,p.longitude]);
-      if(!el('showTrack').checked)continue;
-      const aircraft=d.deviceCategory==='aircraft';
-      const style={color:aircraft?'#47c3e7':'#9aa9b8',weight:aircraft?3:2,opacity:.85,dashArray:aircraft?null:'4 6'};
-      if(!tracks.has(d.sn))tracks.set(d.sn,L.polyline(points,style).addTo(map));
-      else tracks.get(d.sn).setLatLngs(points).setStyle(style);
-      // Without a usable live position (e.g. 0/0 indoors), show the recorded track once.
-      if(!centered&&points.length){map.fitBounds(tracks.get(d.sn).getBounds(),{maxZoom:17,padding:[40,40]});centered=true;}
-    }catch(_){/* keep the previous track */}
+      results.push({device:d,points});
+    }catch(_){if(controller.signal.aborted)return;failures++;}
   }
+  if(id!==trackLoadId||!el('showTrack').checked)return;
+  trackController=null;
+  for(const {device:d,points} of results){
+    if(points.length<2){removeTrack(d.sn);continue;}
+    const aircraft=d.deviceCategory==='aircraft';
+    const style={color:aircraft?'#47c3e7':'#9aa9b8',weight:aircraft?3:2,opacity:.85,dashArray:aircraft?null:'4 6'};
+    if(!tracks.has(d.sn))tracks.set(d.sn,L.polyline(points,style).addTo(map));
+    else tracks.get(d.sn).setLatLngs(points).setStyle(style);
+    // Without a usable live position (e.g. 0/0 indoors), show the recorded track once.
+    if(!centered){map.fitBounds(tracks.get(d.sn).getBounds(),{maxZoom:17,padding:[40,40]});centered=true;}
+  }
+  if(failures){
+    setTrackStatus(tracks.size?'Flugspuren unvollständig aktualisiert; vorheriger Stand sichtbar.':
+      'Flugspuren konnten nicht geladen werden.',true);
+  }else if(tracks.size){
+    setTrackStatus(tracks.size+' '+(tracks.size===1?'Flugspur':'Flugspuren')+' aus den letzten 60 Minuten sichtbar.');
+  }else setTrackStatus('Keine gespeicherte Flugspur in den letzten 60 Minuten.');
 }
 el('showTrack').addEventListener('change',loadTracks);
+el('retryTracks').addEventListener('click',()=>loadTracks());
 el('fitDevices').addEventListener('click',fitDevices);
 el('deviceSearch').addEventListener('compositionstart',()=>{composingSearch=true;});
 el('deviceSearch').addEventListener('compositionend',()=>{composingSearch=false;update();});
@@ -418,7 +470,7 @@ el('clearSearch').addEventListener('click',()=>{
   el('deviceSearch').value='';update();el('deviceSearch').focus();
 });
 el('deviceFilter').addEventListener('change',update);
-setInterval(()=>{if(socket)loadTracks();},30000);
+setInterval(()=>{if(socket)loadTracks({background:true});},30000);
 el('connect').addEventListener('click',()=>connect());
 el('connect').disabled=false;
 el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
