@@ -35,7 +35,10 @@ function createRegistry(limit = 200) {
       telemetryTimeVerified: null, positionTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
-        heading:null,horizontalSpeed:null,verticalSpeed:null }
+        heading:null,horizontalSpeed:null,verticalSpeed:null,
+        attitudePitch:null,attitudeRoll:null,homeDistance:null,remainingFlightTime:null,
+        gpsSatellites:null,rtkSatellites:null,rtkFixState:null,positionQuality:null,
+        linkQuality:null }
     };
     devices.set(sn, d);
     return d;

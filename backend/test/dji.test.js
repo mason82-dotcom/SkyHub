@@ -17,7 +17,10 @@ test('DJI 1.18 OSD nested data and relative/absolute height stay distinct',()=>{
   const result=parseMessage('thing/product/AIR/osd',msg);
   assert.deepEqual(result.telemetry,{
     latitude:49.1,longitude:8.4,altitude:120,heightEllipsoid:420,
-    battery:76,heading:null,horizontalSpeed:6.5,verticalSpeed:-1.2
+    battery:76,heading:null,horizontalSpeed:6.5,verticalSpeed:-1.2,
+    attitudePitch:null,attitudeRoll:null,homeDistance:null,remainingFlightTime:null,
+    gpsSatellites:null,rtkSatellites:null,rtkFixState:null,positionQuality:null,
+    linkQuality:null
   });
   assert.equal(result.state.modeCode,5);
 });
@@ -71,4 +74,41 @@ test('OSD freshness expires after 15 seconds',()=>{
 test('invalid and oversized MQTT envelopes are rejected',()=>{
   assert.throws(()=>parseMessage('thing/product/RC/osd',Buffer.from('{')),SyntaxError);
   assert.throws(()=>parseMessage('thing/product/RC/osd',Buffer.alloc(131073)),/length/);
+});
+test('aircraft OSD GNSS/RTK, attitude, home distance and remaining flight time',()=>{
+  const data=extractTelemetry({
+    attitude_pitch:-3.5,attitude_roll:1.2,home_distance:142.7,
+    battery:{capacity_percent:64,remain_flight_time:1180},
+    position_state:{gps_number:21,rtk_number:34,is_fixed:2,quality:10}
+  });
+  assert.equal(data.attitudePitch,-3.5);
+  assert.equal(data.attitudeRoll,1.2);
+  assert.equal(data.homeDistance,142.7);
+  assert.equal(data.remainingFlightTime,1180);
+  assert.equal(data.gpsSatellites,21);
+  assert.equal(data.rtkSatellites,34);
+  assert.equal(data.rtkFixState,2);
+  assert.equal(data.positionQuality,10);
+  assert.equal(data.battery,64);
+});
+test('RC OSD link quality and battery; implausible quality values stay unknown',()=>{
+  const rc=extractTelemetry({capacity_percent:88,wireless_link:{sdr_quality:4,dongle_number:0}});
+  assert.equal(rc.battery,88);
+  assert.equal(rc.linkQuality,4);
+  const bad=extractTelemetry({wireless_link:{sdr_quality:9},
+    position_state:{gps_number:-1,is_fixed:7,quality:1.5},battery:{remain_flight_time:-5}});
+  assert.equal(bad.linkQuality,null);
+  assert.equal(bad.gpsSatellites,null);
+  assert.equal(bad.rtkFixState,null);
+  assert.equal(bad.positionQuality,null);
+  assert.equal(bad.remainingFlightTime,null);
+});
+test('data key shape exposes field names only, never values',()=>{
+  const m=parseMessage('thing/product/RC/state',Buffer.from(JSON.stringify({
+    need_reply:1,data:{live_capacity:{x:'SECRETVALUE'},'bad key':1,firmware_version:'1.0'}
+  })));
+  assert.deepEqual(m.dataKeys,['firmware_version','live_capacity']);
+  assert.equal(m.needReply,true);
+  assert.doesNotMatch(JSON.stringify(m.dataKeys),/SECRETVALUE/);
+  assert.deepEqual(parseMessage('thing/product/RC/osd',Buffer.from('{"data":[1]}')).dataKeys,[]);
 });

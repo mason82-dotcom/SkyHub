@@ -5,6 +5,9 @@
 function finite(value, min=-Infinity, max=Infinity) {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max ? value : null;
 }
+function integer(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max ? value : null;
+}
 function serial(value) {
   return typeof value === 'string' && /^[\w.-]{1,100}$/.test(value) ? value : null;
 }
@@ -37,6 +40,8 @@ function extractTelemetry(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
   const battery=p.battery && typeof p.battery === 'object' ? p.battery : {};
   const batteries=Array.isArray(battery.batteries) ? battery.batteries : [];
+  const position=p.position_state && typeof p.position_state === 'object' ? p.position_state : {};
+  const link=p.wireless_link && typeof p.wireless_link === 'object' ? p.wireless_link : {};
   return {
     latitude:finite(p.latitude,-90,90),
     longitude:finite(p.longitude,-180,180),
@@ -47,7 +52,18 @@ function extractTelemetry(p) {
       batteries[0]?.capacity_percent,0,100),
     heading:finite(p.attitude_head ?? p.heading,-360,360),
     horizontalSpeed:finite(p.horizontal_speed,0),
-    verticalSpeed:finite(p.vertical_speed)
+    verticalSpeed:finite(p.vertical_speed),
+    attitudePitch:finite(p.attitude_pitch,-180,180),
+    attitudeRoll:finite(p.attitude_roll,-180,180),
+    homeDistance:finite(p.home_distance,0),
+    remainingFlightTime:integer(battery.remain_flight_time,0,86400),
+    // GNSS quality as reported by DJI; satellite counts are not an accuracy guarantee.
+    gpsSatellites:integer(position.gps_number,0,255),
+    rtkSatellites:integer(position.rtk_number,0,255),
+    rtkFixState:integer(position.is_fixed,0,3),
+    positionQuality:integer(position.quality,0,10),
+    // RC (gateway) OSD: SDR video/control link quality, 0-5.
+    linkQuality:integer(link.sdr_quality,0,5)
   };
 }
 function extractState(data) {
@@ -82,6 +98,11 @@ function extractHms(data) {
     imminent:item.imminent===0 || item.imminent===1 ? item.imminent : null
   }));
 }
+// Field names only (never values) to compare real firmware payloads with the parser.
+function dataKeys(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+  return Object.keys(data).filter(key=>/^[A-Za-z0-9_]{1,48}$/.test(key)).sort().slice(0,64);
+}
 function parseMessage(topic,raw) {
   const meta=parseTopic(topic);
   if (!meta) return null;
@@ -100,6 +121,8 @@ function parseMessage(topic,raw) {
     ...meta,method,
     timestamp:hasTimestamp ? envelope.timestamp : null,
     gatewaySn:serial(envelope.gateway),
+    needReply:envelope.need_reply===1,
+    dataKeys:dataKeys(data),
     telemetry:meta.channel==='osd' ? extractTelemetry(data) : null,
     state:meta.channel==='state' || meta.channel==='osd' ? extractState(data) : null,
     topology:meta.channel==='status' && method==='update_topo' ? extractTopology(data) : null,
@@ -109,4 +132,4 @@ function parseMessage(topic,raw) {
 function fresh(last,now=Date.now()) {
   return Number.isFinite(last) && last<=now && now-last<15000;
 }
-module.exports={finite,serial,domain,model,parseTopic,extractTelemetry,extractState,extractTopology,extractHms,parseMessage,fresh};
+module.exports={finite,integer,dataKeys,serial,domain,model,parseTopic,extractTelemetry,extractState,extractTopology,extractHms,parseMessage,fresh};
