@@ -5,7 +5,7 @@
 set -Eeuo pipefail
 umask 077
 
-if [[ "$1" == "--help" ]]; then
+if [[ $# -eq 1 && "$1" == "--help" ]]; then
   printf '%s\n' 'Usage: bash scripts/pi-backup-legacy.sh'
   printf '%s\n' 'Creates a private backup under ~/Projekte/_backups/skyhub-legacy-*'
   exit 0
