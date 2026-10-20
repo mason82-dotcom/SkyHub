@@ -1,0 +1,43 @@
+name: SkyHub Next checks
+on:
+  push:
+    branches: ["develop/**"]
+  pull_request:
+jobs:
+  dji-parser-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax and DJI parsing tests
+        run: |
+          node --check backend/server.js
+          node --check backend/dji.js
+          node --check backend/mqtt-config.js
+          node --check backend/mqtt-metrics.js
+          node --check backend/pilot-config.js
+          node --check frontend/public/pilot-login.js
+          node --test backend/test/*.test.js
+      - name: Validate isolated Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+      - name: Assert Pi MQTT endpoint on port 1884
+        run: |
+          node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const b=x.services.backend.environment; if(b.MQTT_BROKER_URL!=="mqtt://host.docker.internal:1884" || b.SKYHUB_MQTT_REQUIRED_PORT!=="1884") process.exit(1);'
+      - name: Assert SkyHub Next remains isolated from the existing Pi backend
+        run: |
+          node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const p=x.services.backend.ports; if(x.name!=="skyhub-next"||p.length!==1||Number(p[0].published)!==4001||Number(p[0].target)!==4000||p[0].host_ip!=="127.0.0.1"||x.services.emqx) process.exit(1);'
+      - name: Assert Pilot 2 login remains opt-in and host-bound
+        run: |
+          node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const e=x.services.backend.environment; if(e.SKYHUB_PILOT_ENABLED!=="false"||e.SKYHUB_BIND_ADDRESS!=="127.0.0.1"||e.SKYHUB_PILOT_MQTT_URL!=="mqtt://192.168.178.63:1884") process.exit(1);'
+      - name: Syntax-check read-only Pi preflight script
+        run: |
+          bash -n scripts/pi-preflight.sh
+          bash -n scripts/pi-mqtt-observe.sh
+          bash -n scripts/pi-tls-audit.sh
+      - name: Build the SkyHub Next container
+        run: docker build -f backend/Dockerfile -t skyhub-next:test .
+      - name: Smoke-test bundled runtime modules in the image
+        run: |
+          docker run --rm --network none --entrypoint node skyhub-next:test             -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics"].forEach(require)'

@@ -1,0 +1,107 @@
+'use strict';
+
+// DJI Cloud API v1.18: allowlisted read-only parser. Not a write/onboarding implementation.
+// Never store, log or forward topology keys or any unrecognized message properties.
+function finite(value, min=-Infinity, max=Infinity) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max ? value : null;
+}
+function serial(value) {
+  return typeof value === 'string' && /^[\w.-]{1,100}$/.test(value) ? value : null;
+}
+function domain(value) {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 255) return String(value);
+  return typeof value === 'string' && /^\d{1,3}$/.test(value) ? value : null;
+}
+function model(device) {
+  return {
+    domain: domain(device.domain),
+    type: Number.isInteger(device.type) ? device.type : null,
+    subType: Number.isInteger(device.sub_type) ? device.sub_type : null,
+    // Pilot 2 and dock schemas differ: thing_version or version.
+    thingVersion: (() => {
+      const version = device.thing_version ?? device.version;
+      if (typeof version === 'string' && version.length <= 32) return version;
+      if (Number.isInteger(version) && version >= 0 && version < 10000) return String(version);
+      return null;
+    })()
+  };
+}
+function parseTopic(topic) {
+  const match=/^(thing|sys)\/product\/([^/]{1,100})\/(osd|state|events|services_reply|status)$/.exec(topic);
+  if (!match || !serial(match[2]) ||
+    (match[1] === 'sys' && match[3] !== 'status') ||
+    (match[1] === 'thing' && match[3] === 'status')) return null;
+  return {source:match[1],sn:match[2],channel:match[3]};
+}
+function extractTelemetry(p) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+  const battery=p.battery && typeof p.battery === 'object' ? p.battery : {};
+  const batteries=Array.isArray(battery.batteries) ? battery.batteries : [];
+  return {
+    latitude:finite(p.latitude,-90,90),
+    longitude:finite(p.longitude,-180,180),
+    // DJI height = absolute ellipsoid height; elevation = relative to takeoff point.
+    altitude:finite(p.elevation ?? p.height_above_takeoff),
+    heightEllipsoid:finite(p.height),
+    battery:finite(p.battery_percentage ?? p.capacity_percent ?? battery.capacity_percent ??
+      batteries[0]?.capacity_percent,0,100),
+    heading:finite(p.attitude_head ?? p.heading,-360,360),
+    horizontalSpeed:finite(p.horizontal_speed,0),
+    verticalSpeed:finite(p.vertical_speed)
+  };
+}
+function extractState(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  return {
+    // According to DJI, mode_code usually has pushMode=0 (OSD), not only state.
+    modeCode:Number.isInteger(data.mode_code) ? data.mode_code : null,
+    firmwareVersion:typeof data.firmware_version === 'string' && data.firmware_version.length <= 64
+      ? data.firmware_version : null
+  };
+}
+function extractTopology(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) ||
+      !Array.isArray(data.sub_devices)) return null;
+  return {
+    model:model(data),
+    children:data.sub_devices.slice(0,100).filter(d=>d && serial(d.sn)).map(d=>({
+      sn:d.sn,
+      model:model(d),
+      index:(typeof d.index==='string' && d.index.length<=16) ||
+        (Number.isInteger(d.index) && d.index>=0 && d.index<1000) ? String(d.index) : null
+    }))
+  };
+}
+function extractHms(data) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.list)) return null;
+  return data.list.slice(0,20).filter(x=>x && typeof x === 'object').map(item=>({
+    code:typeof item.code === 'string' && item.code.length<=80 ? item.code : null,
+    level:Number.isInteger(item.level) && item.level>=0 && item.level<=2 ? item.level : null,
+    module:Number.isInteger(item.module) ? item.module : null,
+    deviceType:typeof item.device_type === 'string' && item.device_type.length<=40 ? item.device_type : null,
+    imminent:item.imminent===0 || item.imminent===1 ? item.imminent : null
+  }));
+}
+function parseMessage(topic,raw) {
+  const meta=parseTopic(topic);
+  if (!meta) return null;
+  if (!raw || raw.length>131072) throw new Error('Invalid MQTT payload length');
+  const envelope=JSON.parse(raw.toString('utf8'));
+  if (!envelope || typeof envelope!=='object' || Array.isArray(envelope))
+    throw new Error('Invalid DJI envelope');
+  const data=envelope.data;
+  const method=typeof envelope.method==='string' ? envelope.method.slice(0,80) : null;
+  return {
+    ...meta,method,
+    timestamp:finite(envelope.timestamp,1e12,1e15),
+    gatewaySn:serial(envelope.gateway),
+    telemetry:meta.channel==='osd' ? extractTelemetry(data) : null,
+    state:meta.channel==='state' || meta.channel==='osd' ? extractState(data) : null,
+    topology:meta.channel==='status' && method==='update_topo' ? extractTopology(data) : null,
+    hms:meta.channel==='events' && method==='hms' ? extractHms(data) : null
+  };
+}
+function fresh(last,now=Date.now()) {
+  return Number.isFinite(last) && last<=now && now-last<15000;
+}
+module.exports={finite,serial,domain,model,parseTopic,extractTelemetry,extractState,extractTopology,extractHms,parseMessage,fresh};
