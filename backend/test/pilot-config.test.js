@@ -47,6 +47,11 @@ test('Reject incomplete license, missing credentials, weak access token and inva
     {SKYHUB_PILOT_ENABLED:'false'}
   ])assert.equal(pilotConfiguration({...configured,...patch}).ready,false);
 });
+test('Pilot 2 enabled endpoint rejects broad LAN bind, requiring a trusted HTTPS reverse proxy',()=>{
+  const c=pilotConfiguration({...configured,SKYHUB_BIND_ADDRESS:'0.0.0.0'});
+  assert.equal(c.ready,false);
+  assert.match(c.missing.join(' '),/loopback/);
+});
 test('No unverified MQTT TLS mode is advertised as working',()=>{
   const c=pilotConfiguration({...configured,SKYHUB_PILOT_MQTT_URL:'mqtts://192.168.178.63:1884'});
   assert.equal(c.ready,false);
