@@ -8,6 +8,7 @@ const Redis=require('ioredis');
 const {Pool}=require('pg');
 const {Server}=require('socket.io');
 const {parseMessage}=require('./dji');
+const {classifyMessage}=require('./message-guard');
 const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
 const {createRegistry}=require('./registry');
@@ -64,12 +65,17 @@ const pool=process.env.DATABASE_URL?
   new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:3000}):null;
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
 
-function onMessage(topic,payload){
+function onMessage(topic,payload,packet){
+  // A retained MQTT delivery is not evidence of a currently connected DJI device.
+  if(packet?.retain===true){mqttStats.rejected('retained');return;}
   try {
     const parsed=parseMessage(topic,payload);
     if(!parsed)return;
     const observedAt=Date.now();
+    const decision=classifyMessage(parsed,packet,observedAt);
+    if(!decision.accept){mqttStats.rejected(decision.reason);return;}
     const result=registry.ingest(parsed,observedAt);
+    if(result.dropReason){mqttStats.rejected(result.dropReason);return;}
     mqttStats.accepted(parsed,result,observedAt);
     for(const item of result.updates){
       io.emit('device_update',item);
@@ -85,7 +91,11 @@ function onMessage(topic,payload){
         [p.gatewaySn,p.deviceSn,p.latitude,p.longitude,p.altitude,p.battery]
       ).catch(err=>console.error('[postgres insert]',err.message));
     }
-  }catch(err){ mqttStats.rejected();console.error('[mqtt message rejected]',err.message); }
+  }catch(_err){
+    // Parsing errors may contain snippets of sensitive DJI messages. Never log them.
+    mqttStats.rejected('malformed');
+    console.error('[mqtt message rejected] malformed DJI message');
+  }
 }
 
 const options={clientId:'skyhub_next_readonly_'+process.pid,protocolVersion:5,
