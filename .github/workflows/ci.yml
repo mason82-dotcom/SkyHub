@@ -35,6 +35,7 @@ jobs:
         run: |
           bash -n scripts/pi-preflight.sh
           bash -n scripts/pi-mqtt-observe.sh
+          bash -n scripts/pi-tls-audit.sh
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules in the image
