@@ -22,6 +22,7 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
 - [Trennung vom Legacy-Stack und Migrationsübersicht](docs/legacy-migration.md)
+- [Legacy-Abhängigkeitsaudit und Bereinigungsentscheidung](docs/legacy-dependency-audit.md)(docs/legacy-migration.md)
 - [Betriebswerkzeuge: Nur lesen, Dateien schreiben oder Live-System ändern](docs/scripts.md)
 - [Detaillierter Cutover- und Rollback-Plan](docs/skyhub-legacy-takeover.md)
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)

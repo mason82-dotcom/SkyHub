@@ -8,7 +8,7 @@
 - `backend/dji.js`, `backend/registry.js`, `backend/message-guard.js`, `backend/mqtt-shape.js`: DJI-Topic-Parsing, Zustandsverwaltung und Eingangsvalidierung.
 - `backend/pilot-config.js`, `backend/pilot-pairing.js`, `backend/topology-ack.js`: Pilot-2-Anbindung und optionaler begrenzter Topologie-Antwortkanal.
 - `backend/track-store.js`, `backend/db/schema.sql`: Speicherung von Flugspuren in PostGIS.
-- `frontend/public/`: statisches Dashboard und Pilot-2-Seiten ohne Frontend-Build.
+- `frontend/public/`: statisches Dashboard und Pilot-2-Seiten ohne Frontend-Build. Der alte unverbundene React-Platzhalter `frontend/src/App.jsx` wurde im Cleanup entfernt.
 - `scripts/`: Pi-Diagnose-, Staging-, Sicherungs- und Betriebswerkzeuge.
 - `stacks/legacy-skyhub/`: historischer Quelltext-/Konfigurations-Snapshot, **kein** alternativer Startpfad.
 

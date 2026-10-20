@@ -1,5 +1,7 @@
 # Legacy-Trennung und Migrationspfad
 
+Die geprüften Abhängigkeiten und die Entscheidung, welche Archivdateien vorerst erhalten bleiben, sind im [Legacy-Abhängigkeitsaudit](legacy-dependency-audit.md) dokumentiert.
+
 ## Gültige Zuständigkeiten
 
 | Ort | Rolle | Betrieb |
