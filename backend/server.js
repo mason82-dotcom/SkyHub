@@ -9,6 +9,7 @@ const {Pool}=require('pg');
 const {Server}=require('socket.io');
 const {parseMessage}=require('./dji');
 const {validateBrokerConfig}=require('./mqtt-config');
+const {createMqttMetrics}=require('./mqtt-metrics');
 const {createRegistry}=require('./registry');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
@@ -28,7 +29,7 @@ const io=new Server(server,{maxHttpBufferSize:131072});
 const registry=createRegistry();
 let mqttConnected=false;
 let mqttSubscribed=false;
-const mqttStats={lastConnectedAt:null,lastDisconnectedAt:null,lastMessageAt:null,accepted:0,rejected:0};
+const mqttStats=createMqttMetrics();
 
 app.disable('x-powered-by');
 app.use(express.json({limit:'128kb'}));
@@ -67,9 +68,9 @@ function onMessage(topic,payload){
   try {
     const parsed=parseMessage(topic,payload);
     if(!parsed)return;
-    mqttStats.accepted++;
-    mqttStats.lastMessageAt=Date.now();
-    const result=registry.ingest(parsed);
+    const observedAt=Date.now();
+    const result=registry.ingest(parsed,observedAt);
+    mqttStats.accepted(parsed,result,observedAt);
     for(const item of result.updates){
       io.emit('device_update',item);
       redis.set('skyhub:device:'+item.sn,JSON.stringify(item),'EX',3600)
@@ -84,7 +85,7 @@ function onMessage(topic,payload){
         [p.gatewaySn,p.deviceSn,p.latitude,p.longitude,p.altitude,p.battery]
       ).catch(err=>console.error('[postgres insert]',err.message));
     }
-  }catch(err){ mqttStats.rejected++;console.error('[mqtt message rejected]',err.message); }
+  }catch(err){ mqttStats.rejected();console.error('[mqtt message rejected]',err.message); }
 }
 
 const options={clientId:'skyhub_next_readonly_'+process.pid,protocolVersion:5,
@@ -94,7 +95,7 @@ if(process.env.MQTT_PASSWORD)options.password=process.env.MQTT_PASSWORD;
 const client=mqtt.connect(broker.url,options);
 client.on('connect',()=>{
   mqttConnected=true;
-  mqttStats.lastConnectedAt=Date.now();
+  mqttStats.connected();
   mqttSubscribed=false;
   console.log('[mqtt] connected; subscribing read-only');
   client.subscribe([
@@ -106,16 +107,14 @@ client.on('connect',()=>{
     if(!mqttSubscribed)console.error('[mqtt subscribe] subscriptions not confirmed');
   });
 });
-client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;mqttStats.lastDisconnectedAt=Date.now();});
+client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;mqttStats.disconnected();});
 client.on('error',err=>console.error('[mqtt]',err.message));
 client.on('message',onMessage);
 
 app.get('/api/health',(req,res)=>res.json({
   status:mqttConnected&&mqttSubscribed?'online':'degraded',mqtt:mqttConnected,
   subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true,
-  mqttBrokerPort:broker.port,mqttLastConnectedAt:mqttStats.lastConnectedAt,
-  mqttLastDisconnectedAt:mqttStats.lastDisconnectedAt,mqttLastMessageAt:mqttStats.lastMessageAt,
-  mqttAcceptedMessages:mqttStats.accepted,mqttRejectedMessages:mqttStats.rejected
+  mqttBrokerPort:broker.port,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
