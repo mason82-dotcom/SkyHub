@@ -8,6 +8,8 @@ const MODELS = Object.freeze({
   '0:67:1':'Matrice 30T',
   '0:77:0':'Mavic 3E',
   '0:77:1':'Mavic 3T',
+  // Confirmed live on 2026-10-20 (update_topo via DJI RC Pro Enterprise).
+  '0:77:2':'Mavic 3M',
   '0:77:3':'Mavic 3TA',
   '0:89:0':'Matrice 350 RTK',
   '0:91:0':'Matrice 3D',

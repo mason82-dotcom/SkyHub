@@ -32,7 +32,7 @@ Das bereitgestellte Archiv enthält AeroNexus-On-Prem-Patches gegen die DJI-Refe
 
 ## Ausdrückliche Einschränkungen
 
-- Mavic 3M: Der AeroNexus-Patch nennt Kamera-ID 68; die derzeit geprüfte DJI-Produktliste bestätigt diese ID nicht. Daher erfolgt keine ungeprüfte Modellzuordnung in SkyHub.
+- Mavic 3M: Das Fluggerät `0/77/2` ist seit dem 20.10.2026 per Hardware bestätigt (Topologie über die RC Pro Enterprise) und eingetragen. Die im AeroNexus-Patch genannte **Kamera**-ID 68 bleibt unbestätigt und ist weiterhin nicht zugeordnet.
 - Die zusätzliche Cloud-API-1.18-Funktionspalette muss getrennt anhand der offiziellen gerätespezifischen Schemas verifiziert werden. Es werden keine neuen Flugsteuerungs- oder FTS-Methoden blind übernommen.
 - Die Demo enthält Pilot-2-JSBridge und vollständige Arbeitsbereiche; SkyHub Next besitzt derzeit nur das gesicherte Read-only-Monitoring. Pilot-2-Onboarding, Medienimport, Video und Wayline-Verwaltung sind eigene zukünftige Adapter.
 - Die Backends der DJI-Demo basieren auf anderen Java-/Vue-Bibliotheken. Versionen aus diesem Archiv sind keine Empfehlungen für das neue Node.js-Projekt.
