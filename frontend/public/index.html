@@ -80,7 +80,17 @@ function update(){
     head.append(name,state);card.append(head);
     const grid=document.createElement('div');grid.className='metrics';
     const t=d.telemetry||{};
-    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],['Breite',show(t.latitude)],['Länge',show(t.longitude)]]){
+    const rtk=['nicht gestartet','fixiert gerade','Fix','Fix fehlgeschlagen'];
+    // Optional DJI fields are only shown when the device actually reports them.
+    const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
+      ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites)],
+      ['RTK-Status',t.rtkFixState,rtk[t.rtkFixState]||'—'],
+      ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
+      ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
+        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
+      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')]]
+      .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
+    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],['Breite',show(t.latitude)],['Länge',show(t.longitude)],...optional]){
       const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
       caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
     }

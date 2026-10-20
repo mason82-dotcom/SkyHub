@@ -31,6 +31,7 @@ if(!/^\d{1,5}$/.test(arg) || !Number.isSafeInteger(port) || port<1 || port>65535
           process.exitCode=2;return;
         }
         const count=(value)=>Number.isSafeInteger(value)&&value>=0?value:'n/v';
+        const time=(value)=>Number.isFinite(value)?new Date(value).toISOString():'nie';
         console.log('=== SkyHub Next 0.1.0 – MQTT/OSD Diagnose ===');
         console.log('EMQX-Verbindung: '+(d.mqtt===true?'ja':'nein'));
         console.log('MQTT-Subscriptions: '+(d.subscribed===true?'bestätigt':'nicht bestätigt'));
@@ -39,12 +40,23 @@ if(!/^\d{1,5}$/.test(arg) || !Number.isSafeInteger(port) || port<1 || port>65535
         console.log('Verwertbare Telemetrie: '+count(d.mqttValidTelemetryUpdates));
         console.log('Status-Topic empfangen: '+count(d.mqttObservedChannelCounts?.status));
         console.log('State-Topic empfangen: '+count(d.mqttObservedChannelCounts?.state));
-        const time=(value)=>Number.isFinite(value)?new Date(value).toISOString():'nie';
         console.log('Letztes rohes OSD: '+time(d.mqttLastObservedOsdAt));
         console.log('Letzte valide Telemetrie: '+time(d.mqttLastTelemetryAt));
         console.log('Topologie-Bestätigung aktiviert: '+(d.topologyReplyEnabled===true?'ja':'nein'));
+        if(d.topologyReplyEnabled===true){
+          console.log('Topologie-Antworten gesendet: '+count(d.topologyReplySent)+
+            ' / übersprungen: '+count(d.topologyReplySkipped)+' / Fehler: '+count(d.topologyReplyErrors));
+          console.log('Letzte Topologie-Antwort: '+time(d.topologyReplyLastAt));
+        }
         if(d.mqtt!==true || d.subscribed!==true){
           console.log('Hinweis: Zuerst SkyHub-Subscriber-Verbindung und ACL prüfen.');
+        }else if(d.mqttObservedOsdPackets===0 && d.mqttObservedChannelCounts?.status>0 &&
+            d.topologyReplyEnabled!==true){
+          console.log('Hinweis: update_topo kommt an, aber SkyHub sendet kein status_reply. '+
+            'Pilot 2 wiederholt update_topo dann und sendet kein OSD (SKYHUB_TOPOLOGY_ACK_ENABLED).');
+        }else if(d.mqttObservedOsdPackets===0 && d.topologyReplyEnabled===true &&
+            !(d.topologyReplySent>0)){
+          console.log('Hinweis: Topologie-Antwort aktiviert, aber noch keine gesendet. Backend-Log prüfen.');
         }else if(d.mqttObservedOsdPackets===0){
           console.log('Hinweis: Bisher kein passendes OSD-Topic zugestellt. Pilot-Publish/ACL prüfen.');
         }else if(d.mqttOsdMessages===0){
