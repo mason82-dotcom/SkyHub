@@ -89,11 +89,16 @@ function parseMessage(topic,raw) {
   const envelope=JSON.parse(raw.toString('utf8'));
   if (!envelope || typeof envelope!=='object' || Array.isArray(envelope))
     throw new Error('Invalid DJI envelope');
+  const hasTimestamp=Object.prototype.hasOwnProperty.call(envelope,'timestamp');
+  if (hasTimestamp && (!Number.isSafeInteger(envelope.timestamp) ||
+      envelope.timestamp < 1e12 || envelope.timestamp > 1e15)) {
+    throw new Error('Invalid DJI timestamp');
+  }
   const data=envelope.data;
   const method=typeof envelope.method==='string' ? envelope.method.slice(0,80) : null;
   return {
     ...meta,method,
-    timestamp:finite(envelope.timestamp,1e12,1e15),
+    timestamp:hasTimestamp ? envelope.timestamp : null,
     gatewaySn:serial(envelope.gateway),
     telemetry:meta.channel==='osd' ? extractTelemetry(data) : null,
     state:meta.channel==='state' || meta.channel==='osd' ? extractState(data) : null,
