@@ -120,9 +120,53 @@ Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im 
 
 Die Änderung ist auf dem separaten Branch `develop/skyhub-next-position-integrity-v2` isoliert, ohne Port- oder Brokeränderung. Zusätzliche Tests: `node --test backend/test/position-integrity.test.js`.
 
+## MQTT-Nachrichtenintegrität (Entwicklungsstufe 3)
+
+Der rein lesende Empfangspfad prüft das DJI-Nachrichtenformat und den optionalen
+Quellzeitstempel (Unix-Millisekunden). MQTT-Pakete mit `retain=true` werden
+grundsätzlich verworfen. Bei **vorhandenem** Quellzeitstempel gelten folgende
+Eingangsfenster: OSD höchstens 120 Sekunden alt, andere Kanäle höchstens
+300 Sekunden alt; maximal 30 Sekunden Zukunftstoleranz. Ein verworfenes Paket
+aktualisiert weder Telemetrie noch Geräte-Topologie.
+
+Die bestehende Registry verwirft doppelte oder rückwärts laufende Quellzeitstempel
+pro Gerät und Kanal. Nach einem zeitgestempelten Kanalpaket wird ein späteres
+Paket desselben Kanals **ohne** Zeitstempel nicht mehr übernommen. Nachrichten,
+die von Beginn an ohne Zeitstempel eintreffen, bleiben aus
+Kompatibilitätsgründen zulässig, werden jedoch als zeitlich ungeprüft gekennzeichnet
+(`telemetryTimeVerified=false`, `positionTimeVerified=false`).
+Das ist **kein vollständiger Replay-Schutz** für zeitstempellose Pakete.
+
+`lastTelemetryAt` und `lastPositionAt` beruhen bei verifizierbarem Quellzeitstempel
+auf der DJI-Quellzeit (nicht auf der verspäteten Empfangszeit).
+Die Kartenmarkierung wird nur bei frischer, zeitlich verifizierter GPS-Position
+blau dargestellt; sonst grau. Die sichtbare Frische bedeutet weiterhin **nicht**
+GNSS-/RTK-Genauigkeit oder eine bestätigte Flugposition.
+
+Die Health-API enthält zusätzlich `mqttTimestampUnverifiedMessages` und
+`mqttDroppedByReason` (z. B. `retained`, `stale`, `future`, `duplicate`).
+Abweisungen werden ohne MQTT-Rohdaten und ohne Gerätekennungen protokolliert.
+`mqttLastTelemetryAt` in den aggregierten MQTT-Metriken bezeichnet den
+**Eingangszeitpunkt** eines verwertbaren OSD-Messwerts; die einzelne
+`lastTelemetryAt`-Zeit der Registry den Quellzeitpunkt, sofern bekannt.
+
+`lastTopologyAt` und `topologyTimeVerified` werden getrennt für
+Fernsteuerung und Subgeräte geführt. `topologyOnline` bedeutet ausschließlich
+**zuletzt in einer update_topo-Meldung als verbunden gemeldet**, nicht
+"jetzt nachweislich online". Die Topologie wird durch die MQTT-Verbindung
+oder fehlende Statusänderungen nicht automatisch aufgefrischt.
+
+Voraussetzung für die Zeitfenster ist eine korrekt synchronisierte Pi-Systemuhr
+(NTP). Replay-Schutz anhand von Zeitstempeln ersetzt weder authentifiziertes
+MQTT, Broker-ACLs noch eine vollständige DJI-Protokollvalidierung. Keine
+Produktivdienste werden durch Git-Branchwechsel oder Unit-Tests gestartet.
+
+Neue Tests: `node --test backend/test/message-guard.test.js backend/test/topology-time.test.js`.
+Für alle Regressionstests: `node --test backend/test/*.test.js`.
+
 ## Aktueller Funktionsumfang und Grenzen
 
-OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Produkt- und Gateway-Zuordnung ist noch nicht implementiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
+OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Grundlegende Gateway-/Subgerätezuordnung ist vorhanden; dauerhafter Geräte-Online-Status und zuverlässige Modellzuordnung aus allen Firmwarevarianten sind noch nicht abschließend validiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
 
 Das Frontend benötigt Leaflet/OpenStreetMap über CDN und Internetzugang. MinIO ist eine isolierte Speichergrundlage für zukünftige Medien; eine Medien-API gibt es noch nicht. Die vorhandenen M3E-/M3T-/M3M-Python-Worker sind Demonstrationscode und dürfen nicht als reale Messergebnisse verwendet werden. WPML-Missionseditor, Radiometrie und Photogrammetrie stehen noch aus.
 
