@@ -11,6 +11,7 @@ const {parseMessage}=require('./dji');
 const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
 const {createRegistry}=require('./registry');
+const {pilotConfiguration}=require('./pilot-config');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -24,7 +25,11 @@ try {
   console.error('[mqtt config]',err.message);
   process.exit(1);
 }
+const pilot=pilotConfiguration(process.env);
 const app=express(),server=http.createServer(app);
+// The pilot page must only be exposed through a trusted HTTPS reverse proxy.
+// Docker publishes SkyHub Next to host loopback by default.
+app.set('trust proxy',['loopback','linklocal','uniquelocal']);
 const io=new Server(server,{maxHttpBufferSize:131072});
 const registry=createRegistry();
 let mqttConnected=false;
@@ -110,6 +115,30 @@ client.on('connect',()=>{
 client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;mqttStats.disconnected();});
 client.on('error',err=>console.error('[mqtt]',err.message));
 client.on('message',onMessage);
+
+// DJl Pilot 2 entry point is a real H5 page rather than the legacy 404.
+// By default it is a read-only readiness page; no MQTT credentials are exposed.
+app.get('/pilot-login',(req,res)=>{
+  res.set('Cache-Control','no-store');
+  res.sendFile(path.resolve(__dirname,'../frontend/public/pilot-login.html'));
+});
+app.get('/api/pilot/status',(req,res)=>res.json({
+  configured:pilot.ready,missing:pilot.missing,
+  mqttPort:1884,requiresHttps:true
+}));
+app.post('/api/pilot/bootstrap',(req,res)=>{
+  if(!pilot.ready)return res.status(503).json({error:'Pilot 2 not configured'});
+  if(!req.secure)return res.status(403).json({error:'HTTPS required'});
+  // Credentials are issued only after separate strong Pilot access token validation.
+  const hdr=req.headers.authorization||'';
+  const token=hdr.startsWith('Bearer ')?hdr.slice(7):'';
+  const a=Buffer.from(token),b=Buffer.from(pilot.accessToken);
+  if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){
+    return res.status(401).json({error:'Unauthorized'});
+  }
+  res.set('Cache-Control','no-store');
+  res.json(pilot.bootstrap());
+});
 
 app.get('/api/health',(req,res)=>res.json({
   status:mqttConnected&&mqttSubscribed?'online':'degraded',mqtt:mqttConnected,
