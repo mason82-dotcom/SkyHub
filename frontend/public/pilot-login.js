@@ -90,6 +90,8 @@
     if(!target)return;
     // Read only three DJI APIs. Never call thingGetConfigs (contains credentials).
     target.textContent=[
+      'SkyHub-Seite geladen: ja',
+      'DJI Pilot 2 JSBridge: '+(window.djiBridge?'verfügbar':'nicht verfügbar'),
       'DJI-Lizenz geprüft: '+readBridgeStatus('platformIsVerified'),
       'Thing-Modul geladen: '+readBridgeStatus('platformIsComponentLoaded','thing'),
       'MQTT verbunden (DJI): '+readBridgeStatus('thingGetConnectState'),
