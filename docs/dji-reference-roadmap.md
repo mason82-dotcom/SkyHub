@@ -29,3 +29,7 @@ Stand: 21.10.2026. Ausgangspunkt ist die [DJI Tutorial Reading Map](https://deve
 - Schreibaktionen für gemeinsame Elemente erhalten einen eigenen Rechte- und Bestätigungsfluss. Die aktuelle Monitoring-Seite suggeriert keine verfügbaren Flug- oder Missionsbefehle.
 
 Die DJI-Seiten beschreiben Protokoll und Interaktionen, aber liefern keine unmittelbare Freigabe für SkyHub-Next-Deployments, MQTT-ACL-Änderungen, Medienaktivierung oder Änderungen an produktiven Daten.
+
+## Isolierter Datenbanknachweis vor Pilot-2-Aktivierung (21.10.2026)
+
+Zur P1/P2-Grenze wurde ein optionaler PostGIS-Integrationstest mit dedizierter CI-Testdatenbank ergänzt: DDL mit Wiederholung und Savepoint-Rollback, Workspace-Fremdschlüssel, Filter, leere DJI-Gruppen, invalides GeoJSON sowie historische Flugspur/Retention. Der Codepfad bleibt aus, bis die eigentliche Pilot-Hardwareabnahme, die Rollenentscheidung und eine separate Dump-/Restore-Probe erledigt sind. Ablauf und Grenzen: [PostGIS-Isolationstest](postgis-isolated-validation.md). Der offene Repository-Cleanup-PR #4 bleibt davon unabhängig.
