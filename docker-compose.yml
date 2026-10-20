@@ -68,6 +68,8 @@ services:
       SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD: ${SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD:-}
       # Optional token-free read-only dashboard for one private LAN (e.g. 192.168.178.0/24).
       SKYHUB_LAN_VIEW_CIDR: ${SKYHUB_LAN_VIEW_CIDR:-}
+      # Days of persisted track history in PostGIS (default 30).
+      SKYHUB_TRACK_RETENTION_DAYS: ${SKYHUB_TRACK_RETENTION_DAYS:-30}
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://skyhub_next:${SKYHUB_DB_PASSWORD:?Set SKYHUB_DB_PASSWORD}@postgres:5432/skyhub_next
     depends_on:

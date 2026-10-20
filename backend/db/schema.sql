@@ -11,7 +11,15 @@ CREATE TABLE IF NOT EXISTS drone_telemetry (
     battery_percentage INT,
     hms_codes JSONB,
     geom GEOMETRY(Point, 4326),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    -- Also added at startup for existing databases (backend/track-store.js).
+    source_ts TIMESTAMPTZ,
+    time_verified BOOLEAN,
+    height_ellipsoid DOUBLE PRECISION,
+    gps_satellites SMALLINT,
+    rtk_satellites SMALLINT,
+    rtk_fix_state SMALLINT,
+    position_quality SMALLINT
 );
 CREATE INDEX IF NOT EXISTS idx_telemetry_device_time
   ON drone_telemetry (device_sn, created_at DESC);
