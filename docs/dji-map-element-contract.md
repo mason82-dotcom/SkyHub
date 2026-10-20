@@ -6,6 +6,10 @@ DJI Pilot 2 ruft beim SkyHub-Cloud-Server `GET /map/api/v1/workspaces/{workspace
 
 Der reine Normalisierer `backend/map-element-contract.js` prüft und normalisiert eine bereits geparste Hülle in genau diesem Antwortformat. Er hat keinen Netzwerk-, Datenbank- oder MQTT-Zugriff und ist weder ein DJI-Client noch in die laufende API eingebunden. Eine spätere SkyHub-Route muss Berechtigung, Workspace-Zuordnung, Speicherung und Antwort erst selbst sicherstellen.
 
+## Separater Speicherentwurf
+
+`backend/db/migrations/001_dji_map_elements.sql` ist ein additiver, noch nicht angewendeter Entwurf. Gruppen und Elemente werden zusammengesetzt nach Workspace, Gruppe und DJI-ID abgegrenzt; Geometrie wird als JSONB gespeichert, damit GeoJSON und optionale Höhenwerte erhalten bleiben. Die Fremdschlüsseldefinition löscht Elemente nicht kaskadierend. Das SQL ist weder Teil des Serverstarts noch gegen eine Datenbank ausgeführt. Vor einer Integration braucht es eine isolierte PostGIS-Migration samt Backup-/Wiederherstellungstest und eine Berechtigungsentscheidung.
+
 ## Eingang und Ausgabe
 
 - Erwartet wird die DJI-Hülle `{code: 0, data: [...]}`. Eine fehlerhafte Hülle oder Gruppe wird abgewiesen. Gruppen brauchen ID und Elementliste. Fehlende optionale Namen fallen auf die ID zurück; unbekannter Typ und Sperrstatus bleiben `null`. Typ `2` bezeichnet die App-Shared-Gruppe, die Pilot für die Synchronisierung benötigt.
