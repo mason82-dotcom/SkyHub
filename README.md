@@ -114,7 +114,7 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 - GET /api/drone/:sn/telemetry – authentifiziert; eine Gerätekennung
 - Socket.IO: snapshot, device_update, device_event – authentifiziert mit auth.token
 
-## Positionsintegrität (Entwicklungsstufe 2)
+## Positionsintegrität
 
 Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im **selben** empfangenen DJI-OSD-Paket gültig vorliegen. Fehlende Koordinaten werden nicht aus späteren Paketen ergänzt; ein früheres gültiges Koordinatenpaar bleibt als zuletzt bekannte Position erhalten. `lastPositionAt` und `positionFresh` beziehen sich nur auf vollständige GPS-Paare und sind unabhängig von `lastTelemetryAt` und `fresh` für sonstige OSD-Telemetrie. Alte Positionsmarker werden in der Karte grau dargestellt, inklusive Altersanzeige; aus einem noch aktuellen Akkustand oder Flugmodus folgt keine aktuelle GPS-Position.
 
@@ -122,7 +122,7 @@ Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im 
 
 Die Änderung ist auf dem separaten Branch `develop/skyhub-next-position-integrity-v2` isoliert, ohne Port- oder Brokeränderung. Zusätzliche Tests: `node --test backend/test/position-integrity.test.js`.
 
-## MQTT-Nachrichtenintegrität (Entwicklungsstufe 3)
+## MQTT-Nachrichtenintegrität
 
 Der rein lesende Empfangspfad prüft das DJI-Nachrichtenformat und den optionalen
 Quellzeitstempel (Unix-Millisekunden). MQTT-Pakete mit `retain=true` werden
@@ -187,15 +187,7 @@ den expliziten Nachweis mit `/data/caddy/pki/authorities/local/root.crt`
 aus dem bestehenden Caddy-Container. Er installiert **keine** CA,
 startet/stoppt keinen Dienst und liest keine privaten Schlüssel.
 
-**Branch-Trennung:** Der aktuelle `mqtt-integrity-v3`-Stand konzentriert
-sich auf read-only MQTT-Sicherheit, Nachrichten-/Positions-/Zeitintegrität.
-Die experimentelle DJI-H5-Anmeldestrecke `/pilot-login` wurde getrennt auf
-`develop/skyhub-next-readonly-v1` entwickelt und ist **hier noch nicht
-integriert**. Eine lokal gesetzte `SKYHUB_DJI_APP_ID`, `_APP_KEY` oder
-`_APP_LICENSE` allein aktiviert auf v3 keine Pilot-2-Cloud-Anmeldung.
-Vor der Zusammenführung sind die Sicherheits- und Nachrichtenschutz-
-änderungen des v3-Branches unbedingt zu erhalten. Keine bestehende
-Produktivroute auf Host-Port 4000 überschreiben.
+**Aktueller Prototypstand:** Pilot-2-H5-Anmeldung, MQTT-Integritätsprüfungen und optionaler Topologie-Antwortkanal sind im Feature-Branch zusammengeführt. Eine erfolgreiche Cloud-Bridge-/OSD-Hardwareabnahme steht weiterhin aus. Keine anderen Pi-Dienste oder Caddy-Routen durch Branchwechsel überschreiben.
 
 ## Übernahme des bisherigen SkyHub-Dienstes auf Port 4000
 
@@ -233,7 +225,7 @@ DJI Cloud API Dokumentation:
 - https://github.com/dji-sdk/Cloud-API-Doc
 
 
-## DJI Cloud API 1.18: optionale Topologie-Bestätigung (v4)
+## DJI Cloud API 1.18: optionale Topologie-Bestätigung
 
 Dieser Branch ergänzt ausschließlich den DJI-Pilot-to-Cloud-Antwortkanal
 `sys/product/{gateway_sn}/status_reply` für gültige `update_topo`-Nachrichten.
@@ -265,3 +257,12 @@ DJI-MQTT-Session und garantiert keinen OSD-Datenfluss. OSD-Veröffentlichung,
 Pilot-2-JSBridge und die Broker-ACL sind getrennt zu validieren.
 
 Tests: `node --test backend/test/*.test.js`.
+
+
+## MQTT/OSD-Adapter (Version 0.1.0)
+
+Der vorhandene EMQX-Broker auf Host-Port **1884** bleibt bestehen. Der Open-Source-Referenzclient von Ömer Mersin wurde ausgewertet; übernommen wurden das Konzept des expliziten DJI-`thingConnect()`-Wiederholungsversuchs und die getrennte OSD-Eingangsdiagnose – **nicht** dessen separater EMQX-Container, breiten Topic-Subscriptions oder ungeschützte Konfigurations-API.
+
+Bei getrennt gemeldetem MQTT-Status bietet DJI Pilot 2 den Button **„MQTT erneut verbinden“**. Kein automatisches Reconnect-Spamming und keine Geheimnisse in Statusmeldungen. Der Backend-Health-Endpunkt unterscheidet `mqttObservedOsdPackets` (roh empfangene Topics), `mqttOsdMessages` (übernommene OSD) und `mqttValidTelemetryUpdates` (verwertbare Daten). Die Diagnose liest keine Rohdaten aus.
+
+Nach einem kontrollierten Deployment auf dem Pi: `node scripts/pi-mqtt-osd-check.js` (Standardport 4001). Für Konfiguration, Grenzen, Quellennachweis und Prüfablauf siehe [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
