@@ -1,0 +1,51 @@
+{
+	admin 127.0.0.1:2019
+}
+
+# Reverse proxy for Nextcloud AIO (reverse-proxy mode on 127.0.0.1:11000).
+# rpi5.fritz.box is local-only, therefore Caddy's internal CA is used.
+rpi5.fritz.box {
+    # SKYHUB-NEXT PILOT ROUTES
+    @skyhub_pilot {
+        path /pilot-login /pilot-login.js /api/pilot/*
+    }
+    handle @skyhub_pilot {
+        reverse_proxy 127.0.0.1:4001
+    }
+
+	tls internal
+	log {
+		output file /data/logs/access.json {
+			roll_size 10mb
+			roll_keep 5
+			roll_keep_for 168h
+		}
+		format json
+	}
+	reverse_proxy 127.0.0.1:11000 {
+		# Nextcloud AIO expects the external scheme and host explicitly.
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Host {host}
+	}
+}
+
+rpi5.fritz.box:9443 {
+	tls internal
+	log {
+		output file /data/logs/access.json {
+			roll_size 10mb
+			roll_keep 5
+			roll_keep_for 168h
+		}
+		format json
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+		-Via
+	}
+	reverse_proxy 127.0.0.1:8480
+}

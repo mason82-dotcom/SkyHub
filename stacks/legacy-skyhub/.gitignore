@@ -1,0 +1,15 @@
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+downloads/
+uploads/
+*.log
+*.tmp
+.skyhub-env-backups/
+.vscode/
+.idea/
+.DS_Store

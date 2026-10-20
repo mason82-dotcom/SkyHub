@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>SkyHub Flugleitstand</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="SkyHub Startseite">
+        <span class="brand__mark" aria-hidden="true">SH</span>
+        <span><strong>SkyHub</strong><small>Enterprise Flight Console</small></span>
+      </a>
+      <div id="connection-status" class="status-pill status-pill--waiting" role="status" aria-live="polite">
+        <span class="status-pill__dot" aria-hidden="true"></span>
+        <span>Verbindung wird geprüft</span>
+      </div>
+    </header>
+
+    <main class="console">
+      <section class="console__intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Read-only Telemetrie</p>
+          <h1 id="page-title">Fluglage ohne falsche Freigaben.</h1>
+          <p class="lede">Live-Werte erscheinen erst nach einer validierten DJI-MQTT-Nachricht. Eine Broker-Verbindung allein gilt nicht als Flugbereitschaft.</p>
+        </div>
+        <div class="safety-lock">
+          <span aria-hidden="true">◆</span>
+          <div><strong>Keine Missionssteuerung</strong><small>Diese Ansicht ist ausschließlich lesend</small></div>
+        </div>
+      </section>
+
+      <section class="instrument-grid" aria-label="Aktuelle Flugdaten">
+        <article class="instrument instrument--primary">
+          <p>Relative Höhe</p><strong><span id="altitude">–</span><small> m</small></strong>
+          <span id="altitude-state">Keine Telemetrie</span>
+        </article>
+        <article class="instrument">
+          <p>Akku</p><strong><span id="battery">–</span><small> %</small></strong>
+          <span id="battery-state">Keine Telemetrie</span>
+        </article>
+        <article class="instrument">
+          <p>RTK-Status</p><strong class="instrument__word" id="rtk">–</strong>
+          <span id="satellites">Satelliten: –</span>
+        </article>
+        <article class="instrument">
+          <p>Datenalter</p><strong><span id="age">–</span><small> s</small></strong>
+          <span id="freshness">Warte auf Daten</span>
+        </article>
+      </section>
+
+      <section class="detail-grid">
+        <article class="panel">
+          <div class="panel__heading">
+            <div><p class="eyebrow">Position</p><h2>GNSS-Koordinaten</h2></div>
+            <span id="position-quality" class="micro-status">UNBEKANNT</span>
+          </div>
+          <dl class="coordinate-list">
+            <div><dt>Breitengrad</dt><dd id="latitude">–</dd></div>
+            <div><dt>Längengrad</dt><dd id="longitude">–</dd></div>
+          </dl>
+          <div class="position-radar" aria-hidden="true"><span></span></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel__heading"><div><p class="eyebrow">Quelle</p><h2>DJI-Gerätepaar</h2></div></div>
+          <dl class="source-list">
+            <div><dt>Aircraft / Gerät</dt><dd id="device-sn">–</dd></div>
+            <div><dt>Gateway / RC</dt><dd id="gateway-sn">–</dd></div>
+            <div><dt>Letzter Empfang</dt><dd id="received-at">–</dd></div>
+          </dl>
+          <p class="panel__note">Seriennummern werden ausschließlich aus validierten Topic- und Envelope-Feldern übernommen.</p>
+        </article>
+      </section>
+
+      <section id="empty-state" class="empty-state" role="status">
+        <span aria-hidden="true">◎</span>
+        <div><strong>Warte auf DJI-Telemetrie</strong><p>RC und Aircraft können verbunden sein, ohne bereits OSD-Daten zu senden.</p></div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
