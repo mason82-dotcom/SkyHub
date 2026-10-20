@@ -1,17 +1,32 @@
 'use strict';
+const {parseTopic}=require('./dji');
 
 // Read-only, serial-number-free metrics for the public health endpoint.
 // MQTT subscription success is distinct from receipt of valid DJI telemetry.
 function createMqttMetrics() {
   const channels=Object.freeze(['osd','state','status','events','services_reply']);
   const counts=Object.fromEntries(channels.map(channel=>[channel,0]));
+  const observedCounts=Object.fromEntries(channels.map(channel=>[channel,0]));
   const drops=Object.create(null);
   const state={
     lastConnectedAt:null,lastDisconnectedAt:null,lastMessageAt:null,
     lastOsdAt:null,lastTelemetryAt:null,
-    accepted:0,rejected:0,unverifiedTime:0,osdMessages:0,validTelemetryUpdates:0
+    accepted:0,rejected:0,unverifiedTime:0,osdMessages:0,validTelemetryUpdates:0,
+    observedPackets:0,observedOsdPackets:0,lastObservedOsdAt:null
   };
   return {
+    // Count allowlisted MQTT topic deliveries BEFORE JSON and replay filtering.
+    // This distinguishes absent OSD traffic from malformed or rejected OSD.
+    observed(topic,at=Date.now()) {
+      const meta=parseTopic(topic);
+      if(!meta || !Object.hasOwn(observedCounts,meta.channel))return;
+      state.observedPackets++;
+      observedCounts[meta.channel]++;
+      if(meta.channel==='osd'){
+        state.observedOsdPackets++;
+        state.lastObservedOsdAt=at;
+      }
+    },
     connected(at=Date.now()) { state.lastConnectedAt=at; },
     disconnected(at=Date.now()) { state.lastDisconnectedAt=at; },
     rejected(reason='malformed') {
@@ -49,6 +64,10 @@ function createMqttMetrics() {
         mqttRejectedMessages:state.rejected,
         mqttTimestampUnverifiedMessages:state.unverifiedTime,
         mqttDroppedByReason:{...drops},
+        mqttObservedPackets:state.observedPackets,
+        mqttObservedOsdPackets:state.observedOsdPackets,
+        mqttLastObservedOsdAt:state.lastObservedOsdAt,
+        mqttObservedChannelCounts:{...observedCounts},
         mqttOsdMessages:state.osdMessages,
         mqttValidTelemetryUpdates:state.validTelemetryUpdates,
         mqttChannelCounts:{...counts}
