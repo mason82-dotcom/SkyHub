@@ -61,6 +61,7 @@ const records=new Map(),markers=new Map();
 let socket=null,centered=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
 const fresh=d=>Number.isFinite(d.lastTelemetryAt)&&Date.now()>=d.lastTelemetryAt&&Date.now()-d.lastTelemetryAt<15000;
+const positionFresh=d=>Number.isFinite(d.lastPositionAt)&&Date.now()>=d.lastPositionAt&&Date.now()-d.lastPositionAt<15000;
 function update(){
   const data=[...records.values()].sort((a,b)=>(b.lastSeenAt||0)-(a.lastSeenAt||0));
   el('count').textContent=data.length;
@@ -85,17 +86,23 @@ function update(){
     const meta=document.createElement('small');
     meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
       (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
-      (d.firmwareVersion?' · FW '+d.firmwareVersion:'');
+      (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
+      ' · GPS '+(positionFresh(d)?'frisch':Number.isFinite(d.lastPositionAt)?
+        Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'nicht empfangen');
     card.append(meta);root.append(card);
     if(map && typeof t.latitude==='number' && typeof t.longitude==='number' &&
        Math.abs(t.latitude)<=90 && Math.abs(t.longitude)<=180){
       const pos=[t.latitude,t.longitude];
+      const markerColor=positionFresh(d)?'#47c3e7':'#748697';
       if(!markers.has(d.sn)){
-        const marker=L.circleMarker(pos,{radius:7,color:'#47c3e7'}).addTo(map);
+        const marker=L.circleMarker(pos,{radius:7,color:markerColor}).addTo(map);
         const safeLabel=document.createElement('span');safeLabel.textContent=d.sn;
         marker.bindTooltip(safeLabel);markers.set(d.sn,marker);
-      }else markers.get(d.sn).setLatLng(pos);
-      if(!centered&&(pos[0]!==0||pos[1]!==0)){map.setView(pos,13);centered=true;}
+      }else{
+        markers.get(d.sn).setLatLng(pos);
+        markers.get(d.sn).setStyle({color:markerColor});
+      }
+      if(!centered&&positionFresh(d)&&(pos[0]!==0||pos[1]!==0)){map.setView(pos,13);centered=true;}
     }
   }
 }
