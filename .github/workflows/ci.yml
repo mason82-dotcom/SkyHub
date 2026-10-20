@@ -16,6 +16,7 @@ jobs:
           node --check backend/server.js
           node --check backend/dji.js
           node --check backend/mqtt-config.js
+          node --check backend/mqtt-metrics.js
           node --test backend/test/*.test.js
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
@@ -29,3 +30,6 @@ jobs:
         run: bash -n scripts/pi-preflight.sh
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
+      - name: Smoke-test bundled runtime modules in the image
+        run: |
+          docker run --rm --network none --entrypoint node skyhub-next:test             -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics"].forEach(require)'
