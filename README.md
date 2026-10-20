@@ -14,7 +14,7 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-    git clone --branch develop/skyhub-next-readonly-v1 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+    git clone --branch develop/skyhub-next-mqtt-integrity-v3 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
@@ -163,6 +163,37 @@ Produktivdienste werden durch Git-Branchwechsel oder Unit-Tests gestartet.
 
 Neue Tests: `node --test backend/test/message-guard.test.js backend/test/topology-time.test.js`.
 Für alle Regressionstests: `node --test backend/test/*.test.js`.
+
+## Caddy HTTPS-Vertrauen auf dem Raspberry Pi (20.10.2026)
+
+Der Pi betreibt Caddy 2.11.4 im `host`-Netzwerk. Für
+`rpi5.fritz.box:443` ist ein Zertifikat mit dem Issuer
+`Caddy Local Authority - ECC Intermediate` aktiv. Der erste
+`curl`-Test auf dem Pi endete mit `curl: (60) unable to get local
+issuer certificate`. Das bedeutet, dass `curl` die präsentierte
+Zertifikatskette mit dem **Pi-System-Trust-Store** nicht prüfen konnte.
+Ein separat geprüftes Caddy-CA-Root-Zertifikat ist noch kein Nachweis,
+dass DJI Pilot 2 oder seine Android-WebView derselben CA vertraut.
+
+Lesend und ohne `-k` prüfen:
+
+    cd ~/Projekte/SkyHub-Next
+    bash scripts/pi-tls-audit.sh rpi5.fritz.box 192.168.178.63 443
+
+Der Test prüft zuerst den Pi-System-Trust-Store und versucht anschließend
+den expliziten Nachweis mit `/data/caddy/pki/authorities/local/root.crt`
+aus dem bestehenden Caddy-Container. Er installiert **keine** CA,
+startet/stoppt keinen Dienst und liest keine privaten Schlüssel.
+
+**Branch-Trennung:** Der aktuelle `mqtt-integrity-v3`-Stand konzentriert
+sich auf read-only MQTT-Sicherheit, Nachrichten-/Positions-/Zeitintegrität.
+Die experimentelle DJI-H5-Anmeldestrecke `/pilot-login` wurde getrennt auf
+`develop/skyhub-next-readonly-v1` entwickelt und ist **hier noch nicht
+integriert**. Eine lokal gesetzte `SKYHUB_DJI_APP_ID`, `_APP_KEY` oder
+`_APP_LICENSE` allein aktiviert auf v3 keine Pilot-2-Cloud-Anmeldung.
+Vor der Zusammenführung sind die Sicherheits- und Nachrichtenschutz-
+änderungen des v3-Branches unbedingt zu erhalten. Keine bestehende
+Produktivroute auf Host-Port 4000 überschreiben.
 
 ## Aktueller Funktionsumfang und Grenzen
 
