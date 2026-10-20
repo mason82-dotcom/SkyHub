@@ -4,6 +4,8 @@
 
 **Betriebsgrenzen:** Das Root-Compose ist `skyhub-next` mit Backend-Hostport `127.0.0.1:4001`; der vorhandene Broker ist auf Hostport `1884`. Der bisherige produktive Backend-Hostport `4000` darf nicht ungeprüft übernommen werden. Das Compose im Legacy-Snapshot darf nicht gestartet werden.
 
+**Wirkung von Pi-Skripten und Freigaben:** [Betriebswerkzeuge](scripts.md). `apply`-, `rollback`- und Kopplungsaufrufe nicht mit lesenden Diagnosen verwechseln.
+
 **Querverweise:** [Sicherheit](security.md), [Architektur](architecture.md), [MQTT/OSD](mqtt-osd-integration.md), [kontrollierte Migration](legacy-migration.md).
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
