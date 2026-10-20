@@ -7,3 +7,12 @@ node_modules/
 dist/
 __pycache__/
 *.pyc
+
+# Local Raspberry Pi deployment, backups, and certificates
+docker-compose.override.yml
+frontend/public/*.bak-*
+frontend/public/*.before-*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
