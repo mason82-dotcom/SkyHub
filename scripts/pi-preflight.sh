@@ -16,6 +16,20 @@ listening() {
 
 result=0
 printf '%s\n' '=== SkyHub Raspberry Pi preflight (read-only) ==='
+# Source timestamps require a correct host clock; checking NTP is read-only.
+if command -v timedatectl >/dev/null 2>&1; then
+  synced="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+  if [ "$synced" = yes ]; then
+    printf '%s\n' 'OK: Raspberry Pi clock reports NTP synchronized.'
+  elif [ "$synced" = no ]; then
+    printf '%s\n' 'ERROR: Raspberry Pi clock is not NTP synchronized; MQTT timestamp windows would be unreliable.' >&2
+    result=1
+  else
+    printf '%s\n' 'WARNING: Unable to determine NTP synchronization; verify host time before deployment.'
+  fi
+else
+  printf '%s\n' 'WARNING: timedatectl unavailable; verify host time before deployment.'
+fi
 printf '%s\n' 'Required DJI MQTT broker: EMQX on host TCP 1884'
 if listening 1884; then
   printf '%s\n' 'OK: TCP 1884 is listening.'
