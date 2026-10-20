@@ -116,6 +116,8 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 
 Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im **selben** empfangenen DJI-OSD-Paket gültig vorliegen. Fehlende Koordinaten werden nicht aus späteren Paketen ergänzt; ein früheres gültiges Koordinatenpaar bleibt als zuletzt bekannte Position erhalten. `lastPositionAt` und `positionFresh` beziehen sich nur auf vollständige GPS-Paare und sind unabhängig von `lastTelemetryAt` und `fresh` für sonstige OSD-Telemetrie. Alte Positionsmarker werden in der Karte grau dargestellt, inklusive Altersanzeige; aus einem noch aktuellen Akkustand oder Flugmodus folgt keine aktuelle GPS-Position.
 
+`positionFresh` besagt nur, dass beide numerisch plausiblen Koordinaten kürzlich zusammen empfangen wurden. Es ist **kein** Nachweis eines GNSS-/RTK-Fix, einer bestimmten Positionsgenauigkeit oder einer plausiblen Einsatzposition. Auch ein Paar `(0, 0)` bleibt daher als gemeldeter Gerätewert erhalten und wird nicht als bestätigter Standort interpretiert.
+
 Die Änderung ist auf dem separaten Branch `develop/skyhub-next-position-integrity-v2` isoliert, ohne Port- oder Brokeränderung. Zusätzliche Tests: `node --test backend/test/position-integrity.test.js`.
 
 ## Aktueller Funktionsumfang und Grenzen
