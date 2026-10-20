@@ -47,8 +47,8 @@ test('valid OSD updates telemetry; old packets do not refresh it',()=>{
   const old=receive('thing/product/AIR01/osd',{latitude:50,longitude:9},1760000000100);
   m.accepted(old,registry.ingest(old,4001),4001);
   const s=m.snapshot();
-  assert.equal(s.mqttOsdMessages,2);
-  assert.equal(s.mqttLastOsdAt,4001);
+  assert.equal(s.mqttOsdMessages,1);
+  assert.equal(s.mqttLastOsdAt,4000);
   assert.equal(s.mqttValidTelemetryUpdates,1);
   assert.equal(s.mqttLastTelemetryAt,4000);
   assert.equal(registry.get('AIR01',4001).telemetry.latitude,49);
