@@ -29,10 +29,14 @@ Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfigur
 
 Der Gesundheitsendpunkt meldet unter anderem `mqttBrokerPort: 1884`, `mqtt`,
 `subscribed`, `mqttLastMessageAt`, `mqttAcceptedMessages` und
-`mqttRejectedMessages`. `mqtt: true` belegt nur die TCP/MQTT-Verbindung,
-`subscribed: true` die bestätigten Abonnements – **nicht**, dass DJI-Geräte
-Telemetrie gesendet haben. Erst ein gesetzter `mqttLastMessageAt` zeigt
-tatsächlich empfangene DJI-Nachrichten.
+`mqttRejectedMessages`, `mqttChannelCounts`, `mqttLastOsdAt`,
+`mqttLastTelemetryAt` und `mqttValidTelemetryUpdates`. `mqtt: true` belegt nur
+die MQTT-Verbindung, `subscribed: true` bestätigte Abonnements. Erst
+`mqttLastMessageAt` zeigt empfangene, erkannte DJI-Topic-Nachrichten;
+`mqttLastOsdAt` zeigt OSD-Pakete; `mqttLastTelemetryAt` zeigt den letzten
+verwertbaren, vom Registry übernommenen OSD-Messwert. Diese drei Zustände
+sind ausdrücklich **nicht** gleichzusetzen. Die Zähler der Health-API
+enthalten keine Seriennummern, Nutzdaten oder Anmeldedaten.
 
 ### Bestehende Raspberry-Pi-Broker- und Porttopologie (20.10.2026)
 
@@ -48,6 +52,29 @@ Nur die EMQX-Verbindung auf Port 1884 konfigurieren; den alten Mosquitto weder s
 Vor der Inbetriebnahme ohne Änderungen an laufenden Diensten:
 
     bash scripts/pi-preflight.sh
+
+### EMQX-Istzustand aus der Pi-Diagnose
+
+Am 20.10.2026 wurden 2 aktive Clients, 6 Subscriptions mit
+`thing/product/`-Muster und 0 `sys/product/`-Subscriptions gemeldet.
+Das beweist weder, dass die verbundenen Clients DJI-Fernsteuerungen
+sind, noch den Eingang von Telemetrie. Da SkyHub Next noch nicht läuft,
+ist sein zusätzliches `sys/product/+/status`-Abo noch nicht vorhanden.
+Das bisherige Backend auf Host-Port 4000 liefert für
+`GET /api/health` die HTML-Antwort `Cannot GET /api/health`,
+weil die ältere Implementierung diesen Endpunkt nicht definiert;
+das ist kein Nachweis eines Ausfalls.
+
+Nächste **lesende** Überprüfung (vor Start der neuen Umgebung):
+
+    docker exec skyhub_emqx emqx ctl broker metrics | grep -E 'messages\\.(received|delivered)|packets\\.publish\\.received'
+    docker exec skyhub_emqx emqx ctl clients list
+
+Die Client-Liste kann Gerätekennungen, Benutzernamen und Netzwerkadressen
+enthalten; vor dem Teilen bereinigen. Diese Broker-Zähler sind
+aggregiert und können auch Nicht-DJI-MQTT-Verkehr enthalten. Nur eine
+separate Prüfung der Zeitdifferenz bzw. der SkyHub-Next-Live-Zähler kann
+neue Nachrichten belegen.
 
 ### Diagnose bei MQTT-Verbindungsfehlern auf dem Raspberry Pi
 
@@ -74,6 +101,7 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 
     node --check backend/server.js
     node --check backend/dji.js
+    node --check backend/mqtt-metrics.js
     node --test backend/test/*.test.js
 
 ## Live-API
