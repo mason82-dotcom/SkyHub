@@ -29,7 +29,9 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10
 .hms{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 .hms li{border-left:3px solid #6f8396;padding:4px 0 4px 8px;font-size:12px;line-height:1.4}
 .hms li.l1{border-color:#f0b84a}.hms li.l2{border-color:#ff6b5b}
-.hms li small{display:block}.hms-head{margin-top:10px;font-size:12px;color:var(--muted)}
+.hms li small{display:block}
+.toggle{display:flex;gap:8px;align-items:center;margin-top:9px;font-size:12px;color:var(--muted)}
+.toggle input{min-width:0;padding:0}.hms-head{margin-top:10px;font-size:12px;color:var(--muted)}
 @media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:45vh}aside{border-left:0}}
 </style>
 </head>
@@ -51,6 +53,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10
       <div class="tile"><small>Frische Telemetrie</small><strong id="live">0</strong></div>
       <div class="tile wide"><small>Aktive HMS-Warnungen (Stufe 2)</small><strong id="hmsCount">0</strong></div>
     </div>
+    <label class="toggle"><input type="checkbox" id="showTrack" checked> Flugspur der letzten 60 Minuten anzeigen</label>
     <h2>DJI Geräte · Topologie · Live-Telemetrie</h2>
     <div id="devices"><p class="muted">Mit Zugriffstoken verbinden.</p></div>
   </aside>
@@ -65,8 +68,8 @@ const map=window.L?L.map('map').setView([51.1657,10.4515],6):null;
 // OSM's tile policy requires a Referer; the page itself stays on no-referrer.
 if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'© OpenStreetMap',maxZoom:19,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
-const records=new Map(),markers=new Map();
-let socket=null,centered=false;
+const records=new Map(),markers=new Map(),tracks=new Map();
+let socket=null,centered=false,authToken=null;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
 const fresh=d=>Number.isFinite(d.lastTelemetryAt)&&Date.now()>=d.lastTelemetryAt&&Date.now()-d.lastTelemetryAt<15000;
 // HMS lists are pushed repeatedly while alerts are active; older lists are stale.
@@ -90,8 +93,8 @@ function update(){
     const head=document.createElement('div');head.className='head';
     const name=document.createElement('strong');
     name.textContent=d.modelName ? d.modelName+' · '+d.sn : d.sn;
-    const state=document.createElement('span');state.className='state'+(fresh(d)?'':' stale');
-    state.textContent=fresh(d)?(d.telemetryTimeVerified===false?
+    const state=document.createElement('span');state.className='state'+(fresh(d)&&d.aircraftConnected!==false?'':' stale');
+    state.textContent=d.aircraftConnected===false?'● Fluggerät nicht verbunden':fresh(d)?(d.telemetryTimeVerified===false?
       '● OSD empfangen · Zeit ungeprüft':'● OSD frisch'):
       d.topologyOnline===true?'● Topologie gemeldet · OSD veraltet':'● OSD veraltet';
     head.append(name,state);card.append(head);
@@ -174,6 +177,8 @@ async function connect(token=el('token').value.trim(),quiet=false){
     if(!res.ok)throw new Error('API HTTP '+res.status);
     records.clear();for(const d of await res.json())records.set(d.sn,d);
     update();
+    authToken=token;
+    loadTracks();
     const label=token?'Live verbunden':'Live verbunden (Heimnetz)';
     socket=io({auth:token?{token}:{},reconnectionDelayMax:5000});
     socket.on('connect',()=>{el('message').textContent=label;});
@@ -184,6 +189,30 @@ async function connect(token=el('token').value.trim(),quiet=false){
     return true;
   }catch(err){if(!quiet)el('message').textContent=err.message;return false;}
 }
+// Persisted track (PostGIS, movement-filtered, no 0/0) for devices with a known position.
+async function loadTracks(){
+  if(!map)return;
+  const show=el('showTrack').checked;
+  for(const d of records.values()){
+    const known=Number.isFinite(d.lastPositionAt)&&Date.now()-d.lastPositionAt<86400000;
+    if(!show||!known){if(tracks.has(d.sn)){tracks.get(d.sn).remove();tracks.delete(d.sn);}continue;}
+    try{
+      const res=await fetch('/api/drone/'+encodeURIComponent(d.sn)+'/track?minutes=60',
+        {headers:authToken?{Authorization:'Bearer '+authToken}:{},cache:'no-store'});
+      if(!res.ok)continue;
+      const points=(await res.json()).filter(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude))
+        .map(p=>[p.latitude,p.longitude]);
+      const aircraft=d.deviceCategory==='aircraft';
+      const style={color:aircraft?'#47c3e7':'#9aa9b8',weight:aircraft?3:2,opacity:.85,dashArray:aircraft?null:'4 6'};
+      if(!tracks.has(d.sn))tracks.set(d.sn,L.polyline(points,style).addTo(map));
+      else tracks.get(d.sn).setLatLngs(points).setStyle(style);
+      // Without a usable live position (e.g. 0/0 indoors), show the recorded track once.
+      if(!centered&&points.length){map.fitBounds(tracks.get(d.sn).getBounds(),{maxZoom:17,padding:[40,40]});centered=true;}
+    }catch(_){/* keep the previous track */}
+  }
+}
+el('showTrack').addEventListener('change',loadTracks);
+setInterval(()=>{if(socket)loadTracks();},30000);
 el('connect').addEventListener('click',()=>connect());
 el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
 // In the home network the dashboard opens without a token; elsewhere the field stays.

@@ -4,6 +4,10 @@ const { fresh, serial } = require('./dji');
 const { resolveDeviceModel, category } = require('./catalog');
 const { describeHms } = require('./hms-catalog');
 
+// DJI aircraft mode_code 14 = "Not connected": Pilot 2 keeps publishing the aircraft's
+// last known OSD values after the aircraft is switched off or loses its link.
+const AIRCRAFT_NOT_CONNECTED = 14;
+
 // HMS lists are pushed repeatedly while alerts are active; older lists are shown as stale.
 const HMS_FRESH_MS = 30000;
 
@@ -16,7 +20,7 @@ function createRegistry(limit = 200) {
       model: d.model, modelName: resolveDeviceModel(d.model),
       deviceCategory: category(d.model.domain), topologyOnline: d.topologyOnline,
       lastTopologyAt: d.lastTopologyAt, topologyTimeVerified: d.topologyTimeVerified,
-      topologyRestored: d.topologyRestored,
+      topologyRestored: d.topologyRestored, aircraftConnected: d.aircraftConnected,
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
@@ -38,7 +42,7 @@ function createRegistry(limit = 200) {
       sn, role: 'unknown', gatewaySn: null,
       model: {domain:null,type:null,subType:null,thingVersion:null},
       topologyOnline: null, lastTopologyAt: null, topologyTimeVerified: null,
-      topologyRestored: false,
+      topologyRestored: false, aircraftConnected: null,
       children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
@@ -77,7 +81,12 @@ function createRegistry(limit = 200) {
       if (d.role === 'unknown') d.role = 'subdevice';
     }
     let point = null;
-    if (message.telemetry) {
+    const aircraft = d.model.domain === '0' || (d.model.domain === null && d.role === 'subdevice');
+    if (aircraft && message.channel === 'osd') {
+      d.aircraftConnected = message.state?.modeCode !== AIRCRAFT_NOT_CONNECTED;
+    }
+    // Replayed last-known values of a disconnected aircraft are not telemetry.
+    if (message.telemetry && d.aircraftConnected !== false) {
       const values = Object.entries(message.telemetry).filter(([,v]) => v !== null);
       if (values.length) {
         // A GPS fix is atomic: never synthesize coordinates from separate OSD packets.

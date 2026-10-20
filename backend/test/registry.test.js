@@ -68,3 +68,31 @@ test('empty OSD does not pretend to be fresh telemetry',()=>{
   registry.ingest(receive('thing/product/AIR01/osd',{data:{}}),1760000001000);
   assert.equal(registry.get('AIR01',1760000001001).fresh,false);
 });
+
+test('aircraft OSD with mode_code 14 (not connected) is not treated as fresh telemetry',()=>{
+  const {parseMessage}=require('../dji');
+  const registry=createRegistry();
+  const now=1792528000000;
+  const topo=parseMessage('sys/product/RC01/status',Buffer.from(JSON.stringify({
+    timestamp:now-5000,method:'update_topo',
+    data:{domain:'2',type:144,sub_type:0,sub_devices:[{sn:'AIR01',domain:'0',type:77,sub_type:2}]}})));
+  registry.ingest(topo,now-5000);
+  const osd=(ts,mode,battery)=>parseMessage('thing/product/AIR01/osd',Buffer.from(JSON.stringify({
+    timestamp:ts,data:{latitude:49.1,longitude:8.4,battery:{capacity_percent:battery},mode_code:mode}})));
+  const live=registry.ingest(osd(now-3000,0,40),now-3000);
+  assert.ok(live.point);
+  assert.equal(registry.get('AIR01',now-2900).aircraftConnected,true);
+  const off=registry.ingest(osd(now-1000,14,34),now-1000);
+  assert.equal(off.point,null);
+  const d=registry.get('AIR01',now);
+  assert.equal(d.aircraftConnected,false);
+  assert.equal(d.modeCode,14);
+  assert.equal(d.telemetry.battery,40);
+  assert.equal(d.lastTelemetryAt,now-3000);
+  assert.equal(registry.get('AIR01',now+13000).fresh,false);
+  registry.ingest(osd(now+1000,0,33),now+1000);
+  assert.equal(registry.get('AIR01',now+1000).aircraftConnected,true);
+  assert.equal(registry.get('AIR01',now+1000).telemetry.battery,33);
+  // The RC (controller) has no mode_code and is never marked as a disconnected aircraft.
+  assert.equal(registry.get('RC01',now).aircraftConnected,null);
+});

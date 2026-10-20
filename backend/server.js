@@ -18,6 +18,8 @@ const {createStatusReply}=require('./topology-ack');
 const {createPilotPairing,redisStore}=require('./pilot-pairing');
 const {createTopologyStore}=require('./topology-store');
 const {createLanAccess}=require('./lan-access');
+const {createTrackPolicy}=require('./track-policy');
+const {createTrackStore,retentionDays}=require('./track-store');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -32,11 +34,12 @@ try {
   process.exit(1);
 }
 const pilot=pilotConfiguration(process.env);
-let lanAccess;
+let lanAccess,trackRetentionDays;
 try {
   lanAccess=createLanAccess(process.env.SKYHUB_LAN_VIEW_CIDR);
+  trackRetentionDays=retentionDays(process.env.SKYHUB_TRACK_RETENTION_DAYS);
 } catch(err) {
-  console.error('[lan view]',err.message);
+  console.error('[config]',err.message);
   process.exit(1);
 }
 const app=express(),server=http.createServer(app);
@@ -123,6 +126,19 @@ const pairing=createPilotPairing({store:redisStore(redis)});
 const pool=process.env.DATABASE_URL?
   new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:3000}):null;
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
+const trackPolicy=createTrackPolicy();
+const trackStore=createTrackStore(pool);
+let trackStored=0,trackSkipped=0;
+async function pruneTracks(){
+  try{
+    const removed=await trackStore.prune(trackRetentionDays);
+    if(removed)console.log('[track] removed '+removed+' points older than '+trackRetentionDays+' days');
+  }catch(err){console.error('[track prune]',err.message);}
+}
+trackStore.migrate()
+  .then(pruneTracks)
+  .catch(err=>console.error('[track migrate]',err.message));
+setInterval(pruneTracks,3600000).unref();
 
 function onMessage(topic,payload,packet){
   // Passive transport diagnostics, without recording device IDs or payloads.
@@ -169,13 +185,17 @@ function onMessage(topic,payload,packet){
       topologyStore.save(registry.topologyRecords(result.updates.map(item=>item.sn)))
         .catch(err=>console.error('[redis topology]',err.message));
     }
+    // Persist only movement or a 60 s heartbeat, never 0/0 without a fix (track-policy.js).
     if(pool && result.point){
-      const p=result.point;
-      pool.query(
-        'INSERT INTO drone_telemetry (gateway_sn,device_sn,latitude,longitude,altitude,battery_percentage,geom) '+
-        'VALUES ($1,$2,$3,$4,$5,$6,ST_SetSRID(ST_MakePoint($4,$3),4326))',
-        [p.gatewaySn,p.deviceSn,p.latitude,p.longitude,p.altitude,p.battery]
-      ).catch(err=>console.error('[postgres insert]',err.message));
+      const sampleAt=parsed.timestamp===null?observedAt:Math.min(parsed.timestamp,observedAt);
+      if(trackPolicy.shouldStore(result.point,sampleAt)){
+        const t=parsed.telemetry;
+        trackStored++;
+        trackStore.insert({...result.point,sourceTs:sampleAt,timeVerified:parsed.timestamp!==null,
+          heightEllipsoid:t.heightEllipsoid,gpsSatellites:t.gpsSatellites,rtkSatellites:t.rtkSatellites,
+          rtkFixState:t.rtkFixState,positionQuality:t.positionQuality})
+          .catch(err=>console.error('[postgres insert]',err.message));
+      }else trackSkipped++;
     }
   }catch(_err){
     // Parsing errors may contain snippets of sensitive DJI messages. Never log them.
@@ -291,7 +311,8 @@ app.get('/api/health',(req,res)=>res.json({
   topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
   topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
   topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,
-  lanViewEnabled:lanAccess.enabled,...mqttStats.snapshot()
+  lanViewEnabled:lanAccess.enabled,trackPointsStored:trackStored,trackPointsSkipped:trackSkipped,
+  trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
@@ -316,6 +337,13 @@ app.delete('/api/pilot-admin/devices/:id',async(req,res)=>{
 });
 // Field names per channel/method as actually received; no values or serial numbers.
 app.get('/api/diagnostics/mqtt-shapes',(req,res)=>res.json(mqttShapes.snapshot()));
+// Persisted track for the map: newest points within ?minutes (1-1440, default 60).
+app.get('/api/drone/:sn/track',async(req,res)=>{
+  const sn=serial(req.params.sn);
+  if(!sn)return res.status(400).json({error:'Invalid serial'});
+  try{res.json(await trackStore.track(sn,req.query.minutes));}
+  catch(_err){res.status(503).json({error:'Track history unavailable'});}
+});
 app.get('/api/drone/:sn/telemetry',(req,res)=>{
   const d=registry.get(req.params.sn);
   if(!d)return res.status(404).json({error:'Device not observed'});

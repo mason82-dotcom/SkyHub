@@ -358,3 +358,26 @@ bestätigt, OSD von RC und Mavic 3M lief nach rund 70 s wieder. Pilot 2 behält
 die Cloud-Verbindung samt Zugangsdaten über Neustarts; die Pilot-Seite ist nur
 für die Ersteinrichtung nötig. Details:
 [MQTT/OSD-Integration](docs/mqtt-osd-integration.md#restart-test-2026-10-20-pilot-2-and-rc-restarted-after-pairing).
+
+## Flugspur und Speicherung (PostGIS)
+
+Validierte GPS-Punkte werden nur gespeichert, wenn sich das Gerät um ≥ 2 m
+horizontal oder vertikal bewegt hat, sonst höchstens einmal pro Minute.
+Punkte bei 0/0 (DJI ohne Positions-Fix) werden nie gespeichert; die
+Live-Anzeige zeigt sie weiter wie gemeldet. Vorher wurde jedes OSD-Paket
+geschrieben (am 20.10.2026 rund 170.000 Zeilen/Tag, die Hälfte bei 0/0).
+Neue Spalten (`source_ts`, `time_verified`, Satelliten, RTK-Status) werden beim
+Start ergänzt, ohne Daten zu löschen. Aufbewahrung: `SKYHUB_TRACK_RETENTION_DAYS`
+(Standard 30), stündlich bereinigt. `GET /api/drone/:sn/track?minutes=60`
+(1–1440, max. 5000 Punkte) liefert die Spur; die Karte zeigt sie (abschaltbar)
+und zoomt ohne gültige Live-Position einmal darauf. Health:
+`trackPointsStored`, `trackPointsSkipped`, `trackRetentionDays`.
+
+## Ausgeschaltetes Fluggerät (mode_code 14)
+
+Nach dem Ausschalten der Mavic 3M sendete Pilot 2 weiter sekündlich OSD für das
+Fluggerät mit den zuletzt bekannten Werten und `mode_code = 14`
+(„Not connected“). Solche Pakete aktualisieren weder Messwerte, Frische,
+Position noch Flugspur; das Gerät erhält `aircraftConnected: false` und die
+Karte zeigt „Fluggerät nicht verbunden“. Das nächste OSD mit anderem
+`mode_code` hebt den Zustand auf.
