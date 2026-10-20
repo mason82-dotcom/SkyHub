@@ -1,0 +1,120 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: backend/db/Dockerfile.postgis
+    image: skyhub-postgis:15
+    container_name: skyhub_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skyhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: skyhub_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skyhub -d skyhub_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [skyhub-net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: skyhub_redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "notice", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [skyhub-net]
+
+  emqx-init:
+    image: alpine:3.20
+    container_name: skyhub_emqx_init
+    restart: "no"
+    environment:
+      MQTT_CORE_PASSWORD: ${MQTT_CORE_PASSWORD:?Set MQTT_CORE_PASSWORD in .env}
+      MQTT_GATEWAY_PASSWORD: ${MQTT_GATEWAY_PASSWORD:?Set MQTT_GATEWAY_PASSWORD in .env}
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - ./emqx/init-auth.sh:/bootstrap/init-auth.sh:ro
+    command: ["/bin/sh", "/bootstrap/init-auth.sh"]
+
+  emqx:
+    image: emqx/emqx:5.3.0
+    container_name: skyhub_emqx
+    restart: unless-stopped
+    depends_on:
+      emqx-init:
+        condition: service_completed_successfully
+    environment:
+      EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE:?Set EMQX_NODE_COOKIE in .env}
+      EMQX_NODE__DEFAULT_LISTENER_ADDRESS: all
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:?Set EMQX_DASHBOARD_PASSWORD in .env}
+    ports:
+      - "${SKYHUB_LAN_IP:-127.0.0.1}:1884:1883"
+      - "127.0.0.1:18084:18083"
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - ./emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [skyhub-net]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: skyhub-backend:3.1
+    container_name: skyhub_backend
+    restart: unless-stopped
+    ports:
+      - "${SKYHUB_LAN_IP:-127.0.0.1}:4000:4000"
+    environment:
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://skyhub:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/skyhub_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0
+      MQTT_BROKER_URL: mqtt://emqx:1883
+      MQTT_USER: skyhub-core
+      MQTT_PASSWORD: ${MQTT_CORE_PASSWORD:?Set MQTT_CORE_PASSWORD in .env}
+      PILOT_USERNAME: ${PILOT_USERNAME:?Set PILOT_USERNAME in .env}
+      PILOT_PASSWORD: ${PILOT_PASSWORD:?Set PILOT_PASSWORD in .env}
+      MISSION_DISPATCH_ENABLED: ${MISSION_DISPATCH_ENABLED:-false}
+      SKYHUB_ADMIN_TOKEN: ${SKYHUB_ADMIN_TOKEN:-}
+      MISSION_FILE_ALLOWED_ORIGINS: ${MISSION_FILE_ALLOWED_ORIGINS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks: [skyhub-net]
+
+volumes:
+  pgdata:
+  redis_data:
+  emqx_data:
+
+networks:
+  skyhub-net:
+    driver: bridge

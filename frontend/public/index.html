@@ -1,57 +1,198 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyHub Enterprise Command Center v2</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; }
-        #app-header { height: 50px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #334155; }
-        #app-header h1 { font-size: 18px; margin: 0; color: #38bdf8; }
-        .status-badge { background: #16a34a; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        #main-container { display: flex; height: calc(100vh - 50px); }
-        #map-viewport { flex: 1; height: 100%; }
-        #side-panel { width: 360px; background: #1e293b; border-left: 1px solid #334155; padding: 15px; overflow-y: auto; }
-        .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
-        .card h3 { margin-top: 0; font-size: 14px; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid #1e293b; padding-bottom: 6px; }
-        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
-        .telemetry-val { font-size: 16px; font-weight: bold; color: #f1f5f9; }
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyHub Next · DJI Operations</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{color-scheme:dark;--bg:#07111e;--panel:#101f30;--edge:#2c4054;--muted:#94abc1;--blue:#47c3e7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf6ff;font:14px system-ui,sans-serif}
+header{height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;border-bottom:1px solid var(--edge)}
+h1{margin:0;font-size:20px;letter-spacing:.04em}h1 span{color:var(--blue)}small,.muted{color:var(--muted)}
+.auth{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth input{min-width:205px}
+[hidden]{display:none!important}
+input,button{padding:9px 11px;border:1px solid #40576d;border-radius:8px;background:#1b2b3d;color:white}
+button{background:#087d96;font-weight:700;cursor:pointer}button:hover{background:#099ab8}
+main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 66px)}
+#map{width:100%;height:100%;min-height:350px}
+aside{background:var(--panel);border-left:1px solid var(--edge);padding:14px;overflow:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tile,.device{border:1px solid var(--edge);border-radius:10px;background:#14263a;padding:11px}
+.tile strong{display:block;font-size:25px;margin-top:3px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:18px 0 10px;color:var(--muted)}
+#devices{display:grid;gap:8px}.device .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;overflow-wrap:anywhere}
+.device .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.device .metrics strong{display:block;margin-top:2px}
+.state{font-size:12px;color:#84dfb8;white-space:nowrap}.state.stale{color:#efb77b}
+.notice{border:1px solid #655338;border-radius:8px;padding:10px;color:#dfc69f;font-size:12px;line-height:1.5;margin-bottom:12px}
+#message{font-size:12px;color:var(--muted)}
+.tile.wide{grid-column:1/-1}.tile strong.alert{color:#ff8a7a}
+.hms{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.hms li{border-left:3px solid #6f8396;padding:4px 0 4px 8px;font-size:12px;line-height:1.4}
+.hms li.l1{border-color:#f0b84a}.hms li.l2{border-color:#ff6b5b}
+.hms li small{display:block}.hms-head{margin-top:10px;font-size:12px;color:var(--muted)}
+@media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:45vh}aside{border-left:0}}
+</style>
 </head>
 <body>
-    <div id="app-header">
-        <h1>🚁 SkyHub Command Center v2 (Zero-Auth Local Edition)</h1>
-        <div class="status-badge">MQTT 5.0 LIVE</div>
+<header>
+  <h1>SKY<span>HUB</span> NEXT <small>· read-only</small></h1>
+  <div class="auth">
+    <input id="token" type="password" placeholder="SkyHub Zugriffstoken" aria-label="Zugriffstoken" autocomplete="off">
+    <button id="connect">Verbinden</button>
+    <span id="message" role="status">Nicht verbunden</span>
+  </div>
+</header>
+<main>
+  <div id="map" aria-label="Drohnenkarte"></div>
+  <aside>
+    <div class="notice">Nur Monitoring. Keine Flugsteuerung. Nicht empfangene Messwerte erscheinen als —. Die Karte benötigt eine Internetverbindung.</div>
+    <div class="grid">
+      <div class="tile"><small>Bekannte Geräte</small><strong id="count">0</strong></div>
+      <div class="tile"><small>Frische Telemetrie</small><strong id="live">0</strong></div>
+      <div class="tile wide"><small>Aktive HMS-Warnungen (Stufe 2)</small><strong id="hmsCount">0</strong></div>
     </div>
-    <div id="main-container">
-        <div id="map-viewport"></div>
-        <div id="side-panel">
-            <div class="card">
-                <h3>Drohnen Telemetrie (Mavic 3 Series)</h3>
-                <div class="telemetry-grid">
-                    <div>Höhe: <div class="telemetry-val" id="tele-alt">-- m</div></div>
-                    <div>Akku: <div class="telemetry-val" id="tele-bat">-- %</div></div>
-                    <div>Breite: <div class="telemetry-val" id="tele-lat">--</div></div>
-                    <div>Länge: <div class="telemetry-val" id="tele-lng">--</div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Spezial-Module (v2)</h3>
-                <p style="font-size: 12px; color: #94a3b8;">
-                    ✓ M3T Radiometrische Isothermen-Overlays<br>
-                    ✓ M3M NDVI / ISO-XML Landwirtschafts-Exporter<br>
-                    ✓ M3E WebODM Photogrammetrie-Pipeline
-                </p>
-            </div>
-        </div>
-    </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map-viewport').setView([51.1657, 10.4515], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-    </script>
+    <h2>DJI Geräte · Topologie · Live-Telemetrie</h2>
+    <div id="devices"><p class="muted">Mit Zugriffstoken verbinden.</p></div>
+  </aside>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function(){
+'use strict';
+const el=id=>document.getElementById(id);
+const map=window.L?L.map('map').setView([51.1657,10.4515],6):null;
+// OSM's tile policy requires a Referer; the page itself stays on no-referrer.
+if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {attribution:'© OpenStreetMap',maxZoom:19,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
+const records=new Map(),markers=new Map();
+let socket=null,centered=false;
+const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
+const fresh=d=>Number.isFinite(d.lastTelemetryAt)&&Date.now()>=d.lastTelemetryAt&&Date.now()-d.lastTelemetryAt<15000;
+// HMS lists are pushed repeatedly while alerts are active; older lists are stale.
+const hmsFresh=d=>Number.isFinite(d.lastHmsAt)&&Date.now()>=d.lastHmsAt&&Date.now()-d.lastHmsAt<30000;
+const activeHms=d=>hmsFresh(d)&&Array.isArray(d.hms)?d.hms:[];
+const worstHms=d=>activeHms(d).reduce((worst,a)=>Number.isInteger(a.level)&&a.level>worst?a.level:worst,-1);
+const HMS_LEVEL=['Hinweis','Achtung','Warnung'];
+const tooltips=new Map();
+const positionFresh=d=>Number.isFinite(d.lastPositionAt)&&Date.now()>=d.lastPositionAt&&Date.now()-d.lastPositionAt<15000;
+function update(){
+  const data=[...records.values()].sort((a,b)=>(b.lastSeenAt||0)-(a.lastSeenAt||0));
+  el('count').textContent=data.length;
+  el('live').textContent=data.filter(fresh).length;
+  const warnings=data.reduce((n,d)=>n+activeHms(d).filter(a=>a.level===2).length,0);
+  el('hmsCount').textContent=warnings;
+  el('hmsCount').className=warnings?'alert':'';
+  const root=el('devices');root.replaceChildren();
+  if(!data.length){const p=document.createElement('p');p.className='muted';p.textContent='Noch keine Telemetrie empfangen.';root.append(p);}
+  for(const d of data){
+    const card=document.createElement('div');card.className='device';
+    const head=document.createElement('div');head.className='head';
+    const name=document.createElement('strong');
+    name.textContent=d.modelName ? d.modelName+' · '+d.sn : d.sn;
+    const state=document.createElement('span');state.className='state'+(fresh(d)?'':' stale');
+    state.textContent=fresh(d)?(d.telemetryTimeVerified===false?
+      '● OSD empfangen · Zeit ungeprüft':'● OSD frisch'):
+      d.topologyOnline===true?'● Topologie gemeldet · OSD veraltet':'● OSD veraltet';
+    head.append(name,state);card.append(head);
+    const grid=document.createElement('div');grid.className='metrics';
+    const t=d.telemetry||{};
+    const rtk=['nicht gestartet','fixiert gerade','Fix','Fix fehlgeschlagen'];
+    // Optional DJI fields are only shown when the device actually reports them.
+    const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
+      ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites)],
+      ['RTK-Status',t.rtkFixState,rtk[t.rtkFixState]||'—'],
+      ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
+      ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
+        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
+      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')]]
+      .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
+    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],['Breite',show(t.latitude)],['Länge',show(t.longitude)],...optional]){
+      const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
+      caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
+    }
+    card.append(grid);
+    const meta=document.createElement('small');
+    meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
+      (d.topologyRestored?' · Topologie aus Speicher':'')+
+      (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
+      (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
+      ' · GPS '+(positionFresh(d)?(d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
+        Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'nicht empfangen');
+    card.append(meta);
+    if(Array.isArray(d.hms)&&Number.isFinite(d.lastHmsAt)){
+      const head=document.createElement('div');head.className='hms-head';
+      const age=Math.max(0,Math.round((Date.now()-d.lastHmsAt)/1000));
+      head.textContent=hmsFresh(d)?(d.hms.length?'HMS · '+d.hms.length+' aktiv':'HMS · keine Meldungen'):
+        'HMS · Stand vor '+age+' s (veraltet)';
+      card.append(head);
+      if(hmsFresh(d)&&d.hms.length){
+        const list=document.createElement('ul');list.className='hms';
+        for(const a of [...d.hms].sort((x,y)=>(y.level??-1)-(x.level??-1))){
+          const item=document.createElement('li');
+          item.className=Number.isInteger(a.level)?'l'+a.level:'';
+          const text=a.text&&(a.text.de||a.text.en);
+          item.textContent=text||'Unbekannter HMS-Code';
+          const code=document.createElement('small');
+          code.className='muted';
+          code.textContent=(HMS_LEVEL[a.level]||'Stufe ?')+' · '+a.code;
+          item.append(code);list.append(item);
+        }
+        card.append(list);
+      }
+    }
+    root.append(card);
+    if(map && typeof t.latitude==='number' && typeof t.longitude==='number' &&
+       Math.abs(t.latitude)<=90 && Math.abs(t.longitude)<=180){
+      const pos=[t.latitude,t.longitude];
+      const markerColor=positionFresh(d)&&d.positionTimeVerified===true?'#47c3e7':'#748697';
+      // Ring colour shows the most severe active HMS alert; fill keeps position freshness.
+      const level=worstHms(d);
+      const style={color:level===2?'#ff6b5b':level===1?'#f0b84a':markerColor,
+        fillColor:markerColor,fillOpacity:.45,weight:level>=1?4:2};
+      if(!markers.has(d.sn)){
+        const marker=L.circleMarker(pos,{radius:7,...style}).addTo(map);
+        const safeLabel=document.createElement('span');
+        marker.bindTooltip(safeLabel);markers.set(d.sn,marker);tooltips.set(d.sn,safeLabel);
+      }else{
+        markers.get(d.sn).setLatLng(pos);
+        markers.get(d.sn).setStyle(style);
+      }
+      const warnings=activeHms(d).filter(a=>a.level>=1).length;
+      tooltips.get(d.sn).textContent=(d.modelName||d.sn)+(warnings?' · '+warnings+' HMS-Warnung'+(warnings>1?'en':''):'');
+      if(!centered&&positionFresh(d)&&d.positionTimeVerified===true&&(pos[0]!==0||pos[1]!==0)){map.setView(pos,13);centered=true;}
+    }
+  }
+}
+// token===null: token-free read-only access from the configured home network.
+async function connect(token=el('token').value.trim(),quiet=false){
+  if(token!==null && !token){el('message').textContent='Token fehlt';return false;}
+  if(socket){socket.disconnect();socket=null;}
+  if(!quiet)el('message').textContent='Verbinde…';
+  try{
+    const res=await fetch('/api/devices',{headers:token?{Authorization:'Bearer '+token}:{},cache:'no-store'});
+    if(!res.ok)throw new Error('API HTTP '+res.status);
+    records.clear();for(const d of await res.json())records.set(d.sn,d);
+    update();
+    const label=token?'Live verbunden':'Live verbunden (Heimnetz)';
+    socket=io({auth:token?{token}:{},reconnectionDelayMax:5000});
+    socket.on('connect',()=>{el('message').textContent=label;});
+    socket.on('connect_error',()=>{el('message').textContent='WebSocket nicht verbunden';});
+    socket.on('disconnect',()=>{el('message').textContent='Verbindung getrennt';});
+    socket.on('snapshot',list=>{for(const d of list)records.set(d.sn,d);update();});
+    socket.on('device_update',d=>{records.set(d.sn,d);update();});
+    return true;
+  }catch(err){if(!quiet)el('message').textContent=err.message;return false;}
+}
+el('connect').addEventListener('click',()=>connect());
+el('token').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+// In the home network the dashboard opens without a token; elsewhere the field stays.
+connect(null,true).then(ok=>{
+  if(ok){el('token').hidden=true;el('connect').hidden=true;}
+  else el('message').textContent='Nicht verbunden';
+});
+setInterval(update,5000);
+})();
+</script>
 </body>
 </html>

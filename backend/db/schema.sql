@@ -3,15 +3,18 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- 1. Drohnen-Telemetrie und Verlauf
 CREATE TABLE IF NOT EXISTS drone_telemetry (
     id SERIAL PRIMARY KEY,
-    gateway_sn VARCHAR(64) NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    altitude FLOAT,
+    gateway_sn VARCHAR(100),
+    device_sn VARCHAR(100) NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    altitude DOUBLE PRECISION,
     battery_percentage INT,
     hms_codes JSONB,
     geom GEOMETRY(Point, 4326),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_telemetry_device_time
+  ON drone_telemetry (device_sn, created_at DESC);
 
 -- 2. Leitstellen-Annotationen & Geofences (Situational Awareness)
 CREATE TABLE IF NOT EXISTS map_annotations (

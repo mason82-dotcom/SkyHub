@@ -1,150 +1,337 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mqtt = require('mqtt');
-const { Pool } = require('pg');
-const Redis = require('ioredis');
-const Minio = require('minio');
+'use strict';
+const express=require('express');
+const http=require('http');
+const path=require('path');
+const crypto=require('crypto');
+const mqtt=require('mqtt');
+const Redis=require('ioredis');
+const {Pool}=require('pg');
+const {Server}=require('socket.io');
+const {parseMessage,serial}=require('./dji');
+const {classifyMessage}=require('./message-guard');
+const {validateBrokerConfig}=require('./mqtt-config');
+const {createMqttMetrics}=require('./mqtt-metrics');
+const {createShapeCatalog}=require('./mqtt-shape');
+const {createRegistry}=require('./registry');
+const {pilotConfiguration}=require('./pilot-config');
+const {createStatusReply}=require('./topology-ack');
+const {createPilotPairing,redisStore}=require('./pilot-pairing');
+const {createTopologyStore}=require('./topology-store');
+const {createLanAccess}=require('./lan-access');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const secret=process.env.SKYHUB_VIEW_TOKEN;
+if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
+  console.error('SKYHUB_VIEW_TOKEN (minimum 24 characters) is mandatory');
+  process.exit(1);
+}
+let broker;
+try {
+  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT);
+} catch(err) {
+  console.error('[mqtt config]',err.message);
+  process.exit(1);
+}
+const pilot=pilotConfiguration(process.env);
+let lanAccess;
+try {
+  lanAccess=createLanAccess(process.env.SKYHUB_LAN_VIEW_CIDR);
+} catch(err) {
+  console.error('[lan view]',err.message);
+  process.exit(1);
+}
+const app=express(),server=http.createServer(app);
+// Do not trust forged X-Forwarded-Proto when SkyHub occupies the legacy LAN port.
+// Trust proxy headers only when the backend is published exclusively on loopback.
+if(['127.0.0.1','::1'].includes(process.env.SKYHUB_BIND_ADDRESS||'127.0.0.1')){
+  app.set('trust proxy',['loopback','linklocal','uniquelocal']);
+}
+const io=new Server(server,{maxHttpBufferSize:131072});
+const registry=createRegistry();
+let mqttConnected=false;
+let mqttSubscribed=false;
+const mqttStats=createMqttMetrics();
+const mqttShapes=createShapeCatalog();
+const topologyAckEnabled=process.env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
+const topologyAckCredentials={
+  username:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'',
+  password:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD||''
+};
+// A dedicated, ACL-restricted publisher is required; read-only credentials remain unchanged.
+if(topologyAckEnabled && (!topologyAckCredentials.username ||
+    !topologyAckCredentials.password ||
+    topologyAckCredentials.username.startsWith('REPLACE_') ||
+    topologyAckCredentials.password.startsWith('REPLACE_'))){
+  console.error('[topology ack] dedicated publisher credentials are required');
+  process.exit(1);
+}
+let topologyAckConnected=false;
+let topologyAckSent=0;
+let topologyAckFailed=0;
+let topologyAckSkipped=0;
+let topologyAckLastAt=null;
+let topologyAckClient=null;
+// Last successful status_reply per gateway, so Pilot 2 can detect an unacknowledged session.
+const topologyAcks=new Map();
 
-app.use(express.json());
-
-// 1. PostGIS Datenbank-Verbindung
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgres://skyhub:secure_local_db_password_123@postgres:5432/skyhub_db'
+app.disable('x-powered-by');
+app.use(express.json({limit:'128kb'}));
+app.use((req,res,next)=>{
+  res.set('X-Content-Type-Options','nosniff');
+  res.set('Referrer-Policy','no-referrer');
+  res.set('Cache-Control','no-store');
+  next();
 });
+function authorized(value){
+  if(typeof value!=='string')return false;
+  const a=Buffer.from(value),b=Buffer.from(secret);
+  return a.length===b.length && crypto.timingSafeEqual(a,b);
+}
+// Token-free viewing from the configured home LAN: read-only, never pairing administration.
+function lanView(req){
+  return req.method==='GET' && !req.path.startsWith('/pilot-admin') &&
+    lanAccess.allows(req.socket.remoteAddress,req.headers['x-forwarded-for']);
+}
+function auth(req,res,next){
+  const hdr=req.headers.authorization||'';
+  if(lanView(req))return next();
+  if(!authorized(hdr.startsWith('Bearer ')?hdr.slice(7):'')){
+    return res.status(401).json({error:'Unauthorized'});
+  }
+  next();
+}
+io.use((socket,next)=>authorized(socket.handshake.auth?.token) ||
+  lanAccess.allows(socket.request.socket.remoteAddress,socket.handshake.headers['x-forwarded-for'])
+  ?next():next(new Error('Unauthorized')));
+io.on('connection',socket=>socket.emit('snapshot',registry.snapshot()));
 
-// 2. Redis In-Memory Client für Telemetrie-Caching & Pilot 2 Login
-const redis = new Redis(process.env.REDIS_URL || 'redis://redis:6379');
-
-redis.on('connect', () => {
-    console.log('[Redis] Erfolgreich verbunden mit Redis Cache Store.');
+const redis=new Redis(process.env.REDIS_URL||'redis://redis:6379',{
+  lazyConnect:true,maxRetriesPerRequest:1,
+  retryStrategy:attempts=>Math.min(attempts*1000,5000)
 });
+redis.on('error',err=>console.error('[redis]',err.message));
+const topologyStore=createTopologyStore(redis);
+let topologyRestored=0;
+redis.connect()
+  .then(()=>topologyStore.load())
+  .then(records=>{
+    topologyRestored=registry.restoreTopology(records);
+    // Count only; never log serial numbers.
+    if(topologyRestored)console.log('[topology] restored '+topologyRestored+' devices from Redis');
+  })
+  .catch(err=>console.error('[redis connect]',err.message));
+const pairing=createPilotPairing({store:redisStore(redis)});
+const pool=process.env.DATABASE_URL?
+  new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:3000}):null;
+if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
 
-// 3. MinIO S3 Objektspeicher Client
-const minioClient = new Minio.Client({
-    endPoint: process.env.S3_ENDPOINT ? process.env.S3_ENDPOINT.replace('http://', '').split(':')[0] : 'minio',
-    port: 9000,
-    useSSL: false,
-    accessKey: process.env.S3_ACCESS_KEY || 'skyhub_minio_admin',
-    secretKey: process.env.S3_SECRET_KEY || 'secure_minio_password_123'
-});
-
-// S3-Bucket automatisch anlegen falls nicht vorhanden
-const bucketName = process.env.S3_BUCKET_NAME || 'skyhub-media';
-minioClient.bucketExists(bucketName, (err, exists) => {
-    if (err) return console.error('[MinIO Error]', err);
-    if (!exists) {
-        minioClient.makeBucket(bucketName, 'us-east-1', (err) => {
-            if (err) return console.error('[MinIO Error] Bucket-Erstellung fehlgeschlagen:', err);
-            console.log(`[MinIO] Bucket '${bucketName}' erfolgreich angelegt.`);
+function onMessage(topic,payload,packet){
+  // Passive transport diagnostics, without recording device IDs or payloads.
+  mqttStats.observed(topic);
+  // A retained MQTT delivery is not evidence of a currently connected DJI device.
+  if(packet?.retain===true){mqttStats.rejected('retained');return;}
+  try {
+    const parsed=parseMessage(topic,payload);
+    if(!parsed)return;
+    const observedAt=Date.now();
+    mqttShapes.record(parsed,observedAt);
+    const decision=classifyMessage(parsed,packet,observedAt);
+    if(!decision.accept){mqttStats.rejected(decision.reason);return;}
+    const result=registry.ingest(parsed,observedAt);
+    if(result.dropReason){mqttStats.rejected(result.dropReason);return;}
+    mqttStats.accepted(parsed,result,observedAt);
+    // DJI topology acknowledgement is a protocol reply, never a flight command.
+    // Only send for a validated, accepted, non-retained update_topo message.
+    if(topologyAckEnabled && parsed.channel==='status' && parsed.topology){
+      const reply=createStatusReply(parsed,payload,observedAt);
+      if(reply && topologyAckClient && topologyAckConnected){
+        topologyAckClient.publish(reply.topic,reply.payload,{qos:1,retain:false},err=>{
+          if(err){topologyAckFailed++;console.error('[topology ack] publish failed');}
+          else {
+            topologyAckSent++;topologyAckLastAt=Date.now();
+            if(topologyAcks.size>=200 && !topologyAcks.has(parsed.sn))
+              topologyAcks.delete(topologyAcks.keys().next().value);
+            topologyAcks.set(parsed.sn,topologyAckLastAt);
+          }
         });
-    } else {
-        console.log(`[MinIO] Bucket '${bucketName}' ist einsatzbereit.`);
+      }else{
+        // Without status_reply Pilot 2 keeps resending update_topo and withholds OSD.
+        topologyAckSkipped++;
+        console.error('[topology ack] skipped: '+(reply?'publisher not connected':'reply validation failed'));
+      }
     }
-});
-
-// 4. Pilot 2 Login / Device Auth Service
-app.post('/api/v1/login', async (req, res) => {
-    const { username, password, device_sn } = req.body;
-    
-    if (process.env.DISABLE_AUTH === 'true') {
-        const token = "token_skyhub_local_" + Date.now();
-        await redis.set(`session:${device_sn || 'pilot2_gateway'}`, token, 'EX', 86400); // 24h Gültigkeit
-        return res.json({
-            code: 0,
-            message: "Login erfolgreich (Zero-Auth Local Mode)",
-            data: { access_token: token, expires_in: 86400 }
-        });
+    for(const item of result.updates){
+      io.emit('device_update',item);
+      redis.set('skyhub:device:'+item.sn,JSON.stringify(item),'EX',3600)
+        .catch(err=>console.error('[redis write]',err.message));
     }
-
-    // Produktion: Datenbank-Prüfung
-    res.status(401).json({ code: 401, message: "Ungültige Anmeldedaten" });
-});
-
-// 5. MQTT 5.0 Broker-Verbindung (EMQX)
-const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL || 'mqtt://emqx:1883', {
-    clientId: 'SkyHub_Cloud_Server_Core',
-    username: process.env.MQTT_USER || 'admin',
-    password: process.env.MQTT_PASSWORD || 'public',
-    clean: true
-});
-
-mqttClient.on('connect', () => {
-    console.log('[MQTT] Verbunden mit EMQX Broker. Lausche auf DJI Thing Model Topics...');
-    mqttClient.subscribe('thing/product/+/osd');
-    mqttClient.subscribe('thing/product/+/status');
-    mqttClient.subscribe('thing/product/+/events');
-});
-
-mqttClient.on('message', async (topic, payload) => {
-    try {
-        const data = JSON.parse(payload.toString());
-        const topicParts = topic.split('/');
-        const gatewaySn = topicParts[2];
-        const subTopic = topicParts[3];
-
-        // A. OSD Telemetrie im Redis Cache speichern (exakt 1 ms Latenz fürs Dashboard)
-        if (subTopic === 'osd') {
-            await redis.hset(`telemetry:${gatewaySn}`, {
-                latitude: data.latitude || 0,
-                longitude: data.longitude || 0,
-                altitude: data.altitude || 0,
-                battery: data.battery_percentage || 0,
-                updated_at: Date.now()
-            });
-
-            // Asynchron in PostGIS DB persistieren
-            if (data.latitude && data.longitude) {
-                pool.query(
-                    `INSERT INTO drone_telemetry (gateway_sn, latitude, longitude, altitude, battery_percentage, geom)
-                     VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($3, $2), 4326))`,
-                    [gatewaySn, data.latitude, data.longitude, data.altitude || 0, data.battery_percentage || 0]
-                ).catch(e => console.error('[DB Insert Error]', e));
-            }
-        }
-
-        // B. Telemetrie per WebSockets an Frontend-Clients senden
-        io.emit('telemetry_update', { gatewaySn, subTopic, data });
-
-    } catch (err) {
-        console.error('[MQTT Error] Parsen fehlgeschlagen:', err);
+    if(result.event)io.emit('device_event',result.event);
+    if(result.topologyChanged){
+      topologyStore.save(registry.topologyRecords(result.updates.map(item=>item.sn)))
+        .catch(err=>console.error('[redis topology]',err.message));
     }
-});
-
-// REST-Endpunkt zur Abfrage des aktuellen Drohnenstatus aus Redis
-app.get('/api/drone/:sn/telemetry', async (req, res) => {
-    const telemetry = await redis.hgetall(`telemetry:${req.params.sn}`);
-    if (!telemetry || Object.keys(telemetry).length === 0) {
-        return res.status(404).json({ error: 'Keine Telemetrie in Redis gefunden' });
+    if(pool && result.point){
+      const p=result.point;
+      pool.query(
+        'INSERT INTO drone_telemetry (gateway_sn,device_sn,latitude,longitude,altitude,battery_percentage,geom) '+
+        'VALUES ($1,$2,$3,$4,$5,$6,ST_SetSRID(ST_MakePoint($4,$3),4326))',
+        [p.gatewaySn,p.deviceSn,p.latitude,p.longitude,p.altitude,p.battery]
+      ).catch(err=>console.error('[postgres insert]',err.message));
     }
-    res.json(telemetry);
+  }catch(_err){
+    // Parsing errors may contain snippets of sensitive DJI messages. Never log them.
+    mqttStats.rejected('malformed');
+    console.error('[mqtt message rejected] malformed DJI message');
+  }
+}
+
+const options={clientId:'skyhub_next_readonly_'+process.pid,protocolVersion:5,
+  reconnectPeriod:3000,connectTimeout:10000};
+if(process.env.MQTT_USER)options.username=process.env.MQTT_USER;
+if(process.env.MQTT_PASSWORD)options.password=process.env.MQTT_PASSWORD;
+const client=mqtt.connect(broker.url,options);
+if(topologyAckEnabled){
+  topologyAckClient=mqtt.connect(broker.url,{
+    clientId:'skyhub_next_topology_ack_'+process.pid,
+    protocolVersion:5,reconnectPeriod:3000,connectTimeout:10000,
+    username:topologyAckCredentials.username,
+    password:topologyAckCredentials.password
+  });
+  topologyAckClient.on('connect',()=>{topologyAckConnected=true;});
+  topologyAckClient.on('close',()=>{topologyAckConnected=false;});
+  topologyAckClient.on('error',()=>{topologyAckFailed++;console.error('[topology ack] broker connection failed');});
+}
+client.on('connect',()=>{
+  mqttConnected=true;
+  mqttStats.connected();
+  mqttSubscribed=false;
+  console.log('[mqtt] connected; subscribing read-only');
+  client.subscribe([
+    'sys/product/+/status','thing/product/+/osd','thing/product/+/state',
+    'thing/product/+/events','thing/product/+/services_reply'
+  ],{qos:0},(err,granted)=>{
+    mqttSubscribed = !err && Array.isArray(granted) && granted.length===5 &&
+      granted.every(item=>item.qos!==128);
+    if(!mqttSubscribed)console.error('[mqtt subscribe] subscriptions not confirmed');
+  });
+});
+client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;mqttStats.disconnected();});
+client.on('error',err=>console.error('[mqtt]',err.message));
+client.on('message',onMessage);
+
+// Existing DJI Pilot 2 URL /pilot-login now resolves when v3 takes over port 4000.
+// Login/bootstrap remains opt-in; secret provisioning is forbidden over plaintext HTTP.
+app.get('/pilot-login',(req,res)=>{
+  res.set('Content-Security-Policy',
+    "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
+    "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+  res.sendFile(path.resolve(__dirname,'../frontend/public/pilot-login.html'));
+});
+app.get('/api/pilot/status',(req,res)=>res.json({
+  configured:pilot.ready,missing:pilot.missing,mqttPort:1884,requiresHttps:true
+}));
+function pilotGuard(req,res){
+  if(!pilot.ready){res.status(503).json({error:'Pilot 2 not configured'});return false;}
+  if(!req.secure){res.status(403).json({error:'HTTPS required'});return false;}
+  return true;
+}
+// Accepts the shared operator access token or a paired device token.
+async function pilotAuthorized(req){
+  const hdr=req.headers.authorization||'';
+  const token=hdr.startsWith('Bearer ')?hdr.slice(7):'';
+  const a=Buffer.from(token),b=Buffer.from(pilot.accessToken);
+  if(a.length===b.length && crypto.timingSafeEqual(a,b))return true;
+  if(redis.status!=='ready')return false;
+  return Boolean(await pairing.verify(token));
+}
+app.post('/api/pilot/bootstrap',async(req,res)=>{
+  if(!pilotGuard(req,res))return;
+  try{
+    if(!await pilotAuthorized(req))return res.status(401).json({error:'Unauthorized'});
+    res.json(pilot.bootstrap());
+  }catch(_err){res.status(503).json({error:'Pilot authorization unavailable'});}
+});
+// Pairing: unauthenticated start/poll over HTTPS; approval requires the view token.
+app.post('/api/pilot/pair',(req,res)=>{
+  if(!pilotGuard(req,res))return;
+  if(redis.status!=='ready')return res.status(503).json({error:'Pairing store unavailable'});
+  const userAgent=String(req.headers['user-agent']||'').slice(0,300);
+  const started=pairing.start(userAgent,Date.now(),req.ip+'|'+userAgent);
+  if(!started)return res.status(429).json({error:'Too many pending pairings'});
+  console.log('[pilot pairing] code issued; approve with scripts/pi-pilot-pair.js');
+  res.json(started);
+});
+app.get('/api/pilot/pair/:id',async(req,res)=>{
+  if(!pilotGuard(req,res))return;
+  try{
+    const result=await pairing.poll(req.params.id);
+    if(result.status==='approved')console.log('[pilot pairing] device paired');
+    res.json(result);
+  }catch(_err){res.status(503).json({error:'Pairing store unavailable'});}
+});
+// Lets the Pilot page see whether SkyHub acknowledged this RC's topology.
+app.get('/api/pilot/session',async(req,res)=>{
+  if(!pilotGuard(req,res))return;
+  try{
+    if(!await pilotAuthorized(req))return res.status(401).json({error:'Unauthorized'});
+  }catch(_err){return res.status(503).json({error:'Pilot authorization unavailable'});}
+  const gateway=serial(req.query.gateway);
+  const device=gateway?registry.get(gateway):null;
+  res.json({
+    topologyReplyEnabled:topologyAckEnabled,
+    topologyAckAt:gateway?topologyAcks.get(gateway)??null:null,
+    lastTopologyAt:device?.lastTopologyAt??null,
+    lastTelemetryAt:device?.lastTelemetryAt??null
+  });
 });
 
-// REST-Endpunkt zum Veröffentlichen von WPML-Missionspaketen
-app.post('/api/mission/create', async (req, res) => {
-    const { gatewaySn, kmzUrl, missionId } = req.body;
-    
-    const payload = {
-        tid: "skyhub-" + Date.now(),
-        bid: "mission-dispatch-" + missionId,
-        timestamp: Date.now(),
-        data: {
-            file_url: kmzUrl,
-            file_name: `mission_${missionId}.kmz`,
-            exec_mode: 0
-        }
-    };
-
-    mqttClient.publish(`thing/product/${gatewaySn}/services/flighttask_create`, JSON.stringify(payload), { qos: 1 }, (err) => {
-        if (err) return res.status(500).json({ error: 'MQTT Publish fehlgeschlagen' });
-        res.json({ status: 'success', message: 'Mission erfolgreich an DJI Pilot 2 Gateway gesendet.' });
-    });
+app.get('/api/health',(req,res)=>res.json({
+  status:mqttConnected&&mqttSubscribed?'online':'degraded',mqtt:mqttConnected,
+  subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true,
+  mqttBrokerPort:broker.port,topologyReplyEnabled:topologyAckEnabled,
+  topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
+  topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
+  topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,
+  lanViewEnabled:lanAccess.enabled,...mqttStats.snapshot()
+}));
+app.use('/api',auth);
+app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
+app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
+  lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));
+app.get('/api/events',(req,res)=>res.json(registry.events()));
+// Pairing administration: loopback/SSH tunnel only (not routed by Caddy) plus view token.
+app.get('/api/pilot-admin/pairings',async(req,res)=>{
+  try{res.json({pending:pairing.pending(),devices:await pairing.devices()});}
+  catch(_err){res.status(503).json({error:'Pairing store unavailable'});}
 });
-
-server.listen(4000, () => {
-    console.log('[SkyHub Backend v3] Läuft auf Port 4000 (PostGIS, Redis, MinIO, EMQX & Pilot 2 Login ready)');
+app.post('/api/pilot-admin/approve',(req,res)=>{
+  if(!pairing.approve(req.body?.code))return res.status(404).json({error:'No pending pairing with this code'});
+  console.log('[pilot pairing] code approved');
+  res.json({approved:true});
 });
+app.delete('/api/pilot-admin/devices/:id',async(req,res)=>{
+  try{
+    if(!await pairing.revoke(req.params.id))return res.status(404).json({error:'Unknown device'});
+    res.json({revoked:true});
+  }catch(_err){res.status(503).json({error:'Pairing store unavailable'});}
+});
+// Field names per channel/method as actually received; no values or serial numbers.
+app.get('/api/diagnostics/mqtt-shapes',(req,res)=>res.json(mqttShapes.snapshot()));
+app.get('/api/drone/:sn/telemetry',(req,res)=>{
+  const d=registry.get(req.params.sn);
+  if(!d)return res.status(404).json({error:'Device not observed'});
+  res.json(d);
+});
+app.post('/api/mission/create',(req,res)=>res.status(501).json({
+  error:'DJI mission dispatch is disabled pending protocol and hardware validation'
+}));
+app.use(express.static(path.resolve(__dirname,'../frontend/public'),{index:'index.html'}));
+app.use((req,res)=>res.status(404).json({error:'Not found'}));
+const port=Number(process.env.PORT||4000);
+server.listen(port,'0.0.0.0',()=>console.log('[skyhub] Port '+port+' / read-only'));
+function stop(){
+  client.end(true);if(topologyAckClient)topologyAckClient.end(true);
+  io.close();server.close();
+  redis.disconnect();if(pool)pool.end().catch(()=>{});
+}
+process.once('SIGTERM',stop);
+process.once('SIGINT',stop);
