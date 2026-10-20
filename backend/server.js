@@ -120,6 +120,7 @@ client.on('message',onMessage);
 // By default it is a read-only readiness page; no MQTT credentials are exposed.
 app.get('/pilot-login',(req,res)=>{
   res.set('Cache-Control','no-store');
+  res.set('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
   res.sendFile(path.resolve(__dirname,'../frontend/public/pilot-login.html'));
 });
 app.get('/api/pilot/status',(req,res)=>res.json({
