@@ -15,8 +15,12 @@ jobs:
         run: |
           node --check backend/server.js
           node --check backend/dji.js
+          node --check backend/mqtt-config.js
           node --test backend/test/*.test.js
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
+      - name: Assert Pi MQTT endpoint on port 1884
+        run: |
+          node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const b=x.services.backend.environment; if(b.MQTT_BROKER_URL!=="mqtt://host.docker.internal:1884" || b.SKYHUB_MQTT_REQUIRED_PORT!=="1884") process.exit(1);'
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
