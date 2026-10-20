@@ -74,7 +74,9 @@ function update(){
     const name=document.createElement('strong');
     name.textContent=d.modelName ? d.modelName+' · '+d.sn : d.sn;
     const state=document.createElement('span');state.className='state'+(fresh(d)?'':' stale');
-    state.textContent=fresh(d)?'● OSD frisch':d.topologyOnline===true?'● Verbunden, kein frisches OSD':'● OSD veraltet';
+    state.textContent=fresh(d)?(d.telemetryTimeVerified===false?
+      '● OSD empfangen · Zeit ungeprüft':'● OSD frisch'):
+      d.topologyOnline===true?'● Topologie gemeldet · OSD veraltet':'● OSD veraltet';
     head.append(name,state);card.append(head);
     const grid=document.createElement('div');grid.className='metrics';
     const t=d.telemetry||{};
@@ -87,13 +89,13 @@ function update(){
     meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
       (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
       (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
-      ' · GPS '+(positionFresh(d)?'frisch':Number.isFinite(d.lastPositionAt)?
+      ' · GPS '+(positionFresh(d)?(d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
         Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'nicht empfangen');
     card.append(meta);root.append(card);
     if(map && typeof t.latitude==='number' && typeof t.longitude==='number' &&
        Math.abs(t.latitude)<=90 && Math.abs(t.longitude)<=180){
       const pos=[t.latitude,t.longitude];
-      const markerColor=positionFresh(d)?'#47c3e7':'#748697';
+      const markerColor=positionFresh(d)&&d.positionTimeVerified===true?'#47c3e7':'#748697';
       if(!markers.has(d.sn)){
         const marker=L.circleMarker(pos,{radius:7,color:markerColor}).addTo(map);
         const safeLabel=document.createElement('span');safeLabel.textContent=d.sn;
@@ -102,7 +104,7 @@ function update(){
         markers.get(d.sn).setLatLng(pos);
         markers.get(d.sn).setStyle({color:markerColor});
       }
-      if(!centered&&positionFresh(d)&&(pos[0]!==0||pos[1]!==0)){map.setView(pos,13);centered=true;}
+      if(!centered&&positionFresh(d)&&d.positionTimeVerified===true&&(pos[0]!==0||pos[1]!==0)){map.setView(pos,13);centered=true;}
     }
   }
 }
