@@ -74,8 +74,11 @@ Anmeldedaten und Verbindungsparameter und startet eine eigene MQTT-Session.
   den SkyHub-Next-Backend-Container bestimmt.
 - Ein funktionierendes Anmeldeformular allein beweist weder eine gültige
   DJI-Lizenzprüfung noch eine gestartete MQTT-Verbindung.
-- Das aktuelle **SkyHub Next v3.1 ist absichtlich read-only** und
-  bietet diese vollständige H5-/JSBridge-Onboarding-Strecke noch nicht.
+- SkyHub Next enthält jetzt eine **optional aktivierbare** H5-/JSBridge-
+  Pilot-2-Anmeldestrecke mit Lizenzprüfung und `thing`-Initialisierung.
+  Die produktive DJI-Funktionalität ist noch nicht durch Hardware-Tests,
+  Broker-ACLs und vollständige Cloud-API-Replies bestätigt. Der neue
+  Dienst sendet selbst weiterhin keine Flugsteuerungskommandos.
   Keine Credentials oder App-Keys in das Git-Repository einchecken.
 - Eine weitere bereits existierende lokale Cloud-Plattform könnte das
   Onboarding bereitstellen; sie wurde durch die Brokerstatistik jedoch
