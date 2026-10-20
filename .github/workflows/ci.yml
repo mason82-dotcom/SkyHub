@@ -20,6 +20,10 @@ jobs:
           node --check backend/pilot-config.js
           node --check frontend/public/pilot-login.js
           node --test backend/test/*.test.js
+      - name: Test local staging secret preparation
+        run: |
+          python3 -m py_compile scripts/pi-prepare-staging-env.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
       - name: Assert Pi MQTT endpoint on port 1884
