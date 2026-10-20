@@ -125,3 +125,14 @@ test('audit failure rolls back data mutation and redacts SQL errors',async()=>{
   assert.equal(db.calls.some(c=>c.sql==='COMMIT'),false);
   assert.equal(db.stats().released,1);
 });
+
+test('mutation module is not wired into runtime or ordinary Pilot controls',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const server=fs.readFileSync(path.resolve(__dirname,'../server.js'),'utf8');
+  const env=fs.readFileSync(path.resolve(__dirname,'../../.env.example'),'utf8');
+  assert.doesNotMatch(server,/require\(['"]\.\/map-element-mutation['"]\)/);
+  assert.doesNotMatch(server,/createMapMutationStore|dji_map_element_audit/);
+  assert.match(env,/^SKYHUB_DJI_MAP_ELEMENTS_ENABLED=false$/m);
+  assert.doesNotMatch(server,/app\.(?:post|put|patch|delete)\(['"]\/map\/api/);
+});
