@@ -2,6 +2,7 @@
   'use strict';
   const el=id=>document.getElementById(id);
   let ready=false,connecting=false;
+  let mqttLogin=null; // Kept only in WebView memory for an explicit retry.
   const isTls=location.protocol==='https:';
   function status(text){el('result').textContent=text;}
   function bridgeResult(value){
@@ -19,11 +20,81 @@
     const outcome=bridgeResult(window.djiBridge[method](...args));
     if(!outcome.ok)throw new Error(method+': '+(outcome.message||'nicht bestätigt'));
   }
-  // Never print the RC serial, password, license, token or MQTT config.
-  window.skyhubPilotMqttState=function(result){
-    // Do not infer online state from unspecified vendor callback structures.
-    status('MQTT-Statusänderung von DJI Pilot 2 gemeldet. Verbindung im Broker prüfen.');
+  // Never log, render or export callback payloads or credentials.
+  function decodeMqttState(value){
+    let parsed=value;
+    if(typeof parsed==='string'){
+      try{parsed=JSON.parse(parsed.trim());}catch(_){return null;}
+    }
+    if(typeof parsed==='boolean')return parsed;
+    if(parsed && typeof parsed==='object' && !Array.isArray(parsed)){
+      // A failed JSBridge request must not be mistaken for a valid false state.
+      if(typeof parsed.code==='number' && parsed.code!==0)return null;
+      return typeof parsed.data==='boolean'?parsed.data:null;
+    }
+    return null;
+  }
+  function showRetry(enabled){
+    const retry=el('retry');
+    if(!retry)return;
+    retry.hidden=!enabled;
+    retry.disabled=!enabled;
+  }
+  function canRetry(){
+    return Boolean(mqttLogin && window.djiBridge &&
+      typeof window.djiBridge.thingConnect==='function');
+  }
+  window.skyhubPilotMqttState=function(_callbackResult){
+    // The callback payload is intentionally ignored. Query the current state.
+    try{
+      const bridge=window.djiBridge;
+      if(!bridge || typeof bridge.thingGetConnectState!=='function'){
+        status('DJI MQTT: Statusabfrage nicht verfügbar.');
+        showRetry(canRetry());
+        return;
+      }
+      const state=decodeMqttState(bridge.thingGetConnectState());
+      if(state===true){
+        mqttLogin=null;
+        showRetry(false);
+        status('DJI MQTT: VERBUNDEN. OSD-Empfang im SkyHub prüfen.');
+      }else if(state===false){
+        showRetry(canRetry());
+        status('DJI MQTT: NICHT VERBUNDEN. Erneuten Verbindungsversuch anbieten.');
+      }else{
+        showRetry(canRetry());
+        status('DJI MQTT: Bridge-Rückgabe nicht eindeutig. Keine Verbindung bestätigt.');
+      }
+    }catch(_){
+      showRetry(canRetry());
+      status('DJI MQTT: Statusabfrage fehlgeschlagen.');
+    }
   };
+  // Loading the thing component already initiates MQTT login in DJI Pilot 2.
+  // thingConnect is an explicit, user-initiated retry, not an automatic loop.
+  function retryMqtt(){
+    if(connecting || !canRetry())return;
+    connecting=true;
+    showRetry(false);
+    status('DJI MQTT: Erneuter Verbindungsversuch gestartet ...');
+    try{
+      const value=window.djiBridge.thingConnect(
+        mqttLogin.username,mqttLogin.password,'skyhubPilotMqttState');
+      let result=value;
+      if(typeof result==='string'){
+        try{result=JSON.parse(result);}catch(_){}
+      }
+      if(result===false || (result && typeof result==='object' &&
+          typeof result.code==='number' && result.code!==0)){
+        status('DJI MQTT: Wiederverbindung von DJI Bridge abgelehnt.');
+        showRetry(true);
+      }
+      // A successful function return is only request acceptance, not MQTT online.
+    }catch(_){
+      status('DJI MQTT: Wiederverbindung fehlgeschlagen.');
+      showRetry(true);
+    }finally{connecting=false;}
+  }
   async function init(){
     try{
       const response=await fetch('/api/pilot/status',{cache:'no-store'});
@@ -67,9 +138,14 @@
         host:config.mqtt.host,username:config.mqtt.username,
         password:config.mqtt.password,connectCallback:'skyhubPilotMqttState'
       }));
-      status('DJI Cloud-Modul geladen; MQTT-Verbindungsstatus muss separat bestätigt werden.');
+      // Kept in memory only to support the dedicated retry button.
+      mqttLogin={username:config.mqtt.username,password:config.mqtt.password};
+      showRetry(false);
+      status('DJI Cloud-Modul geladen. MQTT-Verbindungsstatus wird geprüft ...');
+      setTimeout(()=>window.skyhubPilotMqttState(),4000);
     }catch(e){status('Verbindung noch nicht bestätigt: '+e.message);}
     finally{connecting=false;el('start').disabled=!ready||!isTls||!window.djiBridge;}
   });
+  el('retry').addEventListener('click',retryMqtt);
   init();
 })();
