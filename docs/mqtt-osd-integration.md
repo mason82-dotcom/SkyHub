@@ -51,6 +51,7 @@ The read-only backend additionally counts allowlisted incoming MQTT **topic deli
 | `mqttOsdMessages` | OSD messages accepted after validation and registry handling |
 | `mqttValidTelemetryUpdates` | OSD updates with usable telemetry fields |
 | `mqttLastTelemetryAt` | Last accepted usable OSD update (backend reception time) |
+| `topologyReplySent` / `topologyReplySkipped` / `topologyReplyLastAt` | `status_reply` publications, skipped replies (validation failed or publisher offline), last successful reply |
 
 Counters are in-memory and reset on backend restart. A raw OSD delivery **does not** imply authenticated DJI origin, a fresh aircraft position, valid GPS, or a current device session.
 
@@ -61,6 +62,30 @@ Diagnostic interpretation:
 - Positive telemetry updates: then check the time and age; old packets are not a live flight feed.
 
 The separate, optional `update_topo` acknowledgment publisher remains **off by default** (`SKYHUB_TOPOLOGY_ACK_ENABLED=false`). Enable it only after verifying the dedicated EMQX write ACL on `sys/product/+/status_reply`; do not reuse Pilot credentials as a server publisher.
+
+## Hardware finding 2026-10-20: RC Pro Enterprise online, no OSD
+
+Observed live on the Pi with a DJI RC Pro Enterprise (topology `domain 2 / type 144 / sub_type 0`, thing version 1.2.0) logged in through `/pilot-login`:
+
+- EMQX lists a client whose client ID is the RC serial number; it subscribes to `sys/product/{sn}/status_reply`, `thing/product/{sn}/services`, `property/set`, `events_reply`, `requests_reply`, `state_reply` and `sys/product/{sn}/network/probe`. This is the RC itself, not a test client.
+- SkyHub received `update_topo` six times within ~100 s and 25 `state` messages, but **zero OSD topic deliveries**. `sub_devices` was empty (no aircraft in the topology).
+- EMQX had delivered **0 messages** to the RC: no `status_reply` was ever sent, because `SKYHUB_TOPOLOGY_ACK_ENABLED` was off.
+
+Per DJI Cloud API, the cloud acknowledges `update_topo` on `sys/product/{gateway_sn}/status_reply` with `data.result=0`; until then Pilot 2 repeats `update_topo` and does not treat the device as online. The missing reply is therefore the leading explanation for absent OSD. It is a hypothesis until a reply is sent and OSD is observed.
+
+Consequences in code:
+- `pi-mqtt-osd-check.js` now reports this case explicitly (status present, OSD absent, reply disabled).
+- Health adds `topologyReplySkipped` and `topologyReplyLastAt`; a reply that fails validation or has no connected publisher is logged (without payload) instead of being silent.
+- `GET /api/diagnostics/mqtt-shapes` (view token required) lists channel, method, `need_reply` count and top-level **field names** of received messages. No values, coordinates or serial numbers. Use it to align the parser with the real firmware instead of ad-hoc sniffing.
+
+### EMQX access control (not changed by SkyHub)
+
+The existing `skyhub_emqx` (5.3.0) has no authenticator configured and `acl.conf` ends with `{allow, all}`, while TCP 1884 is published on all interfaces. Consequently any LAN client can connect anonymously and publish to any topic, including `thing/product/+/services` and `property/set`. The "publish-only on `status_reply`" restriction for the topology publisher is **not enforced** by the broker today; the separate account only keeps the roles distinguishable for when ACLs are introduced.
+
+Recommended, separate change (affects the RC login and the legacy stack, so plan and test it on its own):
+1. Enable the built-in database authenticator; create distinct users for Pilot 2, the SkyHub read-only subscriber and the topology publisher.
+2. ACL: Pilot user may publish its own `thing/product/{sn}/#` / `sys/product/{sn}/status` and subscribe to the reply/service topics; SkyHub subscriber subscribe-only on the five allowlisted patterns; topology publisher publish-only on `sys/product/+/status_reply`; final rule `{deny, all}`.
+3. Then re-verify with `emqx ctl clients list` and the health counters.
 
 ## Local validation on the Raspberry Pi
 

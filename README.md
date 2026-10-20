@@ -266,3 +266,20 @@ Der vorhandene EMQX-Broker auf Host-Port **1884** bleibt bestehen. Der Open-Sour
 Bei getrennt gemeldetem MQTT-Status bietet DJI Pilot 2 den Button **„MQTT erneut verbinden“**. Kein automatisches Reconnect-Spamming und keine Geheimnisse in Statusmeldungen. Der Backend-Health-Endpunkt unterscheidet `mqttObservedOsdPackets` (roh empfangene Topics), `mqttOsdMessages` (übernommene OSD) und `mqttValidTelemetryUpdates` (verwertbare Daten). Die Diagnose liest keine Rohdaten aus.
 
 Nach einem kontrollierten Deployment auf dem Pi: `node scripts/pi-mqtt-osd-check.js` (Standardport 4001). Für Konfiguration, Grenzen, Quellennachweis und Prüfablauf siehe [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
+
+
+## Hardware-Befund 20.10.2026: RC Pro verbunden, kein OSD
+
+Die DJI RC Pro Enterprise ist als Gateway an EMQX angemeldet und sendet
+`update_topo` sowie `state`, aber **kein OSD**. SkyHub hatte nie ein
+`status_reply` gesendet (Topologie-Bestätigung war aus); Pilot 2 wiederholt
+`update_topo` dann und sendet kein OSD. Das Diagnoseskript erkennt diesen Fall
+jetzt ausdrücklich. Neu: `GET /api/diagnostics/mqtt-shapes` (Token nötig)
+zeigt pro Kanal/Methode nur die empfangenen Feldnamen, keine Werte oder
+Seriennummern. Zusätzliche OSD-Felder: GNSS-/RTK-Satelliten und Fix-Status,
+Lage, Home-Distanz, Restflugzeit, RC-Funkqualität.
+
+**Sicherheitsbefund:** Der bestehende EMQX auf 1884 erlaubt anonyme Anmeldung
+und hat `{allow, all}` als ACL. Die vorgesehene Publish-only-Beschränkung des
+Topologie-Publishers wird dadurch noch nicht durchgesetzt. Details und
+Vorgehen: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md).
