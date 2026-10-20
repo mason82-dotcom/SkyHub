@@ -97,6 +97,8 @@ async function withAdmin(fn){
     try{ctl('admins','del',user);}catch(_){console.error('WARNUNG: temporären Admin '+user+' bitte manuell löschen');}
   }
 }
+// EMQX 5.3 answers 200, 201 or 204 depending on the endpoint.
+const success=status=>status>=200 && status<300;
 const authenticator=enable=>({mechanism:'password_based',backend:'built_in_database',
   user_id_type:'username',password_hash_algorithm:{name:'sha256',salt_position:'suffix'},enable});
 
@@ -104,30 +106,30 @@ async function setAuthn(api,a){
   const existing=await api('GET','/authentication/'+AUTHN_ID);
   if(existing.status===404){
     const created=await api('POST','/authentication',authenticator(false));
-    if(created.status!==200)throw new Error('Authenticator anlegen fehlgeschlagen (HTTP '+created.status+')');
+    if(!success(created.status))throw new Error('Authenticator anlegen fehlgeschlagen (HTTP '+created.status+')');
   }
   for(const account of Object.values(a)){
     let r=await api('POST','/authentication/'+AUTHN_ID+'/users',
       {user_id:account.username,password:account.password,is_superuser:false});
     if(r.status===409)r=await api('PUT','/authentication/'+AUTHN_ID+'/users/'+encodeURIComponent(account.username),
       {password:account.password,is_superuser:false});
-    if(r.status!==200 && r.status!==201)throw new Error('Benutzer anlegen fehlgeschlagen (HTTP '+r.status+')');
+    if(!success(r.status))throw new Error('Benutzer anlegen fehlgeschlagen (HTTP '+r.status+')');
   }
   const enabled=await api('PUT','/authentication/'+AUTHN_ID,authenticator(true));
-  if(enabled.status!==200)throw new Error('Authenticator aktivieren fehlgeschlagen (HTTP '+enabled.status+')');
+  if(!success(enabled.status))throw new Error('Authenticator aktivieren fehlgeschlagen (HTTP '+enabled.status+')');
 }
 async function setAuthz(api,ruleText,noMatch){
   const src=await api('PUT','/authorization/sources/file',{type:'file',enable:true,rules:ruleText});
-  if(src.status!==204 && src.status!==200)throw new Error('ACL setzen fehlgeschlagen (HTTP '+src.status+')');
+  if(!success(src.status))throw new Error('ACL setzen fehlgeschlagen (HTTP '+src.status+')');
   const set=await api('PUT','/authorization/settings',{no_match:noMatch,deny_action:'ignore',
     cache:{enable:true,max_size:32,ttl:'1m'}});
-  if(set.status!==200)throw new Error('ACL-Grundeinstellung fehlgeschlagen (HTTP '+set.status+')');
+  if(!success(set.status))throw new Error('ACL-Grundeinstellung fehlgeschlagen (HTTP '+set.status+')');
   ctl('authz','cache-clean','all');
 }
 async function rollback(api){
   await setAuthz(api,originalRules(),'allow');
   const del=await api('DELETE','/authentication/'+AUTHN_ID);
-  if(del.status!==204 && del.status!==404)throw new Error('Authenticator entfernen fehlgeschlagen (HTTP '+del.status+')');
+  if(!success(del.status) && del.status!==404)throw new Error('Authenticator entfernen fehlgeschlagen (HTTP '+del.status+')');
 }
 
 // Probes run inside the SkyHub Next backend container (MQTT.js, same network path).
