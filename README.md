@@ -5,7 +5,7 @@
 ## Sicherheitsmodell
 
 - SKYHUB_VIEW_TOKEN ist für alle Telemetrie-API-Routen und für Socket.IO zwingend erforderlich.
-- Web-Frontend standardmäßig nur auf 127.0.0.1:4000 des Hostsystems; für entfernten Zugriff SSH-Tunnel oder vertrauenswürdigen HTTPS-Reverse-Proxy einsetzen.
+- Web-Frontend standardmäßig nur auf 127.0.0.1:4001 des Hostsystems; für entfernten Zugriff SSH-Tunnel oder vertrauenswürdigen HTTPS-Reverse-Proxy einsetzen.
 - Keine standardmäßig veröffentlichten Postgres-, Redis- oder MinIO-Ports.
 - Kein DISABLE_AUTH; keine im Code hinterlegten Datenbank-, MQTT- oder MinIO-Kennwörter.
 - MQTT ausschließlich als Subscriber. Brokerkonto sollte ACL-seitig auf SUBSCRIBE der dokumentierten DJI Topics beschränkt sein.
@@ -18,13 +18,13 @@
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
-Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports.
+Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
 
 Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfiguration:
 
     docker compose config --quiet
     docker compose up -d --build
-    curl -s http://127.0.0.1:4000/api/health
+    curl -s http://127.0.0.1:4001/api/health
     docker compose logs --tail=60 backend
 
 Der Gesundheitsendpunkt meldet unter anderem `mqttBrokerPort: 1884`, `mqtt`,
@@ -33,6 +33,21 @@ Der Gesundheitsendpunkt meldet unter anderem `mqttBrokerPort: 1884`, `mqtt`,
 `subscribed: true` die bestätigten Abonnements – **nicht**, dass DJI-Geräte
 Telemetrie gesendet haben. Erst ein gesetzter `mqttLastMessageAt` zeigt
 tatsächlich empfangene DJI-Nachrichten.
+
+### Bestehende Raspberry-Pi-Broker- und Porttopologie (20.10.2026)
+
+Die lesend ermittelte Host-Konfiguration:
+
+- `skyhub_emqx`: Host-TCP **1884** → EMQX-Container-TCP **1883**.
+- `mosquitto`: eigenständiger Host-Broker auf TCP **1883**. Nicht mit EMQX gleichsetzen; ohne Bridge werden keine Topics synchronisiert.
+- `skyhub_backend`: bestehende produktive HTTP-Portfreigabe **4000**.
+- `skyhub-next`: bewusst eigener Compose-Projektname; geplanter **4001** am Host (Loopback), **4000** nur innerhalb des neuen Backend-Containers.
+
+Nur die EMQX-Verbindung auf Port 1884 konfigurieren; den alten Mosquitto weder stoppen noch umkonfigurieren. Dass der Port lauscht, beweist **nicht**, dass sich DJI Pilot 2 korrekt anmeldet oder dass OSD-Nachrichten ankommen.
+
+Vor der Inbetriebnahme ohne Änderungen an laufenden Diensten:
+
+    bash scripts/pi-preflight.sh
 
 ### Diagnose bei MQTT-Verbindungsfehlern auf dem Raspberry Pi
 
@@ -51,9 +66,9 @@ Erreichbarkeit; die bestätigt erst der MQTT-Verbindungsstatus.
 
 Remote-Tunnel vom PC:
 
-    ssh -L 4000:127.0.0.1:4000 mason@rpi5.local
+    ssh -L 4001:127.0.0.1:4001 mason@rpi5.local
 
-Dann http://127.0.0.1:4000 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token verbleibt nur im Speicher des Browsers bis zum Neuladen.
+Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token verbleibt nur im Speicher des Browsers bis zum Neuladen.
 
 ## Tests
 
