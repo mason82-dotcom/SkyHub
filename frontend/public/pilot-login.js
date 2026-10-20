@@ -21,18 +21,56 @@
     if(!outcome.ok)throw new Error(method+': DJI Bridge-Code '+(Number.isFinite(outcome.code)?outcome.code:'unbekannt'));
   }
   // Never log, render or export callback payloads or credentials.
-  function decodeMqttState(value){
+  function parseBooleanState(value){
     let parsed=value;
     if(typeof parsed==='string'){
-      try{parsed=JSON.parse(parsed.trim());}catch(_){return null;}
+      try{parsed=JSON.parse(parsed.trim());}catch(_){return {state:null,code:null};}
     }
-    if(typeof parsed==='boolean')return parsed;
+    if(typeof parsed==='boolean')return {state:parsed,code:null};
     if(parsed && typeof parsed==='object' && !Array.isArray(parsed)){
-      // A failed JSBridge request must not be mistaken for a valid false state.
-      if(typeof parsed.code==='number' && parsed.code!==0)return null;
-      return typeof parsed.data==='boolean'?parsed.data:null;
+      // A failed JSBridge call cannot be treated as an online/offline state.
+      if(typeof parsed.code==='number' && parsed.code!==0){
+        const safeCode=Number.isSafeInteger(parsed.code) && parsed.code>=0 &&
+          parsed.code<=999999 ? parsed.code : null;
+        return {state:null,code:safeCode};
+      }
+      if(typeof parsed.data==='boolean')return {state:parsed.data,code:null};
     }
-    return null;
+    return {state:null,code:null};
+  }
+  function decodeMqttState(value){return parseBooleanState(value).state;}
+  function readBridgeStatus(method){
+    if(!window.djiBridge || typeof window.djiBridge[method]!=='function')
+      return 'Schnittstelle nicht verfügbar';
+    try{
+      const result=parseBooleanState(window.djiBridge[method]());
+      if(result.code!==null)return 'DJI-Fehlercode '+result.code;
+      if(result.state===true)return 'ja';
+      if(result.state===false)return 'nein';
+      return 'Antwort nicht auswertbar';
+    }catch(_){return 'Statusabfrage fehlgeschlagen';}
+  }
+  function readThingComponentStatus(){
+    const bridge=window.djiBridge;
+    if(!bridge || typeof bridge.platformIsComponentLoaded!=='function')
+      return 'Schnittstelle nicht verfügbar';
+    try{
+      const result=parseBooleanState(bridge.platformIsComponentLoaded('thing'));
+      if(result.code!==null)return 'DJI-Fehlercode '+result.code;
+      if(result.state===true)return 'ja';
+      if(result.state===false)return 'nein';
+      return 'Antwort nicht auswertbar';
+    }catch(_){return 'Statusabfrage fehlgeschlagen';}
+  }
+  function refreshDiagnostics(){
+    const target=el('diagnostics');
+    if(!target)return;
+    // Read only three DJI APIs. Never call thingGetConfigs (contains credentials).
+    target.textContent=[
+      'DJI-Lizenz geprüft: '+readBridgeStatus('platformIsVerified'),
+      'Thing-Modul geladen: '+readThingComponentStatus(),
+      'MQTT verbunden (DJI): '+readBridgeStatus('thingGetConnectState')
+    ].join('\n');
   }
   function showRetry(enabled){
     const retry=el('retry');
@@ -46,6 +84,7 @@
   }
   window.skyhubPilotMqttState=function(_callbackResult){
     // The callback payload is intentionally ignored. Query the current state.
+    refreshDiagnostics();
     try{
       const bridge=window.djiBridge;
       if(!bridge || typeof bridge.thingGetConnectState!=='function'){
@@ -107,7 +146,9 @@
       el('details').textContent=ready?
         'DJI-Lizenz und MQTT-Parameter sind hinterlegt. Verbinden erfolgt erst nach Prüfung und Freigabe.':
         'Noch erforderliche Konfiguration: '+(data.missing||[]).join(', ');
+      el('security').hidden=isTls;
       if(!isTls)el('security').textContent='HTTPS fehlt. Aus Sicherheitsgründen werden keine Zugangsdaten über unverschlüsseltes HTTP übertragen.';
+      refreshDiagnostics();
       el('start').disabled=!ready||!isTls||!window.djiBridge;
       if(!window.djiBridge)status('DJI JSBridge nicht verfügbar: Bitte die Seite innerhalb DJI Pilot 2 öffnen.');
     }catch(e){el('headline').textContent='Backend nicht bereit';status(e.message);}
@@ -142,6 +183,7 @@
       }));
       // Kept in memory only to support the dedicated retry button.
       mqttLogin={username:config.mqtt.username,password:config.mqtt.password};
+      refreshDiagnostics();
       showRetry(false);
       status('DJI Cloud-Modul geladen. MQTT-Verbindungsstatus wird geprüft ...');
       setTimeout(()=>window.skyhubPilotMqttState(),4000);
@@ -149,5 +191,6 @@
     finally{connecting=false;el('start').disabled=!ready||!isTls||!window.djiBridge;}
   });
   el('retry').addEventListener('click',retryMqtt);
+  el('diagnose').addEventListener('click',refreshDiagnostics);
   init();
 })();
