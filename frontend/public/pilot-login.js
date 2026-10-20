@@ -11,14 +11,14 @@
       try{result=JSON.parse(result);}catch{return {ok:false,message:'Ungültige DJI-Bridge-Antwort'};}
     }
     if(result && typeof result==='object' && typeof result.code==='number')
-      return {ok:result.code===0,message:result.message||''};
+      return {ok:result.code===0,code:result.code};
     return {ok:false,message:'Unerwartete DJI-Bridge-Antwort'};
   }
   function invoke(method,...args){
     if(!window.djiBridge || typeof window.djiBridge[method]!=='function')
       throw new Error('DJI JSBridge-Funktion fehlt: '+method);
     const outcome=bridgeResult(window.djiBridge[method](...args));
-    if(!outcome.ok)throw new Error(method+': '+(outcome.message||'nicht bestätigt'));
+    if(!outcome.ok)throw new Error(method+': DJI Bridge-Code '+(Number.isFinite(outcome.code)?outcome.code:'unbekannt'));
   }
   // Never log, render or export callback payloads or credentials.
   function decodeMqttState(value){
@@ -90,6 +90,8 @@
         showRetry(true);
       }
       // A successful function return is only request acceptance, not MQTT online.
+      // Recheck even when DJI Pilot 2 does not invoke the callback.
+      else setTimeout(()=>window.skyhubPilotMqttState(),4000);
     }catch(_){
       status('DJI MQTT: Wiederverbindung fehlgeschlagen.');
       showRetry(true);
