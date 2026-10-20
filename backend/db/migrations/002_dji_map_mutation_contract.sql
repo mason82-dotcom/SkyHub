@@ -36,3 +36,23 @@ BEGIN
   END IF;
 END
 $skyhub$;
+
+-- Make the audit journal append-only for the application database role.
+-- A privileged DB owner can still alter triggers: operational role separation
+-- and independent backup retention are separate security requirements.
+CREATE OR REPLACE FUNCTION skyhub_map_audit_immutable() RETURNS trigger
+LANGUAGE plpgsql AS $skyhub$
+BEGIN
+  RAISE EXCEPTION 'DJI map audit history is immutable' USING ERRCODE = '42501';
+  RETURN NULL;
+END
+$skyhub$;
+
+DROP TRIGGER IF EXISTS dji_map_audit_no_rewrite ON dji_map_element_audit;
+CREATE TRIGGER dji_map_audit_no_rewrite
+  BEFORE UPDATE OR DELETE ON dji_map_element_audit
+  FOR EACH ROW EXECUTE FUNCTION skyhub_map_audit_immutable();
+DROP TRIGGER IF EXISTS dji_map_audit_no_truncate ON dji_map_element_audit;
+CREATE TRIGGER dji_map_audit_no_truncate
+  BEFORE TRUNCATE ON dji_map_element_audit
+  FOR EACH STATEMENT EXECUTE FUNCTION skyhub_map_audit_immutable();
