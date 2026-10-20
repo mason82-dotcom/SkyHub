@@ -68,3 +68,32 @@ jobs:
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules
         run: docker run --rm --network none --entrypoint node skyhub-next:test -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store"].forEach(require)'
+
+  isolated-postgis-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgis:
+        image: postgis/postgis:15-3.5
+        env:
+          POSTGRES_USER: skyhub_test
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: skyhub_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U skyhub_test -d skyhub_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked test dependencies
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Run real SQL and PostGIS integration in dedicated test database
+        env:
+          SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:55432/skyhub_test
+        run: node --test backend/test/postgis.integration.test.js
