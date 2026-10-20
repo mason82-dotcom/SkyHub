@@ -11,6 +11,7 @@ function createRegistry(limit = 200) {
       sn: d.sn, role: d.role, gatewaySn: d.gatewaySn,
       model: d.model, modelName: resolveDeviceModel(d.model),
       deviceCategory: category(d.model.domain), topologyOnline: d.topologyOnline,
+      lastTopologyAt: d.lastTopologyAt, topologyTimeVerified: d.topologyTimeVerified,
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
@@ -27,7 +28,8 @@ function createRegistry(limit = 200) {
     const d = {
       sn, role: 'unknown', gatewaySn: null,
       model: {domain:null,type:null,subType:null,thingVersion:null},
-      topologyOnline: null, children: [], channel: null,
+      topologyOnline: null, lastTopologyAt: null, topologyTimeVerified: null,
+      children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
       telemetryTimeVerified: null, positionTimeVerified: null,
@@ -96,6 +98,8 @@ function createRegistry(limit = 200) {
     if (message.topology) {
       d.role = 'gateway';
       d.topologyOnline = true;
+      d.lastTopologyAt = observedAt;
+      d.topologyTimeVerified = message.timestamp !== null;
       d.model = message.topology.model;
       const priorChildren = new Set(d.children);
       const children = message.topology.children.map(x => x.sn).filter(sn => sn !== d.sn);
@@ -106,6 +110,8 @@ function createRegistry(limit = 200) {
         const child = devices.get(sn);
         if (child && child.gatewaySn === d.sn) {
           child.topologyOnline = false;
+          child.lastTopologyAt = observedAt;
+          child.topologyTimeVerified = message.timestamp !== null;
           updates.set(sn, child);
         }
       }
@@ -115,6 +121,8 @@ function createRegistry(limit = 200) {
         child.gatewaySn = d.sn;
         child.role = 'subdevice';
         child.topologyOnline = true;
+        child.lastTopologyAt = observedAt;
+        child.topologyTimeVerified = message.timestamp !== null;
         child.model = childData.model;
         updates.set(child.sn, child);
       }
