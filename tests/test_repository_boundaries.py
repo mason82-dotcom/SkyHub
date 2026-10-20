@@ -28,7 +28,8 @@ SOURCE_EXTENSIONS = {".js", ".jsx", ".mjs", ".py", ".sh", ".html", ".css", ".jso
 
 def active_files() -> list[Path]:
     paths = []
-    for folder in ("backend", "frontend", "scripts", "tests", ".github/workflows"):
+    # Test sources intentionally contain archived paths as assertions, not runtime dependencies.
+    for folder in ("backend", "frontend", "scripts", ".github/workflows"):
         for path in (ROOT / folder).rglob("*"):
             if path.is_file() and path.suffix in SOURCE_EXTENSIONS:
                 paths.append(path)
