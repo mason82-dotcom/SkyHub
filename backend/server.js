@@ -8,6 +8,7 @@ const Redis=require('ioredis');
 const {Pool}=require('pg');
 const {Server}=require('socket.io');
 const {parseMessage}=require('./dji');
+const {validateBrokerConfig}=require('./mqtt-config');
 const {createRegistry}=require('./registry');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
@@ -15,9 +16,11 @@ if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
   console.error('SKYHUB_VIEW_TOKEN (minimum 24 characters) is mandatory');
   process.exit(1);
 }
-const brokerUrl=process.env.MQTT_BROKER_URL;
-if(!brokerUrl){
-  console.error('MQTT_BROKER_URL must point to an authenticated MQTT broker');
+let broker;
+try {
+  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT);
+} catch(err) {
+  console.error('[mqtt config]',err.message);
   process.exit(1);
 }
 const app=express(),server=http.createServer(app);
@@ -25,6 +28,7 @@ const io=new Server(server,{maxHttpBufferSize:131072});
 const registry=createRegistry();
 let mqttConnected=false;
 let mqttSubscribed=false;
+const mqttStats={lastConnectedAt:null,lastDisconnectedAt:null,lastMessageAt:null,accepted:0,rejected:0};
 
 app.disable('x-powered-by');
 app.use(express.json({limit:'128kb'}));
@@ -63,6 +67,8 @@ function onMessage(topic,payload){
   try {
     const parsed=parseMessage(topic,payload);
     if(!parsed)return;
+    mqttStats.accepted++;
+    mqttStats.lastMessageAt=Date.now();
     const result=registry.ingest(parsed);
     for(const item of result.updates){
       io.emit('device_update',item);
@@ -78,16 +84,17 @@ function onMessage(topic,payload){
         [p.gatewaySn,p.deviceSn,p.latitude,p.longitude,p.altitude,p.battery]
       ).catch(err=>console.error('[postgres insert]',err.message));
     }
-  }catch(err){ console.error('[mqtt message rejected]',err.message); }
+  }catch(err){ mqttStats.rejected++;console.error('[mqtt message rejected]',err.message); }
 }
 
 const options={clientId:'skyhub_next_readonly_'+process.pid,protocolVersion:5,
   reconnectPeriod:3000,connectTimeout:10000};
 if(process.env.MQTT_USER)options.username=process.env.MQTT_USER;
 if(process.env.MQTT_PASSWORD)options.password=process.env.MQTT_PASSWORD;
-const client=mqtt.connect(brokerUrl,options);
+const client=mqtt.connect(broker.url,options);
 client.on('connect',()=>{
   mqttConnected=true;
+  mqttStats.lastConnectedAt=Date.now();
   mqttSubscribed=false;
   console.log('[mqtt] connected; subscribing read-only');
   client.subscribe([
@@ -99,13 +106,16 @@ client.on('connect',()=>{
     if(!mqttSubscribed)console.error('[mqtt subscribe] subscriptions not confirmed');
   });
 });
-client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;});
+client.on('close',()=>{mqttConnected=false;mqttSubscribed=false;mqttStats.lastDisconnectedAt=Date.now();});
 client.on('error',err=>console.error('[mqtt]',err.message));
 client.on('message',onMessage);
 
 app.get('/api/health',(req,res)=>res.json({
   status:mqttConnected&&mqttSubscribed?'online':'degraded',mqtt:mqttConnected,
-  subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true
+  subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true,
+  mqttBrokerPort:broker.port,mqttLastConnectedAt:mqttStats.lastConnectedAt,
+  mqttLastDisconnectedAt:mqttStats.lastDisconnectedAt,mqttLastMessageAt:mqttStats.lastMessageAt,
+  mqttAcceptedMessages:mqttStats.accepted,mqttRejectedMessages:mqttStats.rejected
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
