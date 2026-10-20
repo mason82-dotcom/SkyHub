@@ -46,6 +46,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       PORT: "4000"
+      SKYHUB_BIND_ADDRESS: ${SKYHUB_BIND_ADDRESS:-127.0.0.1}
       SKYHUB_VIEW_TOKEN: ${SKYHUB_VIEW_TOKEN:?Set SKYHUB_VIEW_TOKEN}
       # Pi host broker runs on 1884; refuse any accidental fallback to 1883.
       MQTT_BROKER_URL: ${MQTT_BROKER_URL:?Set MQTT_BROKER_URL to the Pi broker on port 1884}
