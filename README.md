@@ -229,3 +229,37 @@ Das Frontend benötigt Leaflet/OpenStreetMap über CDN und Internetzugang. MinIO
 DJI Cloud API Dokumentation:
 - https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-plus/properties.html
 - https://github.com/dji-sdk/Cloud-API-Doc
+
+
+## DJI Cloud API 1.18: optionale Topologie-Bestätigung (v4)
+
+Dieser Branch ergänzt ausschließlich den DJI-Pilot-to-Cloud-Antwortkanal
+`sys/product/{gateway_sn}/status_reply` für gültige `update_topo`-Nachrichten.
+Er ist **standardmäßig deaktiviert** (`SKYHUB_TOPOLOGY_ACK_ENABLED=false`).
+Der bisherige, schreibgeschützte DJI-MQTT-Subscriber und seine ACL bleiben unverändert.
+
+Die Bestätigung wird ausschließlich nach erfolgreicher MQTT-Nachrichtenprüfung
+und Übernahme in die Geräte-Registry erzeugt. `tid` und `bid` stammen aus
+der geprüften Eingangsnachricht; `data.result` ist `0`.
+Unbekannte Methoden, ungültige UUIDs, fehlende Zeitstempel, alte/retained
+Pakete und verworfene Registry-Nachrichten lösen keine Bestätigung aus.
+Die Antwort enthält keine Gerätegeheimnisse aus den Topologiedaten.
+
+Für einen produktiven Hardwaretest separat in EMQX anlegen:
+- einen **dedizierten MQTT-Publisher**, der ausschließlich auf
+  `sys/product/+/status_reply` veröffentlichen darf,
+- keine Subscriber-/Pilot-Benutzerdaten für dieses Konto wiederverwenden,
+- keine Rechte für `services`, `drc/down` oder `property/set` vergeben.
+
+Erst nach ACL-Prüfung `SKYHUB_TOPOLOGY_ACK_MQTT_USER`,
+`SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD` und
+`SKYHUB_TOPOLOGY_ACK_ENABLED=true` in der lokalen, nicht versionierten
+`.env` setzen und ausschließlich den Backend-Container neu erstellen.
+Die Health-API enthält `topologyReplyEnabled`, `topologyReplyConnected`,
+`topologyReplySent` und `topologyReplyErrors`.
+
+**Nicht behauptet:** Eine erfolgreiche Topologiebestätigung beweist keine
+DJI-MQTT-Session und garantiert keinen OSD-Datenfluss. OSD-Veröffentlichung,
+Pilot-2-JSBridge und die Broker-ACL sind getrennt zu validieren.
+
+Tests: `node --test backend/test/*.test.js`.
