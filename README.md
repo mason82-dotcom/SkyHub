@@ -112,6 +112,30 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 - GET /api/drone/:sn/telemetry – authentifiziert; eine Gerätekennung
 - Socket.IO: snapshot, device_update, device_event – authentifiziert mit auth.token
 
+## DJI Pilot 2 H5 Anmeldung (isolierter Entwicklungsstand)
+
+**Foto-Diagnose vom 20.10.2026:** Die RC ruft
+`http://192.168.178.63:4000/pilot-login` auf, das bestehende
+SkyHub-Backend antwortet `Cannot GET /pilot-login`.
+Die alte Backend-Version auf 4000 wird nicht verändert.
+
+SkyHub Next bietet nun unter `/pilot-login` eine echte responsive
+DJI-H5-Webview-Seite, zugehörige Readiness-API und einen gesicherten
+Bootstrap zur Lizenzprüfung sowie Initialisierung des DJI-`thing`-Moduls.
+**Standardmäßig deaktiviert**, ohne automatische Anmeldung. Ein
+`POST /api/pilot/bootstrap` benötigt ein separates starkes Pilot-Token
+und HTTPS. `SKYHUB_BIND_ADDRESS` muss für die Aktivierung Loopback
+bleiben; davor ist ein vertrauenswürdiger HTTPS-Reverse-Proxy erforderlich.
+In der `.env.example` stehen ausschließlich Platzhalter, keine DJI-Secrets.
+Die RC erhält den MQTT-Host als `tcp://192.168.178.63:1884`, der
+backendseitige Subscriber bleibt bei `mqtt://host.docker.internal:1884`.
+Es sind getrennte EMQX-MQTT-Konten und die passenden ACLs notwendig.
+Eine H5-Ladung ist **noch kein Nachweis** einer erfolgreichen DJI-MQTT-Verbindung.
+Die vollständige Hardwarevalidierung (DJI Pilot 2/Cloud API 1.18,
+Broker-ACLs und mögliche MQTT-Replies) steht aus.
+
+Details: [Pilot 2 H5 / Sicherheitsvoraussetzungen](docs/pilot2-h5-login.md).
+
 ## Aktueller Funktionsumfang und Grenzen
 
 OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Produkt- und Gateway-Zuordnung ist noch nicht implementiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
