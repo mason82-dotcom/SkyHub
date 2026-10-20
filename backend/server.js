@@ -128,7 +128,8 @@ app.get('/api/health',(req,res)=>res.json({
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
-app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,children:d.children}))));
+app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
+  lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));
 app.get('/api/events',(req,res)=>res.json(registry.events()));
 app.get('/api/drone/:sn/telemetry',(req,res)=>{
   const d=registry.get(req.params.sn);
