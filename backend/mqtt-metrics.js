@@ -21,7 +21,7 @@ function createMqttMetrics() {
       drops[safe]=(drops[safe]||0)+1;
     },
     accepted(message,result,at=Date.now()) {
-      if(!message || !Object.hasOwn(counts,message.channel))return;
+      if(!message || !Object.hasOwn(counts,message.channel) || result?.dropReason)return;
       state.accepted++;
       if (message.timestamp===null) state.unverifiedTime++;
       state.lastMessageAt=at;
