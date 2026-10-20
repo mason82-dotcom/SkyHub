@@ -33,3 +33,7 @@ Die DJI-Seiten beschreiben Protokoll und Interaktionen, aber liefern keine unmit
 ## Isolierter Datenbanknachweis vor Pilot-2-Aktivierung (21.10.2026)
 
 Zur P1/P2-Grenze wurde ein optionaler PostGIS-Integrationstest mit dedizierter CI-Testdatenbank ergänzt: DDL mit Wiederholung und Savepoint-Rollback, Workspace-Fremdschlüssel, Filter, leere DJI-Gruppen, invalides GeoJSON sowie historische Flugspur/Retention. Der Codepfad bleibt aus, bis die eigentliche Pilot-Hardwareabnahme, die Rollenentscheidung und eine separate Dump-/Restore-Probe erledigt sind. Ablauf und Grenzen: [PostGIS-Isolationstest](postgis-isolated-validation.md). Der offene Repository-Cleanup-PR #4 bleibt davon unabhängig.
+
+## P1 Backup-/Restore-Absicherung für DJI-Kartenelemente
+
+Für den bislang ausstehenden Wiederherstellungsnachweis wurde ein CI-isolierter `pg_dump`/`pg_restore`-Durchlauf mit synthetischen Kartenelementen aus zwei Workspaces und PostGIS-Flugspur ergänzt. Die aus dem Dump frisch wiederhergestellte Datenbank wird auf workspace-gebundene Gruppen, Geometrie, Indexe und Fremdschlüssel geprüft. Diese technische Absicherung ändert **nicht** die Roadmap-Freigabeschranken: echtes Backup-/Recovery-Verfahren für einen anonymisierten Pi-Datenbestand, Rollen-/Berechtigungsentscheidung und Pilot-2-Hardwareabnahme sind weiterhin offen. Details unter [PostGIS-Validierung](postgis-isolated-validation.md).
