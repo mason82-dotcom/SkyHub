@@ -21,8 +21,84 @@
   }
   // Never print the RC serial, password, license, token or MQTT config.
   window.skyhubPilotMqttState=function(result){
-    // Do not infer online state from unspecified vendor callback structures.
-    status('MQTT-Statusänderung von DJI Pilot 2 gemeldet. Verbindung im Broker prüfen.');
+    // Query DJI's documented connection-state API.
+    // Never display callback payloads or MQTT credentials.
+    try {
+      if (!window.djiBridge ||
+          typeof window.djiBridge.thingGetConnectState !== 'function') {
+        status('DJI MQTT-Status: Abfrage nicht verfügbar.');
+        return;
+      }
+      const connected = window.djiBridge.thingGetConnectState();
+      if (connected === true) {
+        status('DJI MQTT: VERBUNDEN. Telemetrieempfang prüfen.');
+      } else if (connected === false) {
+        status('DJI MQTT: NICHT VERBUNDEN.');
+      } else {
+        if (typeof connected === 'string') {
+          const raw = connected.trim();
+          let parsed = raw;
+
+          try {
+            parsed = JSON.parse(raw);
+          } catch (_) {}
+
+          if (parsed === true) {
+            status('DJI MQTT: VERBUNDEN (String dekodiert).');
+            return;
+          }
+          if (parsed === false) {
+            status('DJI MQTT: NICHT VERBUNDEN (String dekodiert).');
+            return;
+          }
+
+          if (parsed && typeof parsed === 'object') {
+            const data = parsed.data;
+
+            if (typeof data === 'boolean') {
+              status(data
+                ? 'DJI MQTT: VERBUNDEN (JSON-Daten).'
+                : 'DJI MQTT: NICHT VERBUNDEN (JSON-Daten).');
+              return;
+            }
+
+            const fields = ['code', 'data', 'result', 'state',
+              'status', 'connected'].filter(k =>
+                Object.prototype.hasOwnProperty.call(parsed, k)
+            );
+
+            status('DJI MQTT: JSON-Rückgabe; Felder: ' +
+              (fields.join(', ') || 'unbekannt') +
+              '. Zustand noch nicht bestätigt.');
+            return;
+          }
+
+          status('DJI MQTT: String-Rückgabe, ' +
+            'Länge ' + raw.length +
+            '. Zustand noch nicht bestätigt.');
+          return;
+        }
+
+        const kind = connected === null
+          ? 'null'
+          : Array.isArray(connected)
+            ? 'array'
+            : typeof connected;
+
+        if (connected === 'true') {
+          status('DJI MQTT: VERBUNDEN (String-Rückgabe).');
+        } else if (connected === 'false') {
+          status('DJI MQTT: NICHT VERBUNDEN (String-Rückgabe).');
+        } else {
+          status(
+            'DJI MQTT: Rückgabetyp ' + kind +
+            '. Verbindungsstatus noch nicht bestätigt.'
+          );
+        }
+      }
+    } catch (_) {
+      status('DJI MQTT: Statusabfrage fehlgeschlagen.');
+    }
   };
   async function init(){
     try{
