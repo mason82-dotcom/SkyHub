@@ -1,4 +1,6 @@
-# SkyHub Next – read-only DJI Operations v3.1
+# SkyHub Next – 0.1.0 (Entwicklungsstand)
+
+**Produktversion:** 0.1.0 (Prototyp). Die historischen Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
 **Neue Entwicklungsbasis:** Node.js/Express, Socket.IO, MQTT 5, Redis, PostGIS, MinIO und eine kompakte, statische Live-Karten-WebUI ohne Frontend-Buildprozess. Vollständig getrennt vom alten Python-SkyHub.
 
@@ -8,7 +10,7 @@
 - Web-Frontend standardmäßig nur auf 127.0.0.1:4001 des Hostsystems; für entfernten Zugriff SSH-Tunnel oder vertrauenswürdigen HTTPS-Reverse-Proxy einsetzen.
 - Keine standardmäßig veröffentlichten Postgres-, Redis- oder MinIO-Ports.
 - Kein DISABLE_AUTH; keine im Code hinterlegten Datenbank-, MQTT- oder MinIO-Kennwörter.
-- MQTT ausschließlich als Subscriber. Brokerkonto sollte ACL-seitig auf SUBSCRIBE der dokumentierten DJI Topics beschränkt sein.
+- MQTT-Subscriber bleibt read-only. Eine optionale, standardmäßig deaktivierte Topologie-Bestätigung nutzt einen separaten ACL-eingeschränkten Publisher.
 - Keine DJI-Flug- oder Missionssteuerung. POST /api/mission/create antwortet absichtlich mit HTTP 501.
 - Kein Vortäuschen von Telemetrie: unbekannte Werte null, aktualisierte Werte nur aus echten osd-Meldungen, Frischegrenze 15 Sekunden.
 
