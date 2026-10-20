@@ -18,7 +18,7 @@
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
-Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. MQTT_BROKER_URL, MQTT_USER und MQTT_PASSWORD an den **bestehenden** Broker anpassen; Port 1884 ist ausschließlich ein Beispiel. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports.
+Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports.
 
 Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfiguration:
 
@@ -26,6 +26,28 @@ Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfigur
     docker compose up -d --build
     curl -s http://127.0.0.1:4000/api/health
     docker compose logs --tail=60 backend
+
+Der Gesundheitsendpunkt meldet unter anderem `mqttBrokerPort: 1884`, `mqtt`,
+`subscribed`, `mqttLastMessageAt`, `mqttAcceptedMessages` und
+`mqttRejectedMessages`. `mqtt: true` belegt nur die TCP/MQTT-Verbindung,
+`subscribed: true` die bestätigten Abonnements – **nicht**, dass DJI-Geräte
+Telemetrie gesendet haben. Erst ein gesetzter `mqttLastMessageAt` zeigt
+tatsächlich empfangene DJI-Nachrichten.
+
+### Diagnose bei MQTT-Verbindungsfehlern auf dem Raspberry Pi
+
+    sudo ss -ltnp | grep ':1884'
+    docker compose logs --tail=60 backend
+
+Der MQTT-Broker muss TCP 1884 auf einer vom Container erreichbaren Host-Adresse
+anbieten. Ein Dienst, der ausschließlich an `127.0.0.1:1884` lauscht, ist
+über `host.docker.internal` aus einem Bridge-Container üblicherweise **nicht**
+erreichbar. Prüfen Sie deshalb zuerst Bind-Adresse, Broker-ACL und Firewall.
+Port 1883 muss weder umgebogen noch abgeschaltet werden. Bei einer anderen
+Pi-Adresse darf der Hostname in `MQTT_BROKER_URL` angepasst werden, der Port
+bleibt 1884. Die Portprüfung testet die **Konfiguration**, nicht die tatsächliche
+Erreichbarkeit; die bestätigt erst der MQTT-Verbindungsstatus.
+
 
 Remote-Tunnel vom PC:
 
