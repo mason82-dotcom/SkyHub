@@ -36,3 +36,7 @@ Die Map-Route wird unverändert nur registriert, wenn `SKYHUB_DJI_MAP_ELEMENTS_E
 - Pairing-Tests: serverseitig gespeicherter Workspace und Rückwärtskompatibilität historischer ungefilterter Bootstraps.
 
 Die folgenden Freigaben bleiben **ausdrücklich offen**: echte Operator-/Admin-Authentifizierung und Rollenzuordnung, Gruppen-/Objektberechtigungen und Lock-Semantik, konsistenter Create/Update/Delete-Pfad mit Auditing und konfliktfesten Transaktionen, WebSocket-Refresh, Pilot-2-Hardwareabnahme sowie ein Restore-Test mit realitätsnahen anonymisierten Bestandsdaten. Erst danach dürfen schreibende Funktionen separat entwickelt und aktiviert werden.
+
+## Nächste, isolierte P2-Vorbereitung
+
+Die [Mutationsspezifikation](dji-map-mutation-contract.md) beschreibt einen separaten, noch nicht ausgelieferten SQL-Schreibbaustein mit erwarteter Revision, Audit-Journal und Gruppen-Sperrstatus. `mapAccess()` verweigert weiterhin **alle** Schreiboperationen; insbesondere erhalten Pilot, View-Token und bestehende RC-Kopplungen keinen neuen Schreibzugriff. Die spätere vertrauenswürdige Ausstellung von Operator-/Admin-Principals ist ausdrücklich nicht enthalten.
