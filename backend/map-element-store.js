@@ -21,6 +21,33 @@ function epoch(value){
   return Number.isSafeInteger(value)&&value>=0?value:null;
 }
 
+function optional(target,key,value){
+  if(value!==null&&value!==undefined)target[key]=value;
+}
+
+function wireElement(element){
+  const properties={};
+  optional(properties,'color',element.color);
+  optional(properties,'clampToGround',element.clampToGround);
+  optional(properties,'is3d',element.is3d);
+  const content={type:'Feature',geometry:element.geometry};
+  if(Object.keys(properties).length)content.properties=properties;
+  const resource={content};
+  optional(resource,'type',element.resourceType);
+  const result={id:element.id,name:element.name,resource};
+  optional(result,'create_time',element.createTime);
+  optional(result,'update_time',element.updateTime);
+  return result;
+}
+
+function wireGroup(group){
+  const result={id:group.id,name:group.name,elements:group.elements.map(wireElement)};
+  optional(result,'type',group.type);
+  optional(result,'is_lock',group.isLocked);
+  optional(result,'create_time',group.createTime);
+  return result;
+}
+
 function createMapElementStore(pool){
   if(!pool||typeof pool.query!=='function')throw new TypeError('Database pool required');
   return {
@@ -45,7 +72,7 @@ function createMapElementStore(pool){
         });
       }
       const normalized=parseMapElementGroups({code:0,data:[...groups.values()]});
-      return {code:0,data:normalized.groups,message:'success'};
+      return {code:0,data:normalized.groups.map(wireGroup),message:'success'};
     }
   };
 }

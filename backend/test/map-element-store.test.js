@@ -21,12 +21,14 @@ test('map element store reads one workspace and returns only normalized DJI fiel
   assert.deepEqual(call[1],[WORKSPACE]);
   assert.match(call[0],/WHERE g\.workspace_id=\$1/);
   assert.deepEqual(response,{code:0,message:'success',data:[{
-    id:'shared',name:'App Shared',type:2,isLocked:false,createTime:1637158501230,
-    elements:[{id:'point',name:'Meldepunkt',kind:'Point',
-      geometry:{type:'Point',coordinates:[8.4,49.1]},resourceType:0,color:'#0091FF',
-      clampToGround:false,is3d:false,createTime:1637158501231,updateTime:null}]
+    id:'shared',name:'App Shared',type:2,is_lock:false,create_time:1637158501230,
+    elements:[{id:'point',name:'Meldepunkt',create_time:1637158501231,
+      resource:{type:0,content:{type:'Feature',properties:{
+        color:'#0091FF',clampToGround:false,is3d:false
+      },geometry:{type:'Point',coordinates:[8.4,49.1]}}}}]
   }]});
   assert.doesNotMatch(JSON.stringify(response),/must not escape|secret/);
+  assert.doesNotMatch(JSON.stringify(response),/isLocked|createTime|resourceType|updateTime/);
   assert.doesNotMatch(call[0],/\b(INSERT|UPDATE|DELETE)\b/i);
 });
 
@@ -37,7 +39,7 @@ test('empty groups remain in the response for Pilot App Shared synchronization',
   }]})});
   const result=await store.readResponse(WORKSPACE);
   assert.deepEqual(result.data,[{
-    id:'shared',name:'App Shared',type:2,isLocked:false,createTime:null,elements:[]
+    id:'shared',name:'App Shared',type:2,is_lock:false,elements:[]
   }]);
 });
 
