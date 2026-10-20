@@ -13,10 +13,11 @@
 3. Eine Markerwahl markiert die zugehörige Gerätekarte und scrollt die Geräteliste zum Eintrag. Der Button in jeder passenden Gerätekarte bietet dieselbe Kartenfunktion per Tastatur.
 4. Fehlende Karte, fehlende Positionen und getrennte Live-Verbindung werden als Text angezeigt. Die Liste bleibt bei Kartenfehlern nutzbar. Historische Spurpunkte mit `(0, 0)` bleiben unsichtbar.
 5. Der Kartenhinweis zählt gültige Positionen getrennt nach aktuell (unter 15 Sekunden, verifizierte Quellzeit), zeitlich ungeprüft und älter. So bleiben ältere Marker sichtbar, ohne sie als live darzustellen.
-6. Der Token bleibt nur im Seitenspeicher; keine URL-, Local-Storage- oder Log-Ausgabe. Der Heimnetz-Zugang ist laut Backend nur lesend.
-7. Bei überlappenden Verbindungsversuchen gilt nur der neueste Versuch; verspätete Antworten und Socket-Ereignisse älterer Versuche dürfen Anzeige und Status nicht überschreiben.
-8. Der Flugspur-Schalter zeigt direkt darunter den Zustand des lesenden 60-Minuten-Abrufs: Laden, sichtbare Spuren, keine gespeicherte Spur oder Abruffehler. Eine sichtbare Linie benötigt mindestens zwei gültige Punkte. Nach einem Fehler bleiben vorhandene Linien sichtbar und „Erneut laden“ bietet einen direkten Wiederholungsweg.
-9. Ausschalten und ein neuer Verbindungsversuch brechen laufende Spurabrufe ab und entfernen bisherige Linien. Verspätete Antworten dürfen weder Linien noch Status eines neueren Abrufs überschreiben. Der regelmäßige Abruf aktualisiert den Status bei Erfolg oder Fehler, ohne jeden Zwischenabruf anzukündigen.
+6. Der Kartenhinweis ergänzt die Zahl sichtbarer gespeicherter Flugspuren. Wenn keine gültige Gerätestandortposition vorliegt, aber eine historische Flugspur sichtbar ist, benennt er die Flugspur statt einen leeren Kartenstand zu suggerieren.
+7. Der Token bleibt nur im Seitenspeicher; keine URL-, Local-Storage- oder Log-Ausgabe. Der Heimnetz-Zugang ist laut Backend nur lesend.
+8. Bei überlappenden Verbindungsversuchen gilt nur der neueste Versuch; verspätete Antworten und Socket-Ereignisse älterer Versuche dürfen Anzeige und Status nicht überschreiben.
+9. Der Flugspur-Schalter zeigt direkt darunter den Zustand des lesenden 60-Minuten-Abrufs: Laden, sichtbare Spuren, keine gespeicherte Spur oder Abruffehler. Eine sichtbare Linie benötigt mindestens zwei gültige Punkte. Nach einem Fehler bleiben vorhandene Linien sichtbar und „Erneut laden“ bietet einen direkten Wiederholungsweg.
+10. Ausschalten und ein neuer Verbindungsversuch brechen laufende Spurabrufe ab und entfernen bisherige Linien. Verspätete Antworten dürfen weder Linien noch Status eines neueren Abrufs überschreiben. Der regelmäßige Abruf aktualisiert den Status bei Erfolg oder Fehler, ohne jeden Zwischenabruf anzukündigen.
 
 ## Datenpfad-Diagnose
 

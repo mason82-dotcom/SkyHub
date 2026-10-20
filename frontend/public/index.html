@@ -380,10 +380,13 @@ function update(){
   const unverifiedPositions=positioned.filter(d=>positionFresh(d)&&d.positionTimeVerified!==true).length;
   const olderPositions=count-currentPositions-unverifiedPositions;
   el('fitDevices').disabled=!map||!count;
+  const trackSummary=tracks.size?tracks.size+' '+(tracks.size===1?'Flugspur':'Flugspuren')+' sichtbar':'';
   const mapMessage=!map?'Karte konnte nicht geladen werden. Gerätedaten bleiben in der Liste verfügbar.':
     count?count+' '+(count===1?'Position':'Positionen')+' · '+currentPositions+' aktuell · '+
-      unverifiedPositions+' Zeit ungeprüft · '+olderPositions+' älter · WGS84':
-    'Keine gültige Position verfügbar. Gerätedaten bleiben in der Liste sichtbar.';
+      unverifiedPositions+' Zeit ungeprüft · '+olderPositions+' älter · WGS84'+
+      (trackSummary?' · '+trackSummary:''):
+    trackSummary?'Keine gültige Position · '+trackSummary:
+      'Keine gültige Position verfügbar. Gerätedaten bleiben in der Liste sichtbar.';
   if(el('mapNote').textContent!==mapMessage)el('mapNote').textContent=mapMessage;
   if(focusedDetailsSn){for(const summary of root.querySelectorAll('summary')){
     if(summary.dataset.detailsSn===focusedDetailsSn){summary.focus({preventScroll:true});break;}
@@ -588,6 +591,7 @@ async function loadTracks({background=false}={}){
   if(!el('showTrack').checked){
     for(const sn of tracks.keys())removeTrack(sn);
     setTrackStatus('Flugspuren ausgeblendet.');
+    update();
     return;
   }
   const now=Date.now();
@@ -595,7 +599,7 @@ async function loadTracks({background=false}={}){
     now>=d.lastPositionAt&&now-d.lastPositionAt<86400000);
   const eligibleSn=new Set(eligible.map(d=>d.sn));
   for(const sn of tracks.keys())if(!eligibleSn.has(sn))removeTrack(sn);
-  if(!eligible.length){setTrackStatus('Keine Geräte mit gemeldeter Position.');return;}
+  if(!eligible.length){setTrackStatus('Keine Geräte mit gemeldeter Position.');update();return;}
   if(!background||!tracks.size)setTrackStatus('Lade Flugspuren…');
   const id=trackLoadId;
   const controller=new AbortController();
@@ -632,6 +636,7 @@ async function loadTracks({background=false}={}){
   }else if(tracks.size){
     setTrackStatus(tracks.size+' '+(tracks.size===1?'Flugspur':'Flugspuren')+' aus den letzten 60 Minuten sichtbar.');
   }else setTrackStatus('Keine gespeicherte Flugspur in den letzten 60 Minuten.');
+  update();
 }
 el('showTrack').addEventListener('change',loadTracks);
 el('retryTracks').addEventListener('click',()=>loadTracks());
