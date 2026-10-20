@@ -7,7 +7,7 @@ const crypto=require('node:crypto');
 const {Client}=require('pg');
 const {createMapMutationStore}=require('../map-element-mutation');
 
-const URL=process.env.SKYHUB_TEST_DATABASE_URL;
+const TEST_DATABASE_URL=process.env.SKYHUB_TEST_DATABASE_URL;
 const A='e3dea0f5-37f2-4d79-ae58-490af3228069';
 const B='203cc94c-aef1-4e0e-a520-05a24be33a31';
 const actor={role:'operator',workspaceId:A,id:'operator-ci'};
@@ -24,9 +24,9 @@ function safeTarget(url){
 }
 
 test('isolated PostgreSQL CAS, group lock, workspace boundaries and atomic audit',
-  {skip:!URL},async()=>{
-  safeTarget(URL);
-  const client=new Client({connectionString:URL,connectionTimeoutMillis:5000,query_timeout:10000});
+  {skip:!TEST_DATABASE_URL},async()=>{
+  safeTarget(TEST_DATABASE_URL);
+  const client=new Client({connectionString:TEST_DATABASE_URL,connectionTimeoutMillis:5000,query_timeout:10000});
   await client.connect();
   const schema='skyhub_mutation_ci_'+crypto.randomBytes(6).toString('hex');
   const qname='"'+schema+'"';
