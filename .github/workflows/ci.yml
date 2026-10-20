@@ -1,29 +1,53 @@
 name: SkyHub Next checks
+
 on:
   push:
-    branches: ["develop/**"]
+    branches:
+      - main
+      - "develop/**"
+      - "feature/**"
+      - "chore/**"
   pull_request:
+
+permissions:
+  contents: read
+
+# Pull requests and their branch pushes should not consume two runners indefinitely.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   dji-parser-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - name: Syntax and DJI parsing tests
+          node-version: "22"
+
+      # Formerly duplicated across ci.yml and skyhub-next-tests.yml.
+      - name: Syntax-check active JavaScript
         run: |
-          node --check backend/server.js
-          node --check backend/dji.js
-          node --check backend/mqtt-config.js
-          node --check backend/mqtt-metrics.js
-          node --check backend/pilot-config.js
-          node --check frontend/public/pilot-login.js
-          node --test backend/test/*.test.js
-      - name: Test local staging secret preparation
+          for file in backend/*.js scripts/*.js frontend/public/*.js; do
+            node --check "$file"
+          done
+      - name: Backend unit tests (no broker or DJI hardware)
+        run: node --test backend/test/*.test.js
+
+      - name: Validate staging helper and Python tests
         run: |
           python3 -m py_compile scripts/pi-prepare-staging-env.py
           python3 -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Syntax-check Pi shell tools (never execute them)
+        run: |
+          for file in scripts/*.sh; do
+            bash -n "$file"
+          done
+          sh -n stacks/legacy-skyhub/scripts/migrate-env.sh
+
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
       - name: Assert Pi MQTT endpoint on port 1884
@@ -35,14 +59,10 @@ jobs:
       - name: Assert Pilot 2 disabled by default and Pi broker unchanged
         run: |
           node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const e=x.services.backend.environment; if(e.SKYHUB_PILOT_ENABLED!=="false"||e.SKYHUB_PILOT_MQTT_URL!=="mqtt://192.168.178.63:1884"||e.SKYHUB_BIND_ADDRESS!=="127.0.0.1") process.exit(1);'
-      - name: Syntax-check read-only Pi diagnostics
-        run: |
-          bash -n scripts/pi-preflight.sh
-          bash -n scripts/pi-tls-audit.sh
-          bash -n scripts/pi-skyhub-takeover-audit.sh
-          bash -n scripts/pi-backup-legacy.sh
+
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules in the image
         run: |
-          docker run --rm --network none --entrypoint node skyhub-next:test             -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config"].forEach(require)'
+          docker run --rm --network none --entrypoint node skyhub-next:test \
+            -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config"].forEach(require)'

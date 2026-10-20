@@ -1,3 +1,13 @@
+# ARCHIV – Legacy SkyHub (nicht starten)
+
+> **Nur als Quellcode- und Konfigurationsreferenz aufbewahrt.** Dieses Verzeichnis ist ein Snapshot des früheren SkyHub-Stacks und **kein** eigenständiges Deployment-Ziel. Die folgende historische Dokumentation enthält Start-, Konfigurations- und Migrationsbefehle, die **nicht** als aktuelle Betriebsanleitung gelten. Weder das Compose in diesem Ordner noch seine EMQX-/Postgres-/Redis-Konfiguration auf dem produktiven Pi starten oder einspielen.
+
+**Aktive SkyHub-Next-Entwicklung:** [Repository-README](../../README.md). **Migrationsverfahren:** [Legacy-Migration](../../docs/legacy-migration.md) und [Cutover-Audit](../../docs/skyhub-legacy-takeover.md). Die produktiven Docker-Container können weiterhin den historischen Stand ausführen; sie werden durch das Hinzufügen dieses Archivhinweises nicht verändert.
+
+---
+
+## Historische Originaldokumentation (nur Referenz)
+
 # SkyHub Enterprise Flight Console
 
 Lokaler, standardmäßig read-only arbeitender DJI-Telemetriedienst für PostGIS, Redis, EMQX und ein integriertes Web-Dashboard.

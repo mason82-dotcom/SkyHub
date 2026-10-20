@@ -1,4 +1,12 @@
-# Übernommene Stacks
+# Archiv und übernommene Betriebsreferenzen
+
+> **ARCHIV – KEIN DEPLOYMENT-ZIEL.** Alle Dateien unter `stacks/legacy-skyhub/` und `stacks/caddy/` sind historische Snapshots. Das aktive SkyHub-Next-Compose liegt ausschließlich im Repository-Root. Insbesondere **niemals** `docker compose up` aus `stacks/legacy-skyhub/` oder `docker compose -p skyhub up` auf Basis dieses Snapshots ausführen. Dies könnte laufende Container ersetzen und DJI-Verbindungen unterbrechen.
+
+Zur Architektur und den Unterschieden siehe [Legacy-Migration](../docs/legacy-migration.md). Ein Cutover darf erst nach [Audit, Sicherung und Rückfallplan](../docs/skyhub-legacy-takeover.md) erfolgen.
+
+---
+
+## Historische Snapshot-Notizen (Stand 20.10.2026)
 
 - `legacy-skyhub/`: Kopie von `~/Projekte/SkyHub` (Stand 20.10.2026).
   `.env` und `.skyhub-env-backups/` liegen nur lokal (Rechte 600/700, per
