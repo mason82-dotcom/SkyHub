@@ -1,0 +1,16 @@
+# Explicit Raspberry Pi overlay. Keep docker-compose.override.yml local and ignored.
+# Use with: docker compose -f docker-compose.yml -f docker-compose.arm64.yml config --quiet
+services:
+  postgres:
+    image: skyhub-next-postgis:pg15-arm64
+    platform: linux/arm64
+    build:
+      context: .
+      dockerfile: docker/postgis/Dockerfile.arm64
+    volumes:
+      - pgdata_arm64:/var/lib/postgresql/data
+      - ./docker/postgis/00-postgis.sql:/docker-entrypoint-initdb.d/00-postgis.sql:ro
+
+volumes:
+  pgdata_arm64:
+    name: skyhub-next_pgdata_arm64

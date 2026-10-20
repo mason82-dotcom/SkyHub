@@ -153,6 +153,8 @@ test('diagnostics distinguishes license verification, thing module, and MQTT sta
   };
   pilot.el('diagnose').listeners.click();
   const details=pilot.el('diagnostics').textContent;
+  assert.match(details,/SkyHub-Seite geladen: ja/);
+  assert.match(details,/DJI Pilot 2 JSBridge: verfügbar/);
   assert.match(details,/DJI-Lizenz geprüft: ja/);
   assert.match(details,/Thing-Modul geladen: ja/);
   assert.match(details,/MQTT verbunden \(DJI\): nein/);

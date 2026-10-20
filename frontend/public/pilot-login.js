@@ -90,6 +90,8 @@
     if(!target)return;
     // Read only three DJI APIs. Never call thingGetConfigs (contains credentials).
     target.textContent=[
+      'SkyHub-Seite geladen: ja',
+      'DJI Pilot 2 JSBridge: '+(window.djiBridge?'verfügbar':'nicht verfügbar'),
       'DJI-Lizenz geprüft: '+readBridgeStatus('platformIsVerified'),
       'Thing-Modul geladen: '+readBridgeStatus('platformIsComponentLoaded','thing'),
       'MQTT verbunden (DJI): '+readBridgeStatus('thingGetConnectState'),
@@ -366,6 +368,7 @@
   });
   el('retry').addEventListener('click',retryMqtt);
   el('diagnose').addEventListener('click',refreshDiagnostics);
+  el('diagnose').disabled=false;
   if(el('rebuild'))el('rebuild').addEventListener('click',rebuildSession);
   if(el('pairNew'))el('pairNew').addEventListener('click',startPairing);
   if(el('unpair'))el('unpair').addEventListener('click',()=>{

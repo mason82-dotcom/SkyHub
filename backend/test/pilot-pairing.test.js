@@ -83,3 +83,27 @@ test('the same client gets its open code back on page reloads and double loads',
   pairing.approve(a.code,5);
   assert.notEqual(pairing.start(UA,6,'192.168.178.50|'+UA).pairingId,a.pairingId);
 });
+
+test('newly paired devices receive only the server workspace; legacy device scope stays absent',async()=>{
+  const workspace='e3dea0f5-37f2-4d79-ae58-490af3228069';
+  const store=memoryStore();
+  const scoped=createPilotPairing({store,workspaceId:workspace});
+  const started=scoped.start(UA,100);
+  assert.equal(scoped.approve(started.code,200),true);
+  const {deviceToken}=await scoped.poll(started.pairingId,250);
+  const authorized=await scoped.verify(deviceToken,300);
+  assert.equal(authorized.workspaceId,workspace);
+  assert.equal(JSON.stringify([...store.data]).includes(deviceToken),false);
+  assert.equal(JSON.stringify(scoped.pending(300)).includes(workspace),false);
+
+  const legacy=createPilotPairing({store});
+  const earlier=legacy.start(UA,400);
+  assert.equal(legacy.approve(earlier.code,450),true);
+  const legacyToken=(await legacy.poll(earlier.pairingId,500)).deviceToken;
+  const legacyDevice=await scoped.verify(legacyToken,550);
+  assert.equal(legacyDevice.workspaceId,undefined);
+  // Bootstrap verification remains compatible, but map authorization requires
+  // the scoped device's exact stored workspace.
+  assert.ok(legacyDevice);
+  assert.notEqual(legacyDevice.workspaceId,workspace);
+});
