@@ -48,3 +48,19 @@ Abschlussprüfung dieses Entwicklungsblocks: **123/123 Node-Tests**, **4/4 Pytho
 - Das Karten-Dashboard kennzeichnet jetzt sichtbare gespeicherte Flugspuren auch dann, wenn kein gültiger Gerätestandortmarker vorhanden ist. Strict-UI-Audit und ein isolierter Chromium-Test dieses Zustands bestanden.
 - Das CI prüft jetzt auch die Inline-JavaScript-Syntax des tatsächlich ausgelieferten Dashboards, ohne die Seite oder externe Dienste auszuführen. Regressionstests decken gültige, fehlerhafte und unvollständige Script-Tags ab.
 - Die überlappenden GitHub-Actions-Workflows wurden zu einem Workflow mit den bisherigen Prüfungen auf Feature- und Develop-Branches sowie Pull Requests zusammengeführt. Build, Smoke-Test, Python-Suite und Compose-Sicherheitsprüfungen laufen damit gemeinsam.
+
+## Ergänzung: Isolierter PostGIS-Integrationsnachweis (21.10.2026)
+
+Für den offenen P1-Datenpfad ist ein dedizierter CI-Job mit echter PostgreSQL-15/PostGIS-Datenbank ergänzt. Er überprüft Schema- und Track-Migration, Zeitstempel, 0/0-Filter und Retention sowie die getrennte, noch nicht produktiv aktive DJI-Map-Element-Migration inklusive Workspace-Isolation und transaktionalem Rollback. Siehe [Testumfang und Schutzgrenzen](postgis-isolated-validation.md). Diese Änderung startet keine Pi-Container, verändert keine Live-DB und aktiviert die DJI-Kartenelementroute nicht. Der CI-Erfolg ist vor der Übernahme zu prüfen. Weiter offen: externe Dump-/Restore-Probe, Workspace-Rollenmodell und DJI-Pilot-2-Hardwaretest.
+
+## P1-Folgeprüfung: echte Backup-/Restore-Technik, ausschließlich mit Testdaten
+
+Ergänzend zum transaktionalen PostGIS-Integrationstest wurde ein separater, durch GitHub Actions geschützter `pg_dump`/`pg_restore`-Test implementiert. Die Testdatenbank und die Ziel-Datenbank werden nur innerhalb eines eigens erzeugten, netzwerkisolierten Containers verwendet; das Archiv wird nicht exportiert. Mit synthetischen Daten werden Schema, DJI-Gruppen verschiedener Workspaces und PostGIS-Flugspuren vor und nach der Wiederherstellung geprüft. Die technischen Prüfdetails und der noch erforderliche betriebliche Restore einer anonymisierten Sicherung stehen in [PostGIS-Validierung](postgis-isolated-validation.md). Dies ist **keine** Wiederherstellungsfreigabe für die Pi-Datenbank. Die CI muss auf dem letzten Commit grün sein, bevor der Schritt als abgenommen gilt.
+
+## Fortschritt P2: Zugriffstrennung für DJI-Kartenelemente
+
+Das serverseitige Rollenmodell für die DJI-Kartenelement-GET-Route ist ergänzt: Nur Pilot-Identitäten im richtigen Workspace und nur veröffentlichte Gruppen werden tatsächlich gelesen. Die bisherige Pilot-Kopplung speichert künftig den Workspace als Geräte-Metadatum. Altgeräte ohne Metadatum bleiben beim Bootstrap kompatibel, erhalten aber keinen Karten-Gruppenzugriff ohne Neukopplung. Privates `is_distributed=false`, manipulierte Workspace-/Rollenparameter und spätere Schreiboperationen werden für Pilot strikt verweigert. `viewer`, `operator` und `admin` sind im reinen Policy-Modul definiert; weder Operator- noch Administratorrechte werden aktuell über bestehende Tokens ausgegeben. Prüfungen und Grenzen: [DJI-Kartenberechtigungen](dji-map-access.md). Die Karte und der Pilot-Schreibpfad bleiben ohne Hardwareabnahme deaktiviert.
+
+## Fortschritt P2: Interner Schreibvertrag, ohne Live-Freigabe
+
+Die Karten-Transaktionen sind intern als **nicht angebundener** Baustein modelliert: Gruppen-Sperren, `expectedRevision`/Compare-and-Swap, Audit-Journal und vollständiges Rollback inklusive Auditfehlern. Die separate Migration `002_dji_map_mutation_contract.sql` ist nur ein isoliert getesteter Entwurf, keine automatische Schemaänderung. Unit- und echte SQL-Integrationstests wurden ergänzt; CI validiert weiterhin die bestehende Lese- und Backup-/Restore-Linie. Details und offene Sicherheitsfreigaben: [DJI-Mutationsvertrag](dji-map-mutation-contract.md). Es wurden weder Pi-Dienste noch DJI-Schreibaktionen aktiviert.
