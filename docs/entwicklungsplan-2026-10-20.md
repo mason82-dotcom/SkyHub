@@ -20,7 +20,7 @@ Entwicklungsbasis ist ausschließlich der Stack im Repository-Root. `stacks/lega
 2. **P0 – Zugriffsgrenzen gezielt prüfen.** Tests für den echten Express-/Socket.IO-Pfad ergänzen: LAN-Ansicht nur lesend, Admin-Routen vom LAN ausgeschlossen, Pilot-Bootstrap nur über HTTPS und gültige Tokens, keine geheimen Werte in öffentlichen Antworten. Caddy und EMQX nur lesend gegen die dokumentierten Regeln prüfen; Änderungen an den produktiven Diensten separat freigeben lassen.
 3. **P1 – Datenpfad verlässlich nachweisen.** PostgreSQL-Verbindung und Migrationsstatus separat diagnostizierbar machen; erfolgreiche und fehlgeschlagene Track-Schreibvorgänge korrekt zählen. Mit einer isolierten Testdatenbank die Migration, Track-Abfrage und Retention prüfen. Keine produktiven Datensätze löschen oder zur Probe schreiben.
 4. **P1 – Builds reproduzierbar machen.** Ein Lockfile für das Root-Backend erzeugen und den Container auf `npm ci` umstellen; ARM64-PostGIS-Override und `docker/postgis/` bewusst versionieren oder als rein lokale Betriebsdateien dokumentieren. Images und CI auf Pi-Architektur und verfügbare PostGIS-Erweiterung prüfen.
-5. **P2 – Frontend und Testmatrix konsolidieren.** Unbenutzte React-Datei entweder entfernen oder in eine bewusst geplante Frontend-Migration aufnehmen. Die beiden CI-Workflows zusammenführen und die ausgelieferten HTML/JS-Seiten sowie Authentifizierungsgrenzen mit sinnvollen Regressionstests absichern.
+5. **P2 – Frontend und Testmatrix konsolidieren.** Unbenutzte React-Datei entweder entfernen oder in eine bewusst geplante Frontend-Migration aufnehmen. Die beiden CI-Workflows zusammenführen und die ausgelieferten HTML/JS-Seiten sowie Authentifizierungsgrenzen mit sinnvollen Regressionstests absichern. Die CI-Konsolidierung ist am 21.10.2026 umgesetzt; die nicht ausgelieferte React-Datei bleibt bis zu einer geplanten Migration unberührt.
 6. **P3 – Funktionserweiterung erst nach stabiler Basis.** Medien-API, Photogrammetrie, Radiometrie und WPML-Missionen anhand eigener Anforderungen und Hardware-Abnahme planen. Die vorhandenen Python-Worker sind Demonstrationscode; daraus dürfen keine echten Messergebnisse oder Flugfunktionen abgeleitet werden.
 
 ## Prüfnachweise und offene Grenzen
@@ -41,3 +41,9 @@ Verwendet: `git status --short --branch`, Dateiliste und Codeprüfung im Root, `
 - Noch ausstehend ist eine Integration mit einer **separaten Testdatenbank**. Es wurden keine produktiven Track-Daten zur Probe geschrieben oder gelöscht und kein Container neu erstellt.
 
 Abschlussprüfung dieses Entwicklungsblocks: **123/123 Node-Tests**, **4/4 Python-Tests**, Syntaxprüfung, beide Compose-Varianten und `git diff --check` bestanden. Ein lokaler Backend- oder ARM64-Image-Build wurde auf dem Pi nicht ausgeführt; der Feature-Branch-CI-Workflow prüft den Backend-Build nach dem Push. Der Code wurde nicht auf die laufenden Dienste ausgerollt.
+
+## Fortschritt am 21.10.2026
+
+- Die lesende DJI-Map-Element-GET-Route bleibt per Feature-Flag deaktiviert. Sie bindet Workspace und Token, verarbeitet Filter parametriert und hat Regressionstests für Mehrfachparameter und sichere Beispiel-Defaults. Die PostGIS-Migration ist weiterhin nur ein Entwurf; produktive Datenbanken wurden nicht verändert.
+- Das Karten-Dashboard kennzeichnet jetzt sichtbare gespeicherte Flugspuren auch dann, wenn kein gültiger Gerätestandortmarker vorhanden ist. Strict-UI-Audit und ein isolierter Chromium-Test dieses Zustands bestanden.
+- Die überlappenden GitHub-Actions-Workflows wurden zu einem Workflow mit den bisherigen Prüfungen auf Feature- und Develop-Branches sowie Pull Requests zusammengeführt. Build, Smoke-Test, Python-Suite und Compose-Sicherheitsprüfungen laufen damit gemeinsam.
