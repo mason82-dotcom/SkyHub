@@ -27,6 +27,7 @@ jobs:
           node --check backend/topology-ack.js
           node --check backend/mqtt-shape.js
           node --check backend/pilot-pairing.js
+          node --check backend/topology-store.js
           node --check scripts/pi-pilot-pair.js
           node --check frontend/public/pilot-login.js
           node --check scripts/pi-mqtt-osd-check.js

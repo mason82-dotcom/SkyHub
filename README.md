@@ -296,3 +296,14 @@ wird. Danach verbindet sich die RC bei jedem Öffnen automatisch, lädt das
 Cloud-Modul nur bei Bedarf und baut eine unbestätigte Sitzung selbst neu auf.
 Übersicht und Widerruf: `node scripts/pi-pilot-pair.js` bzw. `--revoke <id>`.
 Details: [MQTT/OSD-Integration](docs/mqtt-osd-integration.md#pilot-2-connection-sequence-handshake).
+
+## Topologie über Neustarts
+
+Rollen, Gateway-Zuordnung, Modelle und Kinder aus `update_topo` werden in Redis
+(`skyhub:topology`, 7 Tage) vorgehalten und beim Start wiederhergestellt.
+Telemetrie wird **nicht** gespeichert; nach einem Neustart ist nichts „frisch“,
+bis echtes OSD eintrifft. Wiederhergestellte Einträge tragen
+`topologyRestored: true` (Karte: „Topologie aus Speicher“) und werden von jedem
+neueren `update_topo` ersetzt. Gespeicherte Daten werden vollständig validiert
+und überschreiben nie eine neuere Live-Topologie. Der Replay-Schutz für
+`update_topo` bleibt über Neustarts erhalten. Health: `topologyRestoredDevices`.

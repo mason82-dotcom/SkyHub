@@ -1,6 +1,6 @@
 'use strict';
 
-const { fresh } = require('./dji');
+const { fresh, serial } = require('./dji');
 const { resolveDeviceModel, category } = require('./catalog');
 
 function createRegistry(limit = 200) {
@@ -12,6 +12,7 @@ function createRegistry(limit = 200) {
       model: d.model, modelName: resolveDeviceModel(d.model),
       deviceCategory: category(d.model.domain), topologyOnline: d.topologyOnline,
       lastTopologyAt: d.lastTopologyAt, topologyTimeVerified: d.topologyTimeVerified,
+      topologyRestored: d.topologyRestored,
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
@@ -29,6 +30,7 @@ function createRegistry(limit = 200) {
       sn, role: 'unknown', gatewaySn: null,
       model: {domain:null,type:null,subType:null,thingVersion:null},
       topologyOnline: null, lastTopologyAt: null, topologyTimeVerified: null,
+      topologyRestored: false,
       children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
@@ -100,6 +102,7 @@ function createRegistry(limit = 200) {
     }
     if (message.topology) {
       d.role = 'gateway';
+      d.topologyRestored = false;
       d.topologyOnline = true;
       d.lastTopologyAt = observedAt;
       d.topologyTimeVerified = message.timestamp !== null;
@@ -113,6 +116,7 @@ function createRegistry(limit = 200) {
         const child = devices.get(sn);
         if (child && child.gatewaySn === d.sn) {
           child.topologyOnline = false;
+          child.topologyRestored = false;
           child.lastTopologyAt = observedAt;
           child.topologyTimeVerified = message.timestamp !== null;
           updates.set(sn, child);
@@ -123,6 +127,7 @@ function createRegistry(limit = 200) {
         const child = ensure(childData.sn);
         child.gatewaySn = d.sn;
         child.role = 'subdevice';
+        child.topologyRestored = false;
         child.topologyOnline = true;
         child.lastTopologyAt = observedAt;
         child.topologyTimeVerified = message.timestamp !== null;
@@ -137,10 +142,64 @@ function createRegistry(limit = 200) {
       events.unshift(event);
       if (events.length > 100) events.pop();
     }
-    return {updates:[...updates.values()].map(device => safeDevice(device,now)),event,point};
+    return {updates:[...updates.values()].map(device => safeDevice(device,now)),event,point,
+      topologyChanged:Boolean(message.topology)};
+  }
+  // Topology only (never telemetry), for persistence across backend restarts.
+  function topologyRecords(sns) {
+    const wanted = sns ? new Set(sns) : null;
+    return [...devices.values()]
+      .filter(d => (!wanted || wanted.has(d.sn)) && Number.isFinite(d.lastTopologyAt) &&
+        (d.role === 'gateway' || d.role === 'subdevice'))
+      .map(d => ({
+        sn:d.sn, role:d.role, gatewaySn:d.gatewaySn, model:{...d.model},
+        topologyOnline:d.topologyOnline, lastTopologyAt:d.lastTopologyAt,
+        topologyTimeVerified:d.topologyTimeVerified, children:[...d.children],
+        statusTimestamp:Number.isFinite(d.lastByChannel.status) ? d.lastByChannel.status : null
+      }));
+  }
+  function validModel(m) {
+    return m && typeof m === 'object' &&
+      (m.domain === null || (typeof m.domain === 'string' && /^\d{1,3}$/.test(m.domain))) &&
+      (m.type === null || Number.isInteger(m.type)) &&
+      (m.subType === null || Number.isInteger(m.subType)) &&
+      (m.thingVersion === null || (typeof m.thingVersion === 'string' && m.thingVersion.length <= 32));
+  }
+  // Stored records are untrusted input: validate everything, never overwrite newer live topology.
+  function restoreTopology(records, now = Date.now()) {
+    let restored = 0;
+    for (const r of Array.isArray(records) ? records : []) {
+      if (!r || typeof r !== 'object' || !serial(r.sn) || !['gateway','subdevice'].includes(r.role) ||
+          (r.gatewaySn !== null && !serial(r.gatewaySn)) || !validModel(r.model) ||
+          !Number.isSafeInteger(r.lastTopologyAt) || r.lastTopologyAt > now ||
+          typeof r.topologyOnline !== 'boolean' ||
+          !Array.isArray(r.children) || r.children.length > 100 || !r.children.every(serial)) continue;
+      const existing = devices.get(r.sn);
+      if (existing && Number.isFinite(existing.lastTopologyAt) &&
+          existing.lastTopologyAt >= r.lastTopologyAt) continue;
+      // A gateway's newer live update_topo also decides which children it has.
+      const gateway = r.gatewaySn ? devices.get(r.gatewaySn) : null;
+      if (gateway && !gateway.topologyRestored && Number.isFinite(gateway.lastTopologyAt) &&
+          gateway.lastTopologyAt >= r.lastTopologyAt) continue;
+      const d = ensure(r.sn);
+      d.role = r.role;
+      d.gatewaySn = r.gatewaySn;
+      d.model = {domain:r.model.domain,type:r.model.type,subType:r.model.subType,
+        thingVersion:r.model.thingVersion};
+      d.topologyOnline = r.topologyOnline;
+      d.lastTopologyAt = r.lastTopologyAt;
+      d.topologyTimeVerified = r.topologyTimeVerified === true;
+      d.topologyRestored = true;
+      d.children = [...new Set(r.children)].filter(sn => sn !== r.sn);
+      // Keep replay protection for update_topo across restarts.
+      if (Number.isSafeInteger(r.statusTimestamp) && r.statusTimestamp <= now &&
+          !(d.lastByChannel.status >= r.statusTimestamp)) d.lastByChannel.status = r.statusTimestamp;
+      restored++;
+    }
+    return restored;
   }
   return {
-    ingest,
+    ingest, topologyRecords, restoreTopology,
     snapshot(now = Date.now()) { return [...devices.values()].map(d => safeDevice(d,now)); },
     events() { return events.map(event => ({...event})); },
     get(sn, now = Date.now()) { const d = devices.get(sn); return d ? safeDevice(d,now) : null; },

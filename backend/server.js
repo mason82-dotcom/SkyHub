@@ -16,6 +16,7 @@ const {createRegistry}=require('./registry');
 const {pilotConfiguration}=require('./pilot-config');
 const {createStatusReply}=require('./topology-ack');
 const {createPilotPairing,redisStore}=require('./pilot-pairing');
+const {createTopologyStore}=require('./topology-store');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -92,7 +93,16 @@ const redis=new Redis(process.env.REDIS_URL||'redis://redis:6379',{
   retryStrategy:attempts=>Math.min(attempts*1000,5000)
 });
 redis.on('error',err=>console.error('[redis]',err.message));
-redis.connect().catch(err=>console.error('[redis connect]',err.message));
+const topologyStore=createTopologyStore(redis);
+let topologyRestored=0;
+redis.connect()
+  .then(()=>topologyStore.load())
+  .then(records=>{
+    topologyRestored=registry.restoreTopology(records);
+    // Count only; never log serial numbers.
+    if(topologyRestored)console.log('[topology] restored '+topologyRestored+' devices from Redis');
+  })
+  .catch(err=>console.error('[redis connect]',err.message));
 const pairing=createPilotPairing({store:redisStore(redis)});
 const pool=process.env.DATABASE_URL?
   new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:3000}):null;
@@ -139,6 +149,10 @@ function onMessage(topic,payload,packet){
         .catch(err=>console.error('[redis write]',err.message));
     }
     if(result.event)io.emit('device_event',result.event);
+    if(result.topologyChanged){
+      topologyStore.save(registry.topologyRecords(result.updates.map(item=>item.sn)))
+        .catch(err=>console.error('[redis topology]',err.message));
+    }
     if(pool && result.point){
       const p=result.point;
       pool.query(
@@ -260,7 +274,7 @@ app.get('/api/health',(req,res)=>res.json({
   mqttBrokerPort:broker.port,topologyReplyEnabled:topologyAckEnabled,
   topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
   topologyReplyErrors:topologyAckFailed,topologyReplySkipped:topologyAckSkipped,
-  topologyReplyLastAt:topologyAckLastAt,...mqttStats.snapshot()
+  topologyReplyLastAt:topologyAckLastAt,topologyRestoredDevices:topologyRestored,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));

@@ -97,6 +97,7 @@ function update(){
     card.append(grid);
     const meta=document.createElement('small');
     meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
+      (d.topologyRestored?' · Topologie aus Speicher':'')+
       (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
       (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
       ' · GPS '+(positionFresh(d)?(d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
