@@ -9,7 +9,7 @@ Der reine Normalisierer `backend/map-element-contract.js` verarbeitet eine berei
 - Erwartet wird die DJI-Hülle `{code: 0, data: [...]}`. Eine fehlerhafte Hülle oder Gruppe wird abgewiesen. Gruppen brauchen ID und Elementliste. Fehlende optionale Namen fallen auf die ID zurück; unbekannter Typ und Sperrstatus bleiben `null`. Typ `2` bezeichnet die App-Shared-Gruppe, die Pilot für die Synchronisierung benötigt.
 - Pro gültigem Element werden ID, Name, Geometrieart, gültige WGS84-Koordinaten im GeoJSON-Format `[Länge, Breite, optionale Höhe]`, bekannte Darstellungsattribute und Zeitstempel übernommen. Unbekannte Felder werden nicht weitergereicht. Ein fehlerhaftes oder doppelt vorhandenes Element wird gezählt und ausgelassen; andere Elemente der Gruppe bleiben erhalten.
 - Darstellungsart ist die GeoJSON-Geometrie `Point`, `LineString` oder `Polygon`. `resource.type` bleibt separat als Diagnosewert erhalten. Die DJI-Beispiele markieren Linien und Polygone teils mit `resource.type: 0`; daraus darf die Darstellungsart nicht abgeleitet werden.
-- Ein offener Polygonring wird nur in der **lesenden Kopie** geschlossen. Die Eingabe bleibt unverändert. Ungültige Koordinaten, degenerierte Linien/Flächen und unbekannte Geometrien werden ausgelassen. Grenzen: 100 Gruppen, 5000 Elemente insgesamt, 2000 Eckpunkte pro Element.
+- Ein offener Polygonring wird nur in der **lesenden Kopie** geschlossen. Die Eingabe bleibt unverändert. Ungültige Koordinaten, degenerierte Linien/Flächen und unbekannte Geometrien werden ausgelassen. Grenzen: 100 Gruppen, 5000 Elemente insgesamt, 2000 Eckpunkte pro Element einschließlich eines ergänzten Ringschlusses.
 
 ## Noch nicht an die produktive API anbinden
 

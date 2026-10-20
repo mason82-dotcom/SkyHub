@@ -36,11 +36,12 @@ function geometry(input){
     const rings=[];
     for(const ring of raw){
       if(!Array.isArray(ring)||ring.length<3)return null;
-      vertices+=ring.length;
-      if(vertices>MAX_VERTICES)return null;
       const points=ring.map(coordinate);
       if(!points.every(Boolean)||distinctPositions(points)<3)return null;
-      if(!samePosition(points[0],points.at(-1)))points.push(points[0].slice());
+      const needsClose=!samePosition(points[0],points.at(-1));
+      vertices+=points.length+(needsClose?1:0);
+      if(vertices>MAX_VERTICES)return null;
+      if(needsClose)points.push(points[0].slice());
       if(points.length<4)return null;
       rings.push(points);
     }

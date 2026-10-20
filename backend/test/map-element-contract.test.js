@@ -57,3 +57,11 @@ test('response and group boundaries fail closed',()=>{
   assert.throws(()=>parseMapElementGroups({code:0,data:Array(101).fill({})}),RangeError);
   assert.throws(()=>parseMapElementGroups(response(Array(5001).fill(item('x',feature('Point',[8,49]))))),RangeError);
 });
+
+test('implicitly closed polygons count the appended coordinate toward the vertex limit',()=>{
+  const ring=[[0,0],[1,0],[1,1]];
+  while(ring.length<2000)ring.push([0,1]);
+  const result=parseMapElementGroups(response([item('oversized-ring',feature('Polygon',[ring]))]));
+  assert.equal(result.rejectedElements,1);
+  assert.equal(result.groups[0].elements.length,0);
+});
