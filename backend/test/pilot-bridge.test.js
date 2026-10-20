@@ -1,0 +1,123 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+const path=require('node:path');
+
+const script=fs.readFileSync(
+  path.resolve(__dirname,'../../frontend/public/pilot-login.js'),'utf8'
+);
+const bootstrap={
+  appId:'test-app',appKey:'not-a-real-key',license:'not-a-real-license',
+  workspaceId:'e3dea0f5-37f2-4d79-ae58-490af3228069',
+  platformName:'SkyHub Next',workspaceName:'SkyHub',description:'Test',
+  mqtt:{host:'tcp://example.test:1884',username:'pilot-test',password:'test-secret'}
+};
+async function createPilot(options={}){
+  const elements=new Map(),timers=[],calls={retry:[],load:[]};
+  function el(id){
+    if(!elements.has(id)){
+      elements.set(id,{
+        id,textContent:'',value:'',disabled:false,hidden:id==='retry',
+        listeners:Object.create(null),
+        addEventListener(event,handler){this.listeners[event]=handler;}
+      });
+    }
+    return elements.get(id);
+  }
+  let response=options.mqttState??JSON.stringify({code:0,data:false});
+  const bridge={
+    platformVerifyLicense:()=>JSON.stringify({code:0}),
+    platformSetWorkspaceId:()=>JSON.stringify({code:0}),
+    platformSetInformation:()=>JSON.stringify({code:0}),
+    platformLoadComponent(...args){calls.load.push(args);return JSON.stringify({code:0});},
+    thingGetConnectState(){return response;},
+    thingConnect(...args){calls.retry.push(args);return JSON.stringify({code:0});}
+  };
+  const win={djiBridge:bridge};
+  const env={
+    window:win,
+    document:{getElementById:el},
+    location:{protocol:'https:'},
+    setTimeout(callback,ms){timers.push({callback,ms});return timers.length;},
+    fetch:async function(url){
+      if(url==='/api/pilot/status')return {ok:true,json:async()=>({configured:true,missing:[]})};
+      if(url==='/api/pilot/bootstrap')return {ok:true,json:async()=>bootstrap};
+      throw new Error('unexpected fetch');
+    }
+  };
+  vm.runInNewContext(script,env,{filename:'pilot-login.js',timeout:1000});
+  for(let i=0;i<8;i++)await Promise.resolve();
+  return {
+    el,win,bridge,calls,timers,
+    setMqttState(value){response=value;},
+    async connect(){
+      el('access').value='placeholder-test-token';
+      await el('start').listeners.click();
+    },
+    fireTimer(){assert.equal(timers.length,1);timers[0].callback();}
+  };
+}
+
+test('loading DJI component does not call thingConnect automatically',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  assert.equal(pilot.calls.load.length,1);
+  assert.equal(pilot.calls.retry.length,0);
+  assert.equal(pilot.el('access').value,'');
+  assert.equal(pilot.el('retry').hidden,true);
+  pilot.fireTimer();
+  assert.equal(pilot.el('retry').hidden,false);
+  assert.match(pilot.el('result').textContent,/NICHT VERBUNDEN/);
+});
+
+test('manual reconnect passes previously authenticated pilot credentials only to bridge',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.fireTimer();
+  pilot.el('retry').listeners.click();
+  assert.equal(pilot.calls.retry.length,1);
+  assert.equal(pilot.calls.retry[0][0],'pilot-test');
+  assert.equal(pilot.calls.retry[0][1],'test-secret');
+  assert.equal(pilot.calls.retry[0][2],'skyhubPilotMqttState');
+  assert.equal(pilot.el('retry').hidden,true);
+  assert.doesNotMatch(pilot.el('result').textContent,/test-secret|not-a-real-key/);
+});
+
+test('a positive DJI JSON state hides retry and clears cached credentials',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.setMqttState(JSON.stringify({code:0,data:true}));
+  pilot.fireTimer();
+  assert.match(pilot.el('result').textContent,/VERBUNDEN/);
+  assert.equal(pilot.el('retry').hidden,true);
+  pilot.el('retry').listeners.click();
+  assert.equal(pilot.calls.retry.length,0);
+});
+
+test('failed DJI JSBridge response must not be treated as MQTT connected',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.setMqttState(JSON.stringify({code:17,data:true}));
+  pilot.fireTimer();
+  assert.match(pilot.el('result').textContent,/nicht eindeutig/i);
+  assert.equal(pilot.el('retry').hidden,false);
+});
+
+test('raw callback payload is not rendered into the Pilot UI',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.win.skyhubPilotMqttState({password:'SHOULD_NOT_DISPLAY',sn:'PRIVATE_SN'});
+  const result=pilot.el('result').textContent;
+  assert.doesNotMatch(result,/SHOULD_NOT_DISPLAY|PRIVATE_SN/);
+});
+
+test('successful thingConnect result alone does not claim MQTT online',async()=>{
+  const pilot=await createPilot();
+  await pilot.connect();
+  pilot.fireTimer();
+  pilot.el('retry').listeners.click();
+  assert.doesNotMatch(pilot.el('result').textContent,/VERBUNDEN\./);
+  assert.match(pilot.el('result').textContent,/gestartet/);
+});
