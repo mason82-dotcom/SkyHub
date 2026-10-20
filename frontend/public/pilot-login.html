@@ -20,7 +20,9 @@
     input{width:100%;padding:12px 14px;border:1px solid #64748b;border-radius:8px;background:#0b1527;color:white;font-size:16px}
     button{border:0;border-radius:8px;padding:12px 20px;background:#38bdf8;color:#071321;font-size:16px;font-weight:700;margin-top:14px}
     button:disabled{background:#627083;color:#e2e8f0;opacity:.65}
-    button[hidden],.warning[hidden]{display:none}
+    [hidden]{display:none!important}
+    .code{font-size:34px;font-weight:700;letter-spacing:4px;color:#38bdf8;margin:4px 0 6px}
+    summary{font-size:12px;color:#9eb2c9;margin-top:10px;cursor:pointer}
     #result{white-space:pre-wrap;overflow-wrap:anywhere;color:#d7e5f4;min-height:50px;font-size:14px}
     #diagnostics{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;color:#b9cbe0;font-family:inherit;font-size:12px;line-height:1.4;}
     .warning{color:#ffda85}
@@ -101,12 +103,22 @@ main > p.detail:last-child {
   <section class="panel">
     <strong id="headline">Konfiguration wird geprüft ...</strong>
     <p id="details" class="detail"></p>
-    <label for="access">SkyHub-Pilot-Zugangstoken</label>
-    <input id="access" type="password" autocomplete="off" spellcheck="false" placeholder="Pilot-Zugangstoken eingeben">
-    <button id="start" type="button" disabled>DJI Cloud verbinden</button>
+    <div id="pairing" hidden>
+      <p class="detail">Kopplungscode (einmalig auf dem Pi bestätigen):</p>
+      <div id="pairCode" class="code" aria-live="polite"></div>
+    </div>
+    <button id="pairNew" type="button" hidden disabled>Neuen Kopplungscode anfordern</button>
     <button id="retry" type="button" hidden disabled>MQTT erneut verbinden</button>
+    <button id="rebuild" type="button" hidden disabled>Cloud-Sitzung neu aufbauen</button>
     <button id="diagnose" type="button">DJI-Status prüfen</button>
+    <button id="unpair" type="button" hidden disabled>Kopplung entfernen</button>
     <pre id="diagnostics" aria-label="DJI-Statusdiagnose"></pre>
+    <details>
+      <summary>Manuell mit Zugangstoken verbinden</summary>
+      <label for="access">SkyHub-Pilot-Zugangstoken</label>
+      <input id="access" type="password" autocomplete="off" spellcheck="false" placeholder="Pilot-Zugangstoken eingeben">
+      <button id="start" type="button" disabled>DJI Cloud verbinden</button>
+    </details>
     <p class="warning" id="security">Die Übermittlung der Zugangsdaten erfordert HTTPS.</p>
     <p id="result" role="status" aria-live="polite"></p>
   </section>
