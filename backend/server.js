@@ -13,6 +13,7 @@ const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
 const {createRegistry}=require('./registry');
 const {pilotConfiguration}=require('./pilot-config');
+const {createStatusReply}=require('./topology-ack');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -38,6 +39,23 @@ const registry=createRegistry();
 let mqttConnected=false;
 let mqttSubscribed=false;
 const mqttStats=createMqttMetrics();
+const topologyAckEnabled=process.env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
+const topologyAckCredentials={
+  username:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'',
+  password:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD||''
+};
+// A dedicated, ACL-restricted publisher is required; read-only credentials remain unchanged.
+if(topologyAckEnabled && (!topologyAckCredentials.username ||
+    !topologyAckCredentials.password ||
+    topologyAckCredentials.username.startsWith('REPLACE_') ||
+    topologyAckCredentials.password.startsWith('REPLACE_'))){
+  console.error('[topology ack] dedicated publisher credentials are required');
+  process.exit(1);
+}
+let topologyAckConnected=false;
+let topologyAckSent=0;
+let topologyAckFailed=0;
+let topologyAckClient=null;
 
 app.disable('x-powered-by');
 app.use(express.json({limit:'128kb'}));
@@ -84,6 +102,17 @@ function onMessage(topic,payload,packet){
     const result=registry.ingest(parsed,observedAt);
     if(result.dropReason){mqttStats.rejected(result.dropReason);return;}
     mqttStats.accepted(parsed,result,observedAt);
+    // DJI topology acknowledgement is a protocol reply, never a flight command.
+    // Only send for a validated, accepted, non-retained update_topo message.
+    if(topologyAckEnabled && parsed.channel==='status' && parsed.topology){
+      const reply=createStatusReply(parsed,payload,observedAt);
+      if(reply && topologyAckClient && topologyAckConnected){
+        topologyAckClient.publish(reply.topic,reply.payload,{qos:1,retain:false},err=>{
+          if(err){topologyAckFailed++;console.error('[topology ack] publish failed');}
+          else topologyAckSent++;
+        });
+      }
+    }
     for(const item of result.updates){
       io.emit('device_update',item);
       redis.set('skyhub:device:'+item.sn,JSON.stringify(item),'EX',3600)
@@ -110,6 +139,17 @@ const options={clientId:'skyhub_next_readonly_'+process.pid,protocolVersion:5,
 if(process.env.MQTT_USER)options.username=process.env.MQTT_USER;
 if(process.env.MQTT_PASSWORD)options.password=process.env.MQTT_PASSWORD;
 const client=mqtt.connect(broker.url,options);
+if(topologyAckEnabled){
+  topologyAckClient=mqtt.connect(broker.url,{
+    clientId:'skyhub_next_topology_ack_'+process.pid,
+    protocolVersion:5,reconnectPeriod:3000,connectTimeout:10000,
+    username:topologyAckCredentials.username,
+    password:topologyAckCredentials.password
+  });
+  topologyAckClient.on('connect',()=>{topologyAckConnected=true;});
+  topologyAckClient.on('close',()=>{topologyAckConnected=false;});
+  topologyAckClient.on('error',()=>{topologyAckFailed++;console.error('[topology ack] broker connection failed');});
+}
 client.on('connect',()=>{
   mqttConnected=true;
   mqttStats.connected();
@@ -154,7 +194,9 @@ app.post('/api/pilot/bootstrap',(req,res)=>{
 app.get('/api/health',(req,res)=>res.json({
   status:mqttConnected&&mqttSubscribed?'online':'degraded',mqtt:mqttConnected,
   subscribed:mqttSubscribed,redis:redis.status==='ready',devices:registry.count(),readOnly:true,
-  mqttBrokerPort:broker.port,...mqttStats.snapshot()
+  mqttBrokerPort:broker.port,topologyReplyEnabled:topologyAckEnabled,
+  topologyReplyConnected:topologyAckConnected,topologyReplySent:topologyAckSent,
+  topologyReplyErrors:topologyAckFailed,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
@@ -174,7 +216,8 @@ app.use((req,res)=>res.status(404).json({error:'Not found'}));
 const port=Number(process.env.PORT||4000);
 server.listen(port,'0.0.0.0',()=>console.log('[skyhub] Port '+port+' / read-only'));
 function stop(){
-  client.end(true);io.close();server.close();
+  client.end(true);if(topologyAckClient)topologyAckClient.end(true);
+  io.close();server.close();
   redis.disconnect();if(pool)pool.end().catch(()=>{});
 }
 process.once('SIGTERM',stop);
