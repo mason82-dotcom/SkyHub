@@ -114,7 +114,12 @@ Consequences in code:
 
 The existing `skyhub_emqx` (5.3.0) has no authenticator configured and `acl.conf` ends with `{allow, all}`, while TCP 1884 is published on all interfaces. Consequently any LAN client can connect anonymously and publish to any topic, including `thing/product/+/services` and `property/set`. The "publish-only on `status_reply`" restriction for the topology publisher is **not enforced** by the broker today; the separate account only keeps the roles distinguishable for when ACLs are introduced.
 
-Recommended, separate change (affects the RC login and the legacy stack, so plan and test it on its own):
+Hardening is scripted: `node scripts/pi-emqx-harden.js plan|apply|verify|rollback`.
+`apply` exports an EMQX backup, creates a temporary dashboard admin through `emqx ctl` (deleted afterwards), enables the built-in database authenticator with the three accounts from `.env`, verifies logins, sets the ACL with `{deny, all}`, verifies 9 permission probes and checks that the connected RC keeps delivering OSD. Any failed check rolls back to the previous state automatically. Configuration is stored by EMQX in its data volume and survives restarts of the same container.
+
+Probe result before hardening (2026-10-20): anonymous login and wrong passwords accepted; the topology publisher could send `services` commands; the Pilot account could read all OSD and forge `status_reply`.
+
+The original manual plan for reference:
 1. Enable the built-in database authenticator; create distinct users for Pilot 2, the SkyHub read-only subscriber and the topology publisher.
 2. ACL: Pilot user may publish its own `thing/product/{sn}/#` / `sys/product/{sn}/status` and subscribe to the reply/service topics; SkyHub subscriber subscribe-only on the five allowlisted patterns; topology publisher publish-only on `sys/product/+/status_reply`; final rule `{deny, all}`.
 3. Then re-verify with `emqx ctl clients list` and the health counters.
