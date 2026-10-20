@@ -15,6 +15,8 @@ function createRegistry(limit = 200) {
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
       lastPositionAt: d.lastPositionAt,
+      telemetryTimeVerified: d.telemetryTimeVerified,
+      positionTimeVerified: d.positionTimeVerified,
       fresh: fresh(d.lastTelemetryAt, now),
       positionFresh: fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry }
     };
@@ -28,6 +30,7 @@ function createRegistry(limit = 200) {
       topologyOnline: null, children: [], channel: null,
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
+      telemetryTimeVerified: null, positionTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
         heading:null,horizontalSpeed:null,verticalSpeed:null }
@@ -40,13 +43,18 @@ function createRegistry(limit = 200) {
     const existing = devices.get(message.sn);
     const prior = existing?.lastByChannel[message.channel];
     // Retained or delayed MQTT packets must not overwrite later snapshots.
+    if (Number.isFinite(prior) && message.timestamp === null) {
+      return { updates:[], event:null, point:null, dropReason:'missing_timestamp_after_verified' };
+    }
     if (message.timestamp !== null && Number.isFinite(prior) && message.timestamp <= prior) {
-      return { updates:[], event:null, point:null };
+      return { updates:[], event:null, point:null, dropReason:'duplicate' };
     }
     const d = ensure(message.sn);
     const updates = new Map();
     d.channel = message.channel;
     d.lastSeenAt = now;
+    // Timestamp provenance stays visible: unverified arrival time is not device time.
+    const observedAt = message.timestamp === null ? now : Math.min(message.timestamp, now);
     if (message.timestamp !== null) d.lastByChannel[message.channel] = message.timestamp;
     if (message.gatewaySn && message.gatewaySn !== message.sn) {
       d.gatewaySn = message.gatewaySn;
@@ -64,9 +72,11 @@ function createRegistry(limit = 200) {
         if (message.telemetry.latitude !== null && message.telemetry.longitude !== null) {
           d.telemetry.latitude = message.telemetry.latitude;
           d.telemetry.longitude = message.telemetry.longitude;
-          d.lastPositionAt = now;
+          d.lastPositionAt = observedAt;
+          d.positionTimeVerified = message.timestamp !== null;
         }
-        d.lastTelemetryAt = now;
+        d.lastTelemetryAt = observedAt;
+        d.telemetryTimeVerified = message.timestamp !== null;
       }
       // Both coordinates must be present in the SAME genuine OSD packet.
       if (message.telemetry.latitude !== null && message.telemetry.longitude !== null) {
