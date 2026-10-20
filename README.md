@@ -307,3 +307,19 @@ bis echtes OSD eintrifft. Wiederhergestellte Einträge tragen
 neueren `update_topo` ersetzt. Gespeicherte Daten werden vollständig validiert
 und überschreiben nie eine neuere Live-Topologie. Der Replay-Schutz für
 `update_topo` bleibt über Neustarts erhalten. Health: `topologyRestoredDevices`.
+
+## HMS-Warnungen
+
+SkyHub wertet DJI-HMS-Meldungen aus beiden Formaten aus: Pilot 2 sendet
+`data:{event:"hms", method:"hms", output:{codes:[{id,level,component_index,sensor_index}]}}`
+mit dezimaler ID (am 20.10.2026 an der Mavic 3M beobachtet), Docks
+`method:"hms", data:{list:[{code:"0x…"}]}`. Jede Meldung ersetzt die Liste der
+aktiven Warnungen des Geräts. Ohne neue Meldung gilt die Liste nach 30 s als
+veraltet. Die Karte zeigt die Warnungen pro Gerät mit deutschem Text
+(Fallback Englisch), die Kachel „Aktive HMS-Warnungen“ und einen roten bzw.
+gelben Marker-Rand.
+
+Texte: `backend/data/hms-texts.json`, erzeugt mit
+`node scripts/build-hms-texts.js <hms.json>` aus der `hms.json` der DJI
+Cloud-API-Demo (MIT, siehe `backend/data/HMS-LICENSE.txt`). Im Flug
+(`mode_code` 3–12, 15–17) wird die `_in_the_sky`-Variante verwendet.

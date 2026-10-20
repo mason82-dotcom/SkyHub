@@ -63,7 +63,8 @@ test('HMS produces a minimal safe alert summary',()=>{
       args:{private:'DANGER'}
     }]}
   })));
-  assert.deepEqual(m.hms,[{code:'0x16100083',level:2,module:3,deviceType:'0-67-0',imminent:1}]);
+  assert.deepEqual(m.hms,[{code:'0x16100083',level:2,module:3,deviceType:'0-67-0',imminent:1,
+    componentIndex:null,sensorIndex:null}]);
   assert.doesNotMatch(JSON.stringify(m),/DANGER/);
 });
 test('OSD freshness expires after 15 seconds',()=>{
@@ -111,4 +112,34 @@ test('data key shape exposes field names only, never values',()=>{
   assert.equal(m.needReply,true);
   assert.doesNotMatch(JSON.stringify(m.dataKeys),/SECRETVALUE/);
   assert.deepEqual(parseMessage('thing/product/RC/osd',Buffer.from('{"data":[1]}')).dataKeys,[]);
+});
+test('Pilot 2 HMS (event/method inside data, decimal id) as observed on a Mavic 3M',()=>{
+  const m=parseMessage('thing/product/AIR01/events',Buffer.from(JSON.stringify({
+    timestamp:1792528000000,
+    data:{event:'hms',method:'hms',output:{codes:[
+      {id:370147430,level:2,component_index:0,sensor_index:0},
+      {id:440536001,level:1,component_index:1,sensor_index:2,secret:'DANGER'},
+      {id:-5,level:2},{id:'0x1',level:2},null
+    ]}}
+  })));
+  assert.equal(m.method,'hms');
+  assert.deepEqual(m.hms,[
+    {code:'0x16100066',level:2,module:null,deviceType:null,imminent:null,componentIndex:0,sensorIndex:0},
+    {code:'0x1A420BC1',level:1,module:null,deviceType:null,imminent:null,componentIndex:1,sensorIndex:2}
+  ]);
+  assert.doesNotMatch(JSON.stringify(m),/DANGER/);
+});
+test('dock HMS keeps only component/sensor index from args and normalises the code',()=>{
+  const m=parseMessage('thing/product/Dock/events',Buffer.from(JSON.stringify({
+    method:'hms',data:{list:[{code:'0x1610abc',level:0,args:{component_index:1,sensor_index:0,x:'DANGER'}}]}
+  })));
+  assert.equal(m.hms[0].code,'0x01610ABC');
+  assert.equal(m.hms[0].componentIndex,1);
+  assert.doesNotMatch(JSON.stringify(m),/DANGER/);
+});
+test('events without HMS are not misread as HMS',()=>{
+  const m=parseMessage('thing/product/AIR01/events',Buffer.from(JSON.stringify({
+    data:{event:'other',method:'hms',output:{codes:[{id:1,level:2}]}}})));
+  assert.equal(m.method,null);
+  assert.equal(m.hms,null);
 });

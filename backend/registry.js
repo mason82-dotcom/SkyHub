@@ -2,6 +2,10 @@
 
 const { fresh, serial } = require('./dji');
 const { resolveDeviceModel, category } = require('./catalog');
+const { describeHms } = require('./hms-catalog');
+
+// HMS lists are pushed repeatedly while alerts are active; older lists are shown as stale.
+const HMS_FRESH_MS = 30000;
 
 function createRegistry(limit = 200) {
   const devices = new Map();
@@ -20,7 +24,11 @@ function createRegistry(limit = 200) {
       telemetryTimeVerified: d.telemetryTimeVerified,
       positionTimeVerified: d.positionTimeVerified,
       fresh: fresh(d.lastTelemetryAt, now),
-      positionFresh: fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry }
+      positionFresh: fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry },
+      hms: d.hms.map(alert => ({...alert,
+        text: describeHms(alert, {domain: d.model.domain, modeCode: d.modeCode})})),
+      lastHmsAt: d.lastHmsAt, hmsTimeVerified: d.hmsTimeVerified,
+      hmsFresh: Number.isFinite(d.lastHmsAt) && d.lastHmsAt <= now && now - d.lastHmsAt < HMS_FRESH_MS
     };
   }
   function ensure(sn) {
@@ -35,6 +43,7 @@ function createRegistry(limit = 200) {
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
       telemetryTimeVerified: null, positionTimeVerified: null,
+      hms: [], lastHmsAt: null, hmsTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
         heading:null,horizontalSpeed:null,verticalSpeed:null,
@@ -95,6 +104,12 @@ function createRegistry(limit = 200) {
           battery: message.telemetry.battery
         };
       }
+    }
+    // Each HMS message carries the complete list of currently active alerts.
+    if (Array.isArray(message.hms)) {
+      d.hms = message.hms.map(alert => ({...alert}));
+      d.lastHmsAt = observedAt;
+      d.hmsTimeVerified = message.timestamp !== null;
     }
     if (message.state) {
       if (message.state.modeCode !== null) d.modeCode = message.state.modeCode;

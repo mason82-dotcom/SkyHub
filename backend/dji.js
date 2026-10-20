@@ -88,15 +88,48 @@ function extractTopology(data) {
     }))
   };
 }
-function extractHms(data) {
-  if (!data || typeof data !== 'object' || !Array.isArray(data.list)) return null;
-  return data.list.slice(0,20).filter(x=>x && typeof x === 'object').map(item=>({
-    code:typeof item.code === 'string' && item.code.length<=80 ? item.code : null,
+// HMS code as upper-case 8-digit hex ("0x16100066"); DJI sends a hex string (dock)
+// or the same value as a decimal integer (Pilot 2).
+function hmsCode(value) {
+  if (Number.isSafeInteger(value) && value >= 0 && value <= 0xFFFFFFFF)
+    return '0x'+value.toString(16).toUpperCase().padStart(8,'0');
+  if (typeof value === 'string' && /^0x[0-9a-f]{1,8}$/i.test(value))
+    return '0x'+value.slice(2).toUpperCase().padStart(8,'0');
+  return null;
+}
+function hmsItem(code, item, args) {
+  return {
+    code,
     level:Number.isInteger(item.level) && item.level>=0 && item.level<=2 ? item.level : null,
     module:Number.isInteger(item.module) ? item.module : null,
-    deviceType:typeof item.device_type === 'string' && item.device_type.length<=40 ? item.device_type : null,
-    imminent:item.imminent===0 || item.imminent===1 ? item.imminent : null
-  }));
+    deviceType:typeof item.device_type === 'string' && /^\d{1,3}-\d{1,4}-\d{1,3}$/.test(item.device_type)
+      ? item.device_type : null,
+    imminent:item.imminent===0 || item.imminent===1 ? item.imminent : null,
+    componentIndex:integer(args.component_index,0,255),
+    sensorIndex:integer(args.sensor_index,0,255)
+  };
+}
+// Two shapes: dock {method:'hms', data:{list:[{code:'0x..',args:{...}}]}} and
+// Pilot 2 {data:{event:'hms', method:'hms', output:{codes:[{id:<int>,...}]}}}.
+// Only allowlisted fields are kept; unknown args never leave the parser.
+function extractHms(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  const pilot = data.event === 'hms' && data.method === 'hms' && data.output &&
+    typeof data.output === 'object' && Array.isArray(data.output.codes);
+  const list = pilot ? data.output.codes : data.list;
+  if (!Array.isArray(list)) return null;
+  return list.slice(0,50).filter(x=>x && typeof x === 'object').map(item=>{
+    // Each shape has exactly one valid code type: integer id (Pilot) or hex string (dock).
+    const code = pilot ? (Number.isSafeInteger(item.id) ? hmsCode(item.id) : null)
+      : (typeof item.code === 'string' ? hmsCode(item.code) : null);
+    if (!code) return null;
+    const args = !pilot && item.args && typeof item.args === 'object' ? item.args : item;
+    return hmsItem(code, item, args);
+  }).filter(Boolean);
+}
+function isHms(method, data) {
+  return method === 'hms' ||
+    Boolean(data && typeof data === 'object' && data.event === 'hms' && data.method === 'hms');
 }
 // Field names only (never values) to compare real firmware payloads with the parser.
 function dataKeys(data) {
@@ -116,7 +149,9 @@ function parseMessage(topic,raw) {
     throw new Error('Invalid DJI timestamp');
   }
   const data=envelope.data;
-  const method=typeof envelope.method==='string' ? envelope.method.slice(0,80) : null;
+  // Pilot 2 HMS carries its method inside data; expose it as 'hms' for events and shapes.
+  const method=typeof envelope.method==='string' ? envelope.method.slice(0,80) :
+    meta.channel==='events' && isHms(null,data) ? 'hms' : null;
   return {
     ...meta,method,
     timestamp:hasTimestamp ? envelope.timestamp : null,
@@ -126,10 +161,10 @@ function parseMessage(topic,raw) {
     telemetry:meta.channel==='osd' ? extractTelemetry(data) : null,
     state:meta.channel==='state' || meta.channel==='osd' ? extractState(data) : null,
     topology:meta.channel==='status' && method==='update_topo' ? extractTopology(data) : null,
-    hms:meta.channel==='events' && method==='hms' ? extractHms(data) : null
+    hms:meta.channel==='events' && isHms(method,data) ? extractHms(data) : null
   };
 }
 function fresh(last,now=Date.now()) {
   return Number.isFinite(last) && last<=now && now-last<15000;
 }
-module.exports={finite,integer,dataKeys,serial,domain,model,parseTopic,extractTelemetry,extractState,extractTopology,extractHms,parseMessage,fresh};
+module.exports={finite,integer,dataKeys,serial,domain,model,parseTopic,extractTelemetry,extractState,extractTopology,extractHms,hmsCode,parseMessage,fresh};
