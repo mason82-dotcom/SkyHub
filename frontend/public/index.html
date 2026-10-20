@@ -65,6 +65,15 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .health-panel dl{display:grid;grid-template-columns:auto 1fr;gap:5px 9px;margin:0;line-height:1.4}
 .health-panel dt{color:var(--muted)}.health-panel dd{margin:0;overflow-wrap:anywhere}
 .health-panel button{margin-top:9px;padding:4px 8px;font-size:11px;background:#203c50}
+.events-panel{margin-top:7px;border:1px solid var(--edge);border-radius:8px;background:#14263a;padding:7px 9px;font-size:12px}
+.events-panel summary{cursor:pointer;color:#bceafa;line-height:1.4}
+.events-panel[open] summary{margin-bottom:7px}
+.events-list{list-style:none;padding:0;margin:0;display:grid;gap:5px}
+.events-list li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid #2c4054}
+.events-list strong{font-size:11px;font-weight:600;overflow-wrap:anywhere}
+.events-list small{font-size:10px;white-space:nowrap}
+.events-note{margin:0;color:var(--muted);font-size:11px}
+.events-panel button{margin-top:8px;padding:4px 8px;font-size:11px;background:#203c50}
 @media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
 </style>
 </head>
@@ -102,6 +111,12 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       </dl>
       <button id="checkHealth" type="button" disabled>Jetzt prüfen</button>
     </details>
+    <details class="events-panel">
+      <summary>Geräteereignisse · <span id="eventsSummary">Verbinde …</span></summary>
+      <p id="eventsNote" class="events-note" role="status">Mit SkyHub verbinden.</p>
+      <ol id="eventsList" class="events-list"></ol>
+      <button id="refreshEvents" type="button" disabled>Aktualisieren</button>
+    </details>
     <label class="toggle"><input type="checkbox" id="showTrack" checked> Flugspur der letzten 60 Minuten anzeigen</label>
     <div id="trackFeedback" class="track-feedback"><span id="trackStatus" role="status">Flugspur wird nach Verbindung geladen.</span><button id="retryTracks" type="button" hidden disabled>Erneut laden</button></div>
     <h2>Geräte im Überblick</h2>
@@ -138,6 +153,8 @@ const records=new Map(),markers=new Map(),tracks=new Map();
 let socket=null,centered=false,authToken=null,selectedSn=null,connectAttempt=0;
 let trackLoadId=0,trackController=null;
 let healthController=null;
+let eventsController=null,eventsLoadId=0;
+const recentEvents=[];
 const expanded=new Set();
 let listState='loading',composingSearch=false;
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
@@ -374,6 +391,7 @@ function update(){
 async function connect(token=el('token').value.trim(),quiet=false){
   if(token!==null && !token){el('message').textContent='Zugriffstoken eingeben';return false;}
   const attempt=++connectAttempt;
+  resetEvents('Verbindung wird hergestellt.');
   cancelTrackLoad();
   setTrackStatus('Warte auf Verbindung.');
   if(socket){const previous=socket;socket=null;previous.disconnect();}
@@ -393,6 +411,7 @@ async function connect(token=el('token').value.trim(),quiet=false){
     listState='ready';
     update();
     authToken=token;
+    loadEvents();
     loadTracks();
     const label=token?'Live verbunden':'Live verbunden (Heimnetz)';
     const current=io({auth:token?{token}:{},reconnectionDelayMax:5000});
@@ -402,6 +421,7 @@ async function connect(token=el('token').value.trim(),quiet=false){
     current.on('disconnect',()=>{if(socket===current)el('message').textContent='Verbindung getrennt';});
     current.on('snapshot',list=>{if(socket!==current)return;records.clear();for(const d of list)records.set(d.sn,d);update();});
     current.on('device_update',d=>{if(socket!==current)return;records.set(d.sn,d);update();});
+    current.on('device_event',event=>{if(socket!==current)return;addRecentEvent(event);});
     return true;
   }catch(err){
     if(attempt!==connectAttempt)return false;
@@ -425,6 +445,82 @@ function setTrackStatus(message,error=false){
 function removeTrack(sn){
   const line=tracks.get(sn);
   if(line){line.remove();tracks.delete(sn);}
+}
+const eventChannels=new Set(['events','status','services_reply']);
+function normalizeDeviceEvent(event){
+  if(!event||typeof event!=='object'||typeof event.sn!=='string'||
+    !/^[\w.-]{1,100}$/.test(event.sn)||!eventChannels.has(event.channel)||
+    !Number.isFinite(event.at))return null;
+  const method=typeof event.method==='string'&&/^[\w.-]{1,64}$/.test(event.method)?event.method:null;
+  return {sn:event.sn,channel:event.channel,method,at:event.at};
+}
+function eventDescription(event){
+  if(event.channel==='events'&&event.method==='hms')return 'HMS-Meldung';
+  if(event.channel==='status'&&event.method==='update_topo')return 'Topologie gemeldet';
+  if(event.channel==='services_reply')return 'Dienstantwort empfangen';
+  return event.channel==='status'?'Statusmeldung':'Geräteereignis';
+}
+function renderEvents(emptyMessage='Keine Geräteereignisse empfangen.'){
+  const list=el('eventsList');
+  list.replaceChildren();
+  const visible=recentEvents.slice(0,8);
+  el('eventsSummary').textContent=visible.length?visible.length+' letzte':'keine';
+  el('eventsNote').hidden=visible.length>0;
+  el('eventsNote').textContent=emptyMessage;
+  for(const event of visible){
+    const row=document.createElement('li');
+    const title=document.createElement('strong');
+    const time=document.createElement('small');
+    title.textContent=eventDescription(event)+' · '+event.sn;
+    time.textContent=healthAge(event.at);
+    row.append(title,time);list.append(row);
+  }
+}
+function addRecentEvent(raw){
+  const event=normalizeDeviceEvent(raw);
+  if(!event)return;
+  const key=[event.sn,event.channel,event.method,event.at].join('|');
+  if(recentEvents.some(item=>[item.sn,item.channel,item.method,item.at].join('|')===key))return;
+  recentEvents.push(event);
+  recentEvents.sort((a,b)=>b.at-a.at);
+  recentEvents.length=Math.min(recentEvents.length,100);
+  renderEvents();
+}
+function resetEvents(message){
+  eventsLoadId++;
+  if(eventsController){eventsController.abort();eventsController=null;}
+  recentEvents.length=0;
+  renderEvents(message);
+  el('refreshEvents').disabled=true;
+}
+async function loadEvents(){
+  if(eventsController)return;
+  const id=++eventsLoadId;
+  const controller=new AbortController();
+  eventsController=controller;
+  el('refreshEvents').disabled=true;
+  if(recentEvents.length)el('eventsSummary').textContent=Math.min(recentEvents.length,8)+' letzte · aktualisiert …';
+  else renderEvents('Ereignisse werden geladen.');
+  const timeout=setTimeout(()=>controller.abort(),8000);
+  try{
+    const res=await fetch('/api/events',{headers:authToken?{Authorization:'Bearer '+authToken}:{},
+      cache:'no-store',signal:controller.signal});
+    if(!res.ok)throw new Error('event request failed');
+    const events=await res.json();
+    if(id!==eventsLoadId)return;
+    if(!Array.isArray(events))throw new Error('invalid event response');
+    for(const event of events)addRecentEvent(event);
+    renderEvents(recentEvents.length?'Keine weiteren Ereignisse.':'Noch keine Geräteereignisse empfangen.');
+  }catch(_){
+    if(id===eventsLoadId){
+      if(recentEvents.length){
+        el('eventsSummary').textContent=Math.min(recentEvents.length,8)+' letzte · Abruf fehlgeschlagen';
+      }else renderEvents('Ereignisse konnten nicht geladen werden.');
+    }
+  }finally{
+    clearTimeout(timeout);
+    if(id===eventsLoadId){eventsController=null;el('refreshEvents').disabled=false;}
+  }
 }
 function healthAge(value){
   if(!Number.isFinite(value)||value<=0)return 'noch nicht';
@@ -535,6 +631,7 @@ async function loadTracks({background=false}={}){
 el('showTrack').addEventListener('change',loadTracks);
 el('retryTracks').addEventListener('click',()=>loadTracks());
 el('checkHealth').addEventListener('click',loadHealth);
+el('refreshEvents').addEventListener('click',loadEvents);
 el('fitDevices').addEventListener('click',fitDevices);
 el('deviceSearch').addEventListener('compositionstart',()=>{composingSearch=true;});
 el('deviceSearch').addEventListener('compositionend',()=>{composingSearch=false;update();});

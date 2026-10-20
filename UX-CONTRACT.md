@@ -23,6 +23,12 @@
 - Der Spurspeicher nennt getrennt „nicht konfiguriert“, „Datenbank noch nicht bereit“, den letzten fehlgeschlagenen Schreibversuch oder bestätigte Spurpunkte seit Backend-Start. „Bereit“ ohne bestätigten Punkt ist kein Nachweis einer gespeicherten Flugspur.
 - Der Abruf läuft beim Laden und alle 30 Sekunden; „Jetzt prüfen“ wiederholt ihn manuell. Bei Abruffehlern werden frühere Erfolgsmeldungen durch „Diagnose nicht erreichbar“ und unbekannte Detailwerte ersetzt. Zeiten sind relativ und beziehen sich auf Backend-Ereignisse, nicht auf die DJI-Quellzeit.
 
+## Geräteereignisse
+
+- Die eingeklappte Ereignisliste nutzt `GET /api/events` nach erfolgreicher Verbindung und ergänzt den Verlauf über `device_event`. Sie zeigt höchstens acht der letzten Ereignisse mit Kennung, verständlicher Kategorie und Empfangsalter; Rohmeldungen und Payloads bleiben verborgen.
+- Erlaubte Kanäle sind `events`, `status` und `services_reply`. Doppelte Ereignisse werden zusammengeführt, der Seitenspeicher bleibt bei höchstens 100 Einträgen. Verbindungswechsel leeren den Verlauf; ein fehlgeschlagener Aktualisierungsabruf löscht bereits sichtbare Ereignisse nicht und kennzeichnet den Fehler.
+- HMS- und Topologie-Ereignisse sind Hinweise auf gemeldete Zustandsänderungen. Sie ersetzen nicht den separat angezeigten Telemetrie- oder Positionszeitpunkt.
+
 ## Geräteliste
 
 - Jede Karte zeigt zuerst Modell, Kennung, OSD-Zustand, Akku, relative Höhe, Position und die höchste aktive HMS-Warnung. Die vollständigen Messwerte, technischen Angaben und HMS-Einträge liegen in einer nativen Aufklappansicht. Ihr Zustand bleibt bei Telemetrie-Updates erhalten.
