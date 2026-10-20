@@ -46,4 +46,5 @@ Abschlussprüfung dieses Entwicklungsblocks: **123/123 Node-Tests**, **4/4 Pytho
 
 - Die lesende DJI-Map-Element-GET-Route bleibt per Feature-Flag deaktiviert. Sie bindet Workspace und Token, verarbeitet Filter parametriert und hat Regressionstests für Mehrfachparameter und sichere Beispiel-Defaults. Die PostGIS-Migration ist weiterhin nur ein Entwurf; produktive Datenbanken wurden nicht verändert.
 - Das Karten-Dashboard kennzeichnet jetzt sichtbare gespeicherte Flugspuren auch dann, wenn kein gültiger Gerätestandortmarker vorhanden ist. Strict-UI-Audit und ein isolierter Chromium-Test dieses Zustands bestanden.
+- Das CI prüft jetzt auch die Inline-JavaScript-Syntax des tatsächlich ausgelieferten Dashboards, ohne die Seite oder externe Dienste auszuführen. Regressionstests decken gültige, fehlerhafte und unvollständige Script-Tags ab.
 - Die überlappenden GitHub-Actions-Workflows wurden zu einem Workflow mit den bisherigen Prüfungen auf Feature- und Develop-Branches sowie Pull Requests zusammengeführt. Build, Smoke-Test, Python-Suite und Compose-Sicherheitsprüfungen laufen damit gemeinsam.

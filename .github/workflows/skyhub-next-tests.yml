@@ -34,9 +34,11 @@ jobs:
           node --check backend/topology-store.js
           node --check backend/hms-catalog.js
           node --check scripts/build-hms-texts.js
+          node --check scripts/check-dashboard-inline.js
           node --check scripts/pi-pilot-pair.js
           node --check frontend/public/pilot-login.js
           node --check scripts/pi-mqtt-osd-check.js
+          node scripts/check-dashboard-inline.js
       - name: Unit and isolated integration tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
       - name: Test local staging secret preparation
