@@ -26,8 +26,10 @@ jobs:
       - name: Assert SkyHub Next remains isolated from the existing Pi backend
         run: |
           node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const p=x.services.backend.ports; if(x.name!=="skyhub-next"||p.length!==1||Number(p[0].published)!==4001||Number(p[0].target)!==4000||p[0].host_ip!=="127.0.0.1"||x.services.emqx) process.exit(1);'
-      - name: Syntax-check read-only Pi preflight script
-        run: bash -n scripts/pi-preflight.sh
+      - name: Syntax-check read-only Pi diagnostics
+        run: |
+          bash -n scripts/pi-preflight.sh
+          bash -n scripts/pi-tls-audit.sh
       - name: Build the SkyHub Next container
         run: docker build -f backend/Dockerfile -t skyhub-next:test .
       - name: Smoke-test bundled runtime modules in the image
