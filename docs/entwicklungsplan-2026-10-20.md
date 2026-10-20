@@ -48,3 +48,7 @@ Abschlussprüfung dieses Entwicklungsblocks: **123/123 Node-Tests**, **4/4 Pytho
 - Das Karten-Dashboard kennzeichnet jetzt sichtbare gespeicherte Flugspuren auch dann, wenn kein gültiger Gerätestandortmarker vorhanden ist. Strict-UI-Audit und ein isolierter Chromium-Test dieses Zustands bestanden.
 - Das CI prüft jetzt auch die Inline-JavaScript-Syntax des tatsächlich ausgelieferten Dashboards, ohne die Seite oder externe Dienste auszuführen. Regressionstests decken gültige, fehlerhafte und unvollständige Script-Tags ab.
 - Die überlappenden GitHub-Actions-Workflows wurden zu einem Workflow mit den bisherigen Prüfungen auf Feature- und Develop-Branches sowie Pull Requests zusammengeführt. Build, Smoke-Test, Python-Suite und Compose-Sicherheitsprüfungen laufen damit gemeinsam.
+
+## Ergänzung: Isolierter PostGIS-Integrationsnachweis (21.10.2026)
+
+Für den offenen P1-Datenpfad ist ein dedizierter CI-Job mit echter PostgreSQL-15/PostGIS-Datenbank ergänzt. Er überprüft Schema- und Track-Migration, Zeitstempel, 0/0-Filter und Retention sowie die getrennte, noch nicht produktiv aktive DJI-Map-Element-Migration inklusive Workspace-Isolation und transaktionalem Rollback. Siehe [Testumfang und Schutzgrenzen](postgis-isolated-validation.md). Diese Änderung startet keine Pi-Container, verändert keine Live-DB und aktiviert die DJI-Kartenelementroute nicht. Der CI-Erfolg ist vor der Übernahme zu prüfen. Weiter offen: externe Dump-/Restore-Probe, Workspace-Rollenmodell und DJI-Pilot-2-Hardwaretest.
