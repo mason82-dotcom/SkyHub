@@ -13,6 +13,7 @@ test('DJI map element storage draft is workspace-scoped and separate from annota
   assert.match(ddl,/FOREIGN KEY \(workspace_id, group_id\)/);
   assert.match(ddl,/geometry JSONB NOT NULL/);
   assert.match(ddl,/group_type IN \(0, 1, 2\)/);
+  assert.match(ddl,/is_distributed BOOLEAN NOT NULL DEFAULT TRUE/);
   assert.match(ddl,/resource_type IN \(0, 1, 2\)/);
   assert.doesNotMatch(ddl,/ON DELETE\s+CASCADE/i);
   assert.doesNotMatch(ddl,/\bDROP\s+(TABLE|COLUMN)\b/i);

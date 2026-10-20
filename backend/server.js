@@ -21,6 +21,8 @@ const {createLanAccess}=require('./lan-access');
 const {createTrackPolicy}=require('./track-policy');
 const {createTrackStore,retentionDays}=require('./track-store');
 const {createTrackRecorder}=require('./track-recorder');
+const {createMapElementStore}=require('./map-element-store');
+const {createMapElementHandler}=require('./map-element-api');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -262,10 +264,23 @@ function pilotGuard(req,res){
 async function pilotAuthorized(req){
   const hdr=req.headers.authorization||'';
   const token=hdr.startsWith('Bearer ')?hdr.slice(7):'';
+  return pilotAuthorizedToken(token);
+}
+async function pilotAuthorizedToken(token){
+  if(typeof token!=='string')return false;
   const a=Buffer.from(token),b=Buffer.from(pilot.accessToken);
   if(a.length===b.length && crypto.timingSafeEqual(a,b))return true;
   if(redis.status!=='ready')return false;
   return Boolean(await pairing.verify(token));
+}
+if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'&&pilot.ready){
+  app.get('/map/api/v1/workspaces/:workspaceId/element-groups',createMapElementHandler({
+    store:pool?createMapElementStore(pool):null,
+    workspaceId:pilot.workspaceId,
+    authorize:pilotAuthorizedToken
+  }));
+}else if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'){
+  console.error('[map elements] disabled: Pilot 2 configuration is incomplete');
 }
 app.post('/api/pilot/bootstrap',async(req,res)=>{
   if(!pilotGuard(req,res))return;

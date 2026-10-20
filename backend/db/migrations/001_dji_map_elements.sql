@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS dji_map_element_groups (
     name VARCHAR(255) NOT NULL,
     group_type SMALLINT,
     is_locked BOOLEAN,
+    is_distributed BOOLEAN NOT NULL DEFAULT TRUE,
     create_time BIGINT,
     PRIMARY KEY (workspace_id, group_id),
     CHECK (group_type IS NULL OR group_type IN (0, 1, 2)),

@@ -7,7 +7,7 @@
 rpi5.fritz.box {
     # SKYHUB-NEXT PILOT ROUTES
     @skyhub_pilot {
-        path /pilot-login /pilot-login.js /api/pilot/*
+        path /pilot-login /pilot-login.js /api/pilot/* /map/api/v1/workspaces/*/element-groups
     }
     handle @skyhub_pilot {
         reverse_proxy 127.0.0.1:4001

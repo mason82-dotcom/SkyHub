@@ -25,7 +25,8 @@ Object.assign(process.env,{
   SKYHUB_PILOT_MQTT_URL:'mqtt://192.168.178.63:1884',
   SKYHUB_PILOT_MQTT_USER:'test-pilot-user',
   SKYHUB_PILOT_MQTT_PASSWORD:'test-pilot-password',
-  SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000'
+  SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000',
+  SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true'
 });
 delete process.env.DATABASE_URL;
 const {server,stop}=require('../server');
@@ -36,9 +37,10 @@ before(async()=>{
 });
 after(()=>stop());
 
-async function request(path,{method='GET',token,lan,https}={}){
+async function request(path,{method='GET',token,xAuthToken,lan,https}={}){
   const headers={};
   if(token)headers.authorization='Bearer '+token;
+  if(xAuthToken)headers['x-auth-token']=xAuthToken;
   if(lan)headers['x-forwarded-for']=lan;
   if(https)headers['x-forwarded-proto']='https';
   return fetch(base+path,{method,headers});
@@ -90,6 +92,18 @@ test('Pilot bootstrap requires HTTPS and the Pilot token',async()=>{
   assert.equal((await response.json()).license,LICENSE);
   const status=await request('/api/pilot/status');
   assert.equal((await status.text()).includes(LICENSE),false);
+});
+
+test('DJI map-group route requires HTTPS, the configured workspace and x-auth-token',async()=>{
+  const path='/map/api/v1/workspaces/123e4567-e89b-42d3-a456-426614174000/element-groups';
+  assert.equal((await request(path,{xAuthToken:PILOT_TOKEN})).status,403);
+  assert.equal((await request(path,{https:true})).status,401);
+  assert.equal((await request('/map/api/v1/workspaces/e3dea0f5-37f2-4d79-ae58-490af3228069/element-groups',
+    {https:true,xAuthToken:PILOT_TOKEN})).status,404);
+  assert.equal((await request(path+'?is_distributed=unknown',
+    {https:true,xAuthToken:PILOT_TOKEN})).status,400);
+  // DATABASE_URL is unset in this suite, so the guarded route cannot contact Postgres.
+  assert.equal((await request(path,{https:true,xAuthToken:PILOT_TOKEN})).status,503);
 });
 
 test('Socket.IO admits only the view token or a configured LAN viewer',async()=>{

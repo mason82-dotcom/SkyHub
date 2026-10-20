@@ -18,8 +18,8 @@ test('map element store reads one workspace and returns only normalized DJI fiel
     }]};
   }});
   const response=await store.readResponse(WORKSPACE);
-  assert.deepEqual(call[1],[WORKSPACE]);
   assert.match(call[0],/WHERE g\.workspace_id=\$1/);
+  assert.deepEqual(call[1],[WORKSPACE,null,true]);
   assert.deepEqual(response,{code:0,message:'success',data:[{
     id:'shared',name:'App Shared',type:2,is_lock:false,create_time:1637158501230,
     elements:[{id:'point',name:'Meldepunkt',create_time:1637158501231,
@@ -41,6 +41,19 @@ test('empty groups remain in the response for Pilot App Shared synchronization',
   assert.deepEqual(result.data,[{
     id:'shared',name:'App Shared',type:2,is_lock:false,elements:[]
   }]);
+});
+
+test('group and distribution filters are parameterized',async()=>{
+  let call;
+  const store=createMapElementStore({query:async(...args)=>{call=args;return {rows:[]};}});
+  const hostileId="shared' OR true --";
+  await store.readResponse(WORKSPACE,{groupId:hostileId,isDistributed:false});
+  assert.deepEqual(call[1],[WORKSPACE,hostileId,false]);
+  assert.match(call[0],/g\.group_id=\$2/);
+  assert.match(call[0],/g\.is_distributed=\$3/);
+  assert.doesNotMatch(call[0],/shared.*OR true/);
+  await assert.rejects(store.readResponse(WORKSPACE,{groupId:['shared']}),
+    /Invalid DJI map group ID/);
 });
 
 test('invalid workspace IDs fail before querying the database',async()=>{
