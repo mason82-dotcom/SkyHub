@@ -366,6 +366,7 @@
   });
   el('retry').addEventListener('click',retryMqtt);
   el('diagnose').addEventListener('click',refreshDiagnostics);
+  el('diagnose').disabled=false;
   if(el('rebuild'))el('rebuild').addEventListener('click',rebuildSession);
   if(el('pairNew'))el('pairNew').addEventListener('click',startPairing);
   if(el('unpair'))el('unpair').addEventListener('click',()=>{

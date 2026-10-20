@@ -6,6 +6,8 @@
 
 **Pi-Iststand am 20.10.2026:** Das eigene Compose-Projekt `skyhub-next` läuft bereits auf `127.0.0.1:4001` mit separatem Postgres und Redis. Der lesend abgefragte Health-Endpunkt meldete MQTT auf Port 1884 verbunden und abonniert sowie verwertbare OSD-Nachrichten. `skyhub_backend` erschien nicht in der laufenden Containerliste. Das ist eine Momentaufnahme; vor Betriebsänderungen den Zustand erneut prüfen. [Bestandsaufnahme und Entwicklungsplan](docs/entwicklungsplan-2026-10-20.md).
 
+Für die weitere Karten- und Pilot-2-Entwicklung dient die [DJI-Referenz und Umsetzungsreihenfolge](docs/dji-reference-roadmap.md). Das aktuelle Dashboard bleibt lesend; gemeinsame DJI-Kartenelemente sind noch nicht implementiert.
+
 ## Sicherheitsmodell
 
 - SKYHUB_VIEW_TOKEN ist für Telemetrie-API und Socket.IO erforderlich. Die optionale, eng begrenzte Heimnetz-Ausnahme erlaubt lesende GET-Abfragen und den Live-Socket ohne Token; Admin-Routen bleiben ausgeschlossen.

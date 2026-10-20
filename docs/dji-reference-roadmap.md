@@ -1,0 +1,29 @@
+# DJI Cloud API als Referenz für SkyHub Next
+
+Stand: 21.10.2026. Ausgangspunkt ist die [DJI Tutorial Reading Map](https://developer.dji.com/doc/cloud-api-tutorial/en/tutorial-map.html#tutorial-overview). Diese Einstiegsseite ist ein Wegweiser durch die Cloud API, keine Spezifikation für Kartenelemente. Für konkrete Verträge gelten die jeweils verlinkten DJI-Funktions- und API-Seiten. SkyHub Next übernimmt daraus Funktionen gezielt für den Root-Stack; `stacks/legacy-skyhub/` bleibt Referenz.
+
+## Fachlicher Abgleich
+
+| DJI-Referenz | Konsequenz für SkyHub Next | Stand |
+| --- | --- | --- |
+| [Cloud-Architektur](https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-architecture.html): Gateway, Pilot 2 bzw. Dock und Cloud kommunizieren über MQTT, HTTPS und WebSocket. | Gerätetopologie und Telemetrie getrennt von Benutzeraktionen behandeln. Der Browser erhält nur freigegebene Daten. | MQTT-OSD und lesendes Dashboard vorhanden. |
+| [Pilot-2-Onboarding](https://developer.dji.com/doc/cloud-api-tutorial/en/feature-set/pilot-feature-set/pilot-access-to-cloud.html): Lizenz, Token, Workspace und Cloud-Modul sind Voraussetzungen. | Diagnose muss „Webseite geladen“, „Pilot verbunden“ und „Telemetrie empfangen“ klar unterscheiden. | Teilweise vorhanden; Hardware-Abnahme offen. |
+| [Kartenelemente](https://developer.dji.com/doc/cloud-api-tutorial/en/feature-set/pilot-feature-set/pilot-map-elements.html): Pilot und Web teilen Punkte, Linien und Flächen im Workspace. | Kartenbedienung aus Leitstellensicht gestalten: Position finden, Frische erkennen, gemeinsame Elemente später gezielt ein- und ausblenden. WGS84-Koordinaten beibehalten. | Gerätepositionen und Track lesend; noch kein Elementabgleich. |
+| [Elementgruppen abrufen](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/https/map-elements/obtain.html), [erstellen](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/https/map-elements/create.html), [aktualisieren](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/https/map-elements/update.html), [löschen](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/https/map-elements/delete.html) und [WebSocket-Meldungen](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/websocket/map-elements/message-push.html). | Pilot-kompatible IDs, Gruppen, GeoJSON, Berechtigungen und Ereignisreihenfolge als eigenen Adapter modellieren. | Nicht implementiert. `map_annotations` ist noch kein DJI-kompatibler Elementspeicher. |
+| [Medienverwaltung](https://developer.dji.com/doc/cloud-api-tutorial/en/feature-set/pilot-feature-set/pilot-media-management.html) und [Wayline-Verwaltung](https://developer.dji.com/doc/cloud-api-tutorial/en/feature-set/pilot-feature-set/pilot-wayline-management.html). | Upload, Objektablage, Wiederanlauf und Missionsstatus separat entwerfen und an unterstützter Hardware prüfen. | MinIO optional und derzeit inaktiv; keine Medien- oder Wayline-API. |
+
+## Priorisierte Umsetzung
+
+1. **P1 · Lesende Einsatzkarte.** Echte und zuletzt gemeldete Positionen unterscheiden, Geräte aus der Liste auf der Karte finden, alle gültigen Positionen einpassen, fehlende/ungültige Koordinaten erklären und historische `(0, 0)`-Trackpunkte nicht darstellen. Der erste Schritt ist im statischen Dashboard umgesetzt. Karteninteraktion bleibt lesend; es werden keine Befehle an Fluggeräte gesendet.
+2. **P1 · DJI-Adapter entwerfen und isoliert testen.** Workspace und App-Shared-Gruppe, Element-IDs, GeoJSON-Validierung, Rollen, Sichtbarkeit und Synchronisationsereignisse als expliziten Vertrag festlegen. Die existierende `map_annotations`-Tabelle darf nicht stillschweigend als DJI-Elementgruppe behandelt werden. Migration und Wiederanlauf zuerst gegen eine separate Testdatenbank prüfen.
+3. **P2 · Gemeinsame Kartenelemente.** Erst nach gesonderter Freigabe von Schreibrechten und Pilot-Hardwaretest: GET der Gruppen, serverseitige Create/Update/Delete-Prüfung, WebSocket-Verteilung und Konflikt-/Offline-Verhalten. Der lesende Heimnetzzugriff erhält keine Schreibrechte.
+4. **P3 · Medien und Missionen.** MinIO-Speicherort, Backup, Zugriff und Upload-Pfad klären; danach Medienbibliothek und WPML-Lebenszyklus getrennt entwickeln. Keine Mission aus einer bloßen UI-Aktion starten und keinen Status als erfolgreich anzeigen, bevor die Geräteantwort ihn bestätigt.
+
+## UI-Leitlinien
+
+- Die Karte zeigt nur Koordinaten mit gültigem Wertebereich und schließt `(0, 0)` aus. Frische, letzte Meldung und fehlende Position bleiben verständliche Textzustände.
+- Karte und Geräteliste verweisen auf dieselbe Gerätekennung. Jede reine Kartenaktion hat eine bedienbare Alternative in der Liste.
+- Warnungen behalten ihre fachliche Bedeutung; Farbe allein transportiert keinen Alarm oder Verbindungsstatus. Tastaturfokus und schmale Displays bleiben nutzbar.
+- Schreibaktionen für gemeinsame Elemente erhalten einen eigenen Rechte- und Bestätigungsfluss. Die aktuelle Monitoring-Seite suggeriert keine verfügbaren Flug- oder Missionsbefehle.
+
+Die DJI-Seiten beschreiben Protokoll und Interaktionen, aber liefern keine unmittelbare Freigabe für SkyHub-Next-Deployments, MQTT-ACL-Änderungen, Medienaktivierung oder Änderungen an produktiven Daten.

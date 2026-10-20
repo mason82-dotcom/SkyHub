@@ -1,0 +1,7 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["frontend/public"],
+  "locale": "de-DE",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Form"]
+}
