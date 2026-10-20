@@ -323,3 +323,16 @@ Texte: `backend/data/hms-texts.json`, erzeugt mit
 `node scripts/build-hms-texts.js <hms.json>` aus der `hms.json` der DJI
 Cloud-API-Demo (MIT, siehe `backend/data/HMS-LICENSE.txt`). Im Flug
 (`mode_code` 3–12, 15–17) wird die `_in_the_sky`-Variante verwendet.
+
+## Dashboard im Heimnetz (192.168.178.0/24)
+
+    sudo bash scripts/pi-caddy-lan-dashboard.sh apply
+
+Ergänzt im bestehenden Caddy eine Site auf **Port 4443**
+(`https://rpi5.fritz.box:4443` bzw. `https://192.168.178.63:4443`, Caddy-interne CA).
+Nur Absender aus `192.168.178.0/24` werden an `127.0.0.1:4001` weitergeleitet,
+alle anderen (auch Tailscale) erhalten 403. `/api/pilot-admin/*` bleibt gesperrt:
+Ein View-Token darf nicht reichen, um ein Gerät zu koppeln und so DJI-Lizenz und
+Pilot-MQTT-Zugangsdaten zu erhalten. Das Backend bleibt auf Loopback gebunden.
+Sicherung und Validierung vor dem Reload, automatischer Rückfall bei Fehlern;
+`rollback` stellt den vorherigen Stand her, `check` testet ohne Änderungen.
