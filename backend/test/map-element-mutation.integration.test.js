@@ -75,6 +75,17 @@ test('isolated PostgreSQL CAS, group lock, workspace boundaries and atomic audit
     assert.deepEqual(rows.rows.map(r=>[r.old_revision,r.new_revision]),
       [[null,'1'],['1','2'],['2',null]]);
     assert.ok(rows.rows.every(r=>r.actor_id==='operator-ci'));
+    // Database triggers protect append-only history from ordinary application edits.
+    await assert.rejects(client.query(
+      "UPDATE dji_map_element_audit SET actor_id='tampered' WHERE workspace_id=$1",
+      [A]),{code:'42501'});
+    await assert.rejects(client.query(
+      'DELETE FROM dji_map_element_audit WHERE workspace_id=$1',[A]),{code:'42501'});
+    await assert.rejects(client.query(
+      'TRUNCATE TABLE dji_map_element_audit'),{code:'42501'});
+    const stillAudited=await client.query(
+      'SELECT count(*)::integer AS n FROM dji_map_element_audit WHERE workspace_id=$1',[A]);
+    assert.equal(stillAudited.rows[0].n,3);
     const remaining=await client.query(
       'SELECT count(*)::integer AS n FROM dji_map_elements WHERE workspace_id=$1',[A]);
     assert.equal(remaining.rows[0].n,0);
