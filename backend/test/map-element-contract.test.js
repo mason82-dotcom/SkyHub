@@ -28,6 +28,17 @@ test('DJI group response normalizes WGS84 point, line and unclosed polygon for r
   assert.equal(input.data[0].elements[2].resource.content.geometry.coordinates[0].length,3);
 });
 
+test('polygon holes are preserved and open rings close only in the normalized copy',()=>{
+  const outer=[[0,0],[10,0],[10,10],[0,10],[0,0]];
+  const hole=[[2,2],[3,2],[3,3]];
+  const input=response([item('with-hole',feature('Polygon',[outer,hole]))]);
+  const result=parseMapElementGroups(input);
+  const rings=result.groups[0].elements[0].geometry.coordinates;
+  assert.equal(result.rejectedElements,0);
+  assert.deepEqual(rings,[outer,[[2,2],[3,2],[3,3],[2,2]]]);
+  assert.equal(input.data[0].elements[0].resource.content.geometry.coordinates[1].length,3);
+});
+
 test('invalid elements are isolated without losing valid elements or exposing raw payloads',()=>{
   const input=response([item('valid',feature('Point',[8.4,49.1])),
     item('bad-latitude',feature('Point',[8.4,91])),
@@ -64,4 +75,25 @@ test('implicitly closed polygons count the appended coordinate toward the vertex
   const result=parseMapElementGroups(response([item('oversized-ring',feature('Polygon',[ring]))]));
   assert.equal(result.rejectedElements,1);
   assert.equal(result.groups[0].elements.length,0);
+});
+
+test('polygon vertex budget accumulates across rings and accepts exactly 2000 normalized vertices',()=>{
+  const outer=[[0,0],[10,0],[10,10],[0,10],[0,0]];
+  const makeHole=size=>{
+    const ring=[[2,2],[3,2],[3,3]];
+    while(ring.length<size)ring.push([2,3]);
+    return ring;
+  };
+  const atLimit=parseMapElementGroups(response([
+    item('at-limit',feature('Polygon',[outer,makeHole(1994)]))
+  ]));
+  assert.equal(atLimit.rejectedElements,0);
+  assert.equal(atLimit.groups[0].elements[0].geometry.coordinates
+    .reduce((total,ring)=>total+ring.length,0),2000);
+
+  const overLimit=parseMapElementGroups(response([
+    item('over-limit',feature('Polygon',[outer,makeHole(1995)]))
+  ]));
+  assert.equal(overLimit.rejectedElements,1);
+  assert.equal(overLimit.groups[0].elements.length,0);
 });
