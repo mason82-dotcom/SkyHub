@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>SkyHub Next – DJI Pilot 2</title>
+  <style>
+    :root{font-family:system-ui,"Segoe UI",sans-serif;color-scheme:dark}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1220;color:#f1f5f9}
+    main{max-width:720px;margin:0 auto;padding:28px 20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .tag{font-size:12px;background:#203047;border-radius:18px;padding:7px 11px;color:#b5dbfa}
+    h1{font-size:24px;margin:24px 0 8px}
+    p{line-height:1.55;color:#c1cad9}
+    .panel{background:#152238;border:1px solid #31435a;border-radius:14px;padding:20px;margin:20px 0}
+    .detail{font-size:14px;color:#9eb2c9}
+    label{display:block;margin:20px 0 8px;font-size:14px}
+    input{width:100%;padding:12px 14px;border:1px solid #64748b;border-radius:8px;background:#0b1527;color:white;font-size:16px}
+    button{border:0;border-radius:8px;padding:12px 20px;background:#38bdf8;color:#071321;font-size:16px;font-weight:700;margin-top:14px}
+    button:disabled{background:#627083;color:#e2e8f0;opacity:.65}
+    #result{white-space:pre-wrap;overflow-wrap:anywhere;color:#d7e5f4;min-height:50px;font-size:14px}
+    .warning{color:#ffda85}
+  </style>
+</head>
+<body>
+<main>
+  <header><strong>SkyHub <span style="color:#38bdf8">Next</span></strong><span class="tag">DJI Pilot 2 · Cloud API</span></header>
+  <h1>Drittanbieter-Cloud-Verbindung</h1>
+  <p>Diese Seite stellt die DJI-Lizenzprüfung und den MQTT-Verbindungsaufbau bereit, sobald die Plattform sicher konfiguriert ist. Eine geladene Webseite ist <strong>noch keine MQTT-Verbindung</strong>.</p>
+  <section class="panel">
+    <strong id="headline">Konfiguration wird geprüft ...</strong>
+    <p id="details" class="detail"></p>
+    <label for="access">SkyHub-Pilot-Zugangstoken</label>
+    <input id="access" type="password" autocomplete="off" spellcheck="false" placeholder="Pilot-Zugangstoken eingeben">
+    <button id="start" type="button" disabled>DJI Cloud verbinden</button>
+    <p class="warning" id="security">Die Übermittlung der Zugangsdaten erfordert HTTPS.</p>
+    <p id="result" role="status" aria-live="polite"></p>
+  </section>
+  <p class="detail">Die Konfiguration verwendet ausschließlich den bestehenden EMQX-Broker auf Raspberry-Pi-Port 1884. Die Übernahme des bisherigen SkyHub-Dienstes auf Port 4000 erfolgt erst nach einem getrennten Freigabetest.</p>
+</main>
+<script src="/pilot-login.js" defer></script>
+</body>
+</html>
