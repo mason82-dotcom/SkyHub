@@ -4,7 +4,7 @@ Stand: 2026-10-21. Zielversion des SkyHub-Projekts: DJI Cloud API 1.18.
 
 ## Referenz und Abdeckungsstatus
 
-Die quellseitig überprüfbaren MQTT-Property-Tabellen wurden aus
+Die drei ursprünglichen, quellseitig überprüfbaren MQTT-Property-Tabellen wurden aus
 [`dji-sdk/Cloud-API-Doc`](https://github.com/dji-sdk/Cloud-API-Doc)
 mit festem Commit `4ec6b0c7f9472aeb09a0a47949855d19c473ea07` extrahiert.
 Daraus stammt der maschinenlesbare Katalog
@@ -26,13 +26,21 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
 | Matrice 4T | `0/99/1` | `aircraftCommon`, 162 Pfade | **vorläufiges** allgemeines Aircraft-Profil; DJI-Modellkennung offiziell |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
-| RC Plus 2 Enterprise | `2/174/0` | `rcPro`, 48 Pfade | **vorläufiges** RC-Basisprofil; DJI-Modellkennung offiziell |
+| RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; Hardwareprüfung ausstehend |
 
 Die Felderzahlen enthalten verschachtelte `struct`- und `array`-Pfade,
 also keine Garantie für ebenso viele gleichzeitig sendende Messwerte.
 Die vollständigen Quellreferenzen samt Datei-SHA befinden sich im Katalog.
-Insbesondere die [DJI RC Plus 2 Property-Referenz](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html)
-ist für einen zukünftigen exakten gerätespezifischen Import relevant.
+Das zusätzliche RC-Plus-2-Profil stammt aus der offiziellen
+[DJI RC Plus 2 Property-Referenz](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html)
+mit Seitenstand 03.09.2025 (am 21.10.2026 überprüft). Anders als die drei archivierten
+GitHub-Profile ist die Webreferenz nicht auf einen Git-Blob gepinnt. Die neu
+abgeglichenen Felder sind `wireless_link.4g_link_state`,
+`wireless_link.4g_quality`, `wireless_link.4g_uav_quality`,
+`wireless_link.4g_gnd_quality`, `wireless_link.4g_freq_band`,
+`cloud_control_auth` (absichtlich redigiert) und `drc_state`.
+Das im älteren RC-Pro-Profil enthaltene `country` fehlt in dieser
+RC-Plus-2-Seite und wurde nicht ungeprüft übernommen.
 
 ## Implementierte Verarbeitung
 
