@@ -37,6 +37,7 @@ function readKmz(buffer){
     directoryOffset+directorySize!==eocd)throw Error('Unsupported KMZ ZIP directory');
   const names=new Set(),records=new Map();
   let pos=directoryOffset,total=0;
+  const occupied=[];
   for(let i=0;i<count;i++){
     if(pos+46>eocd||buffer.readUInt32LE(pos)!==0x02014b50)
       throw Error('Corrupted KMZ central directory');
@@ -67,24 +68,34 @@ function readKmz(buffer){
     if(total>MAX_TOTAL)throw Error('KMZ uncompressed size limit');
     if(local+30>directoryOffset||buffer.readUInt32LE(local)!==0x04034b50)
       throw Error('Invalid local ZIP header');
+    if(buffer.readUInt16LE(local+6)!==flag)throw Error('ZIP flags disagree');
+    if((flag&0x8)===0&&(
+      buffer.readUInt32LE(local+14)!==crc||
+      buffer.readUInt32LE(local+18)!==compressed||
+      buffer.readUInt32LE(local+22)!==uncompressed))
+      throw Error('ZIP local/central size or CRC mismatch');
     const localNameLen=buffer.readUInt16LE(local+26);
     const localExtraLen=buffer.readUInt16LE(local+28);
     const dataOffset=local+30+localNameLen+localExtraLen;
     if(dataOffset+compressed>directoryOffset)throw Error('ZIP entry overlaps directory');
+    const endOfEntry=dataOffset+compressed;
+    if(occupied.some(([a,b])=>local<b&&endOfEntry>a))
+      throw Error('Overlapping ZIP members');
+    occupied.push([local,endOfEntry]);
     const localName=DECODER.decode(buffer.subarray(local+30,local+30+localNameLen));
     if(localName!==name||buffer.readUInt16LE(local+8)!==method)
       throw Error('ZIP headers disagree');
-    if(name==='wpmz/template.kml'||name==='wpmz/waylines.wpml'||
-       name==='template.kml'||name==='waylines.wpml'){
-      if(uncompressed>2*1024*1024)throw Error('WPML XML size limit');
-      const bytes=buffer.subarray(dataOffset,dataOffset+compressed);
-      let plain;
-      try{plain=method===0?Buffer.from(bytes):zlib.inflateRawSync(bytes,{maxOutputLength:2*1024*1024});}
-      catch{throw Error('Corrupted or oversized compressed XML');}
-      if(plain.length!==uncompressed||crc32(plain)!==crc)
-        throw Error('ZIP CRC32/length mismatch');
-      records.set(name,DECODER.decode(plain));
-    }
+    // Verify ALL members, including opaque resources, before trusting their metadata.
+    // A corrupt or modified res/ item can never be silently skipped.
+    const isXml=name===TEMPLATE||name===WAYLINES||name==='template.kml'||name==='waylines.wpml';
+    if(isXml&&uncompressed>2*1024*1024)throw Error('WPML XML size limit');
+    const bytes=buffer.subarray(dataOffset,dataOffset+compressed);
+    let plain;
+    try{plain=method===0?Buffer.from(bytes):zlib.inflateRawSync(bytes,{maxOutputLength:uncompressed+1});}
+    catch{throw Error('Corrupted or oversized KMZ member');}
+    if(plain.length!==uncompressed||crc32(plain)!==crc)
+      throw Error('ZIP CRC32/length mismatch');
+    if(isXml)records.set(name,DECODER.decode(plain));
     pos=end;
   }
   if(pos!==eocd)throw Error('Invalid ZIP directory length');
