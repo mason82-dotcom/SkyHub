@@ -4558,6 +4558,142 @@
             1
           ],
           "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_ui_resource",
+          "type": "array",
+          "access": "r",
+          "push": 1,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_ui_resource.psdk_index",
+          "type": "int",
+          "min": 0,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_ui_resource.psdk_ready",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_ui_resource.object_key",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values",
+          "type": "array",
+          "access": "r",
+          "push": 1,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.psdk_index",
+          "type": "int",
+          "min": 0,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.psdk_name",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.psdk_sn",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.psdk_version",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.psdk_lib_version",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker",
+          "type": "struct",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.work_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.play_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.play_volume",
+          "type": "int",
+          "min": 0,
+          "max": 100,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.system_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            99
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.play_file_name",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.speaker.play_file_md5",
+          "type": "text",
+          "privacy": "redacted",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.values",
+          "type": "array",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.values.index",
+          "type": "int",
+          "min": 0,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "psdk_widget_values.values.value",
+          "type": "int",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
         }
       ],
       "dynamicPayload": {
@@ -4575,7 +4711,8 @@
           "zoom_factor"
         ],
         "confidence": "generic-aircraft-only; Matrice 4T applicability unconfirmed"
-      }
+      },
+      "extensionNotes": "PSDK status, widget and speaker paths are generic 2024 Pilot-to-Cloud aircraft candidates, not confirmed Matrice 4T capabilities. Device/file names, serials and object keys are always redacted."
     }
   },
   "devices": {
