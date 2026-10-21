@@ -127,6 +127,14 @@ test('unrecognized S3 image/other formats are tallied using fixed privacy-safe c
   });
   assert.equal(report.unrecognizedDjiPrefixedImages,2);
   assert.equal(report.unrecognizedOtherImages,4);
+  assert.deepEqual(report.unrecognizedImagesByPrefix,{
+    djiPrefixed:{JPEG:1,TIFF:1,DNG:0,PNG:0},
+    other:{JPEG:1,TIFF:1,DNG:1,PNG:1}
+  });
+  assert.equal(Object.values(report.unrecognizedImagesByPrefix.djiPrefixed)
+    .reduce((n,x)=>n+x,0),report.unrecognizedDjiPrefixedImages);
+  assert.equal(Object.values(report.unrecognizedImagesByPrefix.other)
+    .reduce((n,x)=>n+x,0),report.unrecognizedOtherImages);
   assert.equal(Object.values(report.unrecognizedFormats).reduce((n,x)=>n+x,0),
     report.unrecognized);
   assert.doesNotMatch(JSON.stringify(report),
@@ -143,4 +151,28 @@ test('unknown format histogram reports only bounded labels, never attacker-defin
   assert.equal(report.unrecognizedFormats.NO_EXTENSION,1);
   assert.equal(report.unrecognizedDjiPrefixedImages,0);
   assert.doesNotMatch(JSON.stringify(report),/HIDDENPAYLOAD|XYZ|noext-PII|PRIVATE/);
+});
+
+
+test('M3M unknown filename cross-tab stays consistent with format totals for all four image types',()=>{
+  const input=[
+    'DJI_UNKNOWN.JPG','DJI_OTHER.TIF','DJI_BLA.DNG','DJI_BLA.PNG',
+    'OTHER.JPG','OTHER.TIFF','OTHER.DNG','OTHER.PNG',
+    'OTHER.KMZ','OTHER.JPG'
+  ];
+  const report=inventoryMediaNames(input);
+  for(const key of ['JPEG','TIFF','DNG','PNG']){
+    assert.equal(
+      report.unrecognizedImagesByPrefix.djiPrefixed[key]+
+      report.unrecognizedImagesByPrefix.other[key],
+      report.unrecognizedFormats[key]
+    );
+  }
+  assert.equal(report.unrecognizedDjiPrefixedImages,4);
+  assert.equal(report.unrecognizedOtherImages,5);
+  assert.equal(report.unrecognizedFormats.KMZ,1);
+  assert.deepEqual(Object.keys(report.unrecognizedImagesByPrefix).sort(),[
+    'djiPrefixed','other'
+  ]);
+  assert.doesNotMatch(JSON.stringify(report),/DJI_UNKNOWN|DJI_OTHER|OTHER.JPG|PRIVATE/);
 });
