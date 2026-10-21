@@ -44,6 +44,8 @@ function cleanText(value, path, length) {
   if (value.length > limit) return undefined;
   if (path.endsWith('firmware_version') && /^[A-Za-z0-9_.-]{1,64}$/.test(value)) return value;
   if (path === 'country' && /^[A-Za-z]{2,3}$/.test(value)) return value;
+  // Version only, never arbitrary payload strings or identifiers.
+  if (path === 'wpmz_version' && /^\d{1,4}(?:\.\d{1,4}){1,3}$/.test(value)) return value;
   if ((path.endsWith('payload_index') || path.endsWith('camera_index')) &&
       /^\d{1,4}-\d{1,4}-\d{1,2}$/.test(value)) return value;
   if (path.endsWith('.video_index') && /^\d{1,3}$/.test(value)) return value;
@@ -57,6 +59,51 @@ function cleanText(value, path, length) {
 }
 const MAX_ARRAY_ITEMS = 8;
 const MAX_DEPTH = 7;
+const DYNAMIC_PAYLOAD_KEY = /^\d{1,3}-\d{1,3}-\d{1,2}$/;
+// The aircraft reference documents this dynamically keyed OSD struct.
+// Its key is a payload type index, not an aircraft serial number.
+const DYNAMIC_GIMBAL_FIELDS = Object.freeze({
+  gimbal_pitch:{type:'double',min:-180,max:180},
+  gimbal_roll:{type:'double',min:-180,max:180},
+  gimbal_yaw:{type:'double',min:-180,max:180},
+  measure_target_longitude:{type:'double',min:-180,max:180},
+  measure_target_latitude:{type:'double',min:-90,max:90},
+  measure_target_altitude:{type:'double'},
+  measure_target_distance:{type:'double',min:0},
+  measure_target_error_state:{type:'enum_int',enum:[0,1,2,3]},
+  zoom_factor:{type:'double',min:0}
+});
+function dynamicPayloadEntry(raw,key) {
+  if (!DYNAMIC_PAYLOAD_KEY.test(key) || !isObject(raw)) return undefined;
+  const out=Object.create(null);
+  out.payload_index=key;
+  let count=0;
+  for (const [field,spec] of Object.entries(DYNAMIC_GIMBAL_FIELDS)) {
+    if (!Object.hasOwn(raw,field)) continue;
+    const parsed=cleanValue(raw[field],spec,field,1);
+    if (parsed!==undefined) {out[field]=parsed;count++;}
+  }
+  // A key by itself is not an observed gimbal value.
+  if (!count) return undefined;
+  const lat=out.measure_target_latitude,lon=out.measure_target_longitude;
+  if ((lat!==undefined || lon!==undefined) &&
+      (lat===undefined || lon===undefined || (lat===0 && lon===0))) {
+    delete out.measure_target_latitude;
+    delete out.measure_target_longitude;
+  }
+  return out;
+}
+function dynamicPayloadEntries(data) {
+  if (!isObject(data)) return [];
+  const out=[];
+  for (const key of Object.keys(data)) {
+    if (!DYNAMIC_PAYLOAD_KEY.test(key)) continue;
+    const valid=dynamicPayloadEntry(data[key],key);
+    if (valid) out.push(valid);
+    if (out.length>=MAX_ARRAY_ITEMS) break;
+  }
+  return out;
+}
 
 function cleanValue(value, node, path, depth) {
   if (depth > MAX_DEPTH) return undefined;
@@ -102,8 +149,10 @@ function cleanValue(value, node, path, depth) {
     // bound (-1.4E-45) for GPS longitude/latitude. It is not a valid WGS84
     // geographic bound and would reject the entire Western/Southern world.
     // Validate geographical coordinates explicitly instead.
-    if (path === 'latitude') return value >= -90 && value <= 90 ? value : undefined;
-    if (path === 'longitude') return value >= -180 && value <= 180 ? value : undefined;
+    if (['latitude','home_latitude','measure_target_latitude'].includes(path))
+      return value >= -90 && value <= 90 ? value : undefined;
+    if (['longitude','home_longitude','measure_target_longitude'].includes(path))
+      return value >= -180 && value <= 180 ? value : undefined;
     if (Number.isFinite(node.min) && value < node.min) return undefined;
     if (Number.isFinite(node.max) && value > node.max) return undefined;
     // Where DJI explicitly enumerates values, do not treat unknown codes
@@ -149,12 +198,27 @@ function sanitizeKnownProperties(data, channel) {
   const out = Object.create(null);
   for (const tree of Object.values(trees))
     mergeKnown(out, sanitizeProfile(data, tree, channel));
+  // Only a documented aircraft model may expose this later; the superset
+  // is still sanitized and never forwards arbitrary numeric-looking keys.
+  if (channel==='osd') {
+    const payloads=dynamicPayloadEntries(data);
+    if (payloads.length) out.payload_gimbals=payloads;
+  }
   return out;
 }
 function sanitizeDeviceProperties(known, channel, model) {
   const profile = deviceProfile(model);
   if (!profile) return {};
-  return sanitizeProfile(known, trees[profile.name], channel);
+  const result=sanitizeProfile(known, trees[profile.name], channel);
+  if (channel==='osd' && profile.name==='matrice4T' &&
+      Array.isArray(known?.payload_gimbals)) {
+    // Defend the public helper against unsanitized direct callers as well.
+    const items=known.payload_gimbals.slice(0,MAX_ARRAY_ITEMS)
+      .map(item=>dynamicPayloadEntry(item,item?.payload_index))
+      .filter(Boolean);
+    if (items.length) result.payload_gimbals=items;
+  }
+  return result;
 }
 // Field inventory must not report intentionally censored identifiers as
 // missing telemetry. This reports capability, never an observed field value.
@@ -185,4 +249,5 @@ function fieldDefinitions(model) {
     source:source.source,fields:source.fields};
 }
 module.exports = {deviceProfile,fieldDefinitions,fieldAvailabilityPolicy,
-  sanitizeKnownProperties,sanitizeDeviceProperties,MAX_ARRAY_ITEMS};
+  sanitizeKnownProperties,sanitizeDeviceProperties,MAX_ARRAY_ITEMS,
+  dynamicPayloadEntries};
