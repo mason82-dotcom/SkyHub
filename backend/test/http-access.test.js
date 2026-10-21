@@ -82,6 +82,8 @@ test('LAN view is read-only; pairing administration still needs the view token',
   assert.equal((await request('/api/unknown-future-route',{lan:'192.168.178.70'})).status,401);
   assert.equal((await request('/api/mission/create',{method:'POST',lan:'192.168.178.70'})).status,401);
   assert.equal((await request('/api/mission/create',{method:'POST',token:VIEW_TOKEN})).status,501);
+  assert.equal((await request('/api/wpml/inspect',{method:'POST',lan:'192.168.178.70'})).status,401);
+  assert.equal((await request('/api/wpml/inspect',{method:'POST',token:VIEW_TOKEN})).status,404);
 });
 
 test('Pilot bootstrap requires HTTPS and the Pilot token',async()=>{
