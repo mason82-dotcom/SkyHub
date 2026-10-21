@@ -34,7 +34,7 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertEqual(syntax.returncode, 0, syntax.stderr)
         help_result = subprocess.run(["bash", str(SCRIPT), "--help"], capture_output=True, text=True)
         self.assertEqual(help_result.returncode, 0, help_result.stderr)
-        for mode in ("plan", "apply", "attach", "verify"):
+        for mode in ("plan", "apply", "adopt", "attach", "verify"):
             self.assertIn(mode, help_result.stdout)
         invalid = subprocess.run(["bash", str(SCRIPT), "invalid"], capture_output=True, text=True)
         self.assertEqual(invalid.returncode, 2)
@@ -43,6 +43,9 @@ class SharedMinioStorageTest(unittest.TestCase):
         text = SCRIPT.read_text(encoding="utf-8")
         self.assertIn('up -d --no-deps minio', text)
         self.assertIn('docker network connect', text)
+        self.assertIn("assert_alias_available", text)
+        self.assertIn('existing MinIO is not running', text)
+        self.assertIn('SkyHub-owned MinIO already exists', text)
         self.assertIn('"--allow-legacy-image"', text)
         for command in ("docker compose down", "docker volume rm", "docker system prune", "docker rm -f"):
             self.assertNotIn(command + "\n", text)
