@@ -54,7 +54,44 @@ Das Skript führt nur docker compose exec -T backend node -e aus und ruft drei b
 
 **Achtung:** Globale MQTT-Zähler und Payload-Shapes enthalten Ereignisse aller SkyHub-Geräte und beweisen für sich alleine keine RC/M3M-Verbindung. Der Test prüft die Verknüpfung separat anhand der Registry-Topologie.
 
-## 4. Falls die Verbindung fehlt
+## 4. Interpretation des ersten echten RC/M3M-Tests (21.10.2026)
+
+Beim realen Pilot-2-Test wurden beide Geräte erkannt und verbunden:
+2.464 OSD-Pakete empfangen und übernommen, 1.599 verwertbare
+Telemetrie-Updates; die Geräte-OSD-Zeit lag jeweils bei ca. einer Sekunde.
+Die Zuordnung RC Pro Enterprise zu Mavic 3M war ausdrücklich bestätigt.
+
+Die ursprüngliche Skriptversion zeigte dennoch 0/48 RC- bzw. 0/144
+M3M-Eigenschaftspfade sowie fehlende State-Zeitstempel. Bei fehlender
+`deviceProperties`-/`propertyProfile`-/`propertyFieldObservedAt`-
+Schnittstelle des **laufenden Pi-Backends** ist dies kein DJI-Hardwarebefund.
+Ab der folgenden Skriptversion steht dafür **NICHT PRÜFBAR**.
+Die globalen 60 State-Meldungen im ursprünglichen Report belegen
+State-Traffic, nicht dessen Zuordnung zu einem bestimmten Gerät.
+
+Die nächsten Schritte sind ausschließlich: prüfen, ob das Pi-Backend den
+gemergten Parser bereits enthält; erst dann kann man dessen Feldwerte
+und Feldzeitstempel sinnvoll mit der realen Firmware vergleichen.
+Ein `git fetch` oder `git worktree add` installiert kein neues Backend.
+
+### Rein lesende Versionsprüfung
+
+~~~bash
+cd ~/Projekte/SkyHub-Next
+git status --short --branch
+git log -1 --oneline
+git rev-parse --short origin/main
+~~~
+
+Falls ein kontrolliertes Backend-Update später beauftragt wird, existiert
+`scripts/pi-update-backend.sh --apply` im Repository: Es setzt ein sauberes,
+synchronisiertes `main`, erfolgreiches Pi-Preflight und den laufenden
+Compose-Stack voraus. Es erstellt private Konfigurations- und PostGIS-Backups
+und aktualisiert **nur** das Backend, verursacht dabei aber einen
+kurzen Backend-Neustart. Es darf nicht automatisch durch eine
+Hardware-Diagnose ausgeführt werden.
+
+## 5. Falls die Verbindung fehlt
 
 Für die bestehende Diagnose ohne Änderung am laufenden System:
 
@@ -68,6 +105,6 @@ Ein Merge auf GitHub installiert keine neue Backend-Version auf dem Pi. Veraltet
 
 Bitte nur den sanitisierten Bericht aus dem Hardwarecheck teilen, **keine** MQTT-Rohpayloads, Geräteseriennummern, GPS-Koordinaten, Tokens oder .env-Inhalte.
 
-## 5. Grenzen
+## 6. Grenzen
 
 Die Prüfung löst weder property/set noch Flugsteuerung, Missionen, Medienaufnahmen, neue MQTT-Abos oder Pairing aus. Erst die Ausführung auf realer, eingeschalteter Hardware und die Auswertung des Ergebnisses ermöglichen eine belastbare Abnahme. GitHub-CI prüft lediglich synthetische RC-/M3M-Snapshots und die CLI-Argumentverarbeitung.
