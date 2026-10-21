@@ -236,15 +236,15 @@ class SharedMinioStorageTest(unittest.TestCase):
             root = Path(dirname)
             source = root / "aeronexus.env"
             source.write_text(
-                "MINIO_ROOT_USER='legacy-minio'\\n"
-                "MINIO_ROOT_PASSWORD='some-legacy-secret'\\n"
-                "AERONEXUS_MINIO_ACCESS_KEY=not-the-root-account\\n"
+                "MINIO_ROOT_USER='legacy-minio'\n"
+                "MINIO_ROOT_PASSWORD='some-legacy-secret'\n"
+                "AERONEXUS_MINIO_ACCESS_KEY=not-the-root-account\n"
             )
             source.chmod(0o600)
             existing = root / "skyhub.env"
             existing.write_text(
-                "MINIO_ROOT_USER=old-user\\nMINIO_ROOT_PASSWORD=old-secret\\n"
-                "MINIO_API_CORS_ALLOW_ORIGIN=*\\n"
+                "MINIO_ROOT_USER=old-user\nMINIO_ROOT_PASSWORD=old-secret\n"
+                "MINIO_API_CORS_ALLOW_ORIGIN=*\n"
             )
             existing.chmod(0o600)
             credentials = mod.root_values(source)
@@ -282,16 +282,16 @@ class SharedMinioStorageTest(unittest.TestCase):
             root = Path(dirname)
             path = root / ".env"
             path.write_text(
-                "AERONEXUS_MINIO_ACCESS_KEY=client\\n"
-                "AERONEXUS_MINIO_SECRET_KEY=client-secret\\n"
+                "AERONEXUS_MINIO_ACCESS_KEY=client\n"
+                "AERONEXUS_MINIO_SECRET_KEY=client-secret\n"
             )
             path.chmod(0o600)
             with self.assertRaises(mod.ConfigurationError):
                 mod.root_values(path)
-            path.write_text("MINIO_ROOT_USER=x\\nMINIO_ROOT_PASSWORD=${UNSET}\\n")
+            path.write_text("MINIO_ROOT_USER=x\nMINIO_ROOT_PASSWORD=${UNSET}\n")
             with self.assertRaises(mod.ConfigurationError):
                 mod.root_values(path)
-            path.write_text("MINIO_ROOT_USER=x\\nMINIO_ROOT_PASSWORD=some-secret\\n")
+            path.write_text("MINIO_ROOT_USER=x\nMINIO_ROOT_PASSWORD=some-secret\n")
             path.chmod(0o644)
             with self.assertRaises(mod.ConfigurationError):
                 mod.root_values(path)
