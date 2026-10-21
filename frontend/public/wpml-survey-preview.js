@@ -2,9 +2,10 @@
 // Visualization only. Contains no DJI/WPML flight mission export or HTTP writes.
 (function(){
   const engine=window.SkyHubSurveyPreview;
+  const optics=window.SkyHubPhotoGeometry;
   const $=id=>document.getElementById(id);
   if(!engine){$('status').textContent='Offline-Geometriemodul fehlt.';return;}
-  const points=[];let map=null,polygon=null,markers=[],lines=[],report=null,firstFit=false;
+  const points=[];let map=null,polygon=null,markers=[],lines=[],report=null,photoReport=null,firstFit=false;
   const feedback=(txt,error=false)=>{
     $('status').textContent=txt;
     $('status').style.color=error?'#ffdda6':'#e5f7ff';
@@ -26,7 +27,7 @@
     if(a===null||b===null){feedback('Koordinate außerhalb der erlaubten Grenzen.',true);return;}
     points.push({lat:a,lon:b});invalidate();render();
   }
-  function invalidate(){report=null;$('geojson').disabled=true;}
+  function invalidate(){report=null;photoReport=null;$('geojson').disabled=true;}
   function fit(){
     if(!map||!points.length)return;
     if(points.length===1)map.setView([points[0].lat,points[0].lon],15);
@@ -85,21 +86,67 @@
     feedback('Polygon zurückgesetzt.');
   });
   $('fit').addEventListener('click',fit);
+  $('optics-enable').addEventListener('change',()=>{
+    $('optics-fields').hidden=!$('optics-enable').checked;
+    $('spacing').disabled=$('optics-enable').checked;
+    invalidate();render();
+    feedback($('optics-enable').checked?
+      'Bitte reale Sensor-, Brennweiten-, Bildformat- und AGL-Werte eintragen.':
+      'Manueller Streifenabstand wieder aktiviert.');
+  });
+  const cameraIds=['sensor-width','sensor-height','focal','agl','image-width',
+    'image-height','side-overlap','front-overlap','photo-speed','min-capture-interval'];
+  for(const id of cameraIds)$(id).addEventListener('input',()=>{
+    if(report){invalidate();render();feedback('Kameraparameter geändert. Neu berechnen.');}
+  });
+  function cameraInputs(){
+    const v=id=>$(id).value.trim();
+    const n=id=>v(id)===''?undefined:v(id);
+    return {
+      sensorWidthMm:n('sensor-width'),sensorHeightMm:n('sensor-height'),
+      focalLengthMm:n('focal'),heightAGLM:n('agl'),
+      imageWidthPx:n('image-width'),imageHeightPx:n('image-height'),
+      sideOverlapPercent:n('side-overlap'),frontOverlapPercent:n('front-overlap'),
+      speedMps:n('photo-speed'),
+      ...(v('min-capture-interval')===''?{}:
+        {cameraMinIntervalSeconds:v('min-capture-interval')})
+    };
+  }
   for(const id of ['spacing','heading'])$(id).addEventListener('input',()=>{
     if(report){invalidate();render();feedback('Parameter geändert. Vorschau erneut berechnen.');}
   });
   $('preview').addEventListener('click',()=>{
     try{
+      const photogrammetry=$('optics-enable').checked;
+      if(photogrammetry&&!optics)throw new Error('Kamerageometriemodul nicht geladen');
+      const camera=photogrammetry?cameraInputs():null;
+      const profile=photogrammetry?optics.optics(camera):null;
       report=engine.preview(points,{
-        spacing:$('spacing').value,
+        spacing:photogrammetry?profile.stripSpacingM:$('spacing').value,
         heading:$('heading').value
       });
+      photoReport=photogrammetry?optics.estimate(report,camera):null;
       $('geojson').disabled=false;
       render();
-      feedback('Reine 2D-Geometrieschätzung: '+Math.round(report.areaSqMeters)+' m² Fläche, '+
-        report.stripeCount+' Scanstreifen, '+report.segmentCount+' Linienstücke, '+
-        Math.round(report.previewSegmentLengthMeters)+' m Strecken innerhalb der Fläche. '+
-        'Wendewege, Bildüberlappung, Hindernisse und Flugzeit sind NICHT enthalten.');
+      let message='2D-Geometrie: '+Math.round(report.areaSqMeters)+' m² Fläche, '+
+        report.stripeCount+' Streifen, '+report.segmentCount+' Linienstücke, '+
+        Math.round(report.previewSegmentLengthMeters)+' m Strecken innerhalb der Fläche.';
+      if(photoReport){
+        const p=photoReport,cam=p.optics;
+        message+='\nOptik (nur theoretisch): GSD quer '+cam.gsdAcrossCmPerPx.toFixed(2)+
+          ' cm/Pixel, längs '+cam.gsdAlongCmPerPx.toFixed(2)+
+          ' cm/Pixel. Bodenbild '+cam.groundWidthM.toFixed(1)+' × '+
+          cam.groundLengthM.toFixed(1)+' m, Querstreifenabstand '+
+          cam.stripSpacingM.toFixed(1)+' m, Fotoabstand '+
+          cam.alongTrackTriggerDistanceM.toFixed(1)+' m, Auslöseintervall '+
+          cam.estimatedTriggerIntervalSeconds.toFixed(2)+' s, maximal geschätzte '+
+          p.estimatedImageCount+' Endpunkt-inklusive Aufnahmen.';
+        if(cam.cameraIntervalSatisfiesConstraint===false)
+          message+='\nWARNUNG: Auslöseintervall unterschreitet das angegebene minimale Kamera-Aufnahmeintervall.';
+        else if(cam.cameraIntervalSatisfiesConstraint===null)
+          message+='\nKamera-Aufnahmeintervall unbekannt: Fähigkeit nicht geprüft.';
+      }
+      feedback(message+'\nKeine Wendeflüge, reale Auslösung oder Flug-/Terrainfreigabe.');
     }catch(err){
       invalidate();render();
       feedback(err instanceof Error?err.message:'Geometrie kann nicht berechnet werden.',true);
@@ -109,7 +156,8 @@
     if(!report)return;
     const closed=[...report.polygon,report.polygon[0]];
     const data={type:'FeatureCollection',name:'SkyHub 2D preview – NOT DJI WPML',
-      properties:{flightReady:false,scope:report.validationScope},
+      properties:{flightReady:false,exportableAsWaylines:false,scope:report.validationScope,
+        opticsEstimate:photoReport?{...photoReport}:null},
       features:[
         {type:'Feature',geometry:{type:'Polygon',coordinates:[closed.map(p=>[p.lon,p.lat])]},
           properties:{kind:'user-defined-survey-outline',areaSqMeters:report.areaSqMeters}},
