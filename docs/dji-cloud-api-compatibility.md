@@ -8,6 +8,8 @@ Zielstand: DJI Cloud API 1.18 (vom Projekt vorgegeben). Protokolldetails gelten 
 - Gerätekennung: https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-support.html
 - Pilot-Topologie: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-plus/device.html
 - Fluggeräte: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html
+- RC Pro Enterprise: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-pro/properties.html
+- Aircraft-OSD: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html
 - Alt-Demo: https://github.com/dji-sdk/Cloud-API-Demo-Web (laut DJI seit 10.04.2025 nicht mehr gepflegt)
 
 ## Eingereichte api.zip
@@ -29,6 +31,23 @@ Das bereitgestellte Archiv enthält AeroNexus-On-Prem-Patches gegen die DJI-Refe
 6. mode_code aus OSD und state, nicht ausschließlich aus state.
 7. PostGIS: device_sn als Fluggerätekennung, gateway_sn optional; beide dürfen nicht verwechselt werden.
 8. Stale-Packets überschreiben keine neueren OSD-Meldungen; reine Topologie- und Statusnachrichten erzeugen keine fingierte OSD-Frische.
+
+## Telemetrie-Feldinventar (21.10.2026, Hardware-Snapshot)
+
+Die RC Pro Enterprise meldete fünf der 17 bisher normalisierten Felder
+(`latitude`, `longitude`, `heightEllipsoid`, `battery`, `linkQuality`).
+Die Mavic 3M meldete 14 von 17; es fehlten die zwei gültigen GPS-Koordinaten
+(DJI lieferte `0,0`) und `linkQuality`, ein Gateway-spezifisches Feld.
+Die Profil-Diagnose unterscheidet deshalb typische RC- und Aircraft-Felder,
+optionale zusätzliche DJI-Werte und für die Rolle nicht anwendbare Felder.
+Die Verfügbarkeit im Snapshot belegt nicht, dass ein Wert in jedem OSD-Paket
+vorhanden oder ein GNSS-Fix gültig war.
+
+Die Parser-Erweiterung wertet nur dokumentierte, optionale DJI-OSD-Lesefelder
+aus: Wind, kumulierte Flugwerte, SDR-/4G-Verbindungszustände und
+4G-Signalqualität. Windrichtung ist ein Sektor-Code 1–8, kein Gradwinkel.
+Ungültige Signalqualitäts-Sentinels (z. B. 65535) werden verworfen.
+RTK bleibt optional; die fortlaufende Positionsaufzeichnung bleibt aus.
 
 ## Ausdrückliche Einschränkungen
 

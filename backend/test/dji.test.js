@@ -20,7 +20,9 @@ test('DJI 1.18 OSD nested data and relative/absolute height stay distinct',()=>{
     battery:76,heading:null,horizontalSpeed:6.5,verticalSpeed:-1.2,
     attitudePitch:null,attitudeRoll:null,homeDistance:null,remainingFlightTime:null,
     gpsSatellites:null,rtkSatellites:null,rtkFixState:null,positionQuality:null,
-    linkQuality:null
+    linkQuality:null,
+    windSpeed:null,windDirectionCode:null,totalFlightTime:null,totalFlightDistance:null,
+    sdrLinkState:null,fourGLinkState:null,fourGLinkQuality:null
   });
   assert.equal(result.state.modeCode,5);
 });
@@ -103,6 +105,38 @@ test('RC OSD link quality and battery; implausible quality values stay unknown',
   assert.equal(bad.rtkFixState,null);
   assert.equal(bad.positionQuality,null);
   assert.equal(bad.remainingFlightTime,null);
+});
+test('DJI aircraft wind and flight statistics use bounded read-only parsing',()=>{
+  const t=extractTelemetry({wind_speed:4.75,wind_direction:8,
+    total_flight_time:7200.5,total_flight_distance:18340,
+    battery:{capacity_percent:78},imei:'PRIVATE'});
+  assert.equal(t.windSpeed,4.75);
+  assert.equal(t.windDirectionCode,8);
+  assert.equal(t.totalFlightTime,7200.5);
+  assert.equal(t.totalFlightDistance,18340);
+  assert.equal(t.battery,78);
+  assert.ok(!Object.hasOwn(t,'imei'));
+  const bad=extractTelemetry({wind_speed:-1,wind_direction:360,
+    total_flight_time:Infinity,total_flight_distance:-40});
+  assert.equal(bad.windSpeed,null);
+  assert.equal(bad.windDirectionCode,null);
+  assert.equal(bad.totalFlightTime,null);
+  assert.equal(bad.totalFlightDistance,null);
+});
+test('DJI RC SDR and 4G link status reject invalid or sentinel values',()=>{
+  const valid=extractTelemetry({wireless_link:{
+    sdr_link_state:1,'4g_link_state':0,'4g_quality':3,sdr_quality:4
+  }});
+  assert.equal(valid.sdrLinkState,1);
+  assert.equal(valid.fourGLinkState,0);
+  assert.equal(valid.fourGLinkQuality,3);
+  assert.equal(valid.linkQuality,4);
+  const invalid=extractTelemetry({wireless_link:{
+    sdr_link_state:65535,'4g_link_state':2,'4g_quality':65535
+  }});
+  assert.equal(invalid.sdrLinkState,null);
+  assert.equal(invalid.fourGLinkState,null);
+  assert.equal(invalid.fourGLinkQuality,null);
 });
 test('data key shape exposes field names only, never values',()=>{
   const m=parseMessage('thing/product/RC/state',Buffer.from(JSON.stringify({
