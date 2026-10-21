@@ -20,13 +20,28 @@ const age=(at,now)=>Number.isFinite(at)&&at<=now?Math.round((now-at)/1000):null;
 function statusLabel(valid,observed){
   return valid?'BESTÄTIGT':observed?'NICHT AKTUELL':'NICHT NACHGEWIESEN';
 }
+function isObject(x){return x!==null&&typeof x==='object'&&!Array.isArray(x);}
+function hasPropertyDiagnostics(device){
+  // Version gate: a previous backend can supply real topology, osd and
+  // telemetry values, but not the 1.18 sanitized property snapshots.
+  // Never interpret an absent interface as 0 out of N DJI fields.
+  return isObject(device?.propertyProfile) &&
+    typeof device.propertyProfile.name==='string' &&
+    isObject(device.deviceProperties?.osd) &&
+    isObject(device.deviceProperties?.state) &&
+    isObject(device.propertyObservedAt) &&
+    isObject(device.propertyFieldObservedAt?.osd) &&
+    isObject(device.propertyFieldObservedAt?.state);
+}
 function deviceSummary(device,now){
   if(!device)return {seen:false,modelConfirmed:false,role:null,topologyOnline:null,
     osdFresh:false,osdAgeSeconds:null,stateObserved:false,stateAgeSeconds:null,
-    propertyFields:{documented:0,inspectable:0,observed:0,fresh:0,stale:0,
-      missing:0,redacted:0,untyped:0,observedNames:[],freshNames:[]}};
+    propertyDiagnosticsAvailable:false,
+    propertyFields:{documented:0,inspectable:null,observed:null,fresh:null,stale:null,
+      missing:null,redacted:null,untyped:null,observedNames:[],freshNames:[]}};
+  const capable=hasPropertyDiagnostics(device);
   const [audit]=summarizeTelemetryFields([device],now);
-  const stateAge=age(device.propertyObservedAt?.state,now);
+  const stateAge=capable?age(device.propertyObservedAt?.state,now):null;
   return {
     seen:true,modelConfirmed:true,
     role:device.role==='gateway'?'gateway':device.role==='subdevice'?'subdevice':'other',
@@ -35,19 +50,21 @@ function deviceSummary(device,now){
     osdAgeSeconds:age(device.lastTelemetryAt,now),
     stateObserved:stateAge!==null,
     stateAgeSeconds:stateAge,
+    propertyDiagnosticsAvailable:capable,
     aircraftConnected:device.aircraftConnected===true,
     positionFixFresh:device.positionFresh===true,
     fieldProfileConfidence:device.propertyProfile?.confidence??null,
     propertyFields:{
-      documented:audit.documentedTotal,inspectable:audit.documentedInspectableTotal,
-      observed:audit.observedDocumented.length,
-      fresh:audit.freshDocumented.length,
-      stale:audit.staleDocumented.length,
-      missing:audit.notObservedDocumented.length,
-      redacted:audit.redactedDocumented.length,
-      untyped:audit.unsupportedDocumented.length,
-      observedNames:audit.observedDocumented.slice(0,60),
-      freshNames:audit.freshDocumented.slice(0,60)
+      documented:audit.documentedTotal,
+      inspectable:capable?audit.documentedInspectableTotal:null,
+      observed:capable?audit.observedDocumented.length:null,
+      fresh:capable?audit.freshDocumented.length:null,
+      stale:capable?audit.staleDocumented.length:null,
+      missing:capable?audit.notObservedDocumented.length:null,
+      redacted:capable?audit.redactedDocumented.length:null,
+      untyped:capable?audit.unsupportedDocumented.length:null,
+      observedNames:capable?audit.observedDocumented.slice(0,60):[],
+      freshNames:capable?audit.freshDocumented.slice(0,60):[]
     }
   };
 }
@@ -77,6 +94,10 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
   };
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
+  const stateStatus=d=>
+    !d.seen?'NICHT NACHGEWIESEN':
+    !d.propertyDiagnosticsAvailable?'NICHT PRÜFBAR':
+    statusLabel(d.stateObserved&&d.stateAgeSeconds<15,d.stateObserved);
   const stages=[
     {step:'DJI-MQTT verbunden und abonniert',status:statusLabel(transport.mqttConnected&&transport.subscribed,transport.mqttConnected)},
     {step:'RC Pro Enterprise per Topologie erkannt',status:statusLabel(controller.seen&&controller.topologyOnline,controller.seen)},
@@ -84,8 +105,8 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     {step:'RC und M3M zugeordnet',status:statusLabel(linked,Boolean(rc&&air))},
     {step:'RC sendet aktuelle OSD-Telemetrie',status:statusLabel(controller.osdFresh,controller.osdAgeSeconds!==null)},
     {step:'M3M verbunden und mit aktueller OSD-Telemetrie',status:statusLabel(aircraft.aircraftConnected&&aircraft.osdFresh,aircraft.osdAgeSeconds!==null)},
-    {step:'RC State-Feldbeobachtung vorhanden',status:statusLabel(controller.stateObserved&&controller.stateAgeSeconds<15,controller.stateObserved)},
-    {step:'M3M State-Feldbeobachtung vorhanden',status:statusLabel(aircraft.stateObserved&&aircraft.stateAgeSeconds<15,aircraft.stateObserved)}
+    {step:'RC State-Feldbeobachtung vorhanden',status:stateStatus(controller)},
+    {step:'M3M State-Feldbeobachtung vorhanden',status:stateStatus(aircraft)}
   ];
   return {target:'DJI RC Pro Enterprise + Mavic 3M',mode:'nur Lesen',
     transport,controller,aircraft,linked,stages,
@@ -93,6 +114,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
       'M3M (0:77:2) nutzt ein vorläufiges Mavic-3-Familienprofil.',
+      'Ohne deviceProperties, propertyProfile und propertyFieldObservedAt kann der Container keine feldgenaue 1.18-Abnahme liefern.',
       'Ein Hardwaretest erfordert echte, zeitnahe Pilot-2-MQTT-Meldungen; synthetische Tests sind kein Ersatz.'
     ]};
 }
@@ -113,6 +135,13 @@ function formatReport(r){
     if(!d.seen){lines.push('Gerät nicht in der aktuellen Topologie nachgewiesen');continue;}
     lines.push('OSD Alter (s): '+(d.osdAgeSeconds??'nicht beobachtet')+
       ' | State Alter (s): '+(d.stateAgeSeconds??'nicht beobachtet'));
+    if(!d.propertyDiagnosticsAvailable){
+      lines.push('Feldparser: NICHT PRÜFBAR (laufendes Backend stellt die DJI-1.18-Schnittstelle nicht bereit).');
+      lines.push('Dokumentierte Pfade im Testkatalog: '+d.propertyFields.documented+
+        ' | beobachtete/fehlende Pfade: nicht ermittelbar.');
+      continue;
+    }
+    lines.push('Feldparser: verfügbar');
     lines.push('Dokumentierte Pfade: '+d.propertyFields.documented+
       ' | beobachtet: '+d.propertyFields.observed+
       ' | frisch: '+d.propertyFields.fresh+
