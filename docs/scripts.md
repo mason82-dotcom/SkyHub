@@ -10,6 +10,7 @@ Diese Übersicht bezieht sich auf das **aktive SkyHub-Next-Repository-Root**. Ei
 |---|---|---|---|
 | `pi-minio-network.sh` | `plan` / `verify` | **Lesend**: Docker-Netz-/Volume-Status bzw. HTTP-Readiness | Keine Buckets oder Datenwrites; Output ohne Secrets |
 | `pi-minio-network.sh` | `apply` / `adopt` / `attach` | **Live-Änderung**: MinIO-Container/Netz starten oder vorhandenen MinIO/Clients verbinden | `adopt` startet keinen Container; keine Neustarts anderer Dienste |
+| `pi-minio-s3-check.sh` | `--read` / `--write` | **Aktiver S3-Test**: temporärer Testcontainer mit per-Service-Credentials; optional Testobjekt schreiben/prüfen/löschen | Nur für isoliertes Testbucket, niemals mit Root- oder produktiven Anwendungszugängen |
 | `pi-preflight.sh` | `bash scripts/pi-preflight.sh` | **Lesend**: Zeit, Listener und Docker-Portzuordnung | Geeignet vor Staging; beweist keine DJI-MQTT-Daten |
 | `pi-skyhub-takeover-audit.sh` | `bash scripts/pi-skyhub-takeover-audit.sh` | **Lesend**: Container-, HTTP-, Compose- und Secret-*Status* | Keine Geheimniswerte weitergeben; kein Cutover |
 | `pi-tls-audit.sh` | `bash scripts/pi-tls-audit.sh` | **Lesend**: TLS-Zertifikat und CA-Vertrauen | Pi-CA-Vertrauen beweist kein DJI-Android-Vertrauen |
