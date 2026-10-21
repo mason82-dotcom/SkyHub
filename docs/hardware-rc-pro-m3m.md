@@ -1,0 +1,110 @@
+# Hardwareabnahme: RC Pro Enterprise + Mavic 3M
+
+**Stand:** 21.10.2026. Dies ist eine **Leseprüfung**, kein Flugtest und kein Deployment.
+
+## Voraussetzungen
+
+- RC Pro Enterprise mit DJI Pilot 2 und bereits konfiguriertem SkyHub-Workspace.
+- Mavic 3M sicher am Boden eingeschaltet und mit der RC verbunden. Kein Flug erforderlich.
+- Laufender SkyHub-Next-Backend-Container bietet GET /api/health, GET /api/devices und GET /api/diagnostics/mqtt-shapes an. Intern ist Port 4000 zu verwenden.
+- Compose-Projektname: skyhub-next. Bestehende .env, EMQX, Caddy, Redis und PostGIS unverändert lassen.
+- Kein MQTT- oder API-Token ist auf der Host-Shell einzugeben. Das Skript nutzt den vorhandenen Backend-View-Token ausschließlich im Container.
+
+## 1. Isolierten Diagnose-Checkout vorbereiten
+
+Einmalig im Pi-Terminal:
+
+~~~bash
+cd ~/Projekte/SkyHub-Next
+git status --short --branch
+git fetch origin
+git worktree add --detach ~/Projekte/SkyHub-HW-Test origin/test/rc-pro-m3m-hardware-validation
+~~~
+
+Falls das Test-Worktree schon existiert, nicht überschreiben, sondern zunächst seinen Status prüfen. Der Befehl erstellt einen **separaten** Quellcode-Checkout und startet oder stoppt keine Dienste. Kein git switch im laufenden Projekt, kein Compose-Up, kein Restart.
+
+Die Diagnosedateien liegen im Test-Worktree. SKYHUB_COMPOSE_DIR zeigt auf den bestehenden produktiven Compose-Projektordner und übernimmt dessen lokale Konfiguration, ohne diese zu verändern.
+
+## 2. Bei eingeschalteter RC und Mavic 3M
+
+Pilot 2 wie bisher mit SkyHub verbinden, den Workspace-/MQTT-Handshake abwarten und dann im Pi-Terminal:
+
+~~~bash
+cd ~/Projekte/SkyHub-HW-Test
+node scripts/pi-rc-pro-m3m-check.js --help
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" node scripts/pi-rc-pro-m3m-check.js
+~~~
+
+Das Skript führt nur docker compose exec -T backend node -e aus und ruft drei bestehende GET-APIs ab. Kein MQTT-Publish, kein Flugkommando, keine neue Kopplung, keine Containeränderung. Die geschützten API-Antworten bleiben im lokalen, vom Hostprozess abgefangenen Speicher-/Pipe-Kanal. Terminalausgabe: **ausschließlich** Modellnamen, Zustände, Zähler und dokumentierte Feldnamen.
+
+**Exitcodes:** 0 = beide Gerätetypen, Verknüpfung und frische OSD-Telemetrie bestätigt; 3 = Hardwareabnahme unvollständig; 1 = lokale Docker-/API-Prüfung fehlgeschlagen; 2 = Parameterfehler. Exitcode 0 belegt **keine vollständige DJI-1.18-Feldkonformität**.
+
+## 3. Abnahmekriterien
+
+| Bereich | Erwartung | Einschränkung |
+|---|---|---|
+| MQTT | Verbunden und Subscriptions bestätigt | Broker-Verbindung allein beweist kein OSD |
+| RC | Typ 2:144:0, Gateway, Topologie online | Keine Seriennummer ausgeben |
+| Aircraft | Typ 0:77:2, Subdevice, Topologie online | M3M nutzt vorläufiges Mavic-3-Profil |
+| Zuordnung | M3M als Kind der erkannten RC | Zuordnung ausschließlich intern |
+| RC OSD | Letzte gültige Telemetrie unter 15 Sekunden alt | State-Felder können fehlen |
+| M3M OSD | Explizit verbunden, letzte gültige Telemetrie unter 15 Sekunden alt | Kein GNSS-Fix am Boden erforderlich |
+| State | Beobachtete und frische Feldpfade getrennt | Abwesenheit ist kein Beweis fehlender DJI-Unterstützung |
+| DJI-Feldinventar | Dokumentierte/beobachtete/frische/fehlende Feldnamen | Geschützte und nicht typisierte Felder separat |
+
+**Achtung:** Globale MQTT-Zähler und Payload-Shapes enthalten Ereignisse aller SkyHub-Geräte und beweisen für sich alleine keine RC/M3M-Verbindung. Der Test prüft die Verknüpfung separat anhand der Registry-Topologie.
+
+## 4. Interpretation des ersten echten RC/M3M-Tests (21.10.2026)
+
+Beim realen Pilot-2-Test wurden beide Geräte erkannt und verbunden:
+2.464 OSD-Pakete empfangen und übernommen, 1.599 verwertbare
+Telemetrie-Updates; die Geräte-OSD-Zeit lag jeweils bei ca. einer Sekunde.
+Die Zuordnung RC Pro Enterprise zu Mavic 3M war ausdrücklich bestätigt.
+
+Die ursprüngliche Skriptversion zeigte dennoch 0/48 RC- bzw. 0/144
+M3M-Eigenschaftspfade sowie fehlende State-Zeitstempel. Bei fehlender
+`deviceProperties`-/`propertyProfile`-/`propertyFieldObservedAt`-
+Schnittstelle des **laufenden Pi-Backends** ist dies kein DJI-Hardwarebefund.
+Ab der folgenden Skriptversion steht dafür **NICHT PRÜFBAR**.
+Die globalen 60 State-Meldungen im ursprünglichen Report belegen
+State-Traffic, nicht dessen Zuordnung zu einem bestimmten Gerät.
+
+Die nächsten Schritte sind ausschließlich: prüfen, ob das Pi-Backend den
+gemergten Parser bereits enthält; erst dann kann man dessen Feldwerte
+und Feldzeitstempel sinnvoll mit der realen Firmware vergleichen.
+Ein `git fetch` oder `git worktree add` installiert kein neues Backend.
+
+### Rein lesende Versionsprüfung
+
+~~~bash
+cd ~/Projekte/SkyHub-Next
+git status --short --branch
+git log -1 --oneline
+git rev-parse --short origin/main
+~~~
+
+Falls ein kontrolliertes Backend-Update später beauftragt wird, existiert
+`scripts/pi-update-backend.sh --apply` im Repository: Es setzt ein sauberes,
+synchronisiertes `main`, erfolgreiches Pi-Preflight und den laufenden
+Compose-Stack voraus. Es erstellt private Konfigurations- und PostGIS-Backups
+und aktualisiert **nur** das Backend, verursacht dabei aber einen
+kurzen Backend-Neustart. Es darf nicht automatisch durch eine
+Hardware-Diagnose ausgeführt werden.
+
+## 5. Falls die Verbindung fehlt
+
+Für die bestehende Diagnose ohne Änderung am laufenden System:
+
+~~~bash
+cd ~/Projekte/SkyHub-Next
+node scripts/pi-mqtt-osd-check.js 4001
+node scripts/pi-telemetry-fields-check.js
+~~~
+
+Ein Merge auf GitHub installiert keine neue Backend-Version auf dem Pi. Veraltete lokale Container können die neueren Feldmetadaten noch nicht liefern. Ein Produktionsupdate ist ein **separater** Schritt.
+
+Bitte nur den sanitisierten Bericht aus dem Hardwarecheck teilen, **keine** MQTT-Rohpayloads, Geräteseriennummern, GPS-Koordinaten, Tokens oder .env-Inhalte.
+
+## 6. Grenzen
+
+Die Prüfung löst weder property/set noch Flugsteuerung, Missionen, Medienaufnahmen, neue MQTT-Abos oder Pairing aus. Erst die Ausführung auf realer, eingeschalteter Hardware und die Auswertung des Ergebnisses ermöglichen eine belastbare Abnahme. GitHub-CI prüft lediglich synthetische RC-/M3M-Snapshots und die CLI-Argumentverarbeitung.
