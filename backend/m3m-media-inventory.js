@@ -53,6 +53,12 @@ function inventoryMediaNames(names){
   const unrecognizedFormats=Object.fromEntries(UNKNOWN_FORMATS.map(x=>[x,0]));
   let unrecognizedDjiPrefixedImages=0;
   let unrecognizedOtherImages=0;
+  // Cross-tabulation uses fixed labels only. No input strings are echoed.
+  const imageFormats=['JPEG','TIFF','DNG','PNG'];
+  const unrecognizedImagesByPrefix={
+    djiPrefixed:Object.fromEntries(imageFormats.map(x=>[x,0])),
+    other:Object.fromEntries(imageFormats.map(x=>[x,0]))
+  };
   for(const value of names){
     const n=typeof value==='string'?value:null;
     const item=identify(n);
@@ -61,9 +67,14 @@ function inventoryMediaNames(names){
         unrecognized++;
         const format=unknownFormat(n);
         unrecognizedFormats[format]++;
-        if(['JPEG','TIFF','DNG','PNG'].includes(format)){
-          if(/^DJI_/i.test(n))unrecognizedDjiPrefixedImages++;
-          else unrecognizedOtherImages++;
+        if(imageFormats.includes(format)){
+          if(/^DJI_/i.test(n)){
+            unrecognizedDjiPrefixedImages++;
+            unrecognizedImagesByPrefix.djiPrefixed[format]++;
+          }else{
+            unrecognizedOtherImages++;
+            unrecognizedImagesByPrefix.other[format]++;
+          }
         }
       }else invalid++;
       continue;
@@ -96,6 +107,7 @@ function inventoryMediaNames(names){
     classification:'filename-hints-only',
     totalEntries:names.length,classified,unrecognized,invalid,
     unrecognizedFormats,unrecognizedDjiPrefixedImages,unrecognizedOtherImages,
+    unrecognizedImagesByPrefix,
     bandCounts,captureGroups:groups.size,
     spectralSets,fiveChannelSets,partialSets,duplicateSets,missingBands,
     radiometricCalibrationVerified:false,bandCoregistrationVerified:false,
