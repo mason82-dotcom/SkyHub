@@ -26,8 +26,31 @@ function makeTree(fields) {
   // containing top-level struct/array is reported on state.
   return root;
 }
-const trees = Object.fromEntries(Object.entries(catalog.profiles)
-  .map(([key, value]) => [key, makeTree(value.fields)]));
+// A device-specific overlay extends an official family table without
+// duplicating/potentially drifting 144 pinned base definitions. Only one
+// inheritance level is supported, and duplicate paths are rejected.
+function resolveProfile(name) {
+  const definition=catalog.profiles[name];
+  if (!definition) return null;
+  if (!definition.extends) return definition;
+  const base=catalog.profiles[definition.extends];
+  if (!base || base.extends) throw Error('Invalid DJI profile inheritance');
+  const seen=new Set(base.fields.map(item=>item.path));
+  for(const item of definition.fields){
+    if(seen.has(item.path)) throw Error('Duplicate inherited DJI field: '+item.path);
+    seen.add(item.path);
+  }
+  return {
+    ...base,...definition,
+    source:base.source,
+    sourceBlob:base.sourceBlob,
+    fields:[...base.fields,...definition.fields]
+  };
+}
+const resolvedProfiles=Object.fromEntries(Object.keys(catalog.profiles)
+  .map(name=>[name,resolveProfile(name)]));
+const trees=Object.fromEntries(Object.entries(resolvedProfiles)
+  .map(([key,value])=>[key,makeTree(value.fields)]));
 
 function deviceProfile(model) {
   if (!model || typeof model !== 'object') return null;
@@ -257,7 +280,7 @@ function fieldAvailabilityPolicy(field, profileFields) {
 function fieldDefinitions(model) {
   const profile = deviceProfile(model);
   if (!profile) return null;
-  const source = catalog.profiles[profile.name];
+  const source = resolvedProfiles[profile.name];
   return {profile:profile.name,confidence:profile.confidence,
     source:source.source,
     sourceEdition:source.sourceEdition??null,
@@ -265,6 +288,9 @@ function fieldDefinitions(model) {
     extensionSourceEdition:source.extensionSourceEdition??null,
     extensionVerifiedAt:source.extensionVerifiedAt??null,
     provenance:source.provenance??null,
+    extensionEvidence:source.extensionEvidence??null,
+    extensionStatus:source.extensionStatus??null,
+    inheritedFrom:source.extends??null,
     fields:source.fields,
     dynamicPayload:source.dynamicPayload??null};
 }
