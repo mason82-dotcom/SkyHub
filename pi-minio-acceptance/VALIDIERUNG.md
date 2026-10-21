@@ -7,7 +7,7 @@ Keine Verbindung zum Pi, kein Zugriff auf dessen Daten, keine Pi-Ausführung.
 
 - Python-Syntaxprüfung von `manifest.py` und `restore_probe.py` erfolgreich.
 - Shell-Syntaxprüfung aller drei Shell-Dateien erfolgreich.
-- Acht lokale Tests mit temporären Testdateien erfolgreich:
+- 14 lokale Tests mit temporären Testdateien erfolgreich:
   - Kopie mit unveränderten Inhalten und Metadaten stimmt überein.
   - Manipulierte Inhalte werden erkannt.
   - Zusätzliche Dateien werden erkannt.
@@ -36,3 +36,11 @@ Insbesondere kann eine erfolgreiche Syntaxprüfung keine Pi-Ausführung ersetzen
 Vor einer späteren Durchführung alle Preflight-Ergebnisse und den aktuellen
 Live-Zustand erneut bewerten. Geänderte Zustände dürfen nicht durch Abschalten
 der Schutzprüfungen passend gemacht werden.
+
+## Ergänzung: entfernte Legacy-Container
+
+Sechs weitere lokale Tests mit Fixture-Daten bestätigen: beide Legacy-Container
+fehlen; beide sind gestoppt; einer fehlt und einer ist gestoppt; ein laufender
+Legacy-Container wird abgelehnt; ein unbekannter Status wird abgelehnt; eine
+fehlgeschlagene Docker-Inventur gilt nicht als Abwesenheit. Insgesamt 14 Tests
+bestanden. Kein echter Docker-Aufruf in diesen zusätzlichen Tests, kein Pi-Zugriff.

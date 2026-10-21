@@ -21,9 +21,7 @@ for tool in python3 docker tar zstd gpg sha256sum findmnt; do command -v "$tool"
 [[ "$(docker inspect -f '{{.State.Running}}' skyhub-next-minio-1)" == true ]]
 [[ "$(docker inspect -f '{{.Image}}' skyhub-next-minio-1)" == "$IMAGE" ]]
 [[ "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' skyhub-next-minio-1)" == "$SOURCE" ]]
-for old in aeronexusadvanced-cloud-minio-1 aeronexus-edge-minio-1; do
-  [[ "$(docker inspect -f '{{.State.Running}}' "$old")" == false ]]
-done
+python3 "$HERE/legacy_guard.py"
 python3 - "$SOURCE" "$IMAGE" <<'PY'
 import json, os, shutil, subprocess, sys
 total = entries = 0

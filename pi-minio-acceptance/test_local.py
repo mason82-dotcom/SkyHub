@@ -11,6 +11,9 @@ HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('manifest_helper', HERE/'manifest.py')
 helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
+legacy_spec = importlib.util.spec_from_file_location('legacy_guard', HERE/'legacy_guard.py')
+legacy = importlib.util.module_from_spec(legacy_spec)
+legacy_spec.loader.exec_module(legacy)
 
 
 class AcceptancePreparationTests(unittest.TestCase):
@@ -63,6 +66,31 @@ class AcceptancePreparationTests(unittest.TestCase):
     def test_all_shell_syntax(self):
         for script in ('preflight.sh', 'backup.sh', 'restore.sh'):
             self.assertEqual(subprocess.run(['bash', '-n', str(HERE/script)]).returncode, 0)
+
+    def test_removed_legacy_containers_allowed(self):
+        self.assertEqual(legacy.check_legacy([]), (2, 0))
+
+    def test_stopped_legacy_containers_allowed(self):
+        rows = [{'Name': name, 'State': {'Running': False}} for name in legacy.LEGACY]
+        self.assertEqual(legacy.check_legacy(rows), (0, 2))
+
+    def test_one_absent_one_stopped_allowed(self):
+        row = {'Name': sorted(legacy.LEGACY)[0], 'State': {'Running': False}}
+        self.assertEqual(legacy.check_legacy([row]), (1, 1))
+
+    def test_running_legacy_container_rejected(self):
+        row = {'Name': sorted(legacy.LEGACY)[0], 'State': {'Running': True}}
+        with self.assertRaises(ValueError): legacy.check_legacy([row])
+
+    def test_unknown_legacy_state_rejected(self):
+        row = {'Name': sorted(legacy.LEGACY)[0], 'State': {}}
+        with self.assertRaises(ValueError): legacy.check_legacy([row])
+
+    def test_docker_inventory_failure_not_treated_as_absence(self):
+        from unittest.mock import patch
+        with patch.object(legacy.subprocess, 'check_output',
+                          side_effect=subprocess.CalledProcessError(1, 'docker')):
+            with self.assertRaises(subprocess.CalledProcessError): legacy.main()
 
 
 if __name__ == '__main__':

@@ -32,8 +32,10 @@ Aus den vom Nutzer übermittelten Terminalausgaben:
 
 PR #19 ist nicht identisch mit diesem laufenden Aufbau. Der dortige alternative
 Container `skyhub-shared-minio` wird hier nicht angelegt. Kein `move`, kein
-PR-19-`up`, kein `apply`, kein `adopt`, kein `attach`. Legacy-Container bleiben
-gestoppt. PostgreSQL, Redis, EMQX, Nextcloud und Immich werden nicht gestoppt.
+PR-19-`up`, kein `apply`, kein `adopt`, kein `attach`. AeroNexus und
+AeroNexusAdvanced wurden laut Nutzer entfernt; die abschließende Containerliste
+zeigt nur den aktiven SkyHub-MinIO. Falls historische MinIO-Container noch
+vorhanden sind, müssen sie gestoppt sein; entfernte Container sind zulässig. PostgreSQL, Redis, EMQX, Nextcloud und Immich werden nicht gestoppt.
 
 Dies ist eine Storage-Sicherung, kein vollständiger SkyHub-Disaster-Recovery-Test:
 PostgreSQL-Dumps, Backend-Image und komplette Host-/Docker-Konfiguration sind
@@ -53,8 +55,8 @@ Original und Sicherung liegen auf unterschiedlichen physischen NVMe-Geräten,
 aber im selben Pi. Das schützt nicht gegen gemeinsamen Verlust, Diebstahl,
 Hostkompromittierung oder mehrere gleichzeitig beschädigte Laufwerke.
 
-`cryptsetup` wurde bisher nicht als installiert bestätigt. Fehlt es, ist der
-Restore gesperrt. Dieses Paket installiert keine Software. Auch das Erstellen
+`cryptsetup` und `cryptsetup-bin` wurden mit Version `2:2.7.5-2` auf dem Pi
+als installiert bestätigt. Dieses Paket installiert keine Software. Auch das Erstellen
 eines LUKS-/ext4-Abbilds auf diesem konkreten NTFS-Mount ist noch nicht praktisch
 getestet; ein nicht unterstütztes `fallocate` führt zum Abbruch.
 
@@ -63,6 +65,7 @@ getestet; ein nicht unterstütztes `fallocate` führt zum Abbruch.
 | Datei | Funktion |
 |---|---|
 | `preflight.sh` | Nur lesende Prüfung auf dem Pi |
+| `legacy_guard.py` | Fehlende Legacy-Container zulassen; laufende oder unklare Zustände ablehnen |
 | `backup.sh` | Späterer Offline-Backup-Lauf mit Verschlüsselung und Wiederanlauf |
 | `restore.sh` | Späterer Restore in neues verschlüsseltes Testabbild mit isoliertem MinIO |
 | `manifest.py` | Vollständiger Dateisatz, SHA-256, Größen, numerische Eigentümer, Modi und xattr-Digests |
@@ -89,7 +92,8 @@ bash preflight.sh
 Vor Backup-Ausführung müssen alle folgenden Punkte erfüllt sein:
 
 - Aktueller Datenpfad, UUID, Image und Container stimmen weiterhin.
-- Beide alten AeroNexus-MinIO-Server sind gestoppt.
+- Alte AeroNexus-MinIO-Server sind entfernt oder, falls noch vorhanden, gestoppt.
+  Eine fehlgeschlagene Docker-Inventur wird nicht als fehlender Container gewertet.
 - S3-Nutzer und direkte Dateischreiber sind ermittelt. Die gemeinsame
   Netzwerkmitgliedschaft allein ist keine vollständige Clientinventur.
 - Keine laufenden Uploads, Verarbeitungsläufe oder IAM-Änderungen im Wartungsfenster.
@@ -298,3 +302,19 @@ Bei bereits vorhandenem Ziel-Worktree nicht löschen oder überschreiben, sonder
 mit `git worktree list` und dessen Commit zuerst den Zustand prüfen. Kein
 Branchwechsel im aktiven SkyHub-Projekt. Die Backup-/Restore-Ausführungsargumente
 aus den späteren Phasen gehören ausdrücklich nicht zum Preflight.
+
+## Aktualisierung nach Entfernung von AeroNexus
+
+Am 22.10.2026 bestätigte der Nutzer die Entfernung von AeroNexus und
+AeroNexusAdvanced. Die jüngste Containerliste zeigt `skyhub-next-minio-1`
+und `skyhub-next-backend-1`; der Datenpfad liegt weiter auf der erwarteten NVMe
+und `.minio.sys` ist vorhanden. Die zuvor aktivierte Medien-Sync-Unit ist
+unter Benutzer `mason` nicht mehr geladen, ihre Datei fehlt.
+
+Der Legacy-Guard erlaubt daher entfernte historische Container. Vorhandene
+laufende, pausierte, neu startende oder unklar erkannte Legacy-Server werden
+weiterhin abgelehnt. Docker-Fehler führen zum Abbruch. Die zusätzliche Prüfung
+überlappender schreibbarer Mounts bleibt erhalten.
+
+Diese Befunde ersetzen keine Wartungsfreigabe und schließen externe oder
+zeitversetzte S3-Nutzer nicht aus. Backup/Restore bleiben ungestartet.
