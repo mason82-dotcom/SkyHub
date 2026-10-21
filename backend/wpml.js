@@ -3,6 +3,7 @@
 // Reference: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/
 const KML='http://www.opengis.net/kml/2.2';
 const WPML='http://www.dji.com/wpmz/1.0.2';
+const {assessAircraft}=require('./wpml-product-support');
 const MODES={
   templateType:['waypoint','mapping2d','mapping3d','mappingStrip'],
   flyToWaylineMode:['safely','pointToPoint'],
@@ -178,13 +179,15 @@ function mission(document,file,errors){
   if(!drone)pathError(errors,path+'/droneInfo','required element missing');
   if(!payload)pathError(errors,path+'/payloadInfo','required element missing');
   const droneType=drone?fieldNumber(drone,'droneEnumValue',0,65535,path+'/droneInfo',errors,true,true):null;
-  const droneSubtype=drone?fieldNumber(drone,'droneSubEnumValue',0,65535,path+'/droneInfo',errors,droneType===67,true):null;
+  const droneSubtype=drone?fieldNumber(drone,'droneSubEnumValue',0,65535,path+'/droneInfo',errors,
+    [67,77,91,99,100].includes(droneType),true):null;
   const payloadType=payload?fieldNumber(payload,'payloadEnumValue',0,65535,path+'/payloadInfo',errors,true,true):null;
-  if(payload)fieldNumber(payload,'payloadPositionIndex',0,255,path+'/payloadInfo',errors,true,true);
+  const payloadPosition=payload?fieldNumber(payload,'payloadPositionIndex',0,255,
+    path+'/payloadInfo',errors,true,true):null;
   const reroute=one(config,'wpml:autoRerouteInfo');
   if(reroute)for(const n of ['missionAutoRerouteMode','transitionalAutoRerouteMode'])
     optionalBool(reroute,n,path+'/autoRerouteInfo',errors);
-  return {droneType,droneSubtype,payloadType};
+  return {droneType,droneSubtype,payloadType,payloadPosition};
 }
 function heading(node,path,errors){
   if(!node)return;
@@ -238,6 +241,36 @@ function checkGroup(group,path,errors){
     if(['zoom','takePhoto','startRecord','gimbalRotate','orientedShoot'].includes(type)&&
       !one(action,'wpml:actionActuatorFuncParam'))
       pathError(errors,p+'/actionActuatorFuncParam','action parameter missing');
+    checkActionParams(one(action,'wpml:actionActuatorFuncParam'),type,p,errors);
+  }
+}
+function checkActionParams(param,type,path,errors){
+  if(!param)return;
+  const p=path+'/actionActuatorFuncParam';
+  if(['takePhoto','startRecord','stopRecord','focus','zoom','customDirName','gimbalRotate',
+    'gimbalEvenlyRotate','searchlight'].includes(type))
+    fieldNumber(param,'payloadPositionIndex',0,7,p,errors,true,true);
+  if(type==='zoom')fieldNumber(param,'focalLength',0.000001,10000,p,errors,true);
+  if(type==='focus')optionalBool(param,'isPointFocus',p,errors);
+  if(type==='hover')fieldNumber(param,'hoverTime',0.000001,3600,p,errors,true);
+  if(type==='rotateYaw')fieldNumber(param,'aircraftHeading',-180,180,p,errors,true);
+  if(type==='customDirName')required(param,'directoryName',p,errors);
+  if(type==='searchlight'){
+    fieldNumber(param,'searchlightOperateType',0,2,p,errors,true,true);
+    fieldNumber(param,'searchlightBrightness',0,100,p,errors,true,true);
+  }
+  if(type==='gimbalRotate'){
+    ['gimbalPitchRotateEnable','gimbalRollRotateEnable','gimbalYawRotateEnable',
+      'gimbalRotateTimeEnable'].forEach(n=>optionalBool(param,n,p,errors));
+    for(const n of ['gimbalPitchRotateAngle','gimbalRollRotateAngle','gimbalYawRotateAngle'])
+      fieldNumber(param,n,-360,360,p,errors);
+  }
+  if(['takePhoto','startRecord','stopRecord'].includes(type)){
+    optionalBool(param,'useGlobalPayloadLensIndex',p,errors);
+    const lenses=value(param,'payloadLensIndex');
+    if(lenses&&!lenses.split(',').every(x=>
+      ['zoom','wide','ir','narrow_band','visible','visable'].includes(x.trim())))
+      pathError(errors,p+'/payloadLensIndex','invalid camera lens selection');
   }
 }
 function validatePoint(placemark,path,errors,executable){
@@ -287,6 +320,18 @@ function validateDocuments(templateXml,waylinesXml){
   if(!td||!wd)return {valid:false,errors,warnings,templates,waylines};
   const meta=mission(td,'template.kml',errors);
   const execMeta=mission(wd,'waylines.wpml',errors);
+  if(meta){
+    const assessment=assessAircraft(meta.droneType,meta.droneSubtype,meta.payloadType,meta.payloadPosition);
+    meta.model=assessment.model;
+    for(const msg of assessment.errors)pathError(errors,'template.kml/missionConfig',msg);
+    warnings.push(...assessment.warnings);
+  }
+  if(execMeta){
+    const assessment=assessAircraft(execMeta.droneType,execMeta.droneSubtype,execMeta.payloadType,
+      execMeta.payloadPosition);
+    execMeta.model=assessment.model;
+    for(const msg of assessment.errors)pathError(errors,'waylines.wpml/missionConfig',msg);
+  }
   if(meta&&execMeta&&JSON.stringify(meta)!==JSON.stringify(execMeta))
     pathError(errors,'waylines.wpml/missionConfig','aircraft/payload differs from template');
   const templateIds=new Set(),waylineIds=new Set();
