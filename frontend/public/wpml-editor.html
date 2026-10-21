@@ -75,14 +75,32 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
    <div class="tools"><button type="button" id="add">Koordinate hinzufügen</button><button type="button" id="clear">Route leeren</button><button type="button" id="fit">Route einpassen</button></div>
    <div id="waypoints" role="list" aria-label="Wegpunktliste"></div>
    <hr>
+   <h2>Intervall-Fotoaktion (experimenteller WPML-Entwurf)</h2>
+   <label for="photo-trigger">Aufnahmemodus</label>
+   <select id="photo-trigger">
+     <option value="reachPoint">Einzelbild je markiertem Wegpunkt</option>
+     <option value="multipleDistance">Wiederholtes Foto nach Entfernung</option>
+     <option value="multipleTiming">Wiederholtes Foto nach Zeit</option>
+   </select>
+   <div id="photo-interval-fields" hidden>
+     <div class="rows">
+       <div><label for="photo-interval" id="photo-interval-label">Auslöseabstand (m)</label>
+         <input type="number" id="photo-interval" min="1" max="1000" step="any" value="12"></div>
+       <div><label for="photo-camera-min">Min. Kamera-Aufnahmeintervall (s, optional)</label>
+         <input type="number" id="photo-camera-min" min="0.1" max="60" step="any" placeholder="Unbekannt"></div>
+     </div>
+     <p class="caption">Nur offline generierte WPML-Aktionsgruppe; nicht auf DJI Pilot 2, Mavic 3M oder anderen Geräten verifiziert. Einzelbilder je Wegpunkt werden in diesem Modus deaktiviert. Insbesondere Start-/Endauslösung und Stopps an Wegpunkten sind NICHT hardwaregetestet.</p>
+   </div>
+   <hr>
    <button type="submit" id="export">WPML-KMZ lokal exportieren</button>
-   <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Aktuell Wegpunkte, eine globale Höhe oder individuell explizit belegte relative und WGS84-Ellipsoidhöhen sowie optionale Einzelbilder. Mapping2D/3D, Korridore, Terrain-Referenzen und Multispektralaktionen werden hier noch nicht zu Missionswegen berechnet.</p>
+   <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Wegpunkte, relative und WGS84-Ellipsoidhöhen sowie experimentelle, noch nicht in DJI Pilot 2 geprüfte Intervall-Fotoaktionen. Mapping2D/3D, Korridore, Terrain-Referenzen und Multispektralaktionen werden hier noch nicht zu Missionswegen berechnet.</p>
    <div id="message" role="status" aria-live="polite">Mindestens zwei unterschiedliche Wegpunkte setzen.</div>
    <p class="warning">Keine Flugfreigabe. DJI Pilot 2 muss die Mission prüfen. Keine Geofencing-, Terrain-, Kollisions- oder Kamerakompatibilitätsgarantie.</p>
   </form>
  </aside>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/wpml-interval-actions.js"></script>
 <script src="/wpml-editor-core.js"></script>
 <script src="/wpml-editor.js"></script>
 </body>
