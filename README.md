@@ -124,7 +124,7 @@ Das optionale MinIO-Profil kann mit `docker-compose.storage.yml` über das
 externe Docker-Netz `skyhub-storage-net` von ausgewählten Pi-Containern
 verwendet werden. **Kein automatisches Deployment und keine neuen S3-Uploads.**
 Der Betriebshelfer `scripts/pi-minio-network.sh` bietet einen lesenden
-`plan`, eine gezielte `apply`-Aktion, explizites `attach` sowie lesendes
-`verify`. Der bisherige Root-MinIO-Datenträger bleibt erhalten.
+`plan`, `apply` für ein neues SkyHub-MinIO, `adopt` für ein vorhandenes
+fremdes MinIO, explizites `attach` sowie lesendes `verify`. Der bisherige Root-MinIO-Datenträger bleibt erhalten.
 Die historische 2023er Image-Vorgabe wird für `apply` vorsorglich gesperrt.
 Siehe [Gemeinsamer MinIO-Objektspeicher](docs/minio-shared-storage.md).
