@@ -93,6 +93,47 @@ müssen nach DJI-Schema-Abgleich ausdrücklich ergänzt werden.
 - `GET /api/diagnostics/dji-fields?model=0:77:2` liefert die Wert-freien Definitionen nach regulärer View-Token-Authentifizierung. Dieselbe API unterstützt alle sechs genannten DJI-Typen. Beim erweiterten M4T-Profil enthält die Antwort **getrennte Quellangaben** für die fest gepinnte GitHub-Basistabelle (`source`) und die dokumentierten generischen DJI-Web-Erweiterungen (`extensionSource`, `extensionSourceEdition`, `extensionVerifiedAt`). Das Vertrauensniveau bleibt ausdrücklich `shared-aircraft-with-web-extensions-unverified`.
 - `node scripts/pi-telemetry-fields-check.js` zeigt zusätzlich dokumentierte Pfadzahlen und beobachtete Feldnamen pro Gerät an; kein Rohwert oder Seriennummer wird ausgegeben. **Aktuell** bedeutet je Feld eine letzte validierte Beobachtung innerhalb von 15 Sekunden, nicht lediglich eine neue Meldung auf dem betreffenden MQTT-Kanal. Historisch beobachtete Werte werden separat gezählt. Die Diagnose zählt **auswertbare**, absichtlich **redigierte** und wegen untypisierter Arrays **nicht unterstützte** Felder getrennt. Absichtlich aus Datenschutzgründen verworfene Kennungen gelten nicht als `nicht beobachtet`.
 
+## Hardwarevalidierte Mavic-3M-Erweiterung (21.10.2026)
+
+Der echte RC-Pro-Enterprise-/Mavic-3M-Hardwaretest nach dem kontrollierten
+SkyHub-Backend-Update bestätigte die Gerätezuordnung in der live
+akzeptierten MQTT-Topologie (M3M: `0:77:2`). Im neuen
+**modellbezogenen**, ausschließlich lesenden MQTT-Feldkatalog wurden
+drei zusätzliche Aircraft-Rootfelder konkret in Mavic-3M-OSD beobachtet:
+
+- `distance_limit_status` – Distanzbegrenzungsstatus, dokumentierter
+  verschachtelter `struct`;
+- `rth_altitude` – eingestellte Rückkehrhöhe (RTH);
+- `rc_lost_action` – konfigurierte Aktion bei Verbindungsverlust zur RC.
+
+**Nachweisgrenze:** Beobachtet wurden ausschließlich die Root**namen**.
+Werte, Typen, Unterfelder, Grenzbereiche und Enum-Codes wurden in dieser
+Live-Sitzung **nicht** protokolliert und deshalb nicht auf M3M-Hardware
+bestätigt. Die typisierten Grenzen stammen aus der generischen
+[DJI Aircraft Property Reference](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html),
+Editionsstand 2024-06-28. Es dürfen daraus insbesondere **keine**
+Aussagen über sicherheitskritische tatsächliche RTH- oder
+Verbindungsverlust-Einstellungen abgeleitet werden.
+
+Die Schemaabbildung `mavic3m` enthält **nur sechs zusätzliche
+Felddefinitionen** (3 Roots plus 3 Kinder unter
+`distance_limit_status`) und erbt alle 144 fest gepinnten Mavic-3-Felder.
+Dadurch lautet das vorläufige inventarisierte Profil **150 Pfade**.
+Die Mavic 3E und 3T behalten unverändert ihre 144 Definitionen.
+`confidence` und `extensionEvidence` kennzeichnen die Hardware-
+Validierung auf Rootnamen-Ebene und die noch offene Werteprüfung.
+
+Die neuen Definitionen werden ausschließlich gelesen und mit
+DJI-Typ-/Wertebereich-Prüfungen akzeptiert; die generischen
+`access: rw`-Metadaten autorisieren **keine** DJI-`property/set`-
+Nachrichten. Keine Flugsteuerung, keine RTH-Änderung und keine
+Geräte-Konfigurationsänderung.
+
+Bei vorläufiger M3M-OSD-Feldprüfung sind mindestens zu unterscheiden:
+`osd`-Nachricht angenommen, dokumentierter Rootname beobachtet,
+einzelnes Unterfeld/Enum-Wert tatsächlich validiert und schließlich
+hardwarebestätigte Funktion. Jede Stufe benötigt gesonderte Evidenz.
+
 ## Absichtlich nicht umgesetzt
 
 Keine DJI-`property/set`-Aufrufe, Flight Control, Missionsstarts, Kameraaktionen
