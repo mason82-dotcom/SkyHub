@@ -119,3 +119,24 @@ test('dynamic gimbal inventory reports only field names, not payload indices or 
     model:{domain:'0',type:77,subType:2},deviceProperties:{osd:{},state:{}}
   }])[0].dynamicDocumentedTotal,0);
 });
+
+
+test('audit records sources and marks generic Matrice 4T property extensions unverified',()=>{
+  const [d]=summarizeTelemetryFields([{
+    model:{domain:'0',type:99,subType:1},
+    modelName:'Matrice 4T',
+    deviceCategory:'aircraft',
+    deviceProperties:{osd:{},state:{}}
+  }]);
+  assert.equal(d.documentedTotal,199);
+  assert.match(d.documentedSource,/Cloud-API-Doc/);
+  assert.match(d.documentedExtensionSource,/aircraft\/properties\.html/);
+  assert.equal(d.documentedExtensionEdition,'2024-06-28');
+  assert.match(d.documentedConfidence,/unverified/);
+  assert.ok(d.redactedDocumented.includes('state:psdk_widget_values.psdk_sn'));
+  assert.ok(d.redactedDocumented.includes('state:psdk_widget_values.speaker.play_file_name'));
+  assert.ok(d.redactedDocumented.includes('state:psdk_ui_resource.object_key'));
+  assert.ok(d.notObservedDocumented.includes('state:psdk_widget_values.speaker.play_volume'));
+  assert.equal(d.observedDocumented.length+d.notObservedDocumented.length+
+    d.redactedDocumented.length+d.unsupportedDocumented.length,199);
+});
