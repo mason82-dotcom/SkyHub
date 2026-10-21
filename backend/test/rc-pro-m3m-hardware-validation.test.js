@@ -321,3 +321,54 @@ test('missing M3M on an older backend is not invented as camera capability data'
   assert.equal(report.aircraft.propertyFields.m3mGapGroups,null);
   assert.match(formatReport(report),/M3M-Feldluecken-Klassifikation: NICHT PRUEFBAR/);
 });
+
+
+test('State channel diagnostics distinguish zero deliveries from rejected and accepted messages',()=>{
+  const cases=[
+    {observed:0,accepted:0,status:'KEIN STATE-TOPIC BEOBACHTET'},
+    {observed:7,accepted:0,status:'STATE-TOPIC BEOBACHTET, NICHT ANGENOMMEN'},
+    {observed:9,accepted:2,status:'STATE ANGENOMMEN, NICHT RC/M3M ZUGEORDNET'}
+  ];
+  for(const c of cases){
+    const h={...health,
+      mqttObservedChannelCounts:{...health.mqttObservedChannelCounts,state:c.observed},
+      mqttChannelCounts:{state:c.accepted}};
+    const r=evaluateHardwareSession([rc,air],h,shapes,now,[]);
+    assert.equal(r.stateEvidence.observed,c.observed);
+    assert.equal(r.stateEvidence.accepted,c.accepted);
+    assert.equal(r.stateEvidence.status,c.status);
+    assert.equal(r.stateEvidence.modelRc,0);
+    assert.equal(r.stateEvidence.modelM3m,0);
+    assert.match(formatReport(r),/State auf MQTT-Topic beobachtet/);
+    assert.doesNotMatch(formatReport(r),/PRIVATE_AIR_SERIAL|PRIVATE_RC_SERIAL/);
+  }
+});
+
+test('State model evidence shows accepted packets separately from typed property acceptance',()=>{
+  const h={...health,mqttChannelCounts:{state:4}};
+  const modelShapes=[
+    {channel:'state',model:'2:144:0',count:1,dataKeys:['live_capacity','PRIVATE_RC_SERIAL']},
+    {channel:'state',model:'0:77:2',count:2,dataKeys:['firmware_version','PRIVATE_AIR_SERIAL']},
+    {channel:'state',model:'unknown',count:999,dataKeys:['SECRET_TOKEN']}
+  ];
+  const noTypedAir={...air,propertyObservedAt:{...air.propertyObservedAt,state:null}};
+  const r=evaluateHardwareSession([rc,noTypedAir],h,shapes,now,modelShapes);
+  assert.equal(r.stateEvidence.status,'STATE MODELLBEZOGEN BEOBACHTET');
+  assert.equal(r.stateEvidence.modelRc,1);
+  assert.equal(r.stateEvidence.modelM3m,2);
+  assert.equal(r.stateEvidence.rcTypedPropertiesObserved,true);
+  assert.equal(r.stateEvidence.m3mTypedPropertiesObserved,false);
+  assert.match(formatReport(r),/Geraeteseitige typisierte State-Feldannahme: RC ja \| M3M nein/);
+  assert.doesNotMatch(JSON.stringify(r),/PRIVATE|SECRET_TOKEN|unknown/);
+});
+
+test('State channel diagnostics remain non-speculative with older backend or incomplete health',()=>{
+  const h={...health,mqttChannelCounts:{state:3}};
+  const report=evaluateHardwareSession([rc,air],h,shapes,now);
+  assert.equal(report.stateEvidence.modelScopedAvailable,false);
+  assert.equal(report.stateEvidence.modelRc,null);
+  assert.equal(report.stateEvidence.status,'STATE ANGENOMMEN, MODELLZUORDNUNG UNBEKANNT');
+  const unavailable=evaluateHardwareSession([rc,air],{},[],now);
+  assert.equal(unavailable.stateEvidence.status,'NICHT PRUEFBAR');
+  assert.match(formatReport(unavailable),/State-Status: NICHT PRUEFBAR/);
+});
