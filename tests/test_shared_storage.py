@@ -119,6 +119,74 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertIn("expected exactly one running MinIO server", helper)
         self.assertIn("Stopped historical containers remain untouched", helper)
 
+    def test_migrated_runtime_is_separate_no_ports_same_nvme(self):
+        standalone = (ROOT / "docker-compose.minio-shared.yml").read_text()
+        self.assertIn("name: skyhub-storage", standalone)
+        self.assertIn("container_name: skyhub-shared-minio", standalone)
+        self.assertIn("image: skyhub/minio:RELEASE.2025-10-15", standalone)
+        self.assertIn("pull_policy: never", standalone)
+        self.assertIn("create_host_path: false", standalone)
+        self.assertIn("/mnt/hc4backup/skyhub-next/minio", standalone)
+        self.assertNotIn("\n    ports:", standalone)
+        self.assertNotIn("aeronexus-data/minio", standalone)
+        self.assertIn("format: raw", standalone)
+
+    def test_aeronexus_migration_explicitly_copy_free_and_opt_in(self):
+        helper = ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh"
+        self.assertTrue(helper.is_file())
+        parsed = subprocess.run(["bash", "-n", str(helper)], capture_output=True, text=True)
+        self.assertEqual(parsed.returncode, 0, parsed.stderr)
+        out = subprocess.run(["bash", str(helper), "--help"], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        for mode in ("plan", "move", "up", "status"):
+            self.assertIn(mode, out.stdout)
+        text = helper.read_text()
+        self.assertIn("os.rename(src, dst)", text)
+        self.assertIn("os.stat(src).st_dev != os.stat(dst.parent).st_dev", text)
+        self.assertIn('ln -s -- "$TARGET" "$LINK"', text)
+        self.assertIn('docker image tag "$OLD_IMAGE" "$NEW_IMAGE"', text)
+        self.assertIn('verify_old_stopped', text)
+        self.assertIn('verify_no_other_running', text)
+        self.assertIn('EXPECTED_IMAGE_ID="sha256:117cf7edd05', text)
+        self.assertIn("docker compose -f", text)
+        for bad in ("cp -a", "rsync", "shutil.copy", "docker compose down",
+                    "docker volume rm", "docker start ", "docker stop ",
+                    "docker rm -f", "docker pull ", "mv -"):
+            self.assertNotIn(bad + "\n", text)
+        self.assertIn("/storage/minio-data", (ROOT / ".gitignore").read_text())
+
+    def test_credentials_exporter_never_prints_values_or_overwrites(self):
+        import importlib.util
+        path = ROOT / "scripts/pi-minio-credentials.py"
+        spec = importlib.util.spec_from_file_location("minio_credentials", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        config = mod.parse_env([
+            "PATH=/bin",
+            "MINIO_ROOT_USER=s3-user",
+            "MINIO_ROOT_PASSWORD=unit-test-only",
+            "MINIO_REGION_NAME=us-east-1",
+        ])
+        self.assertEqual(config["MINIO_ROOT_USER"], "s3-user")
+        self.assertEqual(len(config), 3)
+        with self.assertRaises(ValueError):
+            mod.parse_env([
+                "MINIO_ROOT_USER=s3-user",
+                "MINIO_ROOT_PASSWORD=unit-test-only",
+                "MINIO_KMS_KES_ENDPOINT=https://kms.local",
+            ])
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            dest = Path(folder) / "secrets.env"
+            mod.export_file(config, dest)
+            self.assertEqual(dest.stat().st_mode & 0o777, 0o600)
+            with self.assertRaises(FileExistsError):
+                mod.export_file(config, dest)
+        text = path.read_text()
+        self.assertNotIn("print(values)", text)
+        self.assertNotIn("print(env)", text)
+        self.assertIn("O_EXCL", text)
+
     def test_existing_profile_and_persistent_volume_are_preserved(self):
         compose = ROOT_COMPOSE.read_text(encoding="utf-8")
         self.assertIn('profiles: ["media"]', compose)
