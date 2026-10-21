@@ -133,3 +133,78 @@ test('topology drives model-specific extraction, separated channel timestamps an
   assert.equal(device.propertyObservedAt.osd,now-1000);
   assert.equal(device.telemetry.battery,60);
 });
+
+
+test('RC Plus 2 stream capabilities preserve safe lens enums, not identifiers',()=>{
+  const payload={
+    live_capacity:{available_video_number:1,device_list:[{
+      sn:'SECRET_AIRCRAFT',camera_list:[{
+        camera_index:'89-0-0',video_list:[{
+          video_index:'0',
+          video_type:'zoom',
+          switchable_video_types:['wide','zoom','ir','SECRET_LINK','normal','infrared',
+            'https://untrusted.example','visible','thermal','fpv']
+        }]
+      }]
+    }]},
+    live_status:[{video_id:'SECRET_AIRCRAFT/89-0-0/0',video_type:'wide',
+      video_quality:2,status:1,error_status:0}]
+  };
+  const known=sanitizeKnownProperties(payload,'state');
+  const rc=sanitizeDeviceProperties(known,'state',models[5][0]);
+  const camera=rc.live_capacity.device_list[0].camera_list[0];
+  assert.equal(camera.camera_index,'89-0-0');
+  assert.equal(camera.video_list[0].video_index,'0');
+  assert.equal(camera.video_list[0].video_type,'zoom');
+  assert.deepEqual(camera.video_list[0].switchable_video_types,
+    ['wide','zoom','ir','normal','infrared','visible']);
+  assert.equal(rc.live_status[0].video_type,'wide');
+  assert.equal(rc.live_status[0].status,1);
+  const safe=JSON.stringify(rc);
+  for(const forbidden of ['SECRET_AIRCRAFT','SECRET_LINK','untrusted.example'])
+    assert.doesNotMatch(safe,new RegExp(forbidden));
+  assert.equal(sanitizeKnownProperties(payload,'osd').live_capacity,undefined);
+});
+test('missing reconnect mode code does not revive disconnected aircraft or stale properties',()=>{
+  const registry=createRegistry(),now=1792602000000;
+  registry.ingest(topo(now-4000),now-4000);
+  const send=(ms,data)=>registry.ingest(receive('thing/product/AIR/osd',data,ms),ms);
+  send(now-3000,{mode_code:4,battery:{capacity_percent:78},
+    cameras:[{remain_photo_num:12}],latitude:49.12,longitude:8.23});
+  send(now-2000,{mode_code:14,battery:{capacity_percent:50},
+    cameras:[{remain_photo_num:9}],latitude:49.13,longitude:8.24});
+  const update=send(now-1000,{battery:{capacity_percent:20},
+    cameras:[{remain_photo_num:4}],latitude:49.14,longitude:8.25});
+  assert.equal(update.point,null);
+  let device=registry.get('AIR',now);
+  assert.equal(device.aircraftConnected,false);
+  assert.equal(device.telemetry.battery,78);
+  assert.equal(device.deviceProperties.osd.cameras[0].remain_photo_num,12);
+  assert.equal(device.propertyObservedAt.osd,now-3000);
+  send(now-100,{mode_code:4,battery:{capacity_percent:19},
+    cameras:[{remain_photo_num:3}]});
+  device=registry.get('AIR',now);
+  assert.equal(device.aircraftConnected,true);
+  assert.equal(device.telemetry.battery,19);
+  assert.equal(device.deviceProperties.osd.cameras[0].remain_photo_num,3);
+});
+test('DJI null position and partial coordinate updates preserve prior accepted raw position',()=>{
+  const registry=createRegistry(),now=1792604000000;
+  registry.ingest(topo(now-5000),now-5000);
+  const send=(ms,data)=>registry.ingest(receive('thing/product/AIR/osd',data,ms),ms);
+  send(now-4000,{mode_code:4,latitude:49.1,longitude:8.2,wind_speed:2});
+  send(now-3000,{mode_code:4,latitude:0,longitude:0,wind_speed:3});
+  let d=registry.get('AIR',now);
+  assert.equal(d.deviceProperties.osd.latitude,49.1);
+  assert.equal(d.deviceProperties.osd.longitude,8.2);
+  assert.equal(d.deviceProperties.osd.wind_speed,3);
+  send(now-2000,{mode_code:4,latitude:50.3,wind_speed:4});
+  d=registry.get('AIR',now);
+  assert.equal(d.deviceProperties.osd.latitude,49.1);
+  assert.equal(d.deviceProperties.osd.longitude,8.2);
+  assert.equal(d.deviceProperties.osd.wind_speed,4);
+  send(now-1000,{mode_code:4,latitude:50.3,longitude:9.4});
+  d=registry.get('AIR',now);
+  assert.equal(d.deviceProperties.osd.latitude,50.3);
+  assert.equal(d.deviceProperties.osd.longitude,9.4);
+});
