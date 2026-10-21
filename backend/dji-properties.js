@@ -156,6 +156,7 @@ function sanitizeDeviceProperties(known, channel, model) {
 // missing telemetry. This reports capability, never an observed field value.
 function fieldAvailabilityPolicy(field, profileFields) {
   if (!field || typeof field.path !== 'string') return 'unavailable';
+  if (field.privacy === 'redacted') return 'redacted';
   if (field.type === 'text') {
     const p=field.path;
     const safe=p === 'country' || p.endsWith('firmware_version') ||
