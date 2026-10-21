@@ -548,7 +548,8 @@ function renderHealth(data){
     'Paket '+observed+' beobachtet';
   el('healthTelemetry').textContent=telemetry==='noch nicht'?'Noch kein Messwert übernommen':
     'Messwert '+telemetry+' übernommen';
-  el('healthStorage').textContent=!data.postgresConfigured?'Nicht konfiguriert':
+  el('healthStorage').textContent=data.trackRecordingEnabled===false?'Aufzeichnung deaktiviert':
+    !data.postgresConfigured?'Nicht konfiguriert':
     !data.postgresMigrationReady?'Datenbank noch nicht bereit':
     Number.isFinite(data.trackLastWriteErrorAt)&&
       (!Number.isFinite(data.trackLastWriteAt)||data.trackLastWriteErrorAt>data.trackLastWriteAt)?

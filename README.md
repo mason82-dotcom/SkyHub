@@ -29,6 +29,18 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
 - [Archivhinweise](stacks/README.md)
 
+## Positionsaufzeichnung (standardmäßig deaktiviert)
+
+Die Live-Telemetrie, Kartendarstellung und MQTT-OSD-Verarbeitung laufen
+unabhängig von der PostGIS-Flugspuraufzeichnung. Mit
+`SKYHUB_TRACK_RECORDING_ENABLED=false` (Standard) werden keine neuen
+`drone_telemetry`-Punkte gespeichert; auch die automatische Löschung
+alter Spurpunkte ist pausiert. Bestehende Spuren bleiben in der Datenbank
+und sind weiterhin über die lesende Track-API abrufbar. Der Health-Endpunkt
+meldet dann `trackRecordingEnabled:false`. Erst explizites `true`
+und ein gezieltes Backend-Update aktivieren die Aufnahme wieder.
+Die lokale `.env` bleibt unverändert.
+
 ## Sicher prüfen – ohne Deployment
 
 ```bash

@@ -45,9 +45,45 @@ test('migration failure keeps storage unavailable until a later retry succeeds',
   assert.equal(await recorder.prune(30),3);
 });
 
+test('disabled recording prevents GPS inserts and preserves existing history',async()=>{
+  let inserts=0,prunes=0,migrations=0;
+  const store={
+    migrate:async()=>{migrations++;},
+    insert:async()=>{inserts++;},
+    prune:async()=>{prunes++;return 3;}
+  };
+  const recorder=createTrackRecorder({store,policy:createTrackPolicy(),
+    enabled:true,recordingEnabled:false});
+  assert.equal(await recorder.migrate(),true);
+  assert.equal(await recorder.record(point,100,{}),false);
+  assert.equal(await recorder.record({...point,latitude:49.2},200,{}),false);
+  assert.equal(await recorder.prune(30),0);
+  assert.equal(migrations,1);
+  assert.equal(inserts,0);
+  assert.equal(prunes,0);
+  assert.equal(recorder.snapshot().postgresConfigured,true);
+  assert.equal(recorder.snapshot().postgresMigrationReady,true);
+  assert.equal(recorder.snapshot().trackRecordingEnabled,false);
+  assert.equal(recorder.snapshot().trackPointsStored,0);
+  assert.equal(recorder.snapshot().trackPointsSkipped,0);
+});
+
+test('explicit opt-in enables GPS inserts',async()=>{
+  let inserts=0;
+  const recorder=createTrackRecorder({
+    store:{migrate:async()=>{},insert:async()=>{inserts++;},prune:async()=>0},
+    policy:createTrackPolicy(),enabled:true,recordingEnabled:true
+  });
+  await recorder.migrate();
+  assert.equal(await recorder.record(point,100,{}),true);
+  assert.equal(inserts,1);
+  assert.equal(recorder.snapshot().trackRecordingEnabled,true);
+});
+
 test('a database-free test instance reports its capability honestly',async()=>{
   const recorder=createTrackRecorder({store:{},policy:createTrackPolicy()});
   assert.equal(await recorder.migrate(),false);
   assert.equal(recorder.snapshot().postgresConfigured,false);
   assert.equal(recorder.snapshot().postgresMigrationReady,false);
+  assert.equal(recorder.snapshot().trackRecordingEnabled,false);
 });

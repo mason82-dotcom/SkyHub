@@ -1,7 +1,7 @@
 'use strict';
 
 // Tracks confirmed writes separately from policy skips and database failures.
-function createTrackRecorder({store,policy,enabled=false,clock=Date.now,onWriteError=()=>{}}){
+function createTrackRecorder({store,policy,enabled=false,recordingEnabled=true,clock=Date.now,onWriteError=()=>{}}){
   let ready=false,migrating=null,stored=0,skipped=0,unavailable=0,pending=0;
   let writeErrors=0,lastWriteAt=null,lastWriteErrorAt=null;
   async function migrate(){
@@ -12,7 +12,7 @@ function createTrackRecorder({store,policy,enabled=false,clock=Date.now,onWriteE
     return migrating;
   }
   function record(point,at,fields){
-    if(!enabled || !point)return Promise.resolve(false);
+    if(!enabled || !recordingEnabled || !point)return Promise.resolve(false);
     if(!ready){unavailable++;return Promise.resolve(false);}
     if(!policy.shouldStore(point,at)){skipped++;return Promise.resolve(false);}
     pending++;
@@ -27,9 +27,11 @@ function createTrackRecorder({store,policy,enabled=false,clock=Date.now,onWriteE
   }
   return {
     migrate,record,
-    prune:days=>ready?store.prune(days):Promise.resolve(0),
+    // Disabled recording also preserves the existing history against automatic pruning.
+    prune:days=>ready&&recordingEnabled?store.prune(days):Promise.resolve(0),
     snapshot:()=>({
       postgresConfigured:enabled,postgresMigrationReady:ready,
+      trackRecordingEnabled:Boolean(enabled&&recordingEnabled),
       trackPointsStored:stored,trackPointsSkipped:skipped,
       trackPointsUnavailable:unavailable,trackWritesPending:pending,
       trackWriteErrors:writeErrors,trackLastWriteAt:lastWriteAt,

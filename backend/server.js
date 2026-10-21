@@ -134,7 +134,10 @@ const pool=process.env.DATABASE_URL?
 if(pool)pool.on('error',err=>console.error('[postgres]',err.message));
 const trackPolicy=createTrackPolicy();
 const trackStore=createTrackStore(pool);
+// Historical GPS recording is opt-in; live DJI telemetry remains available.
+const trackRecordingEnabled=process.env.SKYHUB_TRACK_RECORDING_ENABLED==='true';
 const trackRecorder=createTrackRecorder({store:trackStore,policy:trackPolicy,enabled:Boolean(pool),
+  recordingEnabled:trackRecordingEnabled,
   onWriteError:()=>console.error('[postgres insert] failed')});
 async function pruneTracks(){
   try{
@@ -197,7 +200,7 @@ function onMessage(topic,payload,packet){
         .catch(err=>console.error('[redis topology]',err.message));
     }
     // Persist only movement or a 60 s heartbeat, never 0/0 without a fix (track-policy.js).
-    if(pool && result.point){
+    if(pool && trackRecordingEnabled && result.point){
       const sampleAt=parsed.timestamp===null?observedAt:Math.min(parsed.timestamp,observedAt);
       const t=parsed.telemetry;
       trackRecorder.record(result.point,sampleAt,{sourceTs:sampleAt,timeVerified:parsed.timestamp!==null,
