@@ -234,11 +234,8 @@ function checkGroup(group,path,errors){
   if(!trigger)pathError(errors,path+'/actionTrigger','required element missing');
   else{
     const type=fieldEnum(trigger,'actionTriggerType',path+'/actionTrigger',errors,true);
-    if(['multipleTiming','multipleDistance'].includes(type)){
+    if(['multipleTiming','multipleDistance'].includes(type))
       fieldNumber(trigger,'actionTriggerParam',0.000001,100000,path+'/actionTrigger',errors,true);
-      if(start!==null&&end!==null&&end===start)
-        pathError(errors,path,'periodic photo/action trigger needs a waypoint range');
-    }
   }
   const actions=kids(group,'wpml:action'),used=new Set();
   if(!actions.length)pathError(errors,path,'action list missing');
