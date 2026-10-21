@@ -6,6 +6,104 @@ Pi-Compose-Stacks. Der bisherige optionale Root-Compose-Dienst `minio` mit
 `minio_data:/data` bleibt erhalten. Es findet **keine** automatische Migration,
 kein Löschen und kein Ersatz eines vorhandenen MinIO-Datenvolumes statt.
 
+## Aktueller Pi: AeroNexus ist stillgelegt – Copy-free-Umzug nach SkyHub
+
+**Bereitgestellt, aber noch NICHT auf dem Raspberry Pi ausgeführt:**
+`docker-compose.minio-shared.yml`,
+`scripts/pi-minio-migrate-from-aeronexus.sh` und
+`scripts/pi-minio-credentials.py`. Die zwei früheren AeroNexus-MinIO-
+Container bleiben unangetastet und gestoppt. **Beide verwenden übrigens
+exakt dasselbe ARM64-Image**; es gibt keinen unterschiedlichen neueren
+Image-Stand. Der zuletzt aktiv gewesene Container
+`aeronexusadvanced-cloud-minio-1` wird als Quelle seiner
+Startkonfiguration und seiner privaten MINIO_-Environment-Variablen benutzt.
+
+Ein Docker-Container kann **nicht** einfach als Datei in ein Git-
+Projektverzeichnis verschoben werden. `docker rename` ändert nur seinen
+Namen und würde die bisherige riskante Host-Portbindung auf TCP 9000
+**nicht** entfernen. Stattdessen wird aus demselben lokalen Image
+ein neuer, Compose-verwalteter MinIO **ohne Download und ohne Kopie der
+Image-Layer** angelegt. Der neue Container heißt `skyhub-shared-minio`,
+Image-Tag `skyhub/minio:RELEASE.2025-10-15T17-29-55Z-an1`.
+
+Der MinIO-Datenbestand wird **innerhalb derselben NVMe-Partition**
+mittels `os.rename` von
+`/mnt/hc4backup/aeronexus-data/minio` nach
+`/mnt/hc4backup/skyhub-next/minio` verlagert. Das ist eine
+Dateisystem-Metadatenoperation, **keine rekursive Kopie**. Im
+SkyHub-Repository wird der symbolische Link
+`storage/minio-data -> /mnt/hc4backup/skyhub-next/minio`
+angelegt; Buckets/Objekte werden nicht ins Root-Dateisystem des Pi
+kopiert. Das Script prüft vor der Umbenennung explizit
+`st_dev` beider Verzeichnisse und verwendet `os.rename`, niemals
+einen Cross-Filesystem-Fallback mit Kopie.
+
+**Wichtige Voraussetzung:** Vor dem Umzug einen unabhängigen
+Daten-Backup-/Restore-Plan und die tatsächlichen Buckets separat
+verifizieren. Der nachgewiesene `.minio.sys`-Ordner zeigt vorhandene
+Metadaten, aber keinen fehlerfreien Datenbestand oder gelungenes Backup.
+Nach dem Umbenennen zeigen beide alten Container weiterhin auf ihren
+**jetzt ungültigen** ursprünglichen Pfad. **Keinen alten Container mehr
+starten**: Der Bind-Mount könnte ein neues, leeres Verzeichnis anlegen;
+zudem würde Port 9000 auf dem Pi-Host veröffentlicht. Die alten
+Container bleiben als gestoppte Konfigurationsreferenzen erhalten.
+
+### Drei getrennte Betriebsphasen
+
+Auf einem **lokalen Checkout dieses Entwicklungsbranches** im aktiven
+SkyHub-Projektverzeichnis, nach Prüfung des Mounts und der Sicherung:
+
+```bash
+# 1. Nur LESEN: Docker- und NVMe-Quellen validieren,
+# vorhandene MinIO-Konfigurations-Schlüsselnamen ohne Werte prüfen:
+bash scripts/pi-minio-migrate-from-aeronexus.sh plan
+
+# 2. BEWUSSTER DATEN-PFAD-UMZUG: von /mnt/hc4backup/aeronexus-data
+# nach /mnt/hc4backup/skyhub-next, OHNE Daten zu kopieren.
+# Schreibt davor eine private lokale .env (0600) mit dem bestehenden
+# MinIO-Root-Benutzer und -Passwort, ohne sie auszugeben:
+bash scripts/pi-minio-migrate-from-aeronexus.sh move
+
+# Zwischenprüfung: Verzeichnisse/Symlink und Containerstatus:
+bash scripts/pi-minio-migrate-from-aeronexus.sh status
+
+# 3. NUR NACH SICHERUNGS-/KONFIGURATIONSPRÜFUNG:
+# Vorhandenes Image nur lokal umtaggen, Einzel-Container ohne Host-Ports
+# starten und SkyHub-Backend dem privaten Storage-Netz hinzufügen:
+bash scripts/pi-minio-migrate-from-aeronexus.sh up
+
+# Readiness aus dem laufenden SkyHub-Backend heraus prüfen:
+bash scripts/pi-minio-network.sh verify
+```
+
+`plan` und `status` sind rein lesend. `move` verändert den
+**Datenverzeichnispfad auf dem NVMe** und legt den lokalen Symlink und
+die passwortgeschützte Konfigurationsdatei an. `up` verändert Docker
+(Images-Tags, Netzwerk, einen Container) sowie die Netzwerkmitgliedschaft
+des bestehenden SkyHub-Backends, **nicht** dessen Datenbank/Redis/MQTT-
+Dienste. Es wird kein Host-Port (auch nicht 9001) publiziert.
+Nach `up` hat die MinIO-Container-Restart-Policy absichtlich
+`no`. Für spätere automatische Starts ist zuerst eine
+Mount-abhängige systemd-Unit mit `RequiresMountsFor` für
+`/mnt/hc4backup` nötig, damit nie ohne NVMe-Bind-Mount gestartet wird.
+
+Der lokale Credentials-Exporter lehnt fehlende Root-Variablen sowie
+besondere KMS-, SSE-, Identity-, Distributed- und andere sensible
+Konfigurationen ab, die man vor einem Wechsel manuell prüfen muss.
+Er gibt **nur die Schlüsselnamen, nie Werte** aus.
+`~/.config/skyhub/minio-shared.env` liegt absichtlich außerhalb
+des Git-Projektordners (Rechte 0600). Vorhandene Credentials-Dateien
+werden nicht überschrieben. `env_file.format: raw` benötigt eine
+geeignete aktuelle Docker-Compose-Version; `up` validiert das vorab.
+
+**Nicht** mit `scripts/pi-minio-network.sh apply` arbeiten:
+Dieser Modus erzeugt einen zweiten SkyHub-eigenen MinIO mit einem
+separaten `minio_data`-Volume. Für die NVMe-Migration allein das
+dedizierte `docker-compose.minio-shared.yml` und dessen Helper
+verwenden. SkyHub-Next verwendet anschließend den Endpunkt
+`http://skyhub-minio:9000`; tatsächliche S3-Uploads/Bucket-Policies
+müssen separat aktiviert werden.
+
 ## Topologie und Abgrenzung
 
 ```text
