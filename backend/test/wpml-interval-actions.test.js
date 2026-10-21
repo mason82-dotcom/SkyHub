@@ -132,3 +132,29 @@ test('periodic distance/timing triggers must cover at least two route indices',(
   assert.ok(validateDocuments(built.templateXml,badInterval).errors.some(
     x=>x.path.endsWith('/actionTriggerParam')));
 });
+
+test('offline CLI processes synthetic multipleDistance example and rejects overwrites',()=>{
+  const {spawnSync}=require('node:child_process');
+  const os=require('node:os');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'skyhub-interval-'));
+  const fixture=path.join(__dirname,'../../docs/examples/wpml-interval-photo-plan.json');
+  const script=path.join(__dirname,'../../scripts/wpml-plan.js');
+  const output=path.join(dir,'interval-draft.kmz');
+  try{
+    const result=spawnSync(process.execPath,[script,fixture,output],
+      {encoding:'utf8',timeout:15000});
+    assert.equal(result.status,0,result.stderr);
+    const inspection=inspectKmz(fs.readFileSync(output));
+    assert.equal(inspection.valid,true,JSON.stringify(inspection.errors));
+    assert.equal(inspection.flightReady,false);
+    const data=readKmz(fs.readFileSync(output)).waylines;
+    assert.match(data,/<wpml:actionTriggerType>multipleDistance<\/wpml:actionTriggerType>/);
+    assert.match(data,/<wpml:actionTriggerParam>12<\/wpml:actionTriggerParam>/);
+    const again=spawnSync(process.execPath,[script,fixture,output],
+      {encoding:'utf8',timeout:15000});
+    assert.equal(again.status,2);
+    assert.match(again.stderr,/generation rejected/);
+  }finally{
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
+});
