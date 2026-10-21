@@ -40,6 +40,10 @@ test('read-only S3 probe invokes only HEAD', async () => {
 test('S3 write probe needs explicit opt-in and is always self-cleaning', async () => {
   await assert.rejects(runProbe({...cfg,write:true,fetchImpl:async()=>{throw Error('should not run')}}),
     /explicit SKYHUB_S3_WRITE_PROBE=1/);
+  await assert.rejects(runProbe({
+    ...cfg,bucket:'skyhub-media-raw',write:true,allowWrite:true,
+    fetchImpl:async()=>{throw Error('should not run')}
+  }),/restricted to dedicated skyhub-storage-smoke bucket/);
   const calls = [];
   let payload;
   const result = await runProbe({
