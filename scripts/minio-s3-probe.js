@@ -73,6 +73,9 @@ async function runProbe({
   if (write && !allowWrite) {
     throw new Error('Writing requires explicit SKYHUB_S3_WRITE_PROBE=1');
   }
+  if (write && bucket !== 'skyhub-storage-smoke') {
+    throw new Error('Write test restricted to dedicated skyhub-storage-smoke bucket');
+  }
   // Read-only by default; requires s3:ListBucket for the named bucket.
   async function request(method, key = '', payload = Buffer.alloc(0)) {
     const signed = signS3({
