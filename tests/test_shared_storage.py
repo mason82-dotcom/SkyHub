@@ -155,6 +155,43 @@ class SharedMinioStorageTest(unittest.TestCase):
             self.assertNotIn(bad + "\n", text)
         self.assertIn("/storage/minio-data", (ROOT / ".gitignore").read_text())
 
+    def test_migration_accepts_first_time_checkout_without_storage_directory(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / "docker-compose.yml").write_text("name: skyhub-next\\n")
+            (project / "backend").mkdir()
+            self.assertFalse((project / "storage").exists())
+            env = {**os.environ, "SKYHUB_PROJECT_DIR": str(project)}
+            proc = subprocess.run(
+                ["bash", str(ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh"),
+                 "--help"],
+                capture_output=True, text=True, env=env,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn("PLAN only", (
+                ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh"
+            ).read_text())
+            self.assertFalse((project / "storage").exists(),
+                             "Read-only help must never create storage/")
+            helper = (ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh").read_text()
+            self.assertIn('mkdir -p -- "$STORAGE_DIR"', helper)
+            self.assertIn('SkyHub storage/ directory: absent (will be created by move only)', helper)
+
+    def test_migration_rejects_invalid_checkout_path(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {**os.environ, "SKYHUB_PROJECT_DIR": tmp}
+            proc = subprocess.run(
+                ["bash", str(ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh"),
+                 "plan"],
+                capture_output=True, text=True, env=env,
+            )
+            self.assertEqual(proc.returncode, 2)
+            self.assertIn("absolute SkyHub checkout", proc.stderr)
+
     def test_credentials_exporter_never_prints_values_or_overwrites(self):
         import importlib.util
         path = ROOT / "scripts/pi-minio-credentials.py"
