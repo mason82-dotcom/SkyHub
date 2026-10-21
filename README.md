@@ -27,6 +27,7 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [Detaillierter Cutover- und Rollback-Plan](docs/skyhub-legacy-takeover.md)
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
+- [DJI WPML 1.18: KMZ-Inspektion, Feldabgleich und Einschränkungen](docs/dji-wpml-integration.md)
 - [Archivhinweise](stacks/README.md)
 
 ## Positionsaufzeichnung (standardmäßig deaktiviert)
