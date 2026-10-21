@@ -210,6 +210,18 @@ up() {
   preflight
   verify_no_other_running
   verify_new_state
+  # Compare with the original AeroNexusAdvanced project dotenv before
+  # any new MinIO instance can be launched. When more than one source
+  # exists, select its PATH with SKYHUB_AERONEXUSADVANCED_ENV_FILE.
+  local -a credential_check=(
+    python3 "$ROOT/scripts/pi-minio-env-from-aeronexusadvanced.py"
+    check --require-match
+  )
+  if [[ -n "${SKYHUB_AERONEXUSADVANCED_ENV_FILE:-}" ]]; then
+    credential_check+=(--source "$SKYHUB_AERONEXUSADVANCED_ENV_FILE")
+  fi
+  "${credential_check[@]}" ||
+    die "SkyHub credentials do not match AeroNexusAdvanced project's env; run safe check/import first"
   docker container inspect skyhub-shared-minio >/dev/null 2>&1 &&
     die "skyhub-shared-minio exists; will not recreate it"
   [[ -f "$COMPOSE_FILE" ]] || die "SkyHub standalone Compose file missing"
