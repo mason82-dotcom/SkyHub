@@ -25,7 +25,7 @@ SkyHub speichert nur SHA-256-Hashes der Geräte-Tokens in Redis. Die neuen Token
 - RC Plus 2 Enterprise und Matrice 4T sicher **am Boden**, gekoppelt und eingeschaltet, DJI Pilot 2 geöffnet.
 - Der bereits laufende produktive SkyHub-Next-Stack `skyhub-next` unter `~/Projekte/SkyHub-Next`. Laufende EMQX-, Caddy-, PostGIS-, Redis- und Backend-Dienste **nicht ändern**.
 - Sichtbar erreichbare bestehende SkyHub-Pilot-2-HTTPS-Seite (in Pilot 2: Cloud Services / Open Platforms); dieselbe URL wie bei der bestehenden RC, **kein erfundener zusätzlicher Endpunkt**.
-- Der laufende Backend-Container stellt `GET /api/health`, `GET /api/devices` und `GET /api/diagnostics/mqtt-shapes` bereit und besitzt die erweiterten `deviceProperties`-/`propertyFieldObservedAt`-Snapshots.
+- Der laufende Backend-Container stellt `GET /api/health`, `GET /api/devices`, `GET /api/diagnostics/mqtt-shapes` sowie intern `GET /api/pilot-admin/pairings` bereit und besitzt die erweiterten `deviceProperties`-/`propertyFieldObservedAt`-Snapshots. Der Pairing-Endpunkt benötigt View-Token und bleibt hinter dem lokalen Backend-Loopback.
 - Vor jedem Test prüfen, ob die M4T in Pilot 2 erfolgreich gekoppelt ist. Die Geräte **nicht starten oder bewegen**.
 
 ## 1. Eigenständiges Worktree auf dem Raspberry Pi
@@ -69,17 +69,18 @@ SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
 echo "Exitstatus: $?"
 ```
 
-Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf und liest ausschließlich die drei vorhandenen APIs über den Container-Loopback `127.0.0.1:4000`. Der View-Token bleibt **im Backend-Container**. API-Rohantworten werden nur in einer begrenzten lokalen Pipe verarbeitet. Das Terminal enthält ausschließlich Modelllabels, Zustände, Zähler sowie feste **dokumentierte** Feldnamen; keine Seriennummern, GNSS-Koordinaten oder Messwerte.
+Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf und liest ausschließlich vier vorhandene GET-APIs über den Container-Loopback `127.0.0.1:4000` (Health, Geräte, MQTT-Feldformen und geschützte lokale Pairing-Übersicht). Der View-Token bleibt **im Backend-Container**. API-Rohantworten werden nur in einer begrenzten lokalen Pipe verarbeitet. Das Terminal enthält ausschließlich Modelllabels, Zustände, anonyme Pairing-Anzahlen sowie feste **dokumentierte** Feldnamen; keine Seriennummern, sechsstelligen Pairing-Codes, Geräte-Tokens, GNSS-Koordinaten oder Messwerte.
 
-**Exitcodes:** `0` = *aktueller Transport- und Feldparser-Smoketest bestanden*, **nicht** vollständige 1.18-Konformität. `3` = unvollständig oder nicht eindeutig. `1` = Docker/Backend/JSON nicht lesbar. `2` = ungültige Argumente.
+**Exitcodes:** `0` = *aktueller Transport-/Feldparser-Smoketest **und** separate SkyHub-Geräte-Token-Verwendung in den letzten 30 Minuten bestätigt*, **nicht** vollständige 1.18-Konformität. `3` = unvollständig oder nicht eindeutig. `1` = Docker/Backend/JSON nicht lesbar. `2` = ungültige Argumente.
 
 ## 4. Abnahmematrix (Cloud API 1.18, Pilot-to-Cloud)
 
 | Bereich | Positivnachweis | Grenzen |
 | --- | --- | --- |
 | MQTT | Backend verbunden und subscribed | Zähler sind backendweit |
-| Handshake | `update_topo`/`status_reply` aktiviert | ACK-Zähler allein belegt noch keinen einzelnen Controller |
+| Handshake | `update_topo`/`status_reply` aktiviert **und separater MQTT-ACK-Publisher verbunden** | ACK-Zähler allein belegt noch keinen einzelnen Controller |
 | RC Plus 2 | `2:174:0` Gateway, Topologie online | Nicht mit RC Pro `2:144:0` verwechseln |
+| Pairing | SkyHub meldet separate RC-Plus-2-Geräte-Token-Registrierung und Verwendung innerhalb von 30 Minuten | Modellbezeichnung stammt vom WebView User-Agent; kein kryptografischer Hardware-Nachweis; keine DJI-Kontoidentität |
 | Matrice 4T | `0:99:1` Subdevice, Topologie online | Nicht mit Mavic 3M `0:77:2` verwechseln |
 | Kopplung | M4T verweist intern auf RC Plus 2 und ist als deren Kind erfasst | Keine Seriennummern ausgeben; mehrere mögliche Zielpaare = unklar |
 | OSD | Beide Geräte liefern frische gültige OSD-Beobachtung unter 15 s | Kein Flug oder gültiger GNSS-Fix am Boden erforderlich |
@@ -89,11 +90,11 @@ Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf 
 | Privacy | `sn`, Token, `device_secret`, `nonce`, IMEI/EID und GPS-Werte nicht ausgeben | Redigierte Felder sind keine fehlenden Felder |
 | RC Pro/M3M | Parallelbetrieb möglich; nur dedizierte RC-Plus-2/M4T-Paarung besteht Zieltest | Separate Live-Überprüfung erforderlich |
 
-Das CLI meldet bewusst `NICHT PRÜFBAR`, wenn das laufende Backend die neue DJI-Feldschnittstelle noch nicht bereitstellt, auch wenn die echte Topologie und das OSD bereits funktionieren. Das ist **kein** Beleg für fehlende DJI-Properties. In diesem Fall erst Laufzeitversion und Change-Freigabe separat prüfen; **kein automatisches Update**.
+Das CLI meldet bewusst `NICHT PRÜFBAR`, wenn das laufende Backend die neue DJI-Feldschnittstelle oder die geschützte Pairing-Übersicht noch nicht bereitstellt, auch wenn die echte Topologie und das OSD bereits funktionieren. Das ist **kein** Beleg für fehlende DJI-Properties. In diesem Fall erst Laufzeitversion und Change-Freigabe separat prüfen; **kein automatisches Update**.
 
 ## 5. Noch ausstehende echte Hardware-Nachweise
 
-- Einmaliges Pilot-2-Pairing der neuen RC Plus 2 und anschließende erneute Anmeldung nach manuellem Pilot-2-Neustart.
+- Einmaliges Pilot-2-Pairing der neuen RC Plus 2, Kontrolle des unabhängigen Geräte-Tokens und anschließende erneute Anmeldung nach manuellem Pilot-2-Neustart.
 - Gleichzeitiger Betrieb mit der RC Pro Enterprise / Mavic 3M ohne Verdrängung derselben MQTT-Client-ID.
 - RC-Plus-2-spezifische Kamera- und Streamfähigkeit, `wireless_link`, `drc_state` und `cloud_control_auth` (Berechtigung **ohne Inhalt** prüfen).
 - M4T: Live-OSD, GNSS/RTK, Akku, Kamera/Gimbal, Wärmebild- bzw. Laser-Feldbeobachtung **nur bei dokumentiertem und tatsächlich sendendem Sensor**. Keine aus generischen Schemas abgeleiteten Feldpflichten behaupten.
