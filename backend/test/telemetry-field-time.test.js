@@ -44,6 +44,31 @@ test('partial GNSS packets do not update coordinates or per-field source times',
   assert.equal(d.telemetry.latitude,49);
 });
 
+test('incomplete GPS-only OSD is not evidence of a new usable measurement',()=>{
+  const r=createRegistry(),t=1760000000000;
+  r.ingest(osd(t,{battery_percentage:55}),t);
+  const partial=r.ingest(osd(t+1000,{latitude:49}),t+1000);
+  const d=r.get('AIR',t+1001);
+  assert.equal(partial.point,null);
+  assert.equal(d.lastTelemetryAt,t);
+  assert.equal(d.telemetryFieldAt.battery,t);
+  assert.equal(d.telemetryFieldAt.latitude,undefined);
+  assert.equal(d.lastPositionAt,null);
+  assert.equal(d.positionFresh,false);
+});
+
+test('unknown and non-numeric OSD-only fields do not create fake freshness',()=>{
+  const r=createRegistry(),t=1760000000000;
+  r.ingest({sn:'AIR',channel:'osd',timestamp:null,telemetry:{
+    latitude:null,longitude:null,not_allowlisted:123,device_secret:'SECRET'
+  }},t);
+  const d=r.get('AIR',t+1);
+  assert.equal(d.lastTelemetryAt,null);
+  assert.equal(d.fresh,false);
+  assert.deepEqual(d.telemetryFieldAt,{});
+  assert.doesNotMatch(JSON.stringify(d),/SECRET|not_allowlisted|device_secret/);
+});
+
 test('unverified arrival times are recorded explicitly as unverified',()=>{
   const r=createRegistry(),t=1760000000000;
   r.ingest(osd(null,{capacity_percent:0,wind_speed:2}),t);

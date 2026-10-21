@@ -52,14 +52,16 @@ aus. Fehlende oder durch DJI mit ungültigen Sentinelwerten gemeldete
 Messwerte werden nicht erraten. Nicht gemeldete optionale Felder
 werden nicht als Messwerte ausgegeben; ein RTK-Fix-Code wird nicht mit dem
 RTK-Ein/Aus-Schalter gleichgesetzt. Der Geräte-Snapshot enthält zuletzt
-beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
+beobachtete Einzelwerte, deren Aktualität nun feldweise ausgewiesen wird.
 Die DJI-MQTT-Verbindung, die Positionsaufzeichnung und die Pilot-Kopplung
 bleiben unverändert.
 
 ### Feldgenaue Aktualität ohne Speicherung
 
 SkyHub hält zu jedem empfangenen DJI-OSD-Feld `telemetryFieldAt` und
-`telemetryFieldTimeVerified` ausschließlich im RAM. Diese Metadaten
+`telemetryFieldTimeVerified` in der flüchtigen Live-Registry im RAM.
+Sie können über den geschützten HTTP-/WebSocket-Kanal abgerufen werden, werden
+aber vor dem Schreiben in den Redis-Gerätecache explizit ausgeschlossen. Diese Metadaten
 erscheinen in der bestehenden authentifizierten Geräte-API und ermöglichen
 dem Dashboard, Einzelwerte als aktuell (weniger als 15 Sekunden),
 veraltet, nicht empfangen oder „Zeit ungeprüft“ zu markieren. `(0,0)`
