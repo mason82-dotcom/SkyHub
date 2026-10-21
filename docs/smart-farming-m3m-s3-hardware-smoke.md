@@ -268,3 +268,52 @@ Dafür nach Fast-forward von PR #24 denselben bestehenden
 \`--auto-first-page\`-Test wiederholen. Es werden nur
 aggregierte Zahlen ausgegeben; der Speicherinhalt,
 die Backend-Container und die DJI-Verbindung bleiben unangetastet.
+
+## Neuer Pi-Livetest: maximal 16 Headerbytes pro unbekannter TIFF-Datei
+
+Der reale Pi-Test vom 21.10.2026 bestand **20/20 lokale Tests**.
+Die sechs unbekannten TIFF-Dateinamen hatten keine der geprüften
+Namensmarkierungen (G/R/RE/NIR, NDVI, Orthomosaik, Höhenmodell).
+Der nächste Test prüft deshalb **Dateisignaturen** statt weiterer
+Namensmuster.
+
+Neuer Prüfer: `scripts/pi-m3m-tiff-magic-check.js`.
+Er liest zunächst einen eindeutig erkannten M3M-verdächtigen Prefix
+anhand **nur der ersten 100 Bucket-Einträge**. Dann zählt er die
+direkten, bisher nicht erkannten TIFF-Objekte über vollständig
+begrenzte S3-Pagination. **Mehr als 12 Kandidaten: Abbruch.**
+
+Für jeden TIFF-Kandidaten wird ausschließlich im bereits
+laufenden Backend-Container ein S3 GetObject mit
+`Range: bytes=0-15` und vorhandenen Reader-Credentials
+ausgeführt. Nur bei **HTTP 206**, gültigem Content-Range
+und einer Content-Length von höchstens 16 Bytes werden diese
+maximal 16 Bytes auf die vier TIFF-/BigTIFF-Signaturen geprüft.
+Bei verweigertem GET wird `unavailable` gezählt; bei
+ignoriertem Bytebereich `rangeNotHonored`.
+Das bedeutet **keine Freigabe zusätzlicher S3-Rechte**.
+
+Es werden keine TIFF-Verzeichnisblöcke, EXIF, XMP, Koordinaten,
+Pixel oder Kalibrierinformationen verarbeitet. Es erscheinen
+ausschließlich feste Headerklassen und Summen, niemals die
+Dateinamen, Schlüssel, Prefixe oder Bildbytes. Insbesondere
+beweist ein korrekter TIFF-Header **keine** DJI-M3M-Herkunft,
+Reflektanz, Bandregistrierung oder NDVI-/NDRE-Bereitschaft.
+Die betreffenden Flags bleiben `false`.
+
+### Auf dem Pi nur nach Fast-forward ausführen
+
+    cd ~/Projekte/SkyHub-Next || exit 1
+    git status --short --branch
+    git fetch origin
+    git pull --ff-only origin feature/m3m-minio-integration-20261021
+    node --test backend/test/m3m-tiff-magic.test.js
+    node scripts/pi-m3m-tiff-magic-check.js --help
+
+    # Optional: 16 Headerbytes pro Kandidat lesen, keine Medien ändern
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-tiff-magic-check.js --auto-first-page
+
+Der Prüfer schreibt keine Dateien oder Buckets, ändert keine
+Docker-/MinIO-Konfiguration und startet den Backend-Container
+nicht neu. Ein GET-Ablehnungsbefund ist kein Schreibfehler.
