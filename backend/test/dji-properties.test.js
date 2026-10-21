@@ -208,3 +208,18 @@ test('DJI null position and partial coordinate updates preserve prior accepted r
   assert.equal(d.deviceProperties.osd.latitude,50.3);
   assert.equal(d.deviceProperties.osd.longitude,9.4);
 });
+
+test('WGS84 Southern and Western coordinates are kept despite DJI float-table typo',()=>{
+  for(const model of [models[0][0],models[3][0],models[4][0]]) {
+    const filtered=sanitizeDeviceProperties(sanitizeKnownProperties({
+      latitude:-33.8568,longitude:-151.2153
+    },'osd'),'osd',model);
+    assert.equal(filtered.latitude,-33.8568);
+    assert.equal(filtered.longitude,-151.2153);
+    const bad=sanitizeDeviceProperties(sanitizeKnownProperties({
+      latitude:91,longitude:-181
+    },'osd'),'osd',model);
+    assert.equal(bad.latitude,undefined);
+    assert.equal(bad.longitude,undefined);
+  }
+});
