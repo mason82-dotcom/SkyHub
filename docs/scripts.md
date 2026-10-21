@@ -8,6 +8,10 @@ Diese Übersicht bezieht sich auf das **aktive SkyHub-Next-Repository-Root**. Ei
 
 | Tool | Aufruf / Modus | Wirkung | Betriebsregel |
 |---|---|---|---|
+| `pi-minio-migrate-from-aeronexus.sh` | `plan` / `status` | **Lesend**: prüft gestoppte AeroNexus-MinIO-Quellen, das geprüfte ARM64-Image, NVMe und Zielpfade | Vor jedem Umzug, keine Secrets ausgegeben |
+| `pi-minio-migrate-from-aeronexus.sh` | `move` | **Dateischreibend**: private 0600-Environment-Datei, atomare Verzeichnis-Umbenennung auf derselben NVMe, Symlink im SkyHub-Projekt | Kein Kopieren; nur nach Offline-Backup und genau geprüftem Ausgangszustand |
+| `pi-minio-migrate-from-aeronexus.sh` | `up` | **Docker-Änderung**: lokales Image umtaggen, neuen `skyhub-shared-minio` ohne Host-Port erstellen, Backend mit privater Storage-Bridge verbinden | Beide alten AeroNexus-Container bleiben gestoppt, keine vorhandenen Backend-/DB-Container neu starten |
+| `pi-minio-credentials.py` | `check` / `export` | Prüft nur MinIO-Variablennamen oder sichert Originalkonfiguration in private Datei | Nur lokale Datei 0600; Credentials niemals ausgeben oder in Git speichern |
 | `pi-minio-shared-mount-check.sh` | ohne Argumente | **Lesend**: Prüft tatsächliches Dateisystem und identische MinIO-Bind-Mount-Quellen unter `/mnt/hc4backup` | Pflicht vor dem Start eines historischen MinIO auf dem Backup-Datenträger |
 | `pi-minio-network.sh adopt` | Containername, erwarteter `/data`-Pfad per Umgebungsvariable | Übernimmt genau einen laufenden, persistenten MinIO mit internem S3-Docker-Port | Lehnt öffentlich oder lokal veröffentlichte S3-HostPorts 9000 ab |
 | `pi-minio-audit.py` | ohne Argumente | **Lesend**: Inventar gestoppter/laufender MinIO-Container und Mount-Metadaten | Keine Containerstarts, Secrets oder Objektzugriffe; lokale Pfade vor Weitergabe ggf. anonymisieren |
