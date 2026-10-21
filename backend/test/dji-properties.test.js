@@ -28,7 +28,7 @@ const topo = (time) => parseMessage('sys/product/RC/status',Buffer.from(JSON.str
 test('pinned property tables enumerate all nested fields and preserve provenance',()=>{
   assert.equal(source.profiles.mavic3.fields.length,144);
   assert.equal(source.profiles.aircraftCommon.fields.length,162);
-  assert.equal(source.profiles.matrice4T.fields.length,179);
+  assert.equal(source.profiles.matrice4T.fields.length,199);
   assert.equal(source.profiles.rcPro.fields.length,48);
   assert.equal(source.profiles.rcPlus2.fields.length,54);
   for (const profile of Object.values(source.profiles)) {
@@ -380,4 +380,91 @@ test('empty dynamic DJI target-only entries are ignored and arrays are bounded',
   assert.ok(source.dynamicPayload.fields.includes('measure_target_error_state'));
   assert.ok(source.dynamicPayload.source.includes('aircraft/properties.html'));
   assert.equal(fieldDefinitions(models[0][0]).dynamicPayload,null);
+});
+
+
+test('PSDK widget and speaker telemetry is bounded and privacy-redacted on M4T candidates',()=>{
+  const model=models[3][0];
+  const raw={
+    psdk_ui_resource:[
+      {psdk_index:0,psdk_ready:1,object_key:'SECRET_OSS_RESOURCE'},
+      {psdk_index:2,psdk_ready:42,object_key:'s3://secret'}
+    ],
+    psdk_widget_values:[{
+      psdk_index:0,psdk_name:'SECRET_NAME',psdk_sn:'SECRET_SN',
+      psdk_version:'SECRET_VERSION',psdk_lib_version:'SECRET_LIB',
+      speaker:{
+        work_mode:0,play_mode:1,play_volume:63,system_state:99,
+        play_file_name:'SECRET_AUDIO.MP3',play_file_md5:'SECRET_MD5'
+      },
+      values:[{index:0,value:-5},{index:1,value:0},{index:2,value:2147483647},
+        {index:3,value:'SECRET_VALUE'}],
+      unknown_host:'SECRET_HOST'
+    }]
+  };
+  const known=sanitizeKnownProperties(raw,'state');
+  const accepted=sanitizeDeviceProperties(known,'state',model);
+  assert.equal(accepted.psdk_ui_resource[0].psdk_ready,1);
+  assert.equal(accepted.psdk_ui_resource[1].psdk_index,2);
+  assert.equal(accepted.psdk_ui_resource[1].psdk_ready,undefined);
+  const widget=accepted.psdk_widget_values[0];
+  assert.equal(widget.psdk_index,0);
+  assert.equal(widget.speaker.play_volume,63);
+  assert.equal(widget.speaker.system_state,99);
+  assert.deepEqual(widget.values.map(item=>item.value),[-5,0,2147483647]);
+  for(const secret of ['SECRET_OSS_RESOURCE','SECRET_NAME','SECRET_SN',
+    'SECRET_VERSION','SECRET_LIB','SECRET_AUDIO','SECRET_MD5',
+    'SECRET_VALUE','SECRET_HOST','s3://'])
+    assert.ok(!JSON.stringify(known).includes(secret),secret);
+  assert.equal(sanitizeDeviceProperties(known,'state',models[0][0]).psdk_widget_values,undefined);
+  assert.equal(sanitizeDeviceProperties(known,'state',models[5][0]).psdk_widget_values,undefined);
+  assert.equal(sanitizeDeviceProperties(known,'osd',model).psdk_widget_values,undefined);
+});
+
+test('PSDK enum ranges and nested list bounds prevent invalid states and excessive arrays',()=>{
+  const model=models[3][0];
+  const raw={
+    psdk_ui_resource:Array.from({length:20},(_,i)=>({
+      psdk_index:i,psdk_ready:i%2
+    })),
+    psdk_widget_values:[{
+      psdk_index:0,
+      speaker:{work_mode:8,play_mode:-1,play_volume:101,system_state:5},
+      values:Array.from({length:20},(_,i)=>({index:i,value:i}))
+    }]
+  };
+  const got=sanitizeDeviceProperties(sanitizeKnownProperties(raw,'state'),'state',model);
+  assert.equal(got.psdk_ui_resource.length,MAX_ARRAY_ITEMS);
+  assert.equal(got.psdk_widget_values[0].values.length,MAX_ARRAY_ITEMS);
+  assert.deepEqual(got.psdk_widget_values[0].speaker,undefined);
+});
+
+test('ranging sensor errors invalidate target coordinates and distance but keep gimbal attitude',()=>{
+  const model=models[3][0];
+  for(const state of [1,2,3]){
+    const raw={'89-0-0':{
+      measure_target_error_state:state,
+      measure_target_latitude:49.123,
+      measure_target_longitude:8.321,
+      measure_target_altitude:200,
+      measure_target_distance:20,
+      gimbal_pitch:15.5,
+      zoom_factor:2
+    }};
+    const got=sanitizeDeviceProperties(sanitizeKnownProperties(raw,'osd'),'osd',model);
+    assert.equal(got.payload_gimbals.length,1);
+    const v=got.payload_gimbals[0];
+    assert.equal(v.measure_target_error_state,state);
+    assert.equal(v.measure_target_latitude,undefined);
+    assert.equal(v.measure_target_longitude,undefined);
+    assert.equal(v.measure_target_altitude,undefined);
+    assert.equal(v.measure_target_distance,undefined);
+    assert.equal(v.gimbal_pitch,15.5);
+  }
+  const ok=sanitizeDeviceProperties(sanitizeKnownProperties({'89-0-0':{
+    measure_target_error_state:0,measure_target_latitude:49.1,
+    measure_target_longitude:8.2,measure_target_distance:20
+  }},'osd'),'osd',model);
+  assert.equal(ok.payload_gimbals[0].measure_target_latitude,49.1);
+  assert.equal(ok.payload_gimbals[0].measure_target_distance,20);
 });

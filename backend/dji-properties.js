@@ -86,7 +86,15 @@ function dynamicPayloadEntry(raw,key) {
   // A key by itself is not an observed gimbal value.
   if (!count) return undefined;
   const lat=out.measure_target_latitude,lon=out.measure_target_longitude;
-  if ((lat!==undefined || lon!==undefined) &&
+  // The documented ranging states 1/2/3 mean too close, too far or no signal.
+  // Preserve the diagnostic enum but never surface a laser target or range as
+  // freshly measured when the sensor reports a ranging error.
+  if (out.measure_target_error_state!==undefined && out.measure_target_error_state!==0) {
+    delete out.measure_target_latitude;
+    delete out.measure_target_longitude;
+    delete out.measure_target_altitude;
+    delete out.measure_target_distance;
+  } else if ((lat!==undefined || lon!==undefined) &&
       (lat===undefined || lon===undefined || (lat===0 && lon===0))) {
     delete out.measure_target_latitude;
     delete out.measure_target_longitude;
@@ -132,7 +140,11 @@ function cleanValue(value, node, path, depth) {
     if (!Object.keys(node.children).length) return undefined;
     const items = value.slice(0, MAX_ARRAY_ITEMS)
       .map(item => cleanValue(item, {type:'struct',children:node.children}, path, depth+1))
-      .filter(item => item !== undefined);
+      .filter(item => item !== undefined &&
+        // An index without a numeric widget value is not a measurement.
+        // Other arrays (cameras, batteries, PSDK readiness) may legitimately
+        // carry identifiers/indexes without every optional field.
+        (path !== 'psdk_widget_values.values' || Object.hasOwn(item,'value')));
     return items.length ? items : undefined;
   }
   if (type === 'bool') {
@@ -247,7 +259,13 @@ function fieldDefinitions(model) {
   if (!profile) return null;
   const source = catalog.profiles[profile.name];
   return {profile:profile.name,confidence:profile.confidence,
-    source:source.source,fields:source.fields,
+    source:source.source,
+    sourceEdition:source.sourceEdition??null,
+    extensionSource:source.extensionSource??null,
+    extensionSourceEdition:source.extensionSourceEdition??null,
+    extensionVerifiedAt:source.extensionVerifiedAt??null,
+    provenance:source.provenance??null,
+    fields:source.fields,
     dynamicPayload:source.dynamicPayload??null};
 }
 module.exports = {deviceProfile,fieldDefinitions,fieldAvailabilityPolicy,

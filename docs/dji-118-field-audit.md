@@ -24,7 +24,7 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3E | `0/77/0` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3T | `0/77/1` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
-| Matrice 4T | `0/99/1` | `matrice4T`, 179 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 17 dokumentierte generische Ergänzungen; M4T-Verfügbarkeit nicht verifiziert |
+| Matrice 4T | `0/99/1` | `matrice4T`, 199 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen; M4T-Verfügbarkeit nicht verifiziert |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
 | RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; Hardwareprüfung ausstehend |
 
@@ -60,9 +60,21 @@ Geräteprofilkennungen dürfen es verwenden; keine SNs, freien Strings
 oder unbekannten Payload-Attribute werden übernommen. Laser-Zielkoordinaten
 werden nur als vollständiges, gültiges WGS84-Paar akzeptiert.
 
-PSDK-Erweiterungen bleiben ohne belegbare Unterstützung des konkreten
-Fluggeräts ausgeschlossen. Auch diese zusätzlichen Felder sind kein
-Nachweis ihrer tatsächlichen Verfügbarkeit an einer M4T.
+Zusätzlich sind aus derselben offiziellen allgemeinen Aircraft-Referenz
+**20 PSDK-Feldpfade** als vorläufige Kandidaten importiert:
+`psdk_ui_resource` (Geräteindex/Bereitschaft) und
+`psdk_widget_values` (numerische Widgetwerte und Lautsprecherstatus).
+Zustände und Lautstärke werden anhand der dokumentierten DJI-Codes und
+Zahlenbereiche geprüft. Namen, Seriennummern, Versionstexte, OSS-Objektschlüssel,
+Dateinamen und Prüfsummen sind absichtlich redigiert. Arrays bleiben auf
+maximal acht Elemente je Ebene begrenzt. Diese PSDK-Strukturen sind **nicht**
+als für die Matrice 4T freigegeben oder hardwarebestätigt zu betrachten.
+
+Die dokumentierten Laserzustände 1 (TOO_CLOSE), 2 (TOO_FAR) und 3 (NO_SIGNAL)
+unterdrücken jetzt auch eventuell mitgesendete Laser-Zielkoordinaten,
+Zielhöhe und Distanz. Zustand 0 (NORMAL) gestattet gültige Koordinatenpaare.
+Diese Schutzregel gilt ausschließlich für die neu integrierten generischen
+Gimbal-Felder. Ein GPS-Trackpunkt wird daraus niemals erzeugt.
 Dokumentierte Enumerationen werden auf bekannte Codes begrenzt; neue Codes
 müssen nach DJI-Schema-Abgleich ausdrücklich ergänzt werden.
 
