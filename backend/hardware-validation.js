@@ -176,7 +176,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Globale MQTT-Shapes erlauben keine Gerätezuordnung. Nur der optionale modellbezogene Katalog nach akzeptiertem Paket und bestätigter Topologie kann Rootfelder der M3M zurechnen.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
-      'M3M (0:77:2) nutzt ein vorläufiges Mavic-3-Familienprofil.',
+      'M3M (0:77:2) nutzt das vorläufige Mavic-3-Profil mit drei hardwarebeobachteten generischen OSD-Rootnamen; deren Wertebereiche sind noch nicht mit echter M3M validiert.',
       'DJI State (pushMode 1) wird bei Zustandsänderung gesendet. Ältere State-Zeitstempel bedeuten nicht automatisch einen Kommunikationsfehler.',
       'Ohne deviceProperties, propertyProfile und propertyFieldObservedAt kann der Container keine feldgenaue 1.18-Abnahme liefern.',
       'Ein Hardwaretest erfordert echte, zeitnahe Pilot-2-MQTT-Meldungen; synthetische Tests sind kein Ersatz.'
