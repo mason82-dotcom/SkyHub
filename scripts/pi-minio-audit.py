@@ -68,9 +68,11 @@ def report(rows: list[dict]) -> str:
         for m in item["mounts"]:
             out.append(f"  Mount: {m['type']} {m['source']} -> {m['destination']} "
                        f"({'rw' if m['rw'] else 'ro'})")
-            # Two containers may share a data directory; this is a hazard if
-            # either one is started before verifying the deployment design.
-            sources[m["source"]].append(item["name"])
+            # Ignore one-shot minio-init sidecars in server-versus-server
+            # overlap detection; an init container may intentionally use the
+            # same volume as its *stopped* storage service.
+            if "minio-init" not in item["name"].lower():
+                sources[m["source"]].append(item["name"])
     overlaps = {src: sorted(set(names)) for src, names in sources.items()
                 if len(set(names)) > 1 and src != "(unknown)"}
     if overlaps:
