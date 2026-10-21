@@ -168,7 +168,7 @@ test('backend-wide generic aircraft property extensions are not misattributed to
   const report=evaluateHardwareSession([rc,air],health,found,now);
   assert.deepEqual(report.transport.genericAircraftCandidatesInBackendShapes,
     ['distance_limit_status','rth_altitude','rc_lost_action','payloads','wpmz_version']);
-  assert.ok(report.notes.some(x=>x.includes('NICHT der M3M zugeschrieben')));
+  assert.ok(report.notes.some(x=>x.includes('Globale MQTT-Shapes erlauben keine Gerätezuordnung')));
   assert.match(formatReport(report),/Kein M3M-Nachweis/);
   assert.equal(report.aircraft.propertyFields.documented,144);
   assert.ok(!report.aircraft.propertyFields.observedNames.includes('state:payloads'));
