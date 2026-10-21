@@ -184,3 +184,39 @@ test('focused --review output prioritizes DJI photo, lens and height mismatches 
     assert.equal(JSON.parse(same.stdout).summary.structuralDifferences,0);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('semantic camera action inventory differentiates two reachPoint groups from one distance group',()=>{
+  const individual=plan(),distance=plan(),timed=plan();
+  individual.waypoints[0].photo=true;
+  individual.waypoints[2].photo=true;
+  distance.intervalPhotos={type:'multipleDistance',interval:12};
+  timed.intervalPhotos={type:'multipleTiming',interval:3};
+  const diff=compareKmz(kmz(individual),kmz(distance));
+  assert.equal(diff.left.cameraActionSummary.actionGroupCount,2);
+  assert.equal(diff.left.cameraActionSummary.actionCount,2);
+  assert.equal(diff.left.cameraActionSummary.reachPointPhotoActions,2);
+  assert.equal(diff.left.cameraActionSummary.triggerModes.reachPoint,2);
+  assert.deepEqual(diff.left.cameraActionSummary.actionGroupsByWayline,[2]);
+  assert.equal(diff.right.cameraActionSummary.actionGroupCount,1);
+  assert.equal(diff.right.cameraActionSummary.actionCount,1);
+  assert.equal(diff.right.cameraActionSummary.triggerModes.multipleDistance,1);
+  assert.equal(diff.right.cameraActionSummary.periodicDistancePhotoActions,1);
+  assert.equal(diff.right.cameraActionSummary.reachPointPhotoActions,0);
+  assert.equal(diff.summary.cameraActionSummariesDiffer,true);
+  assert.equal(diff.summary.pilot2HardwareVerified,false);
+  const time=compareKmz(kmz(individual),kmz(timed));
+  assert.equal(time.right.cameraActionSummary.triggerModes.multipleTiming,1);
+  assert.equal(time.right.cameraActionSummary.periodicTimePhotoActions,1);
+  assert.equal(time.right.cameraActionSummary.periodicDistancePhotoActions,0);
+  assert.equal(time.right.cameraActionSummary.cameraHardwareVerified,false);
+  const json=JSON.stringify(diff);
+  assert.doesNotMatch(json,/49\.12345|8\.56789|Private Pilot/);
+});
+test('camera action inventory shows empty counts and equality on same KMZ',()=>{
+  const zero=kmz(plan()),result=compareKmz(zero,zero);
+  assert.deepEqual(result.left.cameraActionSummary.triggerModes,{});
+  assert.deepEqual(result.left.cameraActionSummary.actuatorFunctions,{});
+  assert.equal(result.left.cameraActionSummary.actionGroupCount,0);
+  assert.equal(result.left.cameraActionSummary.actionCount,0);
+  assert.equal(result.summary.cameraActionSummariesDiffer,false);
+});
