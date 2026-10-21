@@ -44,6 +44,40 @@ docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
 docker volume ls --format 'table {{.Name}}'
 ```
 
+### Befund am 21.10.2026: zwei gestoppte AeroNexus-MinIO-Container
+
+Auf dem Raspberry Pi wurden sowohl
+`aeronexusadvanced-cloud-minio-1` als auch `aeronexus-edge-minio-1`
+als `Exited (0)` gemeldet. In `docker volume ls` ist kein
+offensichtlich benanntes MinIO-Datenvolume zu sehen. **Aus dieser
+Beobachtung folgt nicht, dass keine Daten existieren**: Bind-Mounts,
+anonyme Volumes und externe Storage-Verzeichnisse sind möglich.
+Das Image `aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1`
+wird von beiden Containern verwendet; seine Herkunft und Sicherheitslage
+sind noch nicht geprüft.
+
+Vor irgendeinem Start oder `adopt` zunächst rein lesend ausführen:
+
+```bash
+cd ~/Projekte/SkyHub-Next
+python3 scripts/pi-minio-audit.py
+```
+
+Der Report nennt nur Containernamen, Image, Status, Compose-Projekt,
+Netzwerke und **Mount-Metadaten**, keine Credentials oder Buckets.
+Die angezeigten lokalen Quellpfade können private Verzeichnisnamen
+enthalten: vor dem Weitergeben gegebenenfalls anonymisieren.
+
+**Keiner der beiden gestoppten MinIO-Container wird durch `adopt`
+gestartet.** Nach individueller Prüfung des Speicherzustands muss
+genau ein ausgewählter MinIO-Server kontrolliert in Betrieb genommen
+werden. Nur dieser darf laufen, wenn `adopt` aufgerufen wird.
+Der zweite Container und der MinIO-Init-Container dürfen im gestoppten
+Zustand bleiben und müssen weder gelöscht noch umbenannt werden.
+Eine gemeinsame Datenquelle mehrerer Server ist vor dem Start
+auszuschließen; ebenso sind Image-Build-Herkunft, Persistenz,
+Backups und Abhängigkeiten zu prüfen.
+
 Bei bereits vorhandenem, **anderem** MinIO aus AeroNexus oder sonstigen
 Stacks **nicht** `apply` ausführen. Dessen Datenträger, Buckets,
 Identität und Zugriff zuerst getrennt ermitteln. Falls die Instanz läuft,
