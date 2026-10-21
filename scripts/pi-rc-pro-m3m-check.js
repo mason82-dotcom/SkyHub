@@ -16,7 +16,7 @@ if(process.argv.length!==2){
     process.exitCode=2;
   }
 }else{
-  const code="'use strict';\n(async()=>{\n  const token=process.env.SKYHUB_VIEW_TOKEN;\n  if(!token){process.exitCode=1;return;}\n  async function get(uri,authorized){\n    const res=await fetch('http://127.0.0.1:4000'+uri,{\n      headers:authorized?{Authorization:'Bearer '+token}:{},\n      signal:AbortSignal.timeout(5000)\n    });\n    if(!res.ok)throw Error('api');\n    return res.json();\n  }\n  try{\n    const [health,devices,shapes]=await Promise.all([\n      get('/api/health',false),get('/api/devices',true),\n      get('/api/diagnostics/mqtt-shapes',true)\n    ]);\n    // Values and device IDs stay solely in this bounded, local stdout pipe;\n    // the parent captures stdout and prints a sanitized summary only.\n    const data=JSON.stringify({health,devices,shapes});\n    if(data.length>3000000)throw Error('too-large');\n    process.stdout.write(data);\n  }catch(_){process.exitCode=1;}\n})();";
+  const code="'use strict';\n(async()=>{\n  const token=process.env.SKYHUB_VIEW_TOKEN;\n  if(!token){process.exitCode=1;return;}\n  async function get(uri,authorized){\n    const res=await fetch('http://127.0.0.1:4000'+uri,{\n      headers:authorized?{Authorization:'Bearer '+token}:{},\n      signal:AbortSignal.timeout(5000)\n    });\n    if(!res.ok)throw Error('api');\n    return res.json();\n  }\n  try{\n    const [health,devices,shapes,modelShapes]=await Promise.all([\n      get('/api/health',false),get('/api/devices',true),\n      get('/api/diagnostics/mqtt-shapes',true),\n      get('/api/diagnostics/mqtt-model-shapes',true).catch(()=>null)\n    ]);\n    // Values and device IDs stay solely in this bounded, local stdout pipe;\n    // the parent captures stdout and prints a sanitized summary only.\n    const data=JSON.stringify({health,devices,shapes,modelShapes});\n    if(data.length>3000000)throw Error('too-large');\n    process.stdout.write(data);\n  }catch(_){process.exitCode=1;}\n})();";
   const p=spawnSync('docker',
     ['compose','-p','skyhub-next','exec','-T','backend','node','-e',code],
     {cwd:process.env.SKYHUB_COMPOSE_DIR?path.resolve(process.env.SKYHUB_COMPOSE_DIR):path.resolve(__dirname,'..'),
@@ -27,7 +27,7 @@ if(process.argv.length!==2){
   }else{
     try{
       const data=JSON.parse(p.stdout);
-      const report=evaluateHardwareSession(data.devices,data.health,data.shapes);
+      const report=evaluateHardwareSession(data.devices,data.health,data.shapes,Date.now(),data.modelShapes);
       console.log(formatReport(report));
       if(!report.controller.seen||!report.aircraft.seen||!report.linked){
         console.log('Abnahme unvollständig: Ziel-Hardware nicht gemeinsam erkannt.');
