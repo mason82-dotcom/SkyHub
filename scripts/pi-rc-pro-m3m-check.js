@@ -35,8 +35,14 @@ if(process.argv.length!==2){
       }else if(!report.controller.osdFresh||!report.aircraft.osdFresh){
         console.log('Abnahme unvollständig: OSD-Werte nicht aktuell.');
         process.exitCode=3;
+      }else if(!report.controller.propertyDiagnosticsAvailable||
+               !report.aircraft.propertyDiagnosticsAvailable){
+        console.log('Transporttest bestanden: beide Geräte senden Live-OSD.');
+        console.log('Feldabnahme NICHT PRÜFBAR: auf dem Pi fehlen die DJI-1.18-Feldschnittstellen im laufenden Backend.');
+        console.log('Kein Nachweis fehlender DJI-Hardwarefelder. Backend-Version vor separatem Update prüfen.');
+        process.exitCode=3;
       }else{
-        console.log('Topologie und OSD-Frische beider Geräte bestätigt.');
+        console.log('Topologie und OSD-Frische beider Geräte bestätigt; Feldparser für Einzelprüfung verfügbar.');
       }
     }catch(_){
       console.error('Hardwarecheck nicht möglich: Antwort nicht auswertbar.');
