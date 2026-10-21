@@ -33,6 +33,7 @@ if(process.argv.length!==2){
     "console.log('Aus Datenschutzgründen redigierte Feldpfade: '+d.redactedDocumented.length+' | Nicht typisierte Array-Felder: '+d.unsupportedDocumented.length);",
     "console.log('Dokumentierte Werte beobachtet ('+d.observedDocumented.length+'): '+(d.observedDocumented.join(', ')||'keine'));",
     "console.log('Auswertbare, dokumentierte Werte nicht beobachtet ('+d.notObservedDocumented.length+'), erste 25: '+(d.notObservedDocumented.slice(0,25).join(', ')||'keine'));",
+    "if(d.dynamicDocumentedTotal){console.log('Dynamische Gimbal-Eigenschaften (nur Feldnamen): '+d.observedDynamic.length+'/'+d.dynamicDocumentedTotal+' beobachtet: '+(d.observedDynamic.join(', ')||'keine'));}",
     "console.log('Fehlend bedeutet nicht, dass Sensor oder Funktion nicht unterstützt wird. Redaktionell entfernte Gerätekennungen werden nicht als Werte ausgegeben.');",
     "}",
     "console.log('Feldverfügbarkeit ist kein Nachweis für einen aktuellen GNSS-Fix oder Einzelwert-Frische.');",
