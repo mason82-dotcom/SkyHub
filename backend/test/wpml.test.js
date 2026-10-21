@@ -101,3 +101,63 @@ test('local heading towardPOI requires latitude/longitude/height',()=>{
     '<wpml:waypointPoiPoint>48.5,12.3,0</wpml:waypointPoiPoint></wpml:waypointHeadingParam>');
   assert.equal(validateDocuments(template,waylines.replace(before,before+withPoi)).valid,true);
 });
+
+
+// Append a stored resource to the existing two-entry KMZ, preserving ZIP offsets.
+// This fixture never touches the file system or any DJI endpoint.
+function withResource(kmz,resource='wpmz/res/photo.bin',bytes=Buffer.from([1,2,3,4])){
+  const e=kmz.length-22;
+  const oldDir=kmz.readUInt32LE(e+16);
+  const name=Buffer.from(resource);
+  const checksum=require('../wpml-kmz').crc32(bytes);
+  const local=Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50,0);
+  local.writeUInt16LE(20,4);
+  local.writeUInt16LE(0x800,6);
+  local.writeUInt32LE(checksum,14);
+  local.writeUInt32LE(bytes.length,18);
+  local.writeUInt32LE(bytes.length,22);
+  local.writeUInt16LE(name.length,26);
+  const directory=Buffer.alloc(46);
+  directory.writeUInt32LE(0x02014b50,0);
+  directory.writeUInt16LE(20,4);
+  directory.writeUInt16LE(20,6);
+  directory.writeUInt16LE(0x800,8);
+  directory.writeUInt32LE(checksum,16);
+  directory.writeUInt32LE(bytes.length,20);
+  directory.writeUInt32LE(bytes.length,24);
+  directory.writeUInt16LE(name.length,28);
+  directory.writeUInt32LE(oldDir,42);
+  const eocd=Buffer.from(kmz.subarray(e));
+  eocd.writeUInt16LE(3,8);
+  eocd.writeUInt16LE(3,10);
+  eocd.writeUInt32LE(kmz.readUInt32LE(e+12)+directory.length+name.length,12);
+  const localBytes=Buffer.concat([local,name,bytes]);
+  eocd.writeUInt32LE(oldDir+localBytes.length,16);
+  return Buffer.concat([kmz.subarray(0,oldDir),localBytes,
+    kmz.subarray(oldDir,e),directory,name,eocd]);
+}
+test('KMZ resource data are verified even when not exposed to API callers',()=>{
+  const kmz=withResource(packageKmz(template,waylines));
+  const parsed=readKmz(kmz);
+  assert.equal(parsed.resourceCount,1);
+  assert.equal(inspectKmz(kmz).valid,true);
+  assert.equal(JSON.stringify(parsed).includes('photo.bin'),false);
+  const modified=Buffer.from(kmz);
+  const member=modified.indexOf(Buffer.from([1,2,3,4]));
+  assert.notEqual(member,-1);
+  modified[member]^=0x30;
+  assert.throws(()=>readKmz(modified),/CRC32/);
+});
+test('KMZ rejects unsafe resource paths and mismatched local headers',()=>{
+  const original=packageKmz(template,waylines);
+  assert.throws(()=>readKmz(withResource(original,'wpmz/res/../data.bin')),/Unsafe/);
+  const kmz=withResource(original);
+  const changed=Buffer.from(kmz);
+  const directoryOffset=original.readUInt32LE(original.length-22+16);
+  changed.writeUInt16LE(8,directoryOffset+8);
+  assert.throws(()=>readKmz(changed),/ZIP headers disagree/);
+  const flags=Buffer.from(kmz);
+  flags.writeUInt16LE(1,directoryOffset+6);
+  assert.throws(()=>readKmz(flags),/ZIP flags disagree/);
+});
