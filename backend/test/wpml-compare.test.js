@@ -157,3 +157,30 @@ test('malicious unknown XML tag and attribute names never appear in comparison o
   assert.doesNotMatch(json,/secret49\.12345|private876\.543|token|hidden/);
   assert.doesNotMatch(json,/49\.12345|8\.56789/);
 });
+
+test('focused --review output prioritizes DJI photo, lens and height mismatches without altering exit status',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'skyhub-wpml-review-'));
+  try{
+    const left=path.join(dir,'pilot2.kmz'),right=path.join(dir,'skyhub.kmz');
+    const script=path.join(__dirname,'../../scripts/wpml-compare.js');
+    const a=plan(),b=plan();
+    b.waypoints[0].lat=49.22222;
+    b.intervalPhotos={type:'multipleDistance',interval:12};
+    fs.writeFileSync(left,kmz(a));
+    fs.writeFileSync(right,kmz(b));
+    const out=spawnSync(process.execPath,[script,'--review',left,right],
+      {encoding:'utf8',timeout:15000});
+    assert.equal(out.status,1,out.stderr);
+    const parsed=JSON.parse(out.stdout);
+    assert.equal(parsed.displayMode,'focused-review-not-complete-diff');
+    assert.ok(parsed.summary.structuralDifferences>0);
+    assert.ok(parsed.focusChanges[1].selectedPatterns.some(p=>p.category==='actions'));
+    assert.equal(parsed.flightReady,false);
+    assert.ok(parsed.warning.includes('hides geometry'));
+    assert.doesNotMatch(out.stdout,/49\.22222|49\.12345|Private Pilot/);
+    const same=spawnSync(process.execPath,[script,'--review',left,left],
+      {encoding:'utf8',timeout:15000});
+    assert.equal(same.status,0,same.stderr);
+    assert.equal(JSON.parse(same.stdout).summary.structuralDifferences,0);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
