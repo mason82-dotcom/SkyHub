@@ -51,7 +51,29 @@ Container bleiben als gestoppte Konfigurationsreferenzen erhalten.
 ### Drei getrennte Betriebsphasen
 
 Auf einem **lokalen Checkout dieses Entwicklungsbranches** im aktiven
-SkyHub-Projektverzeichnis, nach Prüfung des Mounts und der Sicherung:
+SkyHub-Projektverzeichnis, nach Prüfung des Mounts und der Sicherung.
+
+Zur Vorbereitung kann ein **separater Git-Worktree** benutzt werden,
+ohne den laufenden SkyHub-Next-Branch zu wechseln. Der Git-Worktree ist
+nur eine weitere Quelltextansicht, keine Kopie der MinIO-Objekte:
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git fetch origin feature/shared-minio-storage-20261021
+git worktree add --detach ../SkyHub-Minio-Migration \
+  origin/feature/shared-minio-storage-20261021
+cd ../SkyHub-Minio-Migration
+# Ziel des Projekt-Symlinks bleibt die aktive SkyHub-Next-Installation:
+export SKYHUB_PROJECT_DIR="$HOME/Projekte/SkyHub-Next"
+bash scripts/pi-minio-migrate-from-aeronexus.sh plan
+```
+
+Vor `move` ein unabhängiges Offline-Backup prüfen. Der Worktree mit
+der dedizierten MinIO-Compose-Datei darf nach `up` nicht unbedacht
+gelöscht werden; später das freigegebene Compose-Manifest ins
+aktive SkyHub-Projekt überführen.
+
+Anschließend die einzelnen Phasen kontrolliert freigeben:
 
 ```bash
 # 1. Nur LESEN: Docker- und NVMe-Quellen validieren,
