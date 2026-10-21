@@ -33,7 +33,16 @@
 
 ## Geräteliste
 
-- Jede Karte zeigt zuerst Modell, Kennung, OSD-Zustand, Akku, relative Höhe, Position und die höchste aktive HMS-Warnung. Die aufklappbare Ansicht zeigt außerdem empfangene DJI-Felder für Heading/Kurs, Vertikalgeschwindigkeit, Nick-/Rollwinkel und Positionsqualitätscode. Optionale Felder ohne beobachteten Wert werden ausgeblendet; numerische Nullwerte bleiben sichtbar. Der RTK-Fix-Code ist kein Hinweis darauf, ob RTK manuell eingeschaltet ist. Zusätzliche DJI-OSD-Felder für Windgeschwindigkeit, Windrichtungssektor (Code 1–8), kumulierte Flugzeit/-strecke sowie SDR-/4G-Linkzustände werden nur bei tatsächlich geparsten Werten angezeigt; fehlende oder ungültige Werte werden nicht geschätzt. Da einzelne OSD-Werte zusammengeführt werden, können sie älter als das letzte OSD sein. Der Aufklappzustand bleibt bei Live-Updates erhalten.
+- Jede Karte zeigt zuerst Modell, Kennung, OSD-Zustand, Akku, relative Höhe, Position und die höchste aktive HMS-Warnung. Die aufklappbare Ansicht zeigt außerdem empfangene DJI-Felder für Heading/Kurs, Vertikalgeschwindigkeit, Nick-/Rollwinkel und Positionsqualitätscode. Optionale Felder ohne beobachteten Wert werden ausgeblendet; numerische Nullwerte bleiben sichtbar. Der RTK-Fix-Code ist kein Hinweis darauf, ob RTK manuell eingeschaltet ist. Zusätzliche DJI-OSD-Felder für Windgeschwindigkeit, Windrichtungssektor (Code 1–8), kumulierte Flugzeit/-strecke sowie SDR-/4G-Linkzustände werden nur bei tatsächlich geparsten Werten angezeigt; fehlende oder ungültige Werte werden nicht geschätzt. Jeder akzeptierte, normalisierte DJI-OSD-Wert besitzt jetzt einen eigenen Zeitstempel
+(`telemetryFieldAt`) und einen Hinweis auf den Quell-/Ankunftszeitpunkt
+(`telemetryFieldTimeVerified`). Die Gerätekarte kennzeichnet pro Wert
+`aktuell` (unter 15 s, verifizierte Quellzeit), `veraltet`, `Zeit ungeprüft`
+oder `nicht empfangen` und aktualisiert diese Texte auch beim Ausbleiben von OSD.
+Eine DJI-Nullposition (0,0) verändert weder die letzten gültigen Koordinaten
+noch deren Zeitstempel und wird unabhängig vom OSD-Alter als fehlender aktueller
+GPS-Fix bezeichnet. Nicht beobachtete optionale DJI-Felder bleiben ausgeblendet;
+Basisfelder werden als fehlend gekennzeichnet. Der Redis-Cache darf diese neuen
+Einzelwert-Zeitstempel nicht speichern. Der Aufklappzustand bleibt bei Live-Updates erhalten.
 - Die lokale Suche gleicht Modell, Geräte- und Gateway-Kennung sowie Rolle ab. Der native Statusfilter wirkt nur auf die Liste; Marker und „Alle Positionen zeigen“ bleiben eine Gesamtsicht. Eine Markerwahl setzt verdeckende Filter zurück und zeigt das gewählte Gerät.
 - „Aktive HMS-Warnungen“ umfasst Stufen 1 und 2, solange die HMS-Meldung frisch ist. „OSD unter 15 Sekunden“ verlangt frische OSD-Telemetrie und ein nicht getrenntes Fluggerät. Ohne Treffer werden Suche und Filter mit einem Button zurückgesetzt.
 - Such- und Filterwerte bleiben während Live-Updates im Seitenspeicher erhalten. Sie werden wegen möglicher Gerätekennungen nicht in URL oder Browser-Speicher geschrieben. Der native Filter nutzt die Popup- und Tastaturbedienung des Browsers.

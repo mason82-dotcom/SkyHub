@@ -53,6 +53,15 @@ Messwerte werden nicht erraten. Nicht gemeldete optionale Felder
 werden nicht als Messwerte ausgegeben; ein RTK-Fix-Code wird nicht mit dem
 RTK-Ein/Aus-Schalter gleichgesetzt. Der Geräte-Snapshot enthält zuletzt
 beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
+Neu: SkyHub führt für jedes tatsächlich empfangene und validierte DJI-OSD-Feld
+einen eigenen letzten Zeitstempel und ein Kennzeichen der Quellzeit-Herkunft.
+Das Dashboard unterscheidet damit je Wert zwischen `aktuell`, `veraltet`,
+`Zeit ungeprüft`, `nicht empfangen` und `kein aktueller GPS-Fix`.
+Ein Teilpaket, eine DJI-Nullposition (0,0) oder eine verspätete Wiederholung
+darf die Zeit eines älteren gültigen Messwerts nicht künstlich auffrischen.
+Die Einzelwert-Zeitstempel liegen nur in der Live-Registry und in kurzlebigen
+API-/WebSocket-Antworten; der Redis-Gerätecache entfernt sie vor dem Schreiben.
+Es gibt keine neue Datenbanktabelle und keine Positions-/Zeitreihenaufzeichnung.
 Die DJI-MQTT-Verbindung, die Positionsaufzeichnung und die Pilot-Kopplung
 bleiben unverändert.
 

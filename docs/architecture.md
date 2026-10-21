@@ -36,6 +36,17 @@ DJI Cloud API Dokumentation:
 
 ## Positionsintegrität
 
+Die Live-Registry hält zusätzlich pro normalisiertem DJI-OSD-Feld
+`telemetryFieldAt` und `telemetryFieldTimeVerified` bereit.
+Nur tatsächlich empfangene und gültige Feldwerte frischen ihren eigenen
+Zeitstempel auf. Breite und Länge werden nur als vollständiges, gültiges
+Koordinatenpaar übernommen; (0,0) verändert keine GPS-Zeit und markiert
+den letzten Fix als nicht aktuell. Fehlende, unvollständige oder veraltete
+OSD-Pakete dürfen die Feld-Zeitstempel nicht überschreiben.
+Diese Zeitstempel werden zwar in den authentifizierten Live-Gerätesnapshots
+(HTTP/Socket.IO) angezeigt, aber durch `deviceCachePayload` vor dem
+bestehenden Redis-Gerätecache ausgeschlossen. Kein neuer Datenbank-Write.
+
 Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im **selben** empfangenen DJI-OSD-Paket gültig vorliegen. Fehlende Koordinaten werden nicht aus späteren Paketen ergänzt; ein früheres gültiges Koordinatenpaar bleibt als zuletzt bekannte Position erhalten. `lastPositionAt` und `positionFresh` beziehen sich nur auf vollständige GPS-Paare und sind unabhängig von `lastTelemetryAt` und `fresh` für sonstige OSD-Telemetrie. Alte Positionsmarker werden in der Karte grau dargestellt, inklusive Altersanzeige; aus einem noch aktuellen Akkustand oder Flugmodus folgt keine aktuelle GPS-Position.
 
 `positionFresh` besagt nur, dass beide numerisch plausiblen Koordinaten kürzlich zusammen empfangen wurden. Es ist **kein** Nachweis eines GNSS-/RTK-Fix, einer bestimmten Positionsgenauigkeit oder einer plausiblen Einsatzposition. Auch ein Paar `(0, 0)` bleibt daher als gemeldeter Gerätewert erhalten und wird nicht als bestätigter Standort interpretiert.
