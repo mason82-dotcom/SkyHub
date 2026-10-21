@@ -372,3 +372,50 @@ test('State channel diagnostics remain non-speculative with older backend or inc
   assert.equal(unavailable.stateEvidence.status,'NICHT PRUEFBAR');
   assert.match(formatReport(unavailable),/State-Status: NICHT PRUEFBAR/);
 });
+
+
+test('realistic state-only rejected delta is attributed only with a complete balanced breakdown',()=>{
+  const h={...health,
+    mqttObservedChannelCounts:{osd:2052,state:18,status:2,events:1026,services_reply:0},
+    mqttChannelCounts:{osd:2052,state:13,status:2,events:1026,services_reply:0},
+    mqttRejectedMessages:5,
+    mqttDroppedByReason:{duplicate:3,stale:2}
+  };
+  const report=evaluateHardwareSession([rc,air],h,shapes,now,[]);
+  assert.deepEqual(report.stateDrops,{
+    available:true,attributed:true,stateNotAccepted:5,totalUnaccepted:5,
+    reasons:[{reason:'duplicate',count:3},{reason:'stale',count:2}]
+  });
+  assert.match(formatReport(report),/State-Pakete nicht angenommen \(Differenz\): 5/);
+  assert.match(formatReport(report),/Ablehnungsgruende dem State-Kanal zurechenbar: JA/);
+  assert.doesNotMatch(JSON.stringify(report),/PRIVATE_RC_SERIAL|PRIVATE_AIR_SERIAL|SECRET/);
+});
+
+test('rejection breakdown is not assigned to State when other channels also had drops',()=>{
+  const h={...health,
+    mqttObservedChannelCounts:{osd:20,state:18,status:2,events:10,services_reply:0},
+    mqttChannelCounts:{osd:19,state:13,status:2,events:10,services_reply:0},
+    mqttRejectedMessages:6,
+    mqttDroppedByReason:{duplicate:3,stale:3}
+  };
+  const report=evaluateHardwareSession([rc,air],h,shapes,now,[]);
+  assert.equal(report.stateDrops.available,true);
+  assert.equal(report.stateDrops.stateNotAccepted,5);
+  assert.equal(report.stateDrops.totalUnaccepted,6);
+  assert.equal(report.stateDrops.attributed,false);
+  assert.match(formatReport(report),/Ablehnungsgruende dem State-Kanal zurechenbar: NEIN/);
+});
+
+test('malformed or unavailable rejected metadata never leaks extra reason names',()=>{
+  const h={...health,
+    mqttObservedChannelCounts:{osd:20,state:8,status:0,events:0,services_reply:0},
+    mqttChannelCounts:{osd:20,state:3,status:0,events:0,services_reply:0},
+    mqttRejectedMessages:5,
+    mqttDroppedByReason:{'SECRET_PAYLOAD_XYZ':5}
+  };
+  const r=evaluateHardwareSession([rc,air],h,shapes,now);
+  assert.equal(r.stateDrops.attributed,false);
+  assert.equal(r.stateDrops.reasons.length,0);
+  assert.doesNotMatch(JSON.stringify(r),/SECRET_PAYLOAD_XYZ/);
+  assert.equal(evaluateHardwareSession([rc,air],health,shapes,now).stateDrops.available,false);
+});
