@@ -341,3 +341,48 @@ ausführlichen Offline-Test-Report des korrigierten Einzeltests.
 Nächster unabhängiger Freigabeschritt ist eine **separate, freiwillige,
 streng begrenzte IFD-Strukturprüfung** mit festen Kategorieausgaben.
 Auch ein IFD-Nachweis ist keine Multispektral- oder Kalibrierfreigabe.
+
+
+## Freiwillige nächste Stufe: erster Classic-TIFF-IFD, maximal 1.040 Bytes
+
+Nach sechs erfolgreichen Little-Endian-Classic-TIFF-Signaturproben
+ist der nächste eigene **opt-in**-Schritt vorbereitet:
+
+    node --test backend/test/m3m-tiff-ifd.test.js
+    node scripts/pi-m3m-tiff-ifd-check.js --help
+
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-tiff-ifd-check.js --auto-first-page
+
+Dieser Code wurde **noch nicht auf realen Pi-Bilddateien** ausgeführt.
+
+Der Vorgang verwendet weiter nur das produktiv **bereits laufende**
+SkyHub-Backend und dessen bestehenden eingeschränkten S3-Reader.
+Er listet maximal zwölf direkte unbekannte TIFF-Objekte aus dem
+eindeutig anhand der ersten 100 Bucket-Einträge ermittelten Prefix.
+Pro Objekt erfolgen **höchstens zwei** bestätigte HTTP-206-GETs:
+erste 16 Bytes und maximal 1.024 Bytes ab dem **ersten Classic-TIFF
+IFD-Offset**, sofern dieser zwischen 8 und 262.144 liegt.
+Ungültige Bytebereiche oder nicht bestätigte HTTP-206-Antworten
+werden als nicht verfügbar gemeldet. Es werden keine weiteren
+IFD- oder Datenoffsets verfolgt und **keine Bildpixel dekodiert**.
+
+Die aus dem ersten IFD auslesbaren, streng limitierten Inline-
+Strukturwerte werden ausschließlich in **feste Kategorien** übersetzt:
+- Bildflächengröße: bis 5 MP, 5–25 MP, über 25 MP, unbekannt
+- Samples per Pixel: 1, 3, 4, andere, unbekannt
+- Bits per Sample: 8/10/12/16/32, gemischt/extern, unbekannt
+- Kompression: unkomprimiert, andere Kompression, unbekannt
+- ausschließlich das *Vorhandensein* von GeoTIFF-/EXIF-Pointer-/
+  XMP-Tags als aggregierte Zähler, **niemals deren Werte**
+
+Meldegruppen sind nur zusammengefasste Zähler, **keine**
+individuellen Dateidatensätze, Rohdaten, Bildabmessungen,
+Objektschlüssel, Metadatenwerte oder GPS. Die IFD-Anwesenheit
+beweist weder ein gültiges Pixelarray noch radiometrische Kalibrierung,
+M3M-Sensorherkunft oder NDVI-/NDRE-Bereitschaft. Die entsprechenden
+Freigabe-Flags bleiben auf false.
+
+Es gibt keine S3-PUT/DELETE-, Docker-Neustart-, Datenbank- oder
+DJI-Steueroperation. Bei einer Reader-GET-Sperre darf keine
+Root-Berechtigung als vermeintliche Fehlerbehebung weitergegeben werden.
