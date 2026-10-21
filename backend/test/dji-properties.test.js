@@ -1,0 +1,135 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {parseMessage} = require('../dji');
+const {createRegistry} = require('../registry');
+const {deviceProfile,fieldDefinitions,sanitizeKnownProperties,
+  sanitizeDeviceProperties,MAX_ARRAY_ITEMS} = require('../dji-properties');
+const source = require('../data/dji-cloud-api-118-fields.json');
+
+const models = [
+  [{domain:'0',type:77,subType:0},'mavic3','official-family'],
+  [{domain:'0',type:77,subType:1},'mavic3','official-family'],
+  [{domain:'0',type:77,subType:2},'mavic3','shared-family-unverified'],
+  [{domain:'0',type:99,subType:1},'aircraftCommon','shared-aircraft-unverified'],
+  [{domain:'2',type:144,subType:0},'rcPro','official-device'],
+  [{domain:'2',type:174,subType:0},'rcPro','shared-rc-unverified']
+];
+const receive = (topic,data,timestamp) => parseMessage(topic,Buffer.from(JSON.stringify({
+  timestamp,data
+})));
+const topo = (time) => parseMessage('sys/product/RC/status',Buffer.from(JSON.stringify({
+  method:'update_topo',timestamp:time,data:{
+    domain:2,type:144,sub_type:0,
+    sub_devices:[{sn:'AIR',domain:0,type:77,sub_type:0}]
+  }
+})));
+
+test('pinned property tables enumerate all nested fields and preserve provenance',()=>{
+  assert.equal(source.profiles.mavic3.fields.length,144);
+  assert.equal(source.profiles.aircraftCommon.fields.length,162);
+  assert.equal(source.profiles.rcPro.fields.length,48);
+  for (const profile of Object.values(source.profiles)) {
+    assert.match(profile.source,/dji-sdk\/Cloud-API-Doc\/blob\/4ec6b0c7/);
+    assert.ok(profile.fields.some(f=>f.path==='latitude' && f.push===0));
+    assert.ok(profile.fields.some(f=>f.path==='firmware_version' && f.push===1));
+    const seen=new Set(profile.fields.map(f=>f.path));
+    assert.equal(seen.size,profile.fields.length);
+  }
+  assert.ok(source.profiles.mavic3.fields.some(f=>f.path==='battery.batteries.temperature'));
+  assert.ok(source.profiles.aircraftCommon.fields.some(f=>f.path==='cameras.ir_zoom_factor'));
+  assert.ok(source.profiles.rcPro.fields.some(f=>f.path==='wireless_link.sdr_quality'));
+});
+test('all six models have documented or explicitly provisional field profiles',()=>{
+  for(const [model,name,confidence] of models) {
+    assert.deepEqual(deviceProfile(model),{name,confidence});
+    const defs=fieldDefinitions(model);
+    assert.equal(defs.profile,name);
+    assert.equal(defs.confidence,confidence);
+    assert.ok(defs.fields.length>=48);
+  }
+  assert.equal(fieldDefinitions({domain:'0',type:999,subType:0}),null);
+});
+test('nested camera, GNSS, battery, RC link and stream fields survive read-only filter',()=>{
+  const input={
+    cameras:[{zoom_factor:3.5,ir_zoom_factor:2,recording_state:1,
+      payload_index:'66-0-0',sn:'PRIVATE_CAMERA',url:'https://private.invalid'}],
+    position_state:{gps_number:19,is_fixed:2,quality:3},
+    battery:{capacity_percent:42,remain_flight_time:800,
+      batteries:[{temperature:31.5,voltage:15430,sn:'PRIVATE_BATTERY'}]},
+    country:'DE', control_source:'SECRET_OPERATOR',
+    device_secret:'SECRET_DEVICE',nonce:'SECRET_NONCE'
+  };
+  const known=sanitizeKnownProperties(input,'osd');
+  const m3=sanitizeDeviceProperties(known,'osd',models[0][0]);
+  assert.equal(m3.cameras[0].zoom_factor,3.5);
+  assert.equal(m3.cameras[0].payload_index,'66-0-0');
+  assert.equal(m3.position_state.gps_number,19);
+  assert.equal(m3.battery.batteries[0].temperature,31.5);
+  assert.equal(m3.battery.batteries[0].voltage,15430);
+  for (const raw of ['PRIVATE_CAMERA','PRIVATE_BATTERY','SECRET_OPERATOR','SECRET_DEVICE','SECRET_NONCE','private.invalid'])
+    assert.doesNotMatch(JSON.stringify(known),new RegExp(raw));
+  assert.equal(sanitizeDeviceProperties(known,'osd',models[4][0]).cameras,undefined);
+});
+test('state and OSD fields cannot be interchanged or promoted to live telemetry',()=>{
+  const rc=models[4][0];
+  const state={live_capacity:{
+    available_video_number:2,device_list:[{sn:'PRIVATE_SERIAL',
+      available_video_number:3,camera_list:[{camera_index:'66-0-0',available_video_number:1}]}]
+  },firmware_version:'1.2.3',latitude:49.1,nonce:'SECRET'};
+  const filtered=sanitizeDeviceProperties(sanitizeKnownProperties(state,'state'),'state',rc);
+  assert.equal(filtered.live_capacity.available_video_number,2);
+  assert.equal(filtered.firmware_version,'1.2.3');
+  assert.equal(filtered.latitude,undefined);
+  assert.doesNotMatch(JSON.stringify(filtered),/PRIVATE_SERIAL|SECRET/);
+  assert.equal(sanitizeKnownProperties(state,'osd').firmware_version,undefined);
+});
+test('arrays, unrecognized fields, invalid numbers and arbitrary text are bounded',()=>{
+  const items=Array.from({length:1000},(_,i)=>({
+    remain_photo_num:i, payload_index:'bad-token',
+    sn:'LEAK', firmware_version:'A'.repeat(400)
+  }));
+  const known=sanitizeKnownProperties({cameras:items,battery:{
+    capacity_percent:Infinity},track_id:'TOPSECRET',
+    dongle_infos:[{imei:'SENSITIVE',eid:'SENSITIVE'}]},'osd');
+  const result=sanitizeDeviceProperties(known,'osd',models[0][0]);
+  assert.equal(result.cameras.length,MAX_ARRAY_ITEMS);
+  assert.equal(result.cameras[7].remain_photo_num,7);
+  assert.equal(result.cameras[0].payload_index,undefined);
+  assert.equal(result.battery,undefined);
+  assert.doesNotMatch(JSON.stringify(known),/LEAK|TOPSECRET|SENSITIVE/);
+});
+test('topology drives model-specific extraction, separated channel timestamps and disconnected replay',()=>{
+  const registry=createRegistry(),now=1792600000000;
+  registry.ingest(topo(now-2000),now-2000);
+  registry.ingest(receive('thing/product/AIR/osd',{
+    mode_code:4,latitude:49.2,longitude:8.6,
+    cameras:[{zoom_factor:6,recording_state:1}],
+    battery:{capacity_percent:60,batteries:[{temperature:27.5,sn:'PRIVATE_BATTERY'}]},
+    nonce:'PRIVATE_NONCE'
+  },now-1000),now-1000);
+  let device=registry.get('AIR',now);
+  assert.equal(device.deviceProperties.osd.cameras[0].zoom_factor,6);
+  assert.equal(device.deviceProperties.osd.battery.batteries[0].temperature,27.5);
+  assert.equal(device.propertyObservedAt.osd,now-1000);
+  assert.equal(device.propertyObservedAt.state,null);
+  assert.equal(device.propertyProfile.name,'mavic3');
+  assert.doesNotMatch(JSON.stringify(device),/PRIVATE_BATTERY|PRIVATE_NONCE/);
+
+  registry.ingest(receive('thing/product/AIR/state',{
+    firmware_version:'5.6.7',mode_code_reason:4
+  },now-500),now-500);
+  device=registry.get('AIR',now);
+  assert.equal(device.deviceProperties.state.firmware_version,'5.6.7');
+  assert.equal(device.propertyObservedAt.state,now-500);
+  assert.equal(device.propertyObservedAt.osd,now-1000);
+
+  registry.ingest(receive('thing/product/AIR/osd',{
+    mode_code:14,cameras:[{zoom_factor:30}],battery:{capacity_percent:3}
+  },now-200),now-200);
+  device=registry.get('AIR',now);
+  assert.equal(device.aircraftConnected,false);
+  assert.equal(device.deviceProperties.osd.cameras[0].zoom_factor,6);
+  assert.equal(device.propertyObservedAt.osd,now-1000);
+  assert.equal(device.telemetry.battery,60);
+});
