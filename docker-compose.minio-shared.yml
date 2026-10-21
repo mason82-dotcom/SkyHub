@@ -3,7 +3,8 @@
 # Never combine this file with docker-compose.yml or the media profile.
 #
 # Site-specific facts audited 2026-10-21:
-# Existing MinIO data: /mnt/hc4backup/aeronexus-data/minio (mounted ext4 NVMe)
+# Migrated MinIO data after atomic same-filesystem rename from /mnt/hc4backup/aeronexus-data/minio.
+# Expected MinIO data: /mnt/hc4backup/skyhub-next/minio (mounted ext4 NVMe)
 # Existing local image: linux/arm64 aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1
 #
 # Deployment is opt-in via scripts/pi-minio-shared-runtime.sh; default is plan.
@@ -21,7 +22,7 @@ services:
         format: raw
     volumes:
       - type: bind
-        source: /mnt/hc4backup/aeronexus-data/minio
+        source: /mnt/hc4backup/skyhub-next/minio
         target: /data
         bind:
           create_host_path: false
