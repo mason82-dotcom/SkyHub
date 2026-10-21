@@ -48,7 +48,8 @@
       const indices=full?Array.from({length:count},(_,i)=>i):[0,count-1];
       for(const photoIndex of indices){
         const t=photoIndex/(count-1);
-        const p={lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t};
+        const p=photoIndex===0?a:photoIndex===count-1?b:
+          {lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t};
         coordinate(p);
         points.push({lat:p.lat,lon:p.lon,segmentIndex:idx,
           stripeIndex:seg.stripeIndex,photoIndex,segmentPhotoCount:count});
