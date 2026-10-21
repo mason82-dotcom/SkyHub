@@ -4,6 +4,8 @@
 const KML='http://www.opengis.net/kml/2.2';
 const WPML='http://www.dji.com/wpmz/1.0.2';
 const {assessAircraft}=require('./wpml-product-support');
+const WPML_CATALOG=require('./data/dji-wpml-fields.json');
+const KNOWN_FIELDS=new Set(WPML_CATALOG.fields.map(field=>field.field));
 const MODES={
   templateType:['waypoint','mapping2d','mapping3d','mappingStrip'],
   flyToWaylineMode:['safely','pointToPoint'],
@@ -309,12 +311,30 @@ function validatePoint(placemark,path,errors,executable){
   }
   actionGroups(placemark,path,errors);
 }
+function fieldInventoryCoverage(documents){
+  const seen=new Set();
+  function walk(node){
+    if(node.name.startsWith('wpml:')&&node.children.length===0)seen.add(node.name);
+    for(const child of node.children)walk(child);
+  }
+  for(const doc of documents)walk(doc);
+  const elements=[...seen].sort();
+  return {
+    referenceRows:WPML_CATALOG.count,
+    documentedUniqueFields:KNOWN_FIELDS.size,
+    presentFields:elements.length,
+    undocumentedFields:elements.filter(name=>!KNOWN_FIELDS.has(name))
+  };
+}
 function validateDocuments(templateXml,waylinesXml){
   const errors=[],warnings=[],templates=[],waylines=[];
   let template,execution;
   try{template=parseXml(templateXml);}catch(e){pathError(errors,'template.kml',e.message);}
   try{execution=parseXml(waylinesXml);}catch(e){pathError(errors,'waylines.wpml',e.message);}
   if(!template||!execution)return {valid:false,errors,warnings,templates,waylines};
+  const fieldCoverage=fieldInventoryCoverage([template,execution]);
+  if(fieldCoverage.undocumentedFields.length)
+    warnings.push('Input contains WPML elements absent from the reference inventory');
   const td=one(template,'Document'),wd=one(execution,'Document');
   if(!td)pathError(errors,'template.kml','Document missing');
   if(!wd)pathError(errors,'waylines.wpml','Document missing');
@@ -409,6 +429,6 @@ function validateDocuments(templateXml,waylinesXml){
   if(templates.some(t=>t.templateType==='mapping3d')&&waylines.length!==5)
     warnings.push('mapping3d commonly generates five executable waylines; verify with DJI Pilot 2');
   warnings.push('Static validation is not aircraft compatibility certification or flight authorization');
-  return {valid:errors.length===0,errors,warnings,aircraft:meta,templates,waylines};
+  return {valid:errors.length===0,errors,warnings,aircraft:meta,templates,waylines,fieldCoverage};
 }
 module.exports={parseXml,validateDocuments,MODES};
