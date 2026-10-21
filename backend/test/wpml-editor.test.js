@@ -16,6 +16,14 @@ function plan(model='mavic3m'){
       {lat:49.1255,lon:8.614,height:50,photo:true}
     ]};
 }
+test('editor aircraft codes remain aligned with the backend WPML product matrix',()=>{
+  const {FIXED}=require('../wpml-product-support');
+  for(const profile of Object.values(planner.MODELS)){
+    const reference=FIXED[String(profile.drone)+':'+String(profile.subtype)];
+    assert.ok(reference,profile.name);
+    assert.equal(reference.payload,profile.payload,profile.name);
+  }
+});
 test('browser-core generates DJI-like matching template and waylines for all supported aircraft',()=>{
   for(const model of Object.keys(planner.MODELS)){
     const output=planner.build(plan(model));
