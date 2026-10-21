@@ -73,8 +73,26 @@ test('TIFF candidate scan rejects incomplete, excessive or invalid inventory',as
     PREFIX),RangeError);
   await assert.rejects(collectUnknownTiffs(mk([{key:'other/PRIVATE.TIF'}]),PREFIX));
   await assert.rejects(collectUnknownTiffs(mk([]),'../SECRET/'),{status:400});
-  const cycle={objects:async()=>page([files[0]],true,'repeat')};
+  // Use distinct object keys per page: this must specifically exercise
+  // the repeated continuation-token guard, not the duplicate-key guard.
+  let pageNumber=0;
+  const cycle={
+    objects:async()=>page(['SECRET_PAGE_'+(++pageNumber)+'.TIF'],true,'repeat')
+  };
   await assert.rejects(collectUnknownTiffs(cycle,PREFIX),/Invalid TIFF pagination/);
+  assert.equal(pageNumber,2);
+
+  // Identical object keys on different pages are an independent fail-closed
+  // condition and must still be rejected (before inspecting more pages).
+  let duplicateCalls=0;
+  const duplicate={
+    objects:async()=>{
+      duplicateCalls++;
+      return page([files[0]],true,'cursor-'+duplicateCalls);
+    }
+  };
+  await assert.rejects(collectUnknownTiffs(duplicate,PREFIX),/Duplicate TIFF object key/);
+  assert.equal(duplicateCalls,2);
 });
 
 test('Pi TIFF check CLI is offline in help mode and discloses no keys',()=>{
