@@ -1,6 +1,9 @@
 'use strict';
 
 const express=require('express');
+const {
+  inventoryM3MFromS3
+}=require('./m3m-s3-inventory');
 
 function createMediaRouter(storage){
   const router=express.Router();
@@ -39,6 +42,32 @@ function createMediaRouter(storage){
     }catch(err){
       res.status(err.status===400?400:503).json({
         error:err.status===400?'Invalid query':'Storage unavailable'
+      });
+    }
+  });
+
+  router.get('/m3m/inventory',async(req,res)=>{
+    const {prefix}=req.query;
+
+    if(typeof prefix!=='string'){
+      return res.status(400).json({
+        error:'Invalid inventory prefix'
+      });
+    }
+
+    try{
+      const report=await inventoryM3MFromS3(
+        storage,prefix
+      );
+      res.json(report);
+    }catch(err){
+      const status=err.status===400?400:
+        err.status===413?413:503;
+
+      res.status(status).json({
+        error:status===400?'Invalid inventory prefix':
+          status===413?'Inventory limit exceeded':
+          'Storage unavailable'
       });
     }
   });
