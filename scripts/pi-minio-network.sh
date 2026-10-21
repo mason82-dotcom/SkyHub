@@ -251,6 +251,18 @@ adopt() {
     echo "ERROR: existing MinIO is not running; do not start it automatically" >&2
     exit 2
   }
+  # SkyHub talks S3 through skyhub-storage-net; a published Docker HostPort
+  # 9000 is unnecessary and may expose an authenticated but sensitive service
+  # to the LAN or upstream networks. Reject even loopback published bindings
+  # so a later network-mode/compose change cannot widen access unnoticed.
+  local s3_host_bindings
+  s3_host_bindings="$(docker inspect --format '{{with index .HostConfig.PortBindings "9000/tcp"}}{{range .}}{{println .HostIp ":" .HostPort}}{{end}}{{end}}' "$name")"
+  [[ -z "$s3_host_bindings" ]] || {
+    echo "ERROR: MinIO publishes S3/tcp 9000 to the Docker host." >&2
+    echo "Recreate the chosen container from reviewed Compose with NO S3 host port" >&2
+    echo "before using adopt; never start both servers on their shared /data." >&2
+    exit 2
+  }
   mode="$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$name")"
   [[ "$mode" != host && "$mode" != none ]] || {
     echo "ERROR: MinIO uses network_mode=$mode; cannot join shared bridge" >&2
