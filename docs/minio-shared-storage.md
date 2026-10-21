@@ -45,9 +45,11 @@ docker volume ls --format 'table {{.Name}}'
 ```
 
 Bei bereits vorhandenem, **anderem** MinIO aus AeroNexus oder sonstigen
-Stacks **abbrechen**. Dessen Datenträger, Buckets, Identität und Zugriff
-zuerst getrennt ermitteln. Das Skript verweigert den parallelen Aufbau
-eines zweiten MinIO, anstatt einen leeren globalen Speicher zu erzeugen.
+Stacks **nicht** `apply` ausführen. Dessen Datenträger, Buckets,
+Identität und Zugriff zuerst getrennt ermitteln. Falls die Instanz läuft,
+kann sie anschließend mit `adopt` als **einziger** gemeinsamer S3-Server
+weiterverwendet werden, statt einen neuen leeren Speicher aufzubauen.
+Das vorhandene Datenvolume bleibt am ursprünglichen MinIO-Container.
 Secrets und Objektlisten nicht in Chat oder GitHub kopieren.
 
 ## 2. Image und Secrets absichern
@@ -101,7 +103,39 @@ Volume, sofern noch nicht vorhanden. `verify` liest den MinIO-Readiness-
 Endpunkt aus dem bestehenden Backend-Container, erstellt aber keine
 Objekte oder Buckets.
 
-## 4. Weitere bestehende Pi-Container gezielt verbinden
+## 4. Vorhandenen MinIO aus AeroNexus oder anderem Compose übernehmen
+
+Nach der lesenden Bestandsaufnahme und Sichtprüfung aller Container:
+
+```bash
+# NUR den konkret geprüften, laufenden MinIO-Container einsetzen:
+bash scripts/pi-minio-network.sh adopt NAME_DES_BESTEHENDEN_MINIO
+bash scripts/pi-minio-network.sh verify
+```
+
+Dieser Modus startet **keinen** MinIO-Container, legt keine Buckets an,
+wechselt kein Image und ändert weder das MinIO-Datenvolume noch dessen
+Credentials. Er prüft vor der Anbindung, dass MinIO läuft, eine
+Speicher-Einbindung besitzt, über eine Bridge angebunden werden kann
+und keine zweite MinIO-Instanz/kein doppelter DNS-Alias existiert.
+Anschließend erhalten der bestehende MinIO und das SkyHub-Backend
+`skyhub-storage-net` als zusätzliche Verbindung. Ein Neustart ist nicht
+vorgesehen. Eine bereits vorhandene Verknüpfung ohne den Alias
+`skyhub-minio` führt aus Sicherheitsgründen zum Abbruch.
+
+**Wichtig:** Nach `adopt` das Profil `media` von SkyHub **nicht**
+aktivieren und `docker-compose.storage.yml` **nicht** als Overlay für
+einen allgemeinen `docker compose up --profile media`-Befehl benutzen:
+das könnte sonst einen zweiten MinIO-Server anlegen.
+Die eigene extern verwaltete MinIO-Instanz bleibt unabhängig vom
+SkyHub-Compose. Für künftige Backend-Neuerstellungen das zusätzliche
+Overlay `docker-compose.storage.external.yml` nutzen (nur Backend-Netz),
+oder den Backend-Container gezielt erneut mit `attach` verbinden.
+Die Alias-Verbindung zum fremden MinIO muss auch in **dessen** Compose
+dauerhaft eingerichtet werden; manuelle Docker-Netzverbindungen können
+bei Container-Neuerstellung verloren gehen.
+
+## 5. Weitere bestehende Pi-Container gezielt verbinden
 
 ```bash
 bash scripts/pi-minio-network.sh attach MEIN_WORKER_CONTAINER
@@ -143,11 +177,13 @@ Storage-Overlay. Wird das Backend damit neu erstellt, kann die manuelle
 Netzwerkverbindung entfallen. Danach den laufenden Backend-Container erneut
 mit `attach skyhub-next-backend-1` verbinden und `verify` ausführen.
 Für dauerhafte Compose-Netzmitgliedschaft müssen zukünftige Deployments
-**beide** Dateien verwenden (`-f docker-compose.yml -f
-docker-compose.storage.yml`), nicht nur das ursprüngliche Compose.
-Diese Änderung ersetzt das bestehende Backend-Update-Skript nicht.
+**beide** Dateien verwenden: für den SkyHub-eigenen MinIO
+`docker-compose.storage.yml`, für einen fremden bereits laufenden MinIO
+`docker-compose.storage.external.yml`.
+Das ursprüngliche Backend-Update-Skript bleibt unverändert und verliert
+die manuelle Netzwerkzuordnung bei einem Recreate.
 
-## 5. Daten- und Zugriffsstrategie
+## 6. Daten- und Zugriffsstrategie
 
 Vorgesehene logisch getrennte Buckets (noch **nicht** angelegt):
 `skyhub-media-raw` für originale Mavic-3M-Multispektraldaten,
@@ -167,8 +203,8 @@ testen**. Ein unverändertes Docker-Volume ist noch kein Backup.
 ## Prüfgrenzen und Rückbau
 
 `plan` und `verify` sind lesend; `apply` erstellt Netzwerk/Container
-und kann beim ersten Start das MinIO-Volume anlegen; `attach` verändert
-die Netzmitgliedschaft benannter laufender Container.
+und kann beim ersten Start das MinIO-Volume anlegen. `adopt` und `attach`
+verändern nur die Netzwerkmitgliedschaft ausgewählter laufender Container.
 Kein Skript löscht Daten, startet Legacy-Dienste oder führt
 `docker compose down`, `docker volume rm` oder `prune` aus.
 Ein einzelner erfolgreicher HTTP-Readiness-Test bestätigt
