@@ -10,11 +10,19 @@ TARGET="/mnt/hc4backup/skyhub-next/minio"
 TARGET_PARENT="${TARGET%/*}"
 MOUNT="/mnt/hc4backup"
 PROJECT_DIR="${SKYHUB_PROJECT_DIR:-$ROOT}"
-[[ "$PROJECT_DIR" = /* && -d "$PROJECT_DIR/storage" ]] || {
-  echo "ERROR: SKYHUB_PROJECT_DIR must be an absolute SkyHub checkout containing storage/" >&2
+# Verify the active checkout, not a directory that happens to contain
+# "storage/". A new SkyHub checkout need not have storage/ before migration.
+[[ "$PROJECT_DIR" = /* && -d "$PROJECT_DIR" &&
+   -f "$PROJECT_DIR/docker-compose.yml" && -d "$PROJECT_DIR/backend" ]] || {
+  echo "ERROR: SKYHUB_PROJECT_DIR must point to an absolute SkyHub checkout (docker-compose.yml and backend/ required)" >&2
   exit 2
 }
-LINK="$PROJECT_DIR/storage/minio-data"
+STORAGE_DIR="$PROJECT_DIR/storage"
+[[ ! -L "$STORAGE_DIR" ]] ||
+  { echo "ERROR: SkyHub storage/ directory may not be a symlink" >&2; exit 2; }
+[[ ! -e "$STORAGE_DIR" || -d "$STORAGE_DIR" ]] ||
+  { echo "ERROR: SkyHub storage/ path is not a directory" >&2; exit 2; }
+LINK="$STORAGE_DIR/minio-data"
 OLD_IMAGE="aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1"
 NEW_IMAGE="skyhub/minio:RELEASE.2025-10-15T17-29-55Z-an1"
 EXPECTED_IMAGE_ID="sha256:117cf7edd050e6acd4a2d06be79b15eaecd5af76ad73e8927a4bf67528f19d10"
@@ -163,6 +171,11 @@ plan() {
   echo "READY: source and target reside on one NVMe; only atomic directory rename needed."
   echo "READY: image ID is the original audited ARM64 image; no layers copied."
   echo "READY: no legacy MinIO running; data source preserved until 'move'."
+  if [[ -d "$STORAGE_DIR" ]]; then
+    echo "SkyHub storage/ directory: present"
+  else
+    echo "SkyHub storage/ directory: absent (will be created by move only)"
+  fi
   echo "Project link: $LINK -> $TARGET"
 }
 
@@ -171,7 +184,9 @@ move() {
   [[ ! -e "$CREDENTIALS" && ! -L "$CREDENTIALS" ]] ||
     die "Credentials file already exists; refuse overwrite"
   python3 "$ROOT/scripts/pi-minio-credentials.py" export
-  # Create only the parent directory; never create the data destination.
+  # Create only parent directories, never the MinIO data destination.
+  # This is the FIRST step allowed to create storage/ in the active checkout.
+  mkdir -p -- "$STORAGE_DIR"
   mkdir -p -- "$TARGET_PARENT"
   [[ "$(stat -c %d "$SOURCE")" == "$(stat -c %d "$TARGET_PARENT")" ]] ||
     die "Cross-filesystem move would copy data; abort"
