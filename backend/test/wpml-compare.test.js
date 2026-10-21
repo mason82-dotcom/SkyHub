@@ -104,3 +104,56 @@ test('offline comparator neither network-connects nor initiates DJI flight/missi
   const cli=fs.readFileSync(path.join(__dirname,'../../scripts/wpml-compare.js'),'utf8');
   assert.doesNotMatch(code+cli,/\bfetch\s*\(|XMLHttpRequest|WebSocket|mqtt\.publish|\/api\/mission\/create/);
 });
+
+test('privacy-safe field-gap summary separates different values from absent fields',()=>{
+  const left=plan(),right=plan();
+  right.speed=7;
+  right.transitionSpeed=7;
+  const valuesOnly=compareKmz(kmz(left),kmz(right));
+  assert.equal(valuesOnly.summary.leftOnlyFieldOccurrences,0);
+  assert.equal(valuesOnly.summary.rightOnlyFieldOccurrences,0);
+  assert.ok(valuesOnly.summary.changedValueOccurrences>0);
+  assert.ok(valuesOnly.documents[1].patterns.entries.some(p=>
+    p.path.includes('autoFlightSpeed')&&p.differentValues>0));
+  right.intervalPhotos={type:'multipleDistance',interval:12};
+  const added=compareKmz(kmz(left),kmz(right));
+  assert.ok(added.summary.rightOnlyFieldOccurrences>0);
+  assert.ok(added.documents[1].patterns.entries.some(p=>
+    p.category==='actions'&&p.rightOnly>0));
+  assert.equal(added.summary.structuralDifferences,
+    added.summary.leftOnlyFieldOccurrences+added.summary.rightOnlyFieldOccurrences+
+    added.summary.changedValueOccurrences);
+});
+test('repeated waypoint coordinate differences group into bounded generic index patterns',()=>{
+  const left=plan(),right=plan();
+  right.waypoints=right.waypoints.concat(
+    Array.from({length:15},(_,i)=>({
+      lat:49.1300+i*0.0001,lon:8.5700+i*0.0001,height:50,photo:false
+    }))
+  );
+  const report=compareKmz(kmz(left),kmz(right));
+  const d=report.documents[1];
+  assert.ok(d.changesByDirection.rightOnly>0);
+  assert.ok(d.patterns.total>0);
+  assert.ok(d.patterns.displayed<=80);
+  assert.ok(d.patterns.entries.some(p=>p.path.includes('[*]')));
+  assert.ok(d.patterns.entries.some(p=>p.rightOnly>1));
+  assert.equal(report.summary.flightReady,false);
+});
+test('malicious unknown XML tag and attribute names never appear in comparison output',()=>{
+  const {packageKmz}=require('../wpml-kmz');
+  const old=planner.documents(plan());
+  const injected=old.waylinesXml.replace('</Placemark>',
+    '<wpml:secret49.12345 data_private876.543="token">' +
+    'hidden</wpml:secret49.12345></Placemark>');
+  const reference=packageKmz(old.templateXml,old.waylinesXml);
+  const candidate=packageKmz(old.templateXml,injected);
+  const report=compareKmz(reference,candidate);
+  const json=JSON.stringify(report);
+  assert.equal(report.right.valid,true);
+  assert.ok(report.summary.rightOnlyFieldOccurrences>0);
+  assert.match(json,/\[unrecognized-element\]/);
+  assert.match(json,/@\[attribute\]/);
+  assert.doesNotMatch(json,/secret49\.12345|private876\.543|token|hidden/);
+  assert.doesNotMatch(json,/49\.12345|8\.56789/);
+});
