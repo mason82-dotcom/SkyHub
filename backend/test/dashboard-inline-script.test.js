@@ -25,5 +25,5 @@ test('dashboard references local field freshness helper before inline JS',()=>{
   const html=fs.readFileSync(filename,'utf8');
   assert.ok(html.indexOf('<script src="/telemetry-freshness.js"></script>')>0);
   assert.ok(html.indexOf('<script src="/telemetry-freshness.js"></script>')<
-    html.indexOf('<script>\\n(function(){'));
+    html.indexOf('<script>'));
 });
