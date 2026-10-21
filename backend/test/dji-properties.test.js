@@ -99,6 +99,33 @@ test('M3M generic Aircraft OSD extensions are parsed read-only with strict DJI l
   assert.equal(sanitizeDeviceProperties(known,'state',m3m).rth_altitude,undefined);
 });
 
+
+test('M3M verified topology routes new generic OSD properties only to its own registry device',()=>{
+  const now=1792611000000,registry=createRegistry();
+  const status=parseMessage('sys/product/RC/status',Buffer.from(JSON.stringify({
+    timestamp:now-2000,method:'update_topo',data:{
+      domain:2,type:144,sub_type:0,
+      sub_devices:[{sn:'M3M_DEVICE',domain:0,type:77,sub_type:2}]
+    }
+  })));
+  registry.ingest(status,now-2000);
+  const payload=receive('thing/product/M3M_DEVICE/osd',{
+    mode_code:4,battery:{capacity_percent:55},
+    distance_limit_status:{state:1,distance_limit:300,is_near_distance_limit:0},
+    rth_altitude:125,rc_lost_action:1,
+    credential:'DANGEROUS_SECRET',sn:'PRIVATE_SERIAL'
+  },now-1000);
+  registry.ingest(payload,now-1000);
+  const d=registry.get('M3M_DEVICE',now);
+  assert.equal(d.propertyProfile.name,'mavic3m');
+  assert.equal(d.deviceProperties.osd.rth_altitude,125);
+  assert.equal(d.deviceProperties.osd.rc_lost_action,1);
+  assert.equal(d.deviceProperties.osd.distance_limit_status.distance_limit,300);
+  assert.equal(d.propertyFieldObservedAt.osd.rth_altitude,now-1000);
+  assert.equal(d.propertyFieldObservedAt.osd['distance_limit_status.distance_limit'],now-1000);
+  assert.doesNotMatch(JSON.stringify(d.deviceProperties),/PRIVATE_SERIAL|DANGEROUS_SECRET/);
+});
+
 test('nested camera, GNSS, battery, RC link and stream fields survive read-only filter',()=>{
   const input={
     cameras:[{zoom_factor:3.5,ir_zoom_factor:2,recording_state:1,
