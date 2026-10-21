@@ -1,5 +1,5 @@
 'use strict';
-const {fieldDefinitions} = require('./dji-properties');
+const {fieldDefinitions,fieldAvailabilityPolicy} = require('./dji-properties');
 
 function hasPath(data, path) {
   const parts = path.split('.');
@@ -53,6 +53,7 @@ function summarizeTelemetryFields(devices){
     const documented=definitions ? definitions.fields : [];
     const accepted=d.deviceProperties&&typeof d.deviceProperties==='object'?d.deviceProperties:{};
     const observedDocumented=[],notObservedDocumented=[];
+    const redactedDocumented=[],unsupportedDocumented=[];
     const pushByRoot=Object.create(null);
     for(const field of documented){
       if(!field.path.includes('.'))pushByRoot[field.path]=field.push;
@@ -60,6 +61,9 @@ function summarizeTelemetryFields(devices){
     for(const field of documented){
       const top=field.path.split('.')[0];
       const channel=pushByRoot[top]===1?'state':'osd';
+      const policy=fieldAvailabilityPolicy(field,documented);
+      if(policy==='redacted'){redactedDocumented.push(channel+':'+field.path);continue;}
+      if(policy==='unsupported-array'){unsupportedDocumented.push(channel+':'+field.path);continue;}
       (hasPath(accepted[channel],field.path)?observedDocumented:notObservedDocumented)
         .push(channel+':'+field.path);
     }
@@ -74,9 +78,10 @@ function summarizeTelemetryFields(devices){
       typicalTotal:typical.length,observed,notObserved,
       extraObserved,extraNotObserved,notApplicable,
       documentedTotal:documented.length,
+      documentedInspectableTotal:documented.length-redactedDocumented.length-unsupportedDocumented.length,
       documentedSource:definitions?.source??null,
       documentedConfidence:definitions?.confidence??null,
-      observedDocumented,notObservedDocumented
+      observedDocumented,notObservedDocumented,redactedDocumented,unsupportedDocumented
     };
   });
 }
