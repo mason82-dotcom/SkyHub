@@ -4,6 +4,7 @@
 const KML='http://www.opengis.net/kml/2.2';
 const WPML='http://www.dji.com/wpmz/1.0.2';
 const {assessAircraft}=require('./wpml-product-support');
+const {validateMappingPlacemark,validateCoordinateGeometry,validatePayloadParam}=require('./wpml-mapping');
 const WPML_CATALOG=require('./data/dji-wpml-fields.json');
 const KNOWN_FIELDS=new Set(WPML_CATALOG.fields.map(field=>field.field));
 const MODES={
@@ -372,6 +373,7 @@ function validateDocuments(templateXml,waylinesXml){
       fieldEnum(coord,'heightMode',p+'/waylineCoordinateSysParam',errors,true);
     }
     heading(one(folder,'wpml:globalWaypointHeadingParam'),p+'/globalWaypointHeadingParam',errors);
+    validatePayloadParam(folder,p,errors);
     if(type==='waypoint'){
       const placemarks=kids(folder,'Placemark');
       if(!placemarks.length)pathError(errors,p,'waypoint template has no points');
@@ -389,7 +391,12 @@ function validateDocuments(templateXml,waylinesXml){
         const ring=shape==='Polygon'?one(one(geom,'outerBoundaryIs'),'LinearRing'):geom;
         const c=one(ring,'coordinates')?.text;
         if(!c)pathError(errors,pp,'mapping geometry missing');
-        else coordinateList(c,false,pp,errors,shape==='Polygon'?3:2);
+        else {
+          const points=coordinateList(c,false,pp,errors,shape==='Polygon'?3:2);
+          if(points.length>=(shape==='Polygon'?3:2))
+            validateCoordinateGeometry(points,type,pp,errors);
+        }
+        validateMappingPlacemark(place,type,pp,errors);
       }
     }
     templates.push({templateId:id,templateType:type});
