@@ -232,6 +232,61 @@ Nachprüfung **ohne MQTT-Payloads oder DJI-Kommandos**:
 **Nicht erforderlich:** Pi-/EMQX-Neustart, Pairing-Reset,
 Broker-ACL-Änderungen, `property/set` oder Flugtest.
 
+## Erfolgreicher DJI-State-/Topologie-Nachtest nach regulärer Cloud-Neuverbindung
+
+Die anschließende Live-Abfrage des Nutzers vom 21.10.2026 liefert **für
+denselben Backend-Prozess** folgende neue kumulative Metriken:
+
+| MQTT-Kanal | Eingegangen | Akzeptiert | Noch offen |
+|---|---:|---:|---|
+| Status | 2 | 2 | keine im Kanal sichtbar |
+| State | 18 | 13 | **5 eingegangene, nicht akzeptierte** |
+| OSD | 2052 | 2052 | keine |
+| Events | 1026 | 1026 | keine |
+
+**Zwei Topologie-Antworten wurden gesendet** (0 vorher), weiterhin
+**zwei aus Redis restaurierte Topologiedatensätze**. Die RC Pro/M3M
+haben sich erneut mit Pilot 2/Cloud verbunden, ohne dass SkyHub,
+EMQX, Pairings, Flug- oder RTH-Einstellungen verändert wurden.
+
+**Abnahme:** MQTT-State- und Status-Transport plus Topologie-Antworten
+sind nun nachgewiesen. Es ist mit hoher Plausibilität bestätigt,
+dass das vorherige Ausbleiben an der bereits laufenden Pilot-2-Sitzung
+bzw. fehlenden State-/Online-Ereignissen seit dem Backend-Neustart lag.
+Eine spezifische Aussage über die technische Publisher-Implementierung
+ist daraus nicht ableitbar.
+
+**Ungeklärt:** Die Differenz `18 - 13 = 5` betrifft **noch
+nicht angenommene State-Nachrichten**. Aus dem bloßen Differenzwert
+geht nicht hervor, welche Prüfregel verantwortlich war.
+`mqttDroppedByReason` ist aktuell nur ein **backendweiter**
+Ablehnungszähler, **nicht pro State-Kanal**. Auch im Parser nicht
+erkennbare Meldungen können als beobachtet, aber nicht angenommen
+gezählt werden, ohne unter einem bestimmten Drop-Grund aufzutauchen.
+Die Gründe dürfen daher nicht ohne zusätzliche kanalbezogene
+Evidenz den fünf State-Paketen zugeordnet werden.
+
+Zur Vertiefung ohne Payload-, ID- oder Konfigurationsausgabe:
+
+```bash
+cd ~/Projekte/SkyHub-HW-Test
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-pro-m3m-check.js \
+  | sed -n '/^--- DJI State-Kanalanalyse/,/^--- M3M-Feldluecken/p'
+
+curl -fsS http://127.0.0.1:4001/api/health | python3 -c '
+import json,sys
+h=json.load(sys.stdin)
+for k in ("mqttObservedChannelCounts","mqttChannelCounts",
+          "mqttRejectedMessages","mqttDroppedByReason"):
+    print(k, ":", h.get(k))
+'
+```
+
+Erst wenn die **modellbezogenen State-Zähler und die wirklich
+akzeptierten State-Feldnamen** vorliegen, können die 27 zuvor
+fehlenden State-Pfade neu bewertet werden.
+
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
