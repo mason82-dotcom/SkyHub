@@ -5,6 +5,31 @@ const {readKmz}=require('./wpml-kmz');
 const {parseXml,validateDocuments}=require('./wpml');
 
 const LIMIT=200;
+const PATTERN_LIMIT=80;
+// Never echo unknown XML element/attribute names: attacker-controlled tag names can contain
+// sensitive substrings even when text and attribute values are suppressed.
+const FIELD_CATALOG=require('./data/dji-wpml-fields.json');
+const TAGS=new Set([
+  'kml','Document','Folder','Placemark','Point','coordinates','Polygon',
+  'outerBoundaryIs','innerBoundaryIs','LinearRing','LineString','MultiGeometry',
+  'name','description','#present',
+  ...FIELD_CATALOG.fields.map(f=>f.field),
+  'wpml:missionConfig','wpml:actionGroup','wpml:actionTrigger','wpml:action',
+  'wpml:actionActuatorFuncParam','wpml:waypointHeadingParam','wpml:waypointTurnParam',
+  'wpml:waylineCoordinateSysParam','wpml:payloadInfo','wpml:droneInfo'
+]);
+function publicPath(path){
+  return path.split('/').map((component,index)=>{
+    if(index===0||component==='')return component;
+    if(component.startsWith('@'))return '@[attribute]';
+    const match=/^([A-Za-z_][\w.:-]*|#present)(\[\d+\])?$/.exec(component);
+    if(!match)return '[unrecognized-element]';
+    return (TAGS.has(match[1])?match[1]:'[unrecognized-element]')+(match[2]||'');
+  }).join('/');
+}
+function patternPath(path){
+  return publicPath(path).replace(/\[\d+\]/g,'[*]').replace(/\/#present$/,'');
+}
 const OMIT_NAMES=new Set([
   'name','description','wpml:author','wpml:createTime','wpml:updateTime',
   'wpml:missionName','wpml:fileSuffix','wpml:directoryName'
@@ -14,6 +39,9 @@ function safeError(message){
   throw Error('WPML comparison rejected: '+message);
 }
 function classify(path){
+  if(/heightMode|ellipsoidHeight|executeHeight|globalHeight|globalRTHHeight|takeOffSecurityHeight/.test(path))
+    return 'heightReferences';
+  if(/imageFormat|payloadLensIndex/.test(path))return 'cameraFormats';
   if(path.includes('actionGroup')||path.includes('actionTrigger')||
      path.includes('actionActuator'))return 'actions';
   if(path.includes('missionConfig'))return 'mission';
@@ -55,7 +83,9 @@ function compareDocuments(a,b,file){
   const left=values(parseXml(a)),right=values(parseXml(b));
   const union=new Set([...left.keys(),...right.keys()]);
   if(union.size>40000)safeError('XML comparison complexity limit');
-  const groups={},changes=[];
+  const groups={},changes=[],patterns=new Map();
+  const kinds={leftOnly:0,rightOnly:0,differentValues:0};
+  const dataKinds={elementPresence:0,attributes:0,fieldText:0};
   let total=0,same=0;
   for(const path of [...union].sort()){
     if(left.has(path)&&right.has(path)&&left.get(path)===right.get(path)){
@@ -64,10 +94,22 @@ function compareDocuments(a,b,file){
     const category=classify(path);
     const kind=!left.has(path)?'added':!right.has(path)?'removed':'changed';
     groups[category]=(groups[category]||0)+1;
+    const direction=kind==='removed'?'leftOnly':kind==='added'?'rightOnly':'differentValues';
+    kinds[direction]++;
+    const dataKind=path.endsWith('/#present')?'elementPresence':
+      path.includes('/@')?'attributes':'fieldText';
+    dataKinds[dataKind]++;
+    const pattern=file+patternPath(path);
+    let item=patterns.get(pattern);
+    if(!item){
+      item={path:pattern,category,leftOnly:0,rightOnly:0,differentValues:0};
+      patterns.set(pattern,item);
+    }
+    item[direction]++;
     total++;
     if(changes.length<LIMIT)changes.push({
-      path:file+path,
-      category,kind,
+      path:file+publicPath(path),
+      category,kind,dataKind,
       // NO mission field values, serials, GPS coordinates, author or timestamps emitted.
       valuesRedacted:true
     });
@@ -76,7 +118,21 @@ function compareDocuments(a,b,file){
     file,comparable:true,equal:total===0,totalChanges:total,
     displayedChanges:changes.length,truncated:total>LIMIT,
     unchangedFields:same,
-    changedByCategory:groups,changes
+    changedByCategory:groups,changes,
+    changesByDirection:kinds,changesByRepresentation:dataKinds,
+    // Group repetitive waypoint/action indices; counts still reflect all differences.
+    patterns:{
+      total:patterns.size,
+      displayed:Math.min(patterns.size,PATTERN_LIMIT),
+      truncated:patterns.size>PATTERN_LIMIT,
+      entries:[...patterns.values()]
+        .sort((a,b)=>{
+          const preferred=['actions','cameraFormats','heightReferences','payload',
+            'mission','waypoints','folders','geometry','other'];
+          const priority=preferred.indexOf(a.category)-preferred.indexOf(b.category);
+          return priority||a.path.localeCompare(b.path);
+        }).slice(0,PATTERN_LIMIT)
+    }
   };
 }
 function inspection(template,waylines,resourceCount){
@@ -119,6 +175,10 @@ function compareKmz(leftBytes,rightBytes){
     left:l,right:r,
     summary:{
       structuralDifferences:differences,
+      // Structural path additions/removals and differing text values are counted separately.
+      leftOnlyFieldOccurrences:docs.reduce((n,d)=>n+d.changesByDirection.leftOnly,0),
+      rightOnlyFieldOccurrences:docs.reduce((n,d)=>n+d.changesByDirection.rightOnly,0),
+      changedValueOccurrences:docs.reduce((n,d)=>n+d.changesByDirection.differentValues,0),
       structurallyEqualExcludingVolatileMetadata:differences===0,
       resourceCountMatches:left.resourceCount===right.resourceCount,
       bothOfflineValid:l.valid&&r.valid,
