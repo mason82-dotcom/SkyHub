@@ -103,3 +103,19 @@ test('redacted and unsupported array fields are excluded from missing-field coun
   assert.ok(rc.redactedDocumented.includes('state:cloud_control_auth'));
 });
 
+
+test('dynamic gimbal inventory reports only field names, not payload indices or values',()=>{
+  const [r]=summarizeTelemetryFields([{
+    model:{domain:'0',type:99,subType:1},modelName:'Matrice 4T',deviceCategory:'aircraft',
+    deviceProperties:{osd:{payload_gimbals:[{payload_index:'89-0-0',
+      gimbal_pitch:12.345,measure_target_distance:55.7}]},state:{}}
+  }]);
+  assert.equal(r.dynamicDocumentedTotal,9);
+  assert.deepEqual(r.observedDynamic,['gimbal_pitch','measure_target_distance']);
+  assert.ok(r.notObservedDynamic.includes('gimbal_yaw'));
+  const asJson=JSON.stringify(r);
+  assert.doesNotMatch(asJson,/89-0-0|12.345|55.7/);
+  assert.equal(summarizeTelemetryFields([{
+    model:{domain:'0',type:77,subType:2},deviceProperties:{osd:{},state:{}}
+  }])[0].dynamicDocumentedTotal,0);
+});
