@@ -10,7 +10,7 @@ const {evaluateHardwareSession,formatReport}=
 function help(){
   console.log('Nutzung: node scripts/pi-rc-plus2-m4t-check.js');
   console.log('Leseprüfung: RC Plus 2 Enterprise + Matrice 4T (DJI Cloud API 1.18).');
-  console.log('Nur Modell, Topologie, Status und dokumentierte Feldnamen.');
+  console.log('Nur Modell, Topologie, Pairing-ANZAHLEN und dokumentierte Feldnamen.');
   console.log('Keine Seriennummern, Rohwerte, GPS-Koordinaten oder Tokens.');
   console.log('Bestehender Backend-Container wird weder neu gebaut noch gestartet.');
   console.log('SKYHUB_COMPOSE_DIR kann auf den bestehenden Compose-Ordner zeigen.');
@@ -37,11 +37,12 @@ if(process.argv.length===3&&process.argv[2]==='--help'){
     return res.json();
   }
   try{
-    const [health,devices,shapes]=await Promise.all([
+    const [health,devices,shapes,pairings]=await Promise.all([
       get('/api/health',false),get('/api/devices',true),
-      get('/api/diagnostics/mqtt-shapes',true)
+      get('/api/diagnostics/mqtt-shapes',true),
+      get('/api/pilot-admin/pairings',true).catch(()=>null)
     ]);
-    const payload=JSON.stringify({health,devices,shapes});
+    const payload=JSON.stringify({health,devices,shapes,pairings});
     if(payload.length>3000000)throw Error('response too large');
     process.stdout.write(payload);
   }catch(_){process.exitCode=1;}
@@ -57,7 +58,8 @@ if(process.argv.length===3&&process.argv[2]==='--help'){
   }else{
     try{
       const data=JSON.parse(exec.stdout);
-      const report=evaluateHardwareSession(data.devices,data.health,data.shapes);
+      const report=evaluateHardwareSession(data.devices,data.health,data.shapes,
+        Date.now(),data.pairings);
       console.log(formatReport(report));
       process.exitCode=report.passed?0:3;
     }catch(_){
