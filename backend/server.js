@@ -13,6 +13,7 @@ const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
 const {createShapeCatalog}=require('./mqtt-shape');
 const {createRegistry}=require('./registry');
+const {deviceCachePayload}=require('./device-cache');
 const {pilotConfiguration}=require('./pilot-config');
 const {createStatusReply}=require('./topology-ack');
 const {createPilotPairing,redisStore}=require('./pilot-pairing');
@@ -191,10 +192,8 @@ function onMessage(topic,payload,packet){
     }
     for(const item of result.updates){
       io.emit('device_update',item);
-      // Individual field timestamps stay in RAM/API/WebSocket, not Redis AOF.
-      const cacheItem={...item};
-      delete cacheItem.telemetryFieldAt;
-      delete cacheItem.telemetryFieldTimeVerified;
+      // Field clocks are volatile and must never enter the Redis/AOF device cache.
+      const cacheItem=deviceCachePayload(item);
       redis.set('skyhub:device:'+item.sn,JSON.stringify(cacheItem),'EX',3600)
         .catch(err=>console.error('[redis write]',err.message));
     }
