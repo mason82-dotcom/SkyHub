@@ -59,13 +59,15 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
     <option value="matrice4e">Matrice 4E</option><option value="matrice4t">Matrice 4T</option>
    </select>
    <div class="rows">
-    <div><label for="height">Höhe über Startpunkt (m)</label><input id="height" type="number" min="2" max="120" step="1" value="50" required></div>
+    <div><label for="height">Globale Standardhöhe über Startpunkt (m)</label><input id="height" type="number" min="2" max="120" step="1" value="50" required></div>
     <div><label for="speed">Fluggeschwindigkeit (m/s)</label><input id="speed" type="number" min="0.2" max="15" step="0.1" value="5" required></div>
     <div><label for="takeoff">Sicherheitssteighöhe (m)</label><input id="takeoff" type="number" min="1.2" max="120" step="0.1" value="30" required></div>
     <div><label for="finish">Nach Missionsende</label><select id="finish"><option value="goHome">Zurückkehren (RTH)</option><option value="noAction">Keine automatische Aktion</option></select></div>
    </div>
    <hr>
    <h2>Wegpunkte <span id="count" class="muted">0 / 500</span></h2>
+   <label class="photo"><input type="checkbox" id="local-heights"> Individuelle Wegpunkthöhen (Expertenmodus)</label>
+   <p class="caption">Bei individuellen Höhen verlangt DJI WPML zusätzlich zu jeder relativen Höhe die <strong>tatsächlich bekannte WGS84-Ellipsoidhöhe</strong> desselben Wegpunkts. SkyHub berechnet diese <strong>nicht</strong> aus dem Startpunkt, DEM oder Geoid. Unbekannte Werte niemals schätzen.</p>
    <div class="rows">
     <div><label for="latitude">Breitengrad (°)</label><input id="latitude" type="number" step="any" min="-90" max="90" placeholder="48.12345"></div>
     <div><label for="longitude">Längengrad (°)</label><input id="longitude" type="number" step="any" min="-180" max="180" placeholder="8.12345"></div>
@@ -74,7 +76,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
    <div id="waypoints" role="list" aria-label="Wegpunktliste"></div>
    <hr>
    <button type="submit" id="export">WPML-KMZ lokal exportieren</button>
-   <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Aktuell nur Wegpunkte, einheitliche relative Höhe und optionale Einzelbilder. Mapping2D/3D, Korridore, RTK-Höhen und Multispektralaktionen werden hier noch nicht berechnet.</p>
+   <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Aktuell Wegpunkte, eine globale Höhe oder individuell explizit belegte relative und WGS84-Ellipsoidhöhen sowie optionale Einzelbilder. Mapping2D/3D, Korridore, Terrain-Referenzen und Multispektralaktionen werden hier noch nicht zu Missionswegen berechnet.</p>
    <div id="message" role="status" aria-live="polite">Mindestens zwei unterschiedliche Wegpunkte setzen.</div>
    <p class="warning">Keine Flugfreigabe. DJI Pilot 2 muss die Mission prüfen. Keine Geofencing-, Terrain-, Kollisions- oder Kamerakompatibilitätsgarantie.</p>
   </form>
