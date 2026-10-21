@@ -224,6 +224,89 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertNotIn("print(env)", text)
         self.assertIn("O_EXCL", text)
 
+    def test_aeronexusadvanced_credentials_readonly_compare_and_safe_import(self):
+        import importlib.util
+        import tempfile
+        from unittest.mock import patch
+        module_path = ROOT / "scripts/pi-minio-env-from-aeronexusadvanced.py"
+        spec = importlib.util.spec_from_file_location("aeronexusadv_credentials", module_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as dirname:
+            root = Path(dirname)
+            source = root / "aeronexus.env"
+            source.write_text(
+                "MINIO_ROOT_USER='legacy-minio'\\n"
+                "MINIO_ROOT_PASSWORD='some-legacy-secret'\\n"
+                "AERONEXUS_MINIO_ACCESS_KEY=not-the-root-account\\n"
+            )
+            source.chmod(0o600)
+            existing = root / "skyhub.env"
+            existing.write_text(
+                "MINIO_ROOT_USER=old-user\\nMINIO_ROOT_PASSWORD=old-secret\\n"
+                "MINIO_API_CORS_ALLOW_ORIGIN=*\\n"
+            )
+            existing.chmod(0o600)
+            credentials = mod.root_values(source)
+            self.assertEqual(credentials["MINIO_ROOT_USER"], "legacy-minio")
+            with patch.object(mod, "TARGET", existing):
+                self.assertNotEqual(mod.current_values()["MINIO_ROOT_USER"],
+                                    credentials["MINIO_ROOT_USER"])
+                with self.assertRaises(mod.ConfigurationError):
+                    mod.import_from_project(source, credentials, False)
+                self.assertIn("old-user", existing.read_text())
+                with patch.object(mod, "assert_minio_stopped"):
+                    message = mod.import_from_project(source, credentials, True)
+                self.assertIn("UPDATED", message)
+                self.assertNotIn("some-legacy-secret", message)
+                self.assertEqual(mod.current_values()["MINIO_ROOT_USER"],
+                                 "legacy-minio")
+                self.assertEqual(mod.current_values()["MINIO_ROOT_PASSWORD"],
+                                 "some-legacy-secret")
+                self.assertEqual(mod.current_values()["MINIO_API_CORS_ALLOW_ORIGIN"],
+                                 "*")
+                self.assertEqual(existing.stat().st_mode & 0o777, 0o600)
+                backups = list(root.glob("skyhub.env.before-aeronexusadvanced-*"))
+                self.assertEqual(len(backups), 1)
+                self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
+                self.assertIn("old-secret", backups[0].read_text())
+
+    def test_aeronexusadvanced_env_refuses_wrong_or_insecure_source(self):
+        import importlib.util
+        import tempfile
+        module_path = ROOT / "scripts/pi-minio-env-from-aeronexusadvanced.py"
+        spec = importlib.util.spec_from_file_location("aeronexusadv_rejection", module_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as dirname:
+            root = Path(dirname)
+            path = root / ".env"
+            path.write_text(
+                "AERONEXUS_MINIO_ACCESS_KEY=client\\n"
+                "AERONEXUS_MINIO_SECRET_KEY=client-secret\\n"
+            )
+            path.chmod(0o600)
+            with self.assertRaises(mod.ConfigurationError):
+                mod.root_values(path)
+            path.write_text("MINIO_ROOT_USER=x\\nMINIO_ROOT_PASSWORD=${UNSET}\\n")
+            with self.assertRaises(mod.ConfigurationError):
+                mod.root_values(path)
+            path.write_text("MINIO_ROOT_USER=x\\nMINIO_ROOT_PASSWORD=some-secret\\n")
+            path.chmod(0o644)
+            with self.assertRaises(mod.ConfigurationError):
+                mod.root_values(path)
+            path.chmod(0o600)
+            sym = root / "linked.env"
+            sym.symlink_to(path)
+            with self.assertRaises(mod.ConfigurationError):
+                mod.root_values(sym)
+
+    def test_minio_up_requires_project_credentials_match(self):
+        helper = (ROOT / "scripts/pi-minio-migrate-from-aeronexus.sh").read_text()
+        self.assertIn("pi-minio-env-from-aeronexusadvanced.py", helper)
+        self.assertIn("check --require-match", helper)
+        self.assertIn("SKYHUB_AERONEXUSADVANCED_ENV_FILE", helper)
+
     def test_existing_profile_and_persistent_volume_are_preserved(self):
         compose = ROOT_COMPOSE.read_text(encoding="utf-8")
         self.assertIn('profiles: ["media"]', compose)
