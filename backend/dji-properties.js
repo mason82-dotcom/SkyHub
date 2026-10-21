@@ -140,7 +140,11 @@ function cleanValue(value, node, path, depth) {
     if (!Object.keys(node.children).length) return undefined;
     const items = value.slice(0, MAX_ARRAY_ITEMS)
       .map(item => cleanValue(item, {type:'struct',children:node.children}, path, depth+1))
-      .filter(item => item !== undefined);
+      .filter(item => item !== undefined &&
+        // An index without a numeric widget value is not a measurement.
+        // Other arrays (cameras, batteries, PSDK readiness) may legitimately
+        // carry identifiers/indexes without every optional field.
+        (path !== 'psdk_widget_values.values' || Object.hasOwn(item,'value')));
     return items.length ? items : undefined;
   }
   if (type === 'bool') {
