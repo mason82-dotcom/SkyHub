@@ -18,6 +18,7 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 ## Dokumentation
 
+- [Erneute Bestandsaufnahme, Branch-Abhängigkeiten und nächste Schritte (22.10.2026)](docs/projektstand-2026-10-22.md)
 - [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
