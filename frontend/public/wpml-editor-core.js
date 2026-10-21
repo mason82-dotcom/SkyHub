@@ -4,9 +4,9 @@
  * https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports=factory();
-  else root.SkyHubWpmlPlanner=factory();
-})(typeof globalThis === 'object' ? globalThis : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports=factory(require('./wpml-interval-actions'));
+  else root.SkyHubWpmlPlanner=factory(root.SkyHubWpmlIntervalActions);
+})(typeof globalThis === 'object' ? globalThis : this, function (intervalActions) {
   const MODELS=Object.freeze({
     mavic3e:Object.freeze({name:'DJI Mavic 3E',drone:77,subtype:0,payload:66}),
     mavic3t:Object.freeze({name:'DJI Mavic 3T',drone:77,subtype:1,payload:67}),
@@ -66,11 +66,18 @@
       const a=waypoints[i-1],b=waypoints[i];
       if(a.lat===b.lat&&a.lon===b.lon)invalid('consecutive identical waypoints');
     }
+    const intervalPhotos=input.intervalPhotos===undefined?null:
+      intervalActions?.normalize(input.intervalPhotos,{
+        waypointCount:waypoints.length,speedMps:speed,
+        hasWaypointPhoto:waypoints.some(p=>p.photo)
+      });
+    if(input.intervalPhotos!==undefined&&!intervalActions)
+      invalid('interval action module unavailable');
     const timestamp=input.timestamp??Date.now();
     if(!Number.isSafeInteger(timestamp)||timestamp<0||timestamp>9999999999999)
       invalid('timestamp');
     return Object.freeze({name:name.trim(),modelKey:input.model,model,speed,transitionSpeed,
-      takeoffHeight,finishAction,waypoints,useLocalHeights,timestamp});
+      takeoffHeight,finishAction,waypoints,useLocalHeights,intervalPhotos,timestamp});
   }
   function field(name,value){return '<wpml:'+name+'>'+esc(value)+'</wpml:'+name+'>';}
   function missionConfig(p){
@@ -122,6 +129,12 @@
         field('useGlobalTurnParam',1)+'</Placemark>').join('')+
       '</Folder>\n';
     let groupId=0;
+    // One interval group from waypoint 0 through the last point.
+    // DJI Pilot 2/aircraft timing is not certified by this structural export.
+    const intervalGroup=p.intervalPhotos?intervalActions.serializeGroup(p.intervalPhotos,{
+      waypointCount:p.waypoints.length,speedMps:p.speed,
+      hasWaypointPhoto:false,groupId:groupId++
+    }).xml:'';
     const waylineFolder='<Folder>'+field('templateId',0)+field('waylineId',0)+
       field('executeHeightMode','relativeToStartPoint')+field('autoFlightSpeed',p.speed)+
       p.waypoints.map((point,index)=>
@@ -134,6 +147,7 @@
         '<wpml:waypointTurnParam>'+
         field('waypointTurnMode','toPointAndStopWithDiscontinuityCurvature')+
         '</wpml:waypointTurnParam>'+
+        (index===0?intervalGroup:'')+
         (point.photo?actionGroup(index,groupId++):'')+'</Placemark>').join('')+
       '</Folder>\n';
     const templateXml=KML_HEADER+metadata+config+templateFolder+KML_FOOTER;
@@ -193,6 +207,12 @@
       summary:{name:output.plan.name,aircraft:output.plan.model.name,
         waypointCount:output.plan.waypoints.length,
         photoCount:output.plan.waypoints.filter(x=>x.photo).length,
+        intervalPhotos:output.plan.intervalPhotos?{
+          type:output.plan.intervalPhotos.type,
+          interval:output.plan.intervalPhotos.interval,
+          unit:output.plan.intervalPhotos.unit,
+          hardwareVerified:false
+        }:null,
         heightReference:'relativeToStartPoint',
         localHeightMode:output.plan.useLocalHeights,
         minRelativeHeight:Math.min(...output.plan.waypoints.map(p=>p.height)),
