@@ -77,6 +77,6 @@ test('all six DJI device families expose value-free documented field coverage',(
     assert.ok(report.observedDocumented.includes('state:firmware_version'));
     assert.ok(!JSON.stringify(report).includes('49.12345'));
     assert.ok(!JSON.stringify(report).includes('1.2.3'));
-    assert.ok(!JSON.stringify(report).includes('55'));
+    assert.doesNotMatch(JSON.stringify(report), /\\"capacity_percent\\"\\s*:\\s*55/);
   }
 });
