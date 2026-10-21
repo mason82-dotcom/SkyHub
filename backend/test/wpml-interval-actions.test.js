@@ -105,3 +105,30 @@ test('browser contains no remote mutation for interval actions',()=>{
   assert.doesNotMatch(engine,/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|\/api\/mission\/create/);
   assert.doesNotMatch(ui,/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|\/api\/mission\/create/);
 });
+
+test('WPML validator rejects duplicate action group ids across separate waypoint actions',()=>{
+  const input=route();
+  input.waypoints[0].photo=true;
+  input.waypoints[1].photo=true;
+  const built=planner.build(input);
+  assert.equal(validateDocuments(built.templateXml,built.waylinesXml).valid,true);
+  const duplicate=built.waylinesXml.replace(
+    '<wpml:actionGroupId>1</wpml:actionGroupId>',
+    '<wpml:actionGroupId>0</wpml:actionGroupId>');
+  assert.ok(validateDocuments(built.templateXml,duplicate).errors.some(
+    x=>x.message.includes('duplicate action group ID')));
+});
+test('periodic distance/timing triggers must cover at least two route indices',()=>{
+  const built=planner.build(route({type:'multipleDistance',interval:12}));
+  const badRange=built.waylinesXml.replace(
+    '<wpml:actionGroupEndIndex>2</wpml:actionGroupEndIndex>',
+    '<wpml:actionGroupEndIndex>0</wpml:actionGroupEndIndex>');
+  assert.ok(validateDocuments(built.templateXml,badRange).errors.some(
+    x=>x.message.includes('needs a waypoint range')));
+  const badInterval=built.waylinesXml.replace(
+    '<wpml:actionTriggerParam>12</wpml:actionTriggerParam>',
+    '<wpml:actionTriggerParam>0</wpml:actionTriggerParam>');
+  assert.equal(validateDocuments(built.templateXml,badInterval).valid,false);
+  assert.ok(validateDocuments(built.templateXml,badInterval).errors.some(
+    x=>x.path.endsWith('/actionTriggerParam')));
+});
