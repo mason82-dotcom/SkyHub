@@ -39,12 +39,18 @@ test('partial GPS packets preserve a previously valid coordinate pair', () => {
   assert.equal(expired.fresh,true);
 });
 
-test('paired zero coordinates are not treated as missing', () => {
+test('paired DJI 0/0 coordinates mean unavailable GPS, not a current fix', () => {
   const store=createRegistry();
   const result=store.ingest(osd('AIR',{latitude:0,longitude:0,battery:0}),20000);
-  assert.equal(result.point.latitude,0);
-  assert.equal(result.point.longitude,0);
-  assert.equal(store.get('AIR',20001).positionFresh,true);
+  assert.equal(result.point,null);
+  const device=store.get('AIR',20001);
+  assert.equal(device.positionUnavailable,true);
+  assert.equal(device.positionFresh,false);
+  assert.equal(device.lastPositionAt,null);
+  assert.equal(device.telemetry.latitude,null);
+  assert.equal(device.telemetry.longitude,null);
+  assert.equal(device.telemetry.battery,0);
+  assert.equal(device.fresh,true);
 });
 
 test('state/events do not refresh GPS age', () => {
