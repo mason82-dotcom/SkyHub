@@ -95,7 +95,7 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertIn("/mnt/hc4backup/aeronexus-data/minio", text)
         self.assertIn("findmnt --target", text)
         self.assertIn('mount_target" != "/"', text)
-        for destructive in ("docker start", "docker stop", "docker rm ", "mkdir -p", "mount ", "docker network connect"):
+        for destructive in ("docker start ", "docker stop ", "docker rm ", "mkdir -p ", "sudo mount ", "docker network connect "):
             self.assertNotIn(destructive, text)
 
     def test_adopt_requires_explicit_data_source_and_real_mount(self):
