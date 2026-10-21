@@ -130,6 +130,57 @@ Tokens oder unbearbeiteten Payload-Keys. Sie wird im Test-Worktree
 gegen das bereits laufende Pi-Backend ohne erneutes Deployment
 ausgeführt.
 
+## State-Nachtest: kein Topic-Empfang trotz OSD-Telemetrie
+
+Im anschließenden echten Pi-Test mit Commit `41d6d64`
+(`scripts/pi-rc-pro-m3m-check.js` aus dem Test-Worktree) wurde
+folgende Zustandskette **direkt aus den bestehenden Backend-APIs** gelesen:
+
+| Ebene | Live-Nachweis |
+|---|---:|
+| MQTT-State-Topic empfangen (`mqttObservedChannelCounts.state`) | **0** |
+| Nach Guard und Registry akzeptiert (`mqttChannelCounts.state`) | **0** |
+| State-Nachrichten dem RC-Modell zugeordnet | **0** |
+| State-Nachrichten der M3M zugeordnet | **0** |
+| Typisierte RC-/M3M-State-Felder seit Prozessstart | **nein / nein** |
+
+Das OSD wurde zuvor **964/964** mal empfangen, übernommen und als
+verwertbare Telemetrie gezählt, mit ungefähr zwei Sekunden
+OSD-Frische an beiden Geräten. Der Transport für OSD ist deshalb
+bestätigt, das **State-Topic blieb dagegen unbeobachtet**. Der
+Beobachtungszähler wird am Anfang von `onMessage()` vor Parsing,
+Guard und Feldfilter erhöht; es handelt sich **nicht** um
+Parserablehnungen. Die DJI-Dokumentation spezifiziert für
+`pushMode=1` State-Übertragung bei Änderung, **nicht zyklisch**.
+
+Offizielle DJI-Referenz:
+https://developer.dji.com/doc/cloud-api-tutorial/en/overview/basic-concept/thing-model.html
+
+### Nächste risikofreie Prüfung am Pi
+
+Nur die bestehenden, lesenden Backend-Healthdaten abfragen:
+
+```bash
+curl -fsS http://127.0.0.1:4001/api/health | python3 -c '
+import json,sys
+h=json.load(sys.stdin)
+for k in ("mqtt","subscribed","topologyRestoredDevices",
+          "mqttLastConnectedAt","mqttLastMessageAt",
+          "mqttLastOsdAt","mqttObservedChannelCounts",
+          "mqttChannelCounts"):
+    print(f"{k}: {h.get(k)}")
+'
+```
+
+Es werden keine Geräte-IDs oder Telemetriewerte angezeigt.
+Die Abfrage **sendet keine MQTT-Nachricht**.
+Beobachtung nach einer normalen Pilot-2-/Cloud-Verbindung bei
+am Boden stehenden Geräten ist möglich, aber eine Cloud-Neuverbindung
+muss **nicht** zwingend State-Nachrichten auslösen.
+Bei weiterhin ausbleibenden State-Topics sollten zuerst
+Publisher-/Broker-Zeitpunkt und Topic-Sichtbarkeit geklärt werden;
+keine `property/set`-Aufrufe, Flight Controls, Kameraaktionen
+oder Netzwerkkonfigurationsänderungen sind für diesen Test zulässig.
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
