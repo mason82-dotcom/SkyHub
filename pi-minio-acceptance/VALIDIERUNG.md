@@ -44,3 +44,24 @@ fehlen; beide sind gestoppt; einer fehlt und einer ist gestoppt; ein laufender
 Legacy-Container wird abgelehnt; ein unbekannter Status wird abgelehnt; eine
 fehlgeschlagene Docker-Inventur gilt nicht als Abwesenheit. Insgesamt 14 Tests
 bestanden. Kein echter Docker-Aufruf in diesen zusätzlichen Tests, kein Pi-Zugriff.
+
+## Ergänzung: entkoppelter Backup-Auftrag und Recovery
+
+24 lokale Tests erfolgreich. Ergänzend geprüft: direkter alter Startweg wird
+abgelehnt; Worker ohne systemd-Credential-Kontext wird abgelehnt; Launcher ohne
+Ausführungsargument startet keinen Auftrag; erzeugter systemd-Aufruf verwendet
+Typ exec, control-group, LoadCredential und ExecStopPost ohne Terminalbindung;
+Recovery startet nur die ursprüngliche Container-ID; laufender Container wird
+nicht erneut gestartet; falsche UUID, geänderte Container-ID und konkurrierender
+MinIO führen zum Abbruch; ohne Restart-Marker erfolgt kein Docker-Zugriff.
+
+Diese Tests verwenden Mock-Daten. Kein echter systemd-/Docker-Auftrag, keine
+Credential-Übergabe an einen echten Systemmanager und kein SIGKILL-/SSH-Abbruchtest
+auf dem Pi wurden durchgeführt. Die Skripte ersetzen keine Absicherung gegen
+Host-/Stromausfall. Der erste tatsächliche Lauf hatte kein vollständiges
+Datenbackup geliefert; MinIO-Readiness HTTP 200 ist nach manuellem Wiederanlauf
+bestätigt.
+
+Primärquellen für die Ablaufgestaltung:
+- https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html
+- https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html

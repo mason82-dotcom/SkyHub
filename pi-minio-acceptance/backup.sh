@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# PREPARED ONLY. Mutates the Pi only with explicit --execute-backup.
+# Internal systemd worker. Direct terminal execution is refused.
 set +x
 set -Eeuo pipefail
 umask 077
-[[ "${1:-}" == --execute-backup && $# == 1 ]] || {
-  echo 'NOT EXECUTED. Usage after separate approval: sudo bash backup.sh --execute-backup'
+[[ "${1:-}" == --systemd-worker && $# == 1 && -n "${INVOCATION_ID:-}" && -n "${CREDENTIALS_DIRECTORY:-}" ]] || {
+  echo 'NOT EXECUTED. Use the detached launch_backup.py after separate approval; direct execution refused.'
   exit 2
 }
 [[ $EUID == 0 ]] || { echo 'ERROR: root required'; exit 2; }
+RUN="${SKYHUB_BACKUP_RUN_DIR:-}"
+[[ "${RUN%/*}" == /run && "${RUN##*/}" == skyhub-backup-job-* && -d "$RUN" && ! -L "$RUN" && -O "$RUN" ]]
+[[ "$(stat -c %a "$RUN")" == 700 ]]
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE=/mnt/hc4backup/skyhub-next/minio
 PROJECT=/home/mason/Projekte/SkyHub-Next
@@ -55,27 +58,29 @@ for obj in json.loads(subprocess.check_output(['docker', 'inspect', *ids])) if i
             raise SystemExit('ERROR: another running container has overlapping writable storage')
 print('No other running container has an overlapping writable bind mount.')
 PY
-read -r -p 'All S3 users accounted for; maintenance interruption approved? Type BACKUP: ' answer </dev/tty
-[[ "$answer" == BACKUP ]] || exit 2
-read -r -s -p 'New archive passphrase (store separately): ' PASS </dev/tty; echo
-read -r -s -p 'Repeat passphrase: ' REPEAT </dev/tty; echo
-[[ -n "$PASS" && "$PASS" == "$REPEAT" ]] || { echo 'ERROR: passphrases differ'; exit 2; }
-unset REPEAT
+IFS= read -r PASS < "$CREDENTIALS_DIRECTORY/archive-passphrase"
+[[ -n "$PASS" ]] || { echo 'ERROR: archive credential missing'; exit 2; }
 [[ "$(findmnt -nr -T /run -o FSTYPE)" == tmpfs ]] || { echo 'ERROR: /run must be tmpfs'; exit 2; }
 STAGE="$(mktemp -d /run/skyhub-backup.XXXXXXXX)"
 OUT="$(mktemp -d /mnt/benz/skyhub-backup-$(date +%Y%m%dT%H%M%S)-XXXXXXXX)"
 STOPPED=0
-source_ready() {
-  [[ "$(findmnt -nr --mountpoint /mnt/hc4backup -o UUID)" == ad583d3f-9bfe-4792-829c-1cc2b6738358 &&
-     "$(findmnt -nr -T "$SOURCE" -o TARGET)" == /mnt/hc4backup &&
-     -d "$SOURCE/.minio.sys" && ! -L "$SOURCE" ]]
+recover_in_worker() {
+  python3 - "$RUN" "$HERE" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[2])
+from recover_backup import recover
+try:
+    recover(sys.argv[1])
+except Exception:
+    raise SystemExit('CRITICAL: guarded worker recovery failed; inspect unit and source mount')
+PY
 }
 finish() {
   local result=$?
   trap - EXIT
   unset PASS
   if (( STOPPED )); then
-    if ! source_ready || ! docker start skyhub-next-minio-1 >/dev/null; then
+    if ! recover_in_worker; then
       echo 'CRITICAL: existing MinIO could not restart; manual recovery required.' >&2
       result=1
     fi
@@ -85,6 +90,9 @@ finish() {
   exit "$result"
 }
 trap finish EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 mkdir -m 700 "$STAGE/gnupg" "$STAGE/evidence" "$STAGE/evidence/config"
 # Capture runtime secrets only on tmpfs; archive them encrypted, never print them.
 docker inspect skyhub-next-minio-1 skyhub-next-backend-1 > "$STAGE/evidence/runtime.json"
@@ -119,25 +127,41 @@ docker image save "$IMAGE" | zstd -T1 -3 | encrypt "$OUT/image.tar.zst.gpg.parti
 decrypt "$OUT/image.tar.zst.gpg.partial" | zstd -d | tar -tf - >/dev/null
 mv "$OUT/image.tar.zst.gpg.partial" "$OUT/image.tar.zst.gpg"
 # The EXIT trap restarts the same existing container if stop times out/interruption occurs.
+python3 - "$RUN" <<'PY'
+import json, os, pathlib, subprocess, sys
+p = pathlib.Path(sys.argv[1])
+container_id = subprocess.check_output(
+    ['docker', 'inspect', '-f', '{{.Id}}', 'skyhub-next-minio-1'], text=True).strip()
+marker = p/'restart-needed.json.tmp'
+with marker.open('x') as f:
+    json.dump({'container_id': container_id}, f)
+    f.flush()
+    os.fsync(f.fileno())
+os.replace(marker, p/'restart-needed.json')
+PY
 STOPPED=1
+echo 'Phase: stopping existing MinIO; offline manifest and archive follow.'
 docker stop --time 120 skyhub-next-minio-1 >/dev/null
 [[ "$(docker inspect -f '{{.State.Running}}' skyhub-next-minio-1)" == false ]]
 [[ "$(docker inspect -f '{{.State.ExitCode}}' skyhub-next-minio-1)" == 0 ]] || {
   echo 'ERROR: MinIO did not stop cleanly; no data archive created'; exit 2;
 }
+echo 'Phase: creating offline SHA256 manifest (may take substantial time).'
 python3 "$HERE/manifest.py" create "$SOURCE" "$STAGE/evidence/files.jsonl"
+echo 'Phase: streaming compressed encrypted data archive.'
 tar --format=pax --numeric-owner --acls --xattrs --xattrs-include='*' --sparse \
   --one-file-system -cpf - -C /mnt/hc4backup/skyhub-next minio -C "$STAGE" evidence \
   | zstd -T1 -3 | encrypt "$OUT/data.tar.zst.gpg.partial"
+echo 'Phase: reading encrypted data archive for integrity check.'
 decrypt "$OUT/data.tar.zst.gpg.partial" | zstd -d | tar -tf - >/dev/null
 mv "$OUT/data.tar.zst.gpg.partial" "$OUT/data.tar.zst.gpg"
+echo 'Phase: comparing offline source against file manifest.'
 python3 "$HERE/manifest.py" verify "$SOURCE" "$STAGE/evidence/files.jsonl"
 (cd "$OUT"; sha256sum data.tar.zst.gpg image.tar.zst.gpg > SHA256SUMS)
 sync -f "$OUT/data.tar.zst.gpg"
 sync -f "$OUT/image.tar.zst.gpg"
 sync -f "$OUT/SHA256SUMS"
-source_ready || { echo 'CRITICAL: source mount no longer valid; restart refused'; exit 2; }
-docker start skyhub-next-minio-1 >/dev/null
+recover_in_worker
 STOPPED=0
 printf '%s\n' 'Archive verified; source manifest matched; existing container restarted.' \
   'S3 readiness and isolated restore are NOT yet accepted.' > "$OUT/ARCHIVE-COMPLETE.txt"

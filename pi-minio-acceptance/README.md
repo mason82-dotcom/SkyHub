@@ -2,10 +2,11 @@
 
 Stand: 22.10.2026, Europe/Berlin. **Vorbereitet, nicht auf dem Pi ausgeführt.**
 
-Dieses Paket ist eine Anleitung mit überprüfbaren Skripten. Die bisherige
-Autorisierung umfasst ausschließlich lesende Pi-Checks und die Vorbereitung
-dieser Anleitung. Die schreibenden Befehle unten sind für eine spätere,
-ausdrücklich freigegebene Durchführung dokumentiert. Nicht das gesamte Dokument
+Dieses Paket ist eine Anleitung mit überprüfbaren Skripten. Zunächst waren nur
+lesende Pi-Checks und die Vorbereitung erlaubt. Der Nutzer hat anschließend
+einen Backup-Lauf mit MinIO-Unterbrechung freigegeben; dieser Lauf ist abgebrochen.
+Die neue Startvariante wurde noch nicht ausgeführt. Restore, Formatierung und
+Neustarttests sind weiterhin nicht freigegeben. Nicht das gesamte Dokument
 als Shell-Skript ausführen. Keine automatische Ausführung beim Entpacken.
 
 ## 1. Gesicherter Ausgangspunkt und Grenzen
@@ -66,15 +67,19 @@ getestet; ein nicht unterstütztes `fallocate` führt zum Abbruch.
 |---|---|
 | `preflight.sh` | Nur lesende Prüfung auf dem Pi |
 | `legacy_guard.py` | Fehlende Legacy-Container zulassen; laufende oder unklare Zustände ablehnen |
-| `backup.sh` | Späterer Offline-Backup-Lauf mit Verschlüsselung und Wiederanlauf |
+| `launch_backup.py` | Bestätigung/Passphrase entgegennehmen und SSH-unabhängigen systemd-Auftrag starten |
+| `backup.sh` | Nur interner systemd-Worker für verschlüsseltes Offline-Backup |
+| `recover_backup.py` | Getrennte ExecStopPost-Wiederanlaufprüfung mit UUID-/Container-ID-Schutz |
 | `restore.sh` | Späterer Restore in neues verschlüsseltes Testabbild mit isoliertem MinIO |
 | `manifest.py` | Vollständiger Dateisatz, SHA-256, Größen, numerische Eigentümer, Modi und xattr-Digests |
 | `restore_probe.py` | Lesende IAM-/LIST-/GET-Prüfung gegen die Restore-Kopie |
 | `VALIDIERUNG.md` | Lokal ausgeführte Prüfungen und verbleibende Grenzen |
 
-Die Skripte sind bewusst nicht mit einer Pi-Unit oder einem Timer verknüpft.
-`backup.sh` und `restore.sh` verlangen ein ausdrückliches Ausführungsargument
-und eine zusätzliche Eingabe am Terminal. Keine Passphrase in der Shell-History,
+Es wird keine dauerhafte Pi-Unit und kein Timer installiert. Der Backup-Launcher
+erstellt nur bei ausdrücklichem Start eine transiente systemd-Unit.
+`launch_backup.py` und `restore.sh` verlangen ein ausdrückliches Ausführungsargument
+und eine zusätzliche Eingabe am Terminal. `backup.sh` verweigert direkte Aufrufe;
+der Worker startet ausschließlich im vorbereiteten systemd-Auftrag. Keine Passphrase in der Shell-History,
 in Argumenten oder in Dateien speichern; die Skripte verwenden einen privaten
 Dateideskriptor für GPG/cryptsetup. Keine Ausführung mit `bash -x`/Debug-Logging.
 
@@ -110,13 +115,26 @@ zukünftigen Containerstarts. Die Wartungskoordination bleibt erforderlich.
 
 ## 5. Phase B – späteres konsistentes Offline-Backup
 
-**Schreibend und mit MinIO-Unterbrechung. Noch nicht freigegeben/ausgeführt.**
+**Schreibend und mit MinIO-Unterbrechung. Der erste vom Nutzer freigegebene
+Lauf ist nach einer SSH-Trennung abgebrochen; ein vollständiges Datenbackup
+ist nicht nachgewiesen. Diese gehärtete Startvariante ist noch nicht auf dem Pi
+ausgeführt. Vor Wiederholung aktualisierten Preflight prüfen.**
 
 ```bash
-sudo bash backup.sh --execute-backup
+sudo python3 launch_backup.py --execute-backup
 ```
 
-Das Skript:
+Der Launcher nimmt Bestätigung und Passphrase entgegen, kopiert die Worker-Dateien
+in einen privaten root-eigenen tmpfs-Ordner und startet einen transienten
+Systemdienst `skyhub-minio-backup.service`. Er verwendet weder `--pty`, `--pipe`
+noch `--scope`. Nach erfolgreicher Übergabe darf die SSH-Sitzung abbrechen, ohne
+den Worker zu beenden. Eine laufübergreifende flock-Sperre verhindert parallele
+Backup-Worker. Die Passphrase wird als systemd-Credential übergeben; sie steht
+nicht in Argumenten, Environment oder Journal. Der kurzzeitig nötige Quelldatensatz
+unter `/run` wird nach bestätigter Übergabe entfernt. Bei unklarer Übergabe zuerst
+die Unit prüfen, nicht blind erneut starten.
+
+Der Worker:
 
 1. Prüft Quellmount, Ziel, Image, Container, Kapazität und überlappende
    schreibbare Container-Mounts. Erwartet bestehende reguläre Konfigurationsdateien.
@@ -134,12 +152,16 @@ Das Skript:
 9. Entschlüsselt das Archiv zur vollständigen Archiv-Leseprüfung und prüft den
    unveränderten Quellbestand erneut gegen das Manifest.
 10. Schreibt SHA256SUMS, synchronisiert die Archive und startet denselben
-    vorhandenen Container, sofern der richtige Quellmount weiterhin vorhanden ist.
+    vorhandenen Container nach erfolgreicher Recovery-Prüfung.
 
-Die EXIT-Behandlung versucht bei einem Fehler nach dem Stop ebenfalls den
-Wiederanlauf. Fehlt der Quellmount, wird der Start ausdrücklich verweigert.
-Bei Stromausfall, SIGKILL oder Hostausfall kann kein Shell-Trap garantieren,
-dass der Wiederanlauf erfolgt. Keine neuen Container als Ersatz erstellen.
+Ein privater Restart-Marker wird vor dem Stop geschrieben. Signal-/EXIT-Handler
+versuchen den Wiederanlauf. Zusätzlich führt systemd nach Beendigung des Workers
+und seiner Prozessgruppe eine getrennte `ExecStopPost`-Prüfung aus. Diese prüft
+UUID, Datenmount, ursprüngliche Container-ID, Image sowie konkurrierende
+Speicherprozesse und startet ausschließlich denselben vorhandenen Container.
+Bei fehlendem Quellmount oder geänderter Identität wird der Start verweigert.
+Stromausfall, Host-/Docker-Ausfall oder ein Fehler der Recovery selbst bleiben
+Grenzen dieser Absicherung. Keine neuen Container als Ersatz erstellen.
 
 Erwartete Ausgabe: neues Verzeichnis `/mnt/benz/skyhub-backup-...` mit:
 
@@ -318,3 +340,34 @@ weiterhin abgelehnt. Docker-Fehler führen zum Abbruch. Die zusätzliche Prüfun
 
 Diese Befunde ersetzen keine Wartungsfreigabe und schließen externe oder
 zeitversetzte S3-Nutzer nicht aus. Backup/Restore bleiben ungestartet.
+
+## SSH-Abbruch des ersten Laufs und neuer Startweg
+
+Der erste Lauf wurde per SSH gestartet. Nach der Trennung fehlten Backup-Shell
+und Manifestprozess; nur das Image-Archiv war vorhanden, kein Datenarchiv und
+kein Abschlussmarker. Ein unvollständiges Manifest blieb in privatem tmpfs zurück.
+MinIO wurde anschließend nach Mount-/Image-Prüfung manuell wieder gestartet;
+Backend-Readiness HTTP 200 wurde durch den Nutzer bestätigt. Das erklärt nicht
+abschließend, welches Signal oder Ereignis den ursprünglichen Lauf beendete.
+
+Die früher ausgegebene ZIP-Anleitung und der direkte `backup.sh`-Startweg sind
+für eine Wiederholung überholt. Nur den aktualisierten GitHub-Stand verwenden.
+Alte Teilbestände nicht als Backup zählen und in diesem Schritt nicht löschen.
+Die neu hinzugefügte systemd-/Recovery-Funktion ist lokal getestet, aber noch
+nicht mit dem Pi-Systemmanager, dessen Credentials oder einem echten Abbruch
+unter laufendem Backup praktisch abgenommen.
+
+Nach einem ausdrücklich gestarteten neuen Auftrag ausschließlich lesend beobachten:
+
+```bash
+systemctl --no-pager --full show skyhub-minio-backup.service \
+  -p LoadState -p ActiveState -p SubState -p Result -p MainPID
+sudo journalctl -u skyhub-minio-backup.service --no-pager -n 40
+```
+
+Nach Wiederverbindung zuerst diesen Status prüfen; den Launcher nicht erneut
+starten. Eine erfolgreich beendete transiente Unit kann nach Abschluss wieder
+entladen sein. Journal, Archiv-Abschlussmarker und Readiness gemeinsam prüfen.
+`systemctl reset-failed` ist kein Wiederherstellungsverfahren und wird hier nicht
+automatisiert. Bei fehlgeschlagenem Auftrag vor einem neuen Start die Ursache
+und den bestehenden MinIO-Zustand klären.

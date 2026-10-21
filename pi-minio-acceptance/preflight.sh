@@ -2,11 +2,11 @@
 # Read-only on the Pi. Does not create files or contact S3.
 set -Eeuo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-for tool in python3 docker tar zstd gpg sha256sum findmnt cryptsetup mkfs.ext4 mount umount fallocate; do
+for tool in python3 docker tar zstd gpg sha256sum findmnt cryptsetup mkfs.ext4 mount umount fallocate systemd-run flock; do
   if command -v "$tool" >/dev/null 2>&1; then
     printf '%s: available\n' "$tool"
   else
-    printf '%s: MISSING (required before restore)\n' "$tool"
+    printf '%s: MISSING (review required before execution)\n' "$tool"
   fi
 done
 findmnt --raw --noheadings --mountpoint /mnt/hc4backup -o SOURCE,TARGET,FSTYPE,OPTIONS
