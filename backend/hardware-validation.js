@@ -94,10 +94,13 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
   };
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
+  // DJI pushMode=1 is event-driven: state is pushed on change, unlike
+  // fixed-frequency OSD. A state packet that is 16 s old is evidence that
+  // the channel works, not an indication of failed controller/aircraft.
   const stateStatus=d=>
     !d.seen?'NICHT NACHGEWIESEN':
     !d.propertyDiagnosticsAvailable?'NICHT PRÜFBAR':
-    statusLabel(d.stateObserved&&d.stateAgeSeconds<15,d.stateObserved);
+    d.stateObserved?'BESTÄTIGT':'NICHT NACHGEWIESEN';
   const stages=[
     {step:'DJI-MQTT verbunden und abonniert',status:statusLabel(transport.mqttConnected&&transport.subscribed,transport.mqttConnected)},
     {step:'RC Pro Enterprise per Topologie erkannt',status:statusLabel(controller.seen&&controller.topologyOnline,controller.seen)},
@@ -105,8 +108,8 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     {step:'RC und M3M zugeordnet',status:statusLabel(linked,Boolean(rc&&air))},
     {step:'RC sendet aktuelle OSD-Telemetrie',status:statusLabel(controller.osdFresh,controller.osdAgeSeconds!==null)},
     {step:'M3M verbunden und mit aktueller OSD-Telemetrie',status:statusLabel(aircraft.aircraftConnected&&aircraft.osdFresh,aircraft.osdAgeSeconds!==null)},
-    {step:'RC State-Feldbeobachtung vorhanden',status:stateStatus(controller)},
-    {step:'M3M State-Feldbeobachtung vorhanden',status:stateStatus(aircraft)}
+    {step:'RC State-Daten empfangen (bei Änderung)',status:stateStatus(controller)},
+    {step:'M3M State-Daten empfangen (bei Änderung)',status:stateStatus(aircraft)}
   ];
   return {target:'DJI RC Pro Enterprise + Mavic 3M',mode:'nur Lesen',
     transport,controller,aircraft,linked,stages,
@@ -114,6 +117,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
       'M3M (0:77:2) nutzt ein vorläufiges Mavic-3-Familienprofil.',
+      'DJI State (pushMode 1) wird bei Zustandsänderung gesendet. Ältere State-Zeitstempel bedeuten nicht automatisch einen Kommunikationsfehler.',
       'Ohne deviceProperties, propertyProfile und propertyFieldObservedAt kann der Container keine feldgenaue 1.18-Abnahme liefern.',
       'Ein Hardwaretest erfordert echte, zeitnahe Pilot-2-MQTT-Meldungen; synthetische Tests sind kein Ersatz.'
     ]};
@@ -146,7 +150,9 @@ function formatReport(r){
       ' | beobachtet: '+d.propertyFields.observed+
       ' | frisch: '+d.propertyFields.fresh+
       ' | veraltet: '+d.propertyFields.stale+
-      ' | nicht beobachtet: '+d.propertyFields.missing);
+      ' | nicht beobachtet: '+d.propertyFields.missing+
+      ' | redigiert: '+d.propertyFields.redacted+
+      ' | nicht typisiert: '+d.propertyFields.untyped);
     lines.push('Frische Feldnamen (max. 60): '+(d.propertyFields.freshNames.join(', ')||'keine'));
     lines.push('Beobachtete Feldnamen (max. 60): '+(d.propertyFields.observedNames.join(', ')||'keine'));
   }
