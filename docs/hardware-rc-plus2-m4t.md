@@ -52,7 +52,9 @@ Bei bereits vorhandenem Worktree zuerst `git worktree list` und `git status` pr�
 cd ~/Projekte/SkyHub-Next
 node scripts/pi-pilot-pair.js
 # Den tatsächlich auf der RC angezeigten Code lokal einsetzen:
-node scripts/pi-pilot-pair.js <SECHSSTELLIGER_CODE>
+read -r -p "Sechsstelligen Code von der RC Plus 2 eingeben: " PAIR_CODE
+node scripts/pi-pilot-pair.js "$PAIR_CODE"
+unset PAIR_CODE
 ```
 
 3. Auf der RC den Abschluss und den SkyHub-Workspace prüfen. Die bestehende RC Pro Enterprise behält ihr eigenes Token. Keine Tokens oder Geräte-IDs hier veröffentlichen.
