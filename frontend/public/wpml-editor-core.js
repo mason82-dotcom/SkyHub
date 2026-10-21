@@ -47,15 +47,22 @@
       const lat=numeric(point.lat,'latitude '+index,-90,90);
       const lon=numeric(point.lon,'longitude '+index,-180,180);
       const height=numeric(point.height??50,'height '+index,2,120);
+      const ellipsoidHeight=point.ellipsoidHeight===undefined?null:
+        numeric(point.ellipsoidHeight,'ellipsoidHeight '+index,-10000,100000);
       if(typeof point.photo!=='undefined'&&typeof point.photo!=='boolean')
         invalid('photo flag '+index);
-      return Object.freeze({lat,lon,height,photo:point.photo===true});
+      return Object.freeze({lat,lon,height,ellipsoidHeight,photo:point.photo===true});
     });
-    // Avoid inventing EGM96/ellipsoid conversions in the editable template.
-    // This first editor supports a single relative-to-takeoff height only.
+    // Local heights require explicit, independently measured WGS84 ellipsoid heights.
+    // Never derive an ellipsoid reference from height relative to takeoff.
+    const variableHeight=waypoints.some(p=>p.height!==waypoints[0].height);
+    const hasEllipsoid=waypoints.some(p=>p.ellipsoidHeight!==null);
+    if(variableHeight&&!hasEllipsoid)
+      invalid('variable relative heights require explicit ellipsoidHeight at every waypoint');
+    if(hasEllipsoid&&waypoints.some(p=>p.ellipsoidHeight===null))
+      invalid('ellipsoidHeight is required at every waypoint when local heights are used');
+    const useLocalHeights=variableHeight||hasEllipsoid;
     for(let i=1;i<waypoints.length;i++){
-      if(waypoints[i].height!==waypoints[0].height)
-        invalid('first editor requires a uniform relative flight height');
       const a=waypoints[i-1],b=waypoints[i];
       if(a.lat===b.lat&&a.lon===b.lon)invalid('consecutive identical waypoints');
     }
@@ -63,7 +70,7 @@
     if(!Number.isSafeInteger(timestamp)||timestamp<0||timestamp>9999999999999)
       invalid('timestamp');
     return Object.freeze({name:name.trim(),modelKey:input.model,model,speed,transitionSpeed,
-      takeoffHeight,finishAction,waypoints,timestamp});
+      takeoffHeight,finishAction,waypoints,useLocalHeights,timestamp});
   }
   function field(name,value){return '<wpml:'+name+'>'+esc(value)+'</wpml:'+name+'>';}
   function missionConfig(p){
@@ -109,7 +116,8 @@
       field('globalWaypointTurnMode','toPointAndStopWithDiscontinuityCurvature')+
       p.waypoints.map((point,index)=>
         '<Placemark>'+coordinate(point)+field('index',index)+
-        field('height',point.height)+field('useGlobalHeight',1)+
+        (p.useLocalHeights?field('ellipsoidHeight',point.ellipsoidHeight):'')+
+        field('height',point.height)+field('useGlobalHeight',p.useLocalHeights?0:1)+
         field('useGlobalSpeed',1)+field('useGlobalHeadingParam',1)+
         field('useGlobalTurnParam',1)+'</Placemark>').join('')+
       '</Folder>\n';
@@ -185,7 +193,10 @@
       summary:{name:output.plan.name,aircraft:output.plan.model.name,
         waypointCount:output.plan.waypoints.length,
         photoCount:output.plan.waypoints.filter(x=>x.photo).length,
-        heightReference:'relativeToStartPoint'},
+        heightReference:'relativeToStartPoint',
+        localHeightMode:output.plan.useLocalHeights,
+        minRelativeHeight:Math.min(...output.plan.waypoints.map(p=>p.height)),
+        maxRelativeHeight:Math.max(...output.plan.waypoints.map(p=>p.height))},
       flightReady:false,validationScope:'offline-partial'};
   }
   return Object.freeze({MODELS,normalize,documents,createKmz,build});
