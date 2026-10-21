@@ -273,13 +273,15 @@ adopt() {
   fi
   local chosen
   chosen="$(docker inspect --format '{{.Id}}' "$name")"
-  # Canonical ID may be 64 characters, but docker ps yields short IDs.
-  # Use docker ps --no-trunc for exact comparison.
+  # Only ONE MinIO storage SERVER may RUN globally. A historical,
+  # stopped AeroNexus stack and its exited minio-init sidecar are retained
+  # without preventing adoption of the single explicitly selected server.
   local -a other=()
-  mapfile -t other < <(docker ps -a --no-trunc --format '{{.ID}} {{.Image}}' |
-    awk 'tolower($0) ~ /minio|aistor/ { print $1 }')
+  mapfile -t other < <(docker ps --no-trunc --format '{{.ID}} {{.Names}} {{.Image}}' |
+    awk 'tolower($0) ~ /minio|aistor/ && tolower($2) !~ /minio-init/ { print $1 }')
   if (( ${#other[@]} != 1 )) || [[ "${other[0]}" != "$chosen" ]]; then
-    echo "ERROR: multiple MinIO-like installations present; audit manually" >&2
+    echo "ERROR: expected exactly one running MinIO server (the chosen one)" >&2
+    echo "Stopped historical containers remain untouched; audit storage mounts first." >&2
     exit 2
   fi
   assert_alias_available "$chosen"
