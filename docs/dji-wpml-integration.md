@@ -357,6 +357,49 @@ als verifiziert betrachtet. Der Dateiexport ersetzt **keinen**
 Import- und Verhaltensversuch mit DJI Pilot 2/RC Pro Enterprise.
 
 
+## Offline-Vergleich mit DJI-Pilot-2-KMZ (Vorbereitung der Hardwareabnahme)
+
+Ein neuer **rein lesender** Vergleichsbefehl kann eine echte, lokal gespeicherte
+DJI-Pilot-2-KMZ mit einem SkyHub-Entwurf vergleichen, ohne Dateien zu ändern
+oder auf einen DJI-Controller zuzugreifen:
+
+    node scripts/wpml-compare.js /pfad/pilot2-export.kmz /pfad/skyhub-entwurf.kmz
+
+Der neue Backend-Baustein `backend/wpml-compare.js` benutzt ausschließlich
+den vorhandenen, größenbegrenzten KMZ-/ZIP-Parser und den XML-Validator.
+Geprüft werden `wpmz/template.kml`, `wpmz/waylines.wpml`,
+Drohnen-/Payload-Profil, Wayline- und Wegpunktanzahl, XML-Struktur,
+Flugparameter und vorhandene `actionGroup`-/Auslöser-Strukturen.
+
+**Datenschutz:** Standardmäßig gibt die CLI nur die betroffenen XML-Feldpfade,
+Änderungsarten und aggregierte Kennzahlen aus. Werte, GPS-Koordinaten,
+Missionsnamen, Ersteller, Zeitstempel, Ressourcendateinamen und Rohdaten werden
+**nicht** ausgegeben. Missionstitel, Ersteller und Zeitstempel werden bei
+der Strukturvergleichbarkeit ignoriert. Die ZIP-CRC32-Prüfung läuft
+für jedes Mitglied einschließlich Ressourcen. Ressourcen werden nicht
+extrahiert; ihre **Anzahl** wird getrennt verglichen, nicht ihr Inhalt.
+
+Rückgabecodes: `0` für keine erkannten strukturellen Abweichungen bei
+beiden offline-validierten KMZ-Dateien, `1` für erkannte Unterschiede,
+`2` für nicht offline-valide KMZ-Dateien oder Abbruch. Die Prüfroutine
+markiert jedes Ergebnis mit `pilot2HardwareVerified:false` und
+`flightReady:false` – ein struktureller Gleichstand ist keine
+Pilot-2-Import- oder Flugfreigabe. Exakte Flugwegparameter können auch
+bei unterschiedlichen textuellen Darstellungen gleiche Bedeutung haben;
+dieser Vergleich ist **kein** vollständiger semantischer Äquivalenzbeweis.
+
+**Prüfablauf ohne Flugbetrieb:** Eine KMZ auf der RC Pro Enterprise mit DJI
+Pilot 2 erstellen/exportieren, die KMZ-Datei kontrolliert lokal bereitstellen,
+SkyHub-Entwurf mit identischem Gerät und Missionstyp erzeugen und die beiden
+Dateien mit obigem Kommando offline vergleichen. Für den nächsten Schritt
+benötigt SkyHub noch echte, sicher anonymisierte Pilot-2-Dateien und einen
+zugehörigen dokumentierten Import-/Export-Versuchsbericht. Bis dahin sind
+geprüfte DJI-Importierbarkeit, Multispektralsensorverhalten und
+periodische Kameraauslösung **nicht** bestätigt.
+
+Tests: `backend/test/wpml-compare.test.js` (identische KMZ, Metadaten,
+Fotoaktionsabweichungen, Koordinaten-Redaktion, Grenzfälle und CLI-Schutz).
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
