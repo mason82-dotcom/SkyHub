@@ -200,6 +200,82 @@ Schreiblast vermeiden), Offline-Backup des tatsächlichen
 `/data`-Mounts erstellen und **Restore auf einem isolierten Ziel
 testen**. Ein unverändertes Docker-Volume ist noch kein Backup.
 
+## 7. IAM-Rollen und echter S3-Probe (erst nach Hardware-/Storage-Audit)
+
+Vorlagen unter `storage/policies/` definieren **keine** aktiven Berechtigungen.
+Sie müssen über eine geprüfte MinIO-Admin-Konsole oder einen vertrauten
+`mc admin`-Client **manuell** eingerichtet und je einem getrennten
+Anwendungskonto zugewiesen werden. Keine Root-Anmeldedaten an SkyHub-Worker,
+keine öffentlichen Buckets oder pauschale `s3:*`-Freigaben.
+
+| Policy-Datei | Zugriff |
+|---|---|
+| `skyhub-raw-ingest.json` | Originalbilder in `skyhub-media-raw` schreiben/lesen, **kein Löschen** |
+| `skyhub-derived-worker.json` | Originalbilder nur lesen, abgeleitete Produkte schreiben/lesen |
+| `skyhub-wpml-reader.json` | WPML-/KMZ-Daten nur lesen |
+| `skyhub-smoke-probe.json` | Nur isoliertes Testbucket; Objektzugriffe ausschließlich unter `__skyhub_smoke__/` |
+
+Vor der Vergabe Bucket-Namen und die genaue Policy-Kompatibilität mit
+der **tatsächlich installierten** MinIO-Version prüfen. Multiparte Uploads
+für große multispektrale Fotos sind in der Vorlagenpolitik vorgesehen.
+Die Policy-Dateien sind dokumentierte Minimalprofile, keine automatische
+IAM-Provisionierung oder Sicherheitsabnahme.
+
+Für einen authentifizierten S3-Test zunächst ein eigenes privates Bucket
+`skyhub-storage-smoke` sowie einen Benutzer mit **ausschließlich**
+`skyhub-smoke-probe.json` anlegen. Der Test verändert keine DJI-Medien.
+
+Eine **lokale**, nicht versionierte Credential-Datei anlegen:
+
+```bash
+mkdir -p ~/.config/skyhub
+chmod 700 ~/.config/skyhub
+nano ~/.config/skyhub/minio-s3-probe.env
+chmod 600 ~/.config/skyhub/minio-s3-probe.env
+```
+
+Inhalt (nur Platzhalter; niemals hier wirkliche Schlüssel posten):
+
+```dotenv
+SKYHUB_S3_ENDPOINT=http://skyhub-minio:9000
+SKYHUB_S3_REGION=us-east-1
+SKYHUB_S3_BUCKET=skyhub-storage-smoke
+SKYHUB_S3_ACCESS_KEY=REPLACE_WITH_DEDICATED_TEST_ACCESS_KEY
+SKYHUB_S3_SECRET_KEY=REPLACE_WITH_DEDICATED_TEST_SECRET_KEY
+```
+
+Danach im aktiven SkyHub-Next-Checkout:
+
+```bash
+# Authentifiziert, ausschließlich HEAD auf dem Testbucket:
+bash scripts/pi-minio-s3-check.sh --read
+
+# Nur nach freigegebenem Schreibtest: zufälliges Objekt unter
+# __skyhub_smoke__/ anlegen, lesen, SHA-Abgleich und wieder löschen:
+bash scripts/pi-minio-s3-check.sh --write
+```
+
+Der Test nutzt das Image des **bereits vorhandenen SkyHub-Backends**,
+startet jedoch einen separaten, temporären Node-Prozess-Container mit
+`--rm` und `--read-only` im Storage-Netz; das laufende Backend wird
+**nicht** neu gestartet. Die private Credential-Datei wird per
+`--env-file` an den Testcontainer gegeben, nicht über CLI-Argumente
+oder GitHub. Während der kurzen Testlaufzeit kann ein berechtigter
+Docker-Administrator die Test-Credentials über Container-Inspektion
+sehen – Docker-Host-Administratoren sind Teil der Vertrauensgrenze.
+Der Test gibt weder Schlüssel noch Medieninhalte aus. Wenn der
+Schreibtest nach PUT fehlschlägt, versucht er im `finally`-Block zu
+löschen; einen eventuell verbliebenen Testgegenstand **nur im
+isolierten Testbucket** nachträglich prüfen. Für produktive
+App-Objekte niemals einen `--write`-Probe verwenden.
+
+**Prüfstufen:** `pi-minio-network.sh verify` bestätigt eine erreichbare
+HTTP-Readiness; `pi-minio-s3-check.sh --read` bestätigt den
+signierten Bucket-Zugriff; `--write` bestätigt erst einen tatsächlichen
+PUT/GET/Hashvergleich/DELETE im dafür vorgesehenen Testbucket.
+Keine dieser Prüfungen ersetzt Restore-Test, Object-Versioning-
+Konfiguration oder spezifische DJI-Pilot-Medien-Workflows.
+
 ## Prüfgrenzen und Rückbau
 
 `plan` und `verify` sind lesend; `apply` erstellt Netzwerk/Container
