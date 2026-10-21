@@ -178,8 +178,8 @@ test('older backend yields no speculative missing-root classifications',()=>{
   const old={...air,propertyProfile:undefined,deviceProperties:undefined,
     propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
   const result=evaluateHardwareSession([rc,old],health,shapes,now);
-  assert.equal(result.aircraft.propertyFields.missingRoots,undefined);
-  assert.equal(result.aircraft.propertyFields.missingNestedUnderObservedRoot,undefined);
-  assert.equal(result.aircraft.propertyFields.missingNestedWithAbsentRoot,undefined);
+  assert.equal(result.aircraft.propertyFields.missingRoots,null);
+  assert.equal(result.aircraft.propertyFields.missingNestedUnderObservedRoot,null);
+  assert.equal(result.aircraft.propertyFields.missingNestedWithAbsentRoot,null);
   assert.doesNotMatch(formatReport(result),/PRIVATE_AIR_SERIAL/);
 });
