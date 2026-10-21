@@ -20,7 +20,11 @@ function main(args){
   fs.writeFileSync(output,kmz,{flag:'wx',mode:0o600});
   process.stdout.write('WPML KMZ generated offline: '+
     result.summary.waypointCount+' waypoints, '+result.summary.photoCount+
-    ' photo actions; flightReady=false.\n');
+    ' reach-point photo actions'+
+    (result.summary.intervalPhotos?', draft '+result.summary.intervalPhotos.type+
+      ' trigger every '+result.summary.intervalPhotos.interval+' '+
+      result.summary.intervalPhotos.unit+' (hardware UNVERIFIED)':'')+
+    '; flightReady=false.\n');
 }
 try{main(process.argv.slice(2));}
 catch(_error){
