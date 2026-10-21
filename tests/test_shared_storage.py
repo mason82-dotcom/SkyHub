@@ -57,10 +57,10 @@ class SharedMinioStorageTest(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.assertTrue(module.identify_minio(
-            "abc123\\taeronexusadvanced-cloud-minio-1\\taeronexus/minio:2025"
+            "abc123\taeronexusadvanced-cloud-minio-1\taeronexus/minio:2025"
         ))
         self.assertFalse(module.identify_minio(
-            "abc123\\tskyhub-next-postgres-1\\tpostgis/postgis:15"
+            "abc123\tskyhub-next-postgres-1\tpostgis/postgis:15"
         ))
         def item(name, source, state="exited"):
             return {
