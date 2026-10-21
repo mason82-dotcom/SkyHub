@@ -3,6 +3,7 @@
 // Input comes from existing, authorized read-only backend endpoints.
 // Never print serial numbers, GPS coordinates, measurement values or secrets.
 const {summarizeTelemetryFields}=require('./telemetry-field-profile');
+const {classifyM3MGaps,GROUPS}=require('./m3m-gap-classifier');
 const catalog=require('./data/dji-cloud-api-118-fields.json');
 // Never echo unrecognized MQTT property keys: a producer can encode an ID
 // or arbitrary secret as an object key. Show only documented root names.
@@ -110,6 +111,8 @@ function deviceSummary(device,now){
   const capable=hasPropertyDiagnostics(device);
   const [audit]=summarizeTelemetryFields([device],now);
   const rootGaps=capable?rootGapSummary(audit):null;
+  const m3mGapGroups=capable&&keyOf(device)===M3M?
+    classifyM3MGaps(audit.notObservedDocumented):null;
   const stateAge=capable?age(device.propertyObservedAt?.state,now):null;
   return {
     seen:true,modelConfirmed:true,
@@ -136,7 +139,8 @@ function deviceSummary(device,now){
       freshNames:capable?audit.freshDocumented.slice(0,60):[],
       missingRoots:rootGaps?.absentRoots??null,
       missingNestedUnderObservedRoot:rootGaps?.nestedUnderSeenRoot??null,
-      missingNestedWithAbsentRoot:rootGaps?.nestedWithAbsentRoot??null
+      missingNestedWithAbsentRoot:rootGaps?.nestedWithAbsentRoot??null,
+      m3mGapGroups
     }
   };
 }
@@ -264,6 +268,17 @@ function formatReport(r){
       (p.missingNestedUnderObservedRoot.slice(0,40).join(', ')||'keine'));
     lines.push('Nicht beobachtete Unterfelder ohne beobachtetes Root ('+
       p.missingNestedWithAbsentRoot.length+'); keine unabhängige Sensor-Nichtverfügbarkeit ableiten.');
+  }
+  lines.push('--- M3M-Feldluecken nach Kamerafunktion und MQTT-Kanal (nur Namen) ---');
+  const gaps=r.aircraft?.propertyFields?.m3mGapGroups;
+  if(!gaps){
+    lines.push('M3M-Feldluecken-Klassifikation: NICHT PRUEFBAR (Feldschnittstelle nicht vorhanden).');
+  }else{
+    lines.push('M3M klassifizierte, nicht beobachtete auswertbare Pfade: '+gaps.classified);
+    for(const {key} of GROUPS)
+      lines.push('  '+gaps.groups[key].label+': '+gaps.groups[key].count);
+    lines.push('  Hinweis: NIR-Multispektralkanaele sind KEINE thermische Waermebildmessung.');
+    lines.push('  Alle Pfade bleiben im 150-Feld-Schema enthalten. Keine Kompatibilitaet allein aus Abwesenheit ableiten.');
   }
   lines.push('--- M3M-Erweiterung: typisierte OSD-Wertannahme (ohne Werte) ---');
   if(!r.m3mExtensions?.available){
