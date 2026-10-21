@@ -134,8 +134,40 @@ apply() {
     docker network create --driver bridge "$NETWORK" >/dev/null
     echo "Created shared Docker bridge: $NETWORK"
   fi
-  # Restrict to MinIO: no backend/Postgres/Redis/EMQX re-creation.
-  "${COMPOSE[@]}" up -d --no-deps minio
+  # Adopt a running SkyHub MinIO without recreating it (and without
+  # changing root credentials or rewriting its existing data mount).
+  local -a existing=()
+  mapfile -t existing < <(docker ps -a \
+    --filter "label=com.docker.compose.project=$PROJECT" \
+    --filter "label=com.docker.compose.service=minio" --format '{{.ID}}')
+  if (( ${#existing[@]} > 1 )); then
+    echo "ERROR: multiple SkyHub MinIO containers; manual audit required" >&2
+    exit 2
+  fi
+  if (( ${#existing[@]} == 1 )); then
+    local current_image data_volume running
+    current_image="$(docker inspect --format '{{.Config.Image}}' "${existing[0]}")"
+    data_volume="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}' "${existing[0]}")"
+    running="$(docker inspect --format '{{.State.Running}}' "${existing[0]}")"
+    [[ "$current_image" == "$image" && "$data_volume" == "${PROJECT}_minio_data" ]] || {
+      echo "ERROR: existing MinIO image or /data mount differs from this Compose configuration." >&2
+      echo "Do not replace storage silently; audit image and mount privately." >&2
+      exit 2
+    }
+    if [[ "$running" == true ]]; then
+      if is_connected "${existing[0]}"; then
+        echo "OK: running SkyHub MinIO already on the shared bridge"
+      else
+        docker network connect --alias skyhub-minio "$NETWORK" "${existing[0]}"
+        echo "OK: running SkyHub MinIO joined without recreation"
+      fi
+    else
+      "${COMPOSE[@]}" up -d --no-deps minio
+    fi
+  else
+    # First installation: only start MinIO, never backend/DB/Redis/EMQX.
+    "${COMPOSE[@]}" up -d --no-deps minio
+  fi
 
   local backend
   backend="$(single_running_service backend)"
