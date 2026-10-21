@@ -16,13 +16,16 @@ COMPOSE=(
 
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/pi-minio-network.sh [plan|apply [--allow-legacy-image]|attach CONTAINER...|verify]
+Usage: bash scripts/pi-minio-network.sh [plan|apply [--allow-legacy-image]|adopt EXISTING_MINIO|attach CONTAINER...|verify]
   plan      Read-only inventory; does not create a network or run a container.
   apply     Create the shared network, start ONLY SkyHub MinIO, connect a running
             SkyHub Next backend if present. Does NOT recreate the backend.
+  adopt     Reuse an existing RUNNING MinIO from a different Compose stack.
+            Attach the server and the SkyHub backend; do not create MinIO.
   attach    Explicitly join named existing application containers to the shared
             bridge. Does not restart them or pass credentials.
   verify    Read-only inspect + MinIO HTTP readiness check through SkyHub backend.
+            Works with a SkyHub-owned or explicitly adopted MinIO.
   --allow-legacy-image: FOR ISOLATED TESTS ONLY; 2023 MinIO is not supported.
 Never pass secrets as command-line arguments. Do not paste .env into logs.
 USAGE
@@ -55,6 +58,35 @@ check_network() {
 
 is_connected() {
   [[ "$(docker inspect --format '{{if index .NetworkSettings.Networks "skyhub-storage-net"}}yes{{else}}no{{end}}' "$1")" == yes ]]
+}
+
+# Look up the exact network-scoped DNS alias. A name alone is not trustworthy:
+# two containers sharing an alias would make S3 routing nondeterministic.
+alias_owners() {
+  network_exists || return 0
+  local -a ids=()
+  local id
+  mapfile -t ids < <(docker ps --filter "network=$NETWORK" --format '{{.ID}}')
+  for id in "${ids[@]}"; do
+    if docker inspect --format '{{with index .NetworkSettings.Networks "skyhub-storage-net"}}{{range .Aliases}}{{println .}}{{end}}{{end}}' "$id" |
+      grep -Fxq skyhub-minio; then
+      printf '%s\n' "$id"
+    fi
+  done
+}
+
+assert_alias_available() {
+  local target="${1:-}"
+  local -a owners=()
+  mapfile -t owners < <(alias_owners)
+  if (( ${#owners[@]} > 1 )); then
+    echo "ERROR: duplicate skyhub-minio DNS aliases; refusing ambiguous routing" >&2
+    exit 2
+  fi
+  if (( ${#owners[@]} == 1 )) && [[ "${owners[0]}" != "$target" ]]; then
+    echo "ERROR: skyhub-minio alias already owned by a different container" >&2
+    exit 2
+  fi
 }
 
 single_running_service() {
@@ -157,6 +189,7 @@ apply() {
       echo "Do not replace storage silently; audit image and mount privately." >&2
       exit 2
     }
+    assert_alias_available "${existing[0]}"
     ensure_network
     if [[ "$running" == true ]]; then
       if is_connected "${existing[0]}"; then
@@ -166,10 +199,17 @@ apply() {
         echo "OK: running SkyHub MinIO joined without recreation"
       fi
     else
-      "${COMPOSE[@]}" up -d --no-deps minio
+      echo "ERROR: stopped MinIO must be audited and restarted manually; no automatic recreation" >&2
+      exit 2
     fi
   else
-    # First installation: only start MinIO, never backend/DB/Redis/EMQX.
+    # First installation only. Never create a fresh container against an
+    # unknown pre-existing /data volume without a backup/restore audit.
+    if docker volume inspect "${PROJECT}_minio_data" >/dev/null 2>&1; then
+      echo "ERROR: MinIO data volume exists but container is missing; audit data first" >&2
+      exit 2
+    fi
+    assert_alias_available ""
     ensure_network
     "${COMPOSE[@]}" up -d --no-deps minio
   fi
@@ -183,6 +223,82 @@ apply() {
   fi
   echo "Storage endpoint for joined containers: http://skyhub-minio:9000"
   echo "No buckets, IAM users or application media APIs were created."
+}
+
+adopt() {
+  [[ $# == 1 ]] || { echo "ERROR: adopt requires exactly one container name" >&2; exit 2; }
+  local name="$1" image running mount mode backend
+  [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || {
+    echo "ERROR: invalid container name" >&2; exit 2;
+  }
+  # The operator explicitly selects the existing MinIO container. It is
+  # never stopped or recreated, and no volumes or secrets are touched.
+  image="$(docker inspect --format '{{.Config.Image}}' "$name" 2>/dev/null)" || {
+    echo "ERROR: MinIO container not found" >&2; exit 2;
+  }
+  [[ "${image,,}" == *minio* || "${image,,}" == *aistor* ]] || {
+    echo "ERROR: container image does not identify a MinIO server" >&2
+    exit 2
+  }
+  running="$(docker inspect --format '{{.State.Running}}' "$name")"
+  [[ "$running" == true ]] || {
+    echo "ERROR: existing MinIO is not running; do not start it automatically" >&2
+    exit 2
+  }
+  mode="$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$name")"
+  [[ "$mode" != host && "$mode" != none ]] || {
+    echo "ERROR: MinIO uses network_mode=$mode; cannot join shared bridge" >&2
+    exit 2
+  }
+  # A data mount is evidence the target is persistent, but not proof of a
+  # correct backup. We deliberately don't inspect data or environment.
+  mount="$(docker inspect --format '{{range .Mounts}}{{println .Destination}}{{end}}' "$name")"
+  [[ -n "$mount" ]] || {
+    echo "ERROR: existing MinIO has no persistent mount; data safety not established" >&2
+    exit 2
+  }
+  local -a managed=()
+  mapfile -t managed < <(docker ps -a \
+    --filter "label=com.docker.compose.project=$PROJECT" \
+    --filter "label=com.docker.compose.service=minio" --format '{{.ID}}')
+  if (( ${#managed[@]} > 0 )); then
+    echo "ERROR: SkyHub-owned MinIO already exists; do not adopt a second server" >&2
+    exit 2
+  fi
+  local chosen
+  chosen="$(docker inspect --format '{{.Id}}' "$name")"
+  # Canonical ID may be 64 characters, but docker ps yields short IDs.
+  # Use docker ps --no-trunc for exact comparison.
+  local -a other=()
+  mapfile -t other < <(docker ps -a --no-trunc --format '{{.ID}} {{.Image}}' |
+    awk 'tolower($0) ~ /minio|aistor/ { print $1 }')
+  if (( ${#other[@]} != 1 )) || [[ "${other[0]}" != "$chosen" ]]; then
+    echo "ERROR: multiple MinIO-like installations present; audit manually" >&2
+    exit 2
+  fi
+  assert_alias_available "$chosen"
+  if is_connected "$name"; then
+    local -a owners=()
+    mapfile -t owners < <(alias_owners)
+    [[ ${#owners[@]} == 1 && "${owners[0]}" == "${chosen:0:12}" ]] || {
+      echo "ERROR: existing network membership lacks the skyhub-minio alias" >&2
+      echo "Do not disconnect a production MinIO container automatically." >&2
+      exit 2
+    }
+    echo "OK: existing MinIO already attached with DNS alias"
+  else
+    ensure_network
+    docker network connect --alias skyhub-minio "$NETWORK" "$name"
+    echo "OK: reused existing MinIO without recreation"
+  fi
+  backend="$(single_running_service backend)"
+  if [[ -n "$backend" ]]; then
+    connect_existing "$backend"
+  else
+    echo "INFO: SkyHub backend not running; attach it later."
+  fi
+  echo "Existing MinIO now reachable from joined containers at http://skyhub-minio:9000"
+  echo "IMPORTANT: do not launch the SkyHub-owned 'media' MinIO profile in this mode."
 }
 
 attach() {
@@ -216,9 +332,14 @@ verify() {
   network_exists || { echo "ERROR: shared network missing" >&2; exit 1; }
   check_network
   local minio backend
-  minio="$(single_running_service minio)"
-  [[ -n "$minio" ]] || { echo "ERROR: SkyHub MinIO is not running" >&2; exit 1; }
-  is_connected "$minio" || { echo "ERROR: MinIO not on shared network" >&2; exit 1; }
+  local -a owners=()
+  mapfile -t owners < <(alias_owners)
+  [[ ${#owners[@]} == 1 ]] || {
+    echo "ERROR: expected exactly one running skyhub-minio DNS alias" >&2
+    exit 1
+  }
+  minio="${owners[0]}"
+  is_connected "$minio" || { echo "ERROR: storage container not on shared network" >&2; exit 1; }
   backend="$(single_running_service backend)"
   [[ -n "$backend" ]] || { echo "ERROR: no running SkyHub backend available for S3 readiness probe" >&2; exit 1; }
   is_connected "$backend" || { echo "ERROR: backend not on shared network" >&2; exit 1; }
@@ -237,6 +358,7 @@ case "$mode" in
   -h|--help|help) usage ;;
   plan) (( $# == 0 )) || { usage; exit 2; }; require_docker; plan ;;
   apply) require_docker; apply "$@" ;;
+  adopt) require_docker; adopt "$@" ;;
   attach) require_docker; attach "$@" ;;
   verify) (( $# == 0 )) || { usage; exit 2; }; require_docker; verify ;;
   *) usage >&2; exit 2 ;;
