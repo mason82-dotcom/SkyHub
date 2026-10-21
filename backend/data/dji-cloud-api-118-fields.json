@@ -1188,6 +1188,65 @@
         }
       ]
     },
+    "mavic3m": {
+      "extends": "mavic3",
+      "extensionSource": "https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html",
+      "extensionSourceEdition": "2024-06-28",
+      "extensionVerifiedAt": "2026-10-21",
+      "extensionEvidence": "Three OSD root names attributed to Mavic 3M (0:77:2) by validated SkyHub model-scoped MQTT shapes on 2026-10-21; nested field values and specific enumerations require live acceptance.",
+      "extensionStatus": "root-names-hardware-observed-values-unverified",
+      "fields": [
+        {
+          "path": "distance_limit_status",
+          "type": "struct",
+          "access": "rw",
+          "push": 0
+        },
+        {
+          "path": "distance_limit_status.state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "distance_limit_status.distance_limit",
+          "type": "int",
+          "min": 15,
+          "max": 8000,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "distance_limit_status.is_near_distance_limit",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "rth_altitude",
+          "type": "int",
+          "access": "rw",
+          "push": 0,
+          "min": 20,
+          "max": 500,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "rc_lost_action",
+          "type": "enum_int",
+          "access": "rw",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        }
+      ]
+    },
     "aircraftCommon": {
       "source": "https://github.com/dji-sdk/Cloud-API-Doc/blob/4ec6b0c7f9472aeb09a0a47949855d19c473ea07/docs/en/60.api-reference/10.pilot-to-cloud/00.mqtt/30.others/10.aircraft/00.properties.md",
       "sourceBlob": "f1206f03b9c1c019f05f35f6cd1617c2d8d3ef8b",
@@ -4725,8 +4784,8 @@
       "confidence": "official-family"
     },
     "0:77:2": {
-      "profile": "mavic3",
-      "confidence": "shared-family-unverified"
+      "profile": "mavic3m",
+      "confidence": "shared-family-three-generic-roots-observed-values-unverified"
     },
     "0:99:1": {
       "profile": "matrice4T",
