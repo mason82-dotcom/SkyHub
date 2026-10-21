@@ -181,6 +181,57 @@ Bei weiterhin ausbleibenden State-Topics sollten zuerst
 Publisher-/Broker-Zeitpunkt und Topic-Sichtbarkeit geklärt werden;
 keine `property/set`-Aufrufe, Flight Controls, Kameraaktionen
 oder Netzwerkkonfigurationsänderungen sind für diesen Test zulässig.
+## Fortgesetzte Live-Diagnose: MQTT-Verbindung seit 19:33 Uhr
+
+Ein weiteres vom Benutzer direkt auf dem Pi abgefragtes
+`GET /api/health` bestätigte am **21.10.2026** folgende
+**backendprozessbezogene** Werte:
+
+| Kriterium | Beobachtung |
+|---|---|
+| MQTT verbunden / fünf Subscriptions bestätigt | true / true |
+| MQTT-Verbindungszeit | 19:33:31 MESZ (`1792604011174` ms) |
+| Letzte MQTT-Nachricht | 20:02:42 MESZ (`1792605762029` ms) |
+| Letztes OSD | 20:02:42 MESZ |
+| Wiederhergestellte Geräte aus Redis-Topologie | 2 |
+| OSD empfangen / angenommen | 1752 / 1752 |
+| Events empfangen / angenommen | 876 / 876 |
+| State empfangen / angenommen | **0 / 0** |
+| Status empfangen / angenommen | **0 / 0** |
+| Service-Reply empfangen / angenommen | 0 / 0 |
+
+Der erfolgreiche OSD-/Event-Verkehr über einen Zeitraum von rund
+29 Minuten nach MQTT-Connect beweist, dass **kein genereller
+MQTT-Verbindungsverlust** besteht. Der Subscriber hat im aktuellen
+Prozess seit dem Verbindungszeitpunkt jedoch **keine** neuen
+`thing/product/+/state` oder `sys/product/+/status`
+Nachrichten gesehen. Die Zwei-Geräte-Topologie stammt aus
+einem **Redis-Restore** und ersetzt keinen neuen Topologie-Handshake.
+
+DJI beschreibt `state` als **bei Änderung ausgelöst** und `osd`
+als periodischen Kanal; `update_topo` wird in der offiziellen
+Pilot-to-Cloud-Statusdokumentation als Online-/Offline-Ereignis
+beschrieben. Deshalb erklärt eine laufende, unveränderte
+Pilot-2-Sitzung die Kombination als **plausible Hypothese**,
+aber noch nicht als gesicherte Ursache.
+
+Nachprüfung **ohne MQTT-Payloads oder DJI-Kommandos**:
+
+1. SkyHub-Backend und MQTT-Subscription verbunden lassen.
+2. Nur bei am Boden stehenden Geräten nach normalem Aus-/Einschalten
+   von Pilot 2 bzw. regulärer Cloud-Neuverbindung erneut passiv lesen.
+   **Keine Flug- oder RTH-Einstellungen verändern.** Eine
+   Neuverbindung garantiert keine `state`-Nachricht.
+3. `mqttObservedChannelCounts.status/state` erneut prüfen und mit
+   `mqttChannelCounts.status/state` und
+   `topologyReplySent` vergleichen. Falls sie weiter bei null
+   bleiben, zuerst den Publisher-/Broker-Nachrichtenpfad
+   und den Zeitpunkt der Registrierung verifizieren, statt den
+   feldtypisierten Parser anzupassen.
+
+**Nicht erforderlich:** Pi-/EMQX-Neustart, Pairing-Reset,
+Broker-ACL-Änderungen, `property/set` oder Flugtest.
+
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
