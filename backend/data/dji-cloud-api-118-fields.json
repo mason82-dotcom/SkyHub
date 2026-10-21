@@ -3115,6 +3115,1367 @@
           ]
         }
       ]
+    },
+    "matrice4T": {
+      "source": "https://github.com/dji-sdk/Cloud-API-Doc/blob/4ec6b0c7f9472aeb09a0a47949855d19c473ea07/docs/en/60.api-reference/10.pilot-to-cloud/00.mqtt/30.others/10.aircraft/00.properties.md",
+      "sourceBlob": "f1206f03b9c1c019f05f35f6cd1617c2d8d3ef8b",
+      "extensionSource": "https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html",
+      "extensionSourceEdition": "2024-06-28",
+      "extensionVerifiedAt": "2026-10-21",
+      "provenance": "162 pinned generic-aircraft paths plus six documented 2024 Pilot-to-Cloud aircraft paths. Publication predates M4T, applicability to M4T remains unverified.",
+      "fields": [
+        {
+          "path": "country",
+          "type": "text",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "mode_code",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ]
+        },
+        {
+          "path": "mode_code_reason",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ]
+        },
+        {
+          "path": "cameras",
+          "type": "array",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "cameras.remain_photo_num",
+          "type": "int"
+        },
+        {
+          "path": "cameras.remain_record_duration",
+          "type": "int",
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "cameras.record_time",
+          "type": "int",
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "cameras.payload_index",
+          "type": "text"
+        },
+        {
+          "path": "cameras.camera_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "cameras.photo_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "cameras.screen_split_enable",
+          "type": "bool",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "cameras.recording_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "cameras.zoom_factor",
+          "type": "int",
+          "min": 2,
+          "max": 200
+        },
+        {
+          "path": "cameras.ir_zoom_factor",
+          "type": "float",
+          "min": 2,
+          "max": 20
+        },
+        {
+          "path": "cameras.liveview_world_region",
+          "type": "struct"
+        },
+        {
+          "path": "cameras.liveview_world_region.left",
+          "type": "float"
+        },
+        {
+          "path": "cameras.liveview_world_region.top",
+          "type": "float"
+        },
+        {
+          "path": "cameras.liveview_world_region.right",
+          "type": "float"
+        },
+        {
+          "path": "cameras.liveview_world_region.bottom",
+          "type": "float"
+        },
+        {
+          "path": "cameras.photo_storage_settings",
+          "type": "array"
+        },
+        {
+          "path": "cameras.video_storage_settings",
+          "type": "array"
+        },
+        {
+          "path": "cameras.wide_exposure_mode",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "path": "cameras.wide_iso",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            255
+          ]
+        },
+        {
+          "path": "cameras.wide_shutter_speed",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            65534
+          ]
+        },
+        {
+          "path": "cameras.wide_exposure_value",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            255
+          ]
+        },
+        {
+          "path": "cameras.zoom_exposure_mode",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "path": "cameras.zoom_iso",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            255
+          ]
+        },
+        {
+          "path": "cameras.zoom_shutter_speed",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            65534
+          ]
+        },
+        {
+          "path": "cameras.zoom_exposure_value",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            255
+          ]
+        },
+        {
+          "path": "cameras.zoom_focus_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "cameras.zoom_focus_value",
+          "type": "int"
+        },
+        {
+          "path": "cameras.zoom_max_focus_value",
+          "type": "int"
+        },
+        {
+          "path": "cameras.zoom_min_focus_value",
+          "type": "int"
+        },
+        {
+          "path": "cameras.zoom_calibrate_farthest_focus_value",
+          "type": "int"
+        },
+        {
+          "path": "cameras.zoom_calibrate_nearest_focus_value",
+          "type": "int"
+        },
+        {
+          "path": "cameras.zoom_focus_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "cameras.ir_metering_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "cameras.ir_metering_point",
+          "type": "struct"
+        },
+        {
+          "path": "cameras.ir_metering_point.x",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_point.y",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_point.temperature",
+          "type": "double"
+        },
+        {
+          "path": "cameras.ir_metering_area",
+          "type": "struct"
+        },
+        {
+          "path": "cameras.ir_metering_area.x",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.y",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.width",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.height",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.aver_temperature",
+          "type": "double"
+        },
+        {
+          "path": "cameras.ir_metering_area.min_temperature_point",
+          "type": "struct"
+        },
+        {
+          "path": "cameras.ir_metering_area.min_temperature_point.x",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.min_temperature_point.y",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.min_temperature_point.temperature",
+          "type": "double"
+        },
+        {
+          "path": "cameras.ir_metering_area.max_temperature_point",
+          "type": "struct"
+        },
+        {
+          "path": "cameras.ir_metering_area.max_temperature_point.x",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.max_temperature_point.y",
+          "type": "double",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "cameras.ir_metering_area.max_temperature_point.temperature",
+          "type": "double"
+        },
+        {
+          "path": "dongle_infos",
+          "type": "array",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "dongle_infos.imei",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.dongle_type",
+          "type": "enum_int",
+          "enum": [
+            6,
+            10
+          ]
+        },
+        {
+          "path": "dongle_infos.eid",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.esim_activate_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_card_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_slot",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "dongle_infos.esim_infos",
+          "type": "array"
+        },
+        {
+          "path": "dongle_infos.esim_infos.telecom_operator",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "dongle_infos.esim_infos.enabled",
+          "type": "bool"
+        },
+        {
+          "path": "dongle_infos.esim_infos.iccid",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.sim_info",
+          "type": "struct"
+        },
+        {
+          "path": "dongle_infos.sim_info.telecom_operator",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_info.sim_type",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_info.iccid",
+          "type": "text"
+        },
+        {
+          "path": "obstacle_avoidance",
+          "type": "struct",
+          "access": "rw",
+          "push": 0
+        },
+        {
+          "path": "obstacle_avoidance.horizon",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "obstacle_avoidance.upside",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "obstacle_avoidance.downside",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "is_near_area_limit",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "is_near_height_limit",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "height_limit",
+          "type": "int",
+          "access": "rw",
+          "push": 0,
+          "min": 20,
+          "max": 1500,
+          "step": 1,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "night_lights_state",
+          "type": "enum_int",
+          "access": "rw",
+          "push": 0,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "activation_time",
+          "type": "int",
+          "access": "r",
+          "push": 0,
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "maintain_status",
+          "type": "struct",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "maintain_status.maintain_status_array",
+          "type": "array"
+        },
+        {
+          "path": "maintain_status.maintain_status_array.state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "maintain_status.maintain_status_array.last_maintain_type",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "maintain_status.maintain_status_array.last_maintain_time",
+          "type": "date",
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "maintain_status.maintain_status_array.last_maintain_flight_time",
+          "type": "int",
+          "unit": "Hours / h"
+        },
+        {
+          "path": "maintain_status.maintain_status_array.last_maintain_flight_sorties",
+          "type": "int",
+          "min": 0,
+          "max": 2147483647,
+          "step": 1
+        },
+        {
+          "path": "total_flight_sorties",
+          "type": "int",
+          "access": "r",
+          "push": 0,
+          "min": 0,
+          "max": 2147483647,
+          "step": 1
+        },
+        {
+          "path": "track_id",
+          "type": "text",
+          "access": "r",
+          "push": 0,
+          "length": 64
+        },
+        {
+          "path": "position_state",
+          "type": "struct",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "position_state.is_fixed",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "position_state.quality",
+          "type": "enum_int",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "path": "position_state.gps_number",
+          "type": "int"
+        },
+        {
+          "path": "position_state.rtk_number",
+          "type": "int"
+        },
+        {
+          "path": "storage",
+          "type": "struct",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "storage.total",
+          "type": "int",
+          "unit": "Kilobytes / KB"
+        },
+        {
+          "path": "storage.used",
+          "type": "int",
+          "unit": "Kilobytes / KB"
+        },
+        {
+          "path": "battery",
+          "type": "struct",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "battery.capacity_percent",
+          "type": "int",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "path": "battery.remain_flight_time",
+          "type": "int",
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "battery.return_home_power",
+          "type": "int",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "path": "battery.landing_power",
+          "type": "int",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "path": "battery.batteries",
+          "type": "array"
+        },
+        {
+          "path": "battery.batteries.capacity_percent",
+          "type": "int",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "path": "battery.batteries.index",
+          "type": "int",
+          "min": 0
+        },
+        {
+          "path": "battery.batteries.sn",
+          "type": "text"
+        },
+        {
+          "path": "battery.batteries.type",
+          "type": "enum_int"
+        },
+        {
+          "path": "battery.batteries.sub_type",
+          "type": "enum_int"
+        },
+        {
+          "path": "battery.batteries.firmware_version",
+          "type": "text"
+        },
+        {
+          "path": "battery.batteries.loop_times",
+          "type": "int"
+        },
+        {
+          "path": "battery.batteries.voltage",
+          "type": "int",
+          "unit": "Millivolts / mV"
+        },
+        {
+          "path": "battery.batteries.temperature",
+          "type": "float",
+          "unit": "Celsius / °C"
+        },
+        {
+          "path": "battery.batteries.high_voltage_storage_days",
+          "type": "int",
+          "unit": "Days / day"
+        },
+        {
+          "path": "total_flight_distance",
+          "type": "float",
+          "access": "r",
+          "push": 0,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "total_flight_time",
+          "type": "int",
+          "access": "r",
+          "push": 0,
+          "unit": "Seconds / s"
+        },
+        {
+          "path": "serious_low_battery_warning_threshold",
+          "type": "int",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "low_battery_warning_threshold",
+          "type": "int",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "control_source",
+          "type": "text",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "wind_direction",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "path": "wind_speed",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "home_distance",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "home_latitude",
+          "type": "float",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "home_longitude",
+          "type": "float",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "attitude_head",
+          "type": "int",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "attitude_roll",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "attitude_pitch",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "elevation",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "height",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "latitude",
+          "type": "float",
+          "access": "r",
+          "push": 0,
+          "min": -1.4e-45,
+          "max": 3.4028235e+38,
+          "step": 0.1
+        },
+        {
+          "path": "longitude",
+          "type": "float",
+          "access": "r",
+          "push": 0,
+          "min": -1.4e-45,
+          "max": 3.4028235e+38,
+          "step": 0.1
+        },
+        {
+          "path": "vertical_speed",
+          "type": "float",
+          "access": "r",
+          "push": 0,
+          "unit": "Meters per second / m/s"
+        },
+        {
+          "path": "horizontal_speed",
+          "type": "float",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "firmware_upgrade_status",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "compatible_status",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "firmware_version",
+          "type": "text",
+          "access": "r",
+          "push": 1,
+          "length": 64
+        },
+        {
+          "path": "gear",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "path": "camera_watermark_settings",
+          "type": "struct",
+          "access": "rw",
+          "push": 1
+        },
+        {
+          "path": "camera_watermark_settings.global_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.drone_type_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.drone_sn_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.datetime_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.gps_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.user_custom_string_enable",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.user_custom_string",
+          "type": "text"
+        },
+        {
+          "path": "camera_watermark_settings.layout",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.gimbal_pitch",
+          "type": "double",
+          "min": -180,
+          "max": 180,
+          "step": 0.1,
+          "unit": "Degrees / °"
+        },
+        {
+          "path": "camera_watermark_settings.gimbal_roll",
+          "type": "double",
+          "min": -180,
+          "max": 180,
+          "step": 0.1,
+          "unit": "Degrees / °"
+        },
+        {
+          "path": "camera_watermark_settings.gimbal_yaw",
+          "type": "double",
+          "min": -180,
+          "max": 180,
+          "step": 0.1,
+          "unit": "Degrees / °"
+        },
+        {
+          "path": "camera_watermark_settings.measure_target_longitude",
+          "type": "double",
+          "min": -180,
+          "max": 180,
+          "unit": "Degrees / °"
+        },
+        {
+          "path": "camera_watermark_settings.measure_target_latitude",
+          "type": "double",
+          "min": -90,
+          "max": 90,
+          "unit": "Degrees / °"
+        },
+        {
+          "path": "camera_watermark_settings.measure_target_altitude",
+          "type": "double",
+          "unit": "Meters / m"
+        },
+        {
+          "path": "camera_watermark_settings.measure_target_distance",
+          "type": "double",
+          "unit": "Meters / m"
+        },
+        {
+          "path": "camera_watermark_settings.measure_target_error_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.payload_index",
+          "type": "text"
+        },
+        {
+          "path": "camera_watermark_settings.zoom_factor",
+          "type": "double"
+        },
+        {
+          "path": "camera_watermark_settings.thermal_current_palette_style",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            5,
+            6,
+            8,
+            11,
+            12,
+            13
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.thermal_supported_palette_styles",
+          "type": "array"
+        },
+        {
+          "path": "camera_watermark_settings.thermal_gain_mode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.thermal_isotherm_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "camera_watermark_settings.thermal_isotherm_upper_limit",
+          "type": "int",
+          "unit": "Celsius / °C"
+        },
+        {
+          "path": "camera_watermark_settings.thermal_isotherm_lower_limit",
+          "type": "int",
+          "unit": "Celsius / °C"
+        },
+        {
+          "path": "camera_watermark_settings.thermal_global_temperature_min",
+          "type": "float",
+          "unit": "Celsius / °C"
+        },
+        {
+          "path": "camera_watermark_settings.thermal_global_temperature_max",
+          "type": "float",
+          "unit": "Celsius / °C"
+        },
+        {
+          "path": "distance_limit_status",
+          "type": "struct",
+          "access": "rw",
+          "push": 0
+        },
+        {
+          "path": "distance_limit_status.state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "distance_limit_status.distance_limit",
+          "type": "int",
+          "min": 15,
+          "max": 8000,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "distance_limit_status.is_near_distance_limit",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "rth_altitude",
+          "type": "int",
+          "access": "rw",
+          "push": 0,
+          "min": 20,
+          "max": 500,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "rc_lost_action",
+          "type": "enum_int",
+          "access": "rw",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        }
+      ]
     }
   },
   "devices": {
@@ -3131,8 +4492,8 @@
       "confidence": "shared-family-unverified"
     },
     "0:99:1": {
-      "profile": "aircraftCommon",
-      "confidence": "shared-aircraft-unverified"
+      "profile": "matrice4T",
+      "confidence": "shared-aircraft-with-web-extensions-unverified"
     },
     "2:144:0": {
       "profile": "rcPro",
