@@ -3,9 +3,10 @@
 (function(){
   const engine=window.SkyHubSurveyPreview;
   const optics=window.SkyHubPhotoGeometry;
+  const capture=window.SkyHubCapturePreview;
   const $=id=>document.getElementById(id);
   if(!engine){$('status').textContent='Offline-Geometriemodul fehlt.';return;}
-  const points=[];let map=null,polygon=null,markers=[],lines=[],report=null,photoReport=null,firstFit=false;
+  const points=[];let map=null,polygon=null,markers=[],lines=[],photoMarkers=[],report=null,photoReport=null,captureReport=null,firstFit=false;
   const feedback=(txt,error=false)=>{
     $('status').textContent=txt;
     $('status').style.color=error?'#ffdda6':'#e5f7ff';
@@ -27,7 +28,8 @@
     if(a===null||b===null){feedback('Koordinate außerhalb der erlaubten Grenzen.',true);return;}
     points.push({lat:a,lon:b});invalidate();render();
   }
-  function invalidate(){report=null;photoReport=null;$('geojson').disabled=true;}
+  function invalidate(){report=null;photoReport=null;captureReport=null;$('geojson').disabled=true;
+    $('show-photo-centers').disabled=true;}
   function fit(){
     if(!map||!points.length)return;
     if(points.length===1)map.setView([points[0].lat,points[0].lon],15);
@@ -43,6 +45,7 @@
     if(!map)return;
     for(const m of markers)m.remove();markers=[];
     for(const layer of lines)layer.remove();lines=[];
+    for(const layer of photoMarkers)layer.remove();photoMarkers=[];
     if(polygon){polygon.remove();polygon=null;}
     points.forEach((p,i)=>{
       const m=L.marker([p.lat,p.lon],{draggable:true})
@@ -66,6 +69,12 @@
         color:'#ffcc68',weight:3,opacity:.93
       }).addTo(map));
     }
+    if(captureReport&&$('show-photo-centers').checked){
+      for(const p of captureReport.photoCenters)
+        photoMarkers.push(L.circleMarker([p.lat,p.lon],{
+          radius:3,color:'#f5c85c',weight:1,opacity:.85,fillOpacity:.85
+        }).addTo(map));
+    }
     if(!firstFit&&points.length){fit();firstFit=true;}
   }
   $('add').addEventListener('click',()=>{
@@ -86,6 +95,7 @@
     feedback('Polygon zurückgesetzt.');
   });
   $('fit').addEventListener('click',fit);
+  $('show-photo-centers').addEventListener('change',render);
   $('optics-enable').addEventListener('change',()=>{
     $('optics-fields').hidden=!$('optics-enable').checked;
     $('spacing').disabled=$('optics-enable').checked;
@@ -118,7 +128,7 @@
   $('preview').addEventListener('click',()=>{
     try{
       const photogrammetry=$('optics-enable').checked;
-      if(photogrammetry&&!optics)throw new Error('Kamerageometriemodul nicht geladen');
+      if(photogrammetry&&(!optics||!capture))throw new Error('Kamerageometriemodul nicht geladen');
       const camera=photogrammetry?cameraInputs():null;
       const profile=photogrammetry?optics.optics(camera):null;
       report=engine.preview(points,{
@@ -126,6 +136,8 @@
         heading:$('heading').value
       });
       photoReport=photogrammetry?optics.estimate(report,camera):null;
+      captureReport=photogrammetry?capture.plan(report,camera):null;
+      $('show-photo-centers').disabled=!photogrammetry;
       $('geojson').disabled=false;
       render();
       let message='2D-Geometrie: '+Math.round(report.areaSqMeters)+' m² Fläche, '+
@@ -141,6 +153,11 @@
           cam.alongTrackTriggerDistanceM.toFixed(1)+' m, Auslöseintervall '+
           cam.estimatedTriggerIntervalSeconds.toFixed(2)+' s, maximal geschätzte '+
           p.estimatedImageCount+' Endpunkt-inklusive Aufnahmen.';
+        message+='\nFoto-Zentren: '+captureReport.displayedCenterCount+
+          ' Marker ('+captureReport.sampleDescription+'). Kein Auslöseauftrag.';
+        if(captureReport.sampleOnly)
+          message+='\nACHTUNG: Es werden nicht alle '+captureReport.estimatedImageCount+
+            ' geschätzten Fotopunkte dargestellt.';
         if(cam.cameraIntervalSatisfiesConstraint===false)
           message+='\nWARNUNG: Auslöseintervall unterschreitet das angegebene minimale Kamera-Aufnahmeintervall.';
         else if(cam.cameraIntervalSatisfiesConstraint===null)
@@ -165,7 +182,15 @@
           geometry:{type:'MultiLineString',coordinates:report.segments.map(s=>
             [[s.start.lon,s.start.lat],[s.end.lon,s.end.lat]])},
           properties:{kind:'approximate-coverage-preview-not-flight-route',
-            spacingMeters:report.lineSpacingMeters,headingDegrees:report.headingDegrees}}
+            spacingMeters:report.lineSpacingMeters,headingDegrees:report.headingDegrees}},
+        ...(captureReport?[{type:'Feature',geometry:{type:'MultiPoint',
+          coordinates:captureReport.photoCenters.map(p=>[p.lon,p.lat])},
+          properties:{kind:'nominal-photo-centers-NOT-DJI-actions',
+            sampleOnly:captureReport.sampleOnly,
+            displayedCenterCount:captureReport.displayedCenterCount,
+            estimatedImageCount:captureReport.estimatedImageCount,
+            nominalTargetSpacingMeters:captureReport.targetSpacingMeters,
+            flightReady:false,exportableAsWaylines:false}}]:[])
       ]};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/geo+json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');
