@@ -344,6 +344,61 @@ Es werden weder DJI-Kommandos noch weitere MQTT-Abonnements
 ausgeführt, und keine Rohwerte, Koordinaten, Seriennummern oder
 Zugangsdaten ausgegeben.
 
+## Hardwareabnahme: State-Transport, Modellzuordnung und Duplikatschutz
+
+**Neuer realer Raspberry-Pi-Nachtest nach Pilot-2-Wiederverbindung,
+21.10.2026:**
+
+| Stufe | Empfangen | Akzeptiert |
+|---|---:|---:|
+| State-Topic (backendweit) | **29** | **24** |
+| RC-Pro-State (modellbezogen akzeptiert) | – | **13** |
+| M3M-State (modellbezogen akzeptiert) | – | **11** |
+| Backendweit verworfene MQTT-Nachrichten, `duplicate` | – | **5** |
+
+Die **5 nicht angenommenen State-Pakete** können in dieser konkreten
+Messung dem vorhandenen `duplicate`-Ablehnungsgrund zugeordnet
+werden: `29 - 24 = 5`, `mqttDroppedByReason.duplicate=5`;
+alle anderen beobachteten MQTT-Kanäle wurden vollständig angenommen.
+Die RC- und M3M-Zuordnung ergibt `13 + 11 = 24`.
+SkyHub verarbeitet zudem **typisierte State-Property-Felder für beide
+Geräte**, was der frühere Zustand mit 0/0 nicht beweisen konnte.
+
+Die vorhandene `backend/message-guard.js` verwirft nicht selbst
+Duplikate; die Ablehnung wird gegebenenfalls nach `registry.ingest`
+als `result.dropReason` an die MQTT-Statistik übergeben.
+Die Messung beweist damit die **Ablehnung wegen Duplikaten**, nicht
+die semantische Wirkung einzelner DJI-Zustandsänderungen.
+Die fünf identifizierten Wiederholungen sind kein Hinweis auf fünf
+verlorene unterschiedliche Werte.
+
+### Neue feldgenaue State-Abnahme
+
+Der lokale Hardwareprüfer aus dem Test-Worktree zeigt zusätzlich
+nur katalogisierte `state:`-Feldpfade pro Gerät, deren Frische,
+historische Beobachtung, fehlende Rootnamen sowie Redaktionen und
+nicht interpretierbare Felder. **Keine Werte oder Gerätekennungen**
+werden ausgegeben.
+
+```bash
+git -C ~/Projekte/SkyHub-HW-Test fetch origin
+git -C ~/Projekte/SkyHub-HW-Test \
+  switch --detach origin/test/m3m-camera-capability-gap-audit-20261021
+cd ~/Projekte/SkyHub-HW-Test
+node --test backend/test/rc-pro-m3m-hardware-validation.test.js
+set -o pipefail
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-pro-m3m-check.js \
+  | sed -n '/^--- DJI State-Feldabdeckung/,/^--- M3M-Feldluecken/p'
+```
+
+Damit kann aus den ursprünglich **27 nicht beobachteten
+M3M-State-Pfaden** nun eine konkrete, zeitbezogene Abnahmeliste
+abgeleitet werden. Frühere Nullwerte für State dürfen nach der
+Neuverbindung nicht einfach als aktuelle Feldabdeckung ausgegeben
+werden. Der Check selbst ändert weder MQTT-Abonnements noch
+Backend-Prozesse oder DJI-Einstellungen.
+
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
