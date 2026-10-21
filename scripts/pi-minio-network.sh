@@ -256,13 +256,41 @@ adopt() {
     echo "ERROR: MinIO uses network_mode=$mode; cannot join shared bridge" >&2
     exit 2
   }
-  # A data mount is evidence the target is persistent, but not proof of a
-  # correct backup. We deliberately don't inspect data or environment.
-  mount="$(docker inspect --format '{{range .Mounts}}{{println .Destination}}{{end}}' "$name")"
-  [[ -n "$mount" ]] || {
-    echo "ERROR: existing MinIO has no persistent mount; data safety not established" >&2
+  # Require a verified /data mount and explicit operator confirmation of
+  # the EXACT host source. A random script/config mount is not S3 persistence.
+  # Never trust a missing external mount: Docker bind mounts can fall back
+  # to a newly created empty directory on the root filesystem.
+  local mount_type expected mount_target
+  mount="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$name")"
+  mount_type="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Type}}{{end}}{{end}}' "$name")"
+  expected="${SKYHUB_MINIO_EXPECTED_DATA_SOURCE:-}"
+  [[ -n "$mount" && -n "$expected" && "$mount" == "$expected" ]] || {
+    echo "ERROR: /data mount missing or does not match explicitly expected source." >&2
+    echo "Set SKYHUB_MINIO_EXPECTED_DATA_SOURCE to the audited Docker mount Source." >&2
     exit 2
   }
+  [[ "$mount_type" == bind || "$mount_type" == volume ]] || {
+    echo "ERROR: /data must be persistent bind/volume storage" >&2
+    exit 2
+  }
+  if [[ "$mount_type" == bind ]]; then
+    [[ -d "$mount" && ! -L "$mount" ]] || {
+      echo "ERROR: expected bind directory is missing or a symlink." >&2
+      exit 2
+    }
+    command -v findmnt >/dev/null 2>&1 || {
+      echo "ERROR: findmnt required to verify external storage" >&2
+      exit 2
+    }
+    mount_target="$(findmnt --target "$mount" --noheadings --output TARGET)" || {
+      echo "ERROR: cannot resolve MinIO backing filesystem" >&2
+      exit 2
+    }
+    [[ -n "$mount_target" && "$mount_target" != "/" ]] || {
+      echo "ERROR: MinIO /data resolves onto root filesystem; verify backup disk mount." >&2
+      exit 2
+    }
+  fi
   local -a managed=()
   mapfile -t managed < <(docker ps -a \
     --filter "label=com.docker.compose.project=$PROJECT" \
