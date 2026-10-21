@@ -106,8 +106,12 @@ function cleanValue(value, node, path, depth) {
     if (path === 'longitude') return value >= -180 && value <= 180 ? value : undefined;
     if (Number.isFinite(node.min) && value < node.min) return undefined;
     if (Number.isFinite(node.max) && value > node.max) return undefined;
-    // Do not apply enum constraints to future firmware revisions: a new,
-    // finite code is still an observable device value, not permission to act.
+    // Where DJI explicitly enumerates values, do not treat unknown codes
+    // (including 65535 link sentinels) as a valid property state.
+    // A future firmware may add codes: update the pinned schema after review.
+    if (['enum_int','enum','enum_string'].includes(type) &&
+        Array.isArray(node.enum) && node.enum.length && !node.enum.includes(value))
+      return undefined;
     if (Math.abs(value) > 1e15) return undefined;
     return value;
   }
