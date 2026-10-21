@@ -1,6 +1,6 @@
 # DJI Cloud API: Kompatibilitätsabgleich für SkyHub Next
 
-> **Aktueller Feldabgleich:** [DJI Cloud API 1.18 – sechs Gerätemodelle](dji-118-field-audit.md). Die erfassten 144 Mavic-3-, 162 Aircraft- und 48 RC-Feldpfade sind modellzugeordnet, typsicher und schreibgeschützt. Für M3M, Matrice 4T und RC Plus 2 ist eine vollständig gerätespezifische 1.18-Konformität nicht belegt.
+> **Aktueller Feldabgleich:** [DJI Cloud API 1.18 – sechs Gerätemodelle](dji-118-field-audit.md). Der Katalog enthält 144 Mavic-3-, 179 vorläufige Matrice-4T-, 48 RC-Pro- und 54 RC-Plus-2-Feldpfade sowie neun dynamische Gimbal-Feldtypen im vorläufigen Aircraft-Profil. Alle werden lesend und mit typisierten Whitelists verarbeitet. Für M3M und Matrice 4T ist die gerätespezifische 1.18-Kompatibilität weiterhin nicht belegt; auch die RC Plus 2 benötigt noch eine Hardwareabnahme.
 
 Zielstand: DJI Cloud API 1.18 (vom Projekt vorgegeben). Protokolldetails gelten nur soweit durch die verlinkten offiziellen API-Referenzen belegt. Vollständige 1.18-Konformität ist nicht getestet.
 
