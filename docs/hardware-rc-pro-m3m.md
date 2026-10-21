@@ -202,7 +202,43 @@ Die neuen Zeilen `Nicht beobachtete Rootfelder`,
 `Generische Aircraft-Erweiterungen in MQTT-Shapes` enthalten
 ausschließlich offizielle Feldnamen, niemals SNs oder Messwerte.
 
-## 7. Falls die Verbindung fehlt
+## 7. Modellbezogene Zuordnung der generischen Aircraft-Rootfelder
+
+Der fünfte echte Hardwaretest bestätigt eine stabile RC-Pro-/M3M-Topologie:
+1.072/1.072 OSD-Pakete übernommen; beide Geräte mit ca. 2 Sekunden altem OSD.
+Die M3M meldete 75/144 beobachtete auswertbare Feldpfade. Die verbleibenden
+59 Pfade verteilen sich auf **7 fehlende Rootfelder**, **42 optionale Unterfelder
+trotz vorhandener Rootstruktur** (überwiegend IR-/Zoom-/Belichtung-/Fokusattribute)
+und **10 Unterfelder unter nicht beobachteten Rootstrukturen**.
+RC Pro: 25 auswertbare Lücken = 3 Rootfelder, 8 optionale Unterfelder,
+14 Nachfahren nicht beobachteter Rootfelder.
+
+Das bisherige MQTT-Shape-Inventar ist backendweit und erlaubt **keine**
+Absenderzuordnung. Die fünf generischen Aircraft-Rootfelder
+`distance_limit_status`, `rth_altitude`, `rc_lost_action`,
+`payloads` und `wpmz_version` sind daher noch keine M3M-Nachweise.
+
+### Datenschutzsichere modellbezogene Erfassung (neuer Backend-Code)
+
+Die neue Funktion `createModelShapeCatalog()` speichert ausschließlich die
+festen Modellkennungen `2:144:0` und `0:77:2` aus der vertrauenswürdigen
+SkyHub-Registry, Kanal `osd` oder `state`, offiziell dokumentierte Rootnamen,
+Anzahl und Zeitstempel. Die Erfassung läuft **erst nach** MQTT-Guard
+und erfolgreicher Registry-Verarbeitung. Disconnected-Aircraft-Replays,
+unbekannte Modelle, unerkannte Feldnamen sowie freie Werte und IDs werden
+verworfen. Keine neuen Subscriptions, DJI-Kommandos oder Pairing-Aktionen.
+
+Die neue lesende Route `GET /api/diagnostics/mqtt-model-shapes` ist über
+den regulären View-Token geschützt und enthält keine Seriennummern oder
+Koordinaten. Die bestehende Pi-Diagnose verwendet sie optional. Ist sie
+noch nicht im Backend vorhanden, erscheint **NICHT VERFÜGBAR**.
+
+**Wichtig:** Diese Änderung ist aktuell ausschließlich im PR-Testbranch.
+Eine neue Backend-Version wird erst nach Review, Merge und einem separat
+kontrollierten Pi-Update verfügbar. Bis dahin keine modellbezogene
+Zuordnung der zusätzlichen fünf Aircraft-Feldnamen behaupten.
+
+## 8. Falls die Verbindung fehlt
 
 Für die bestehende Diagnose ohne Änderung am laufenden System:
 
@@ -216,6 +252,6 @@ Ein Merge auf GitHub installiert keine neue Backend-Version auf dem Pi. Veraltet
 
 Bitte nur den sanitisierten Bericht aus dem Hardwarecheck teilen, **keine** MQTT-Rohpayloads, Geräteseriennummern, GPS-Koordinaten, Tokens oder .env-Inhalte.
 
-## 8. Grenzen
+## 9. Grenzen
 
 Die Prüfung löst weder property/set noch Flugsteuerung, Missionen, Medienaufnahmen, neue MQTT-Abos oder Pairing aus. Erst die Ausführung auf realer, eingeschalteter Hardware und die Auswertung des Ergebnisses ermöglichen eine belastbare Abnahme. GitHub-CI prüft lediglich synthetische RC-/M3M-Snapshots und die CLI-Argumentverarbeitung.
