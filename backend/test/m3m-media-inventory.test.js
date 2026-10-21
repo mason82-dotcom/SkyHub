@@ -94,3 +94,53 @@ test('optional Pi CLI reads directory entries only, ignores symlinks, redacts pa
     assert.doesNotMatch(fail.stderr,/SECRET/);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+
+test('unrecognized S3 image/other formats are tallied using fixed privacy-safe categories',()=>{
+  const names=[
+    'DJI_20261021190530_0001_MS_G.TIF',
+    'DJI_20261021190530_0001_D.JPG',
+    'DJI_20261021190530_0001_F.JPG',
+    'DJI_RENAMED_128_MS_NIR.TIFF',
+    'SECRET_CUSTOM_CAMERA_SERIAL.JPG',
+    'MASKED_ORTHO.TIF',
+    'RAW_IMAGE.DNG',
+    'MASKED_CHART.PNG',
+    'VIDEO.MP4',
+    'VIDEO.MOV',
+    'AUXILIARY.LRF',
+    'GPS_OVERLAY.SRT',
+    'PRIVATE_DATA.JSON',
+    'LAYERS.XML',
+    'FLIGHT.KMZ',
+    'TOKEN.ABC',
+    'NOEXT',
+    '../PRIVATE.JPG'
+  ];
+  const report=inventoryMediaNames(names);
+  assert.equal(report.classified,2);
+  assert.equal(report.unrecognized,15);
+  assert.equal(report.invalid,1);
+  assert.deepEqual(report.unrecognizedFormats,{
+    JPEG:2,TIFF:2,DNG:1,PNG:1,MP4:1,MOV:1,LRF:1,
+    SRT:1,JSON:1,XML:1,KMZ:1,OTHER_EXTENSION:1,NO_EXTENSION:1
+  });
+  assert.equal(report.unrecognizedDjiPrefixedImages,2);
+  assert.equal(report.unrecognizedOtherImages,4);
+  assert.equal(Object.values(report.unrecognizedFormats).reduce((n,x)=>n+x,0),
+    report.unrecognized);
+  assert.doesNotMatch(JSON.stringify(report),
+    /SECRET|PRIVATE|TOKEN|MASKED|DJI_RENAMED|VIDEO|CUSTOM_CAMERA_SERIAL|20261021/);
+});
+
+test('unknown format histogram reports only bounded labels, never attacker-defined extensions',()=>{
+  const report=inventoryMediaNames([
+    'PRIVATE_ONE.HIDDENPAYLOAD',
+    'DJI_PRIVATE_SN.XYZ',
+    'noext-PII'
+  ]);
+  assert.equal(report.unrecognizedFormats.OTHER_EXTENSION,2);
+  assert.equal(report.unrecognizedFormats.NO_EXTENSION,1);
+  assert.equal(report.unrecognizedDjiPrefixedImages,0);
+  assert.doesNotMatch(JSON.stringify(report),/HIDDENPAYLOAD|XYZ|noext-PII|PRIVATE/);
+});
