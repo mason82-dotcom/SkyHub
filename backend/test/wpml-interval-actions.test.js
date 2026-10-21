@@ -118,13 +118,17 @@ test('WPML validator rejects duplicate action group ids across separate waypoint
   assert.ok(validateDocuments(built.templateXml,duplicate).errors.some(
     x=>x.message.includes('duplicate action group ID')));
 });
-test('periodic distance/timing triggers must cover at least two route indices',()=>{
+test('DJI permits a single-waypoint periodic action group, but rejects invalid index order and interval',()=>{
   const built=planner.build(route({type:'multipleDistance',interval:12}));
-  const badRange=built.waylinesXml.replace(
+  const singleIndex=built.waylinesXml.replace(
     '<wpml:actionGroupEndIndex>2</wpml:actionGroupEndIndex>',
     '<wpml:actionGroupEndIndex>0</wpml:actionGroupEndIndex>');
-  assert.ok(validateDocuments(built.templateXml,badRange).errors.some(
-    x=>x.message.includes('needs a waypoint range')));
+  assert.equal(validateDocuments(built.templateXml,singleIndex).valid,true);
+  const reversed=singleIndex.replace(
+    '<wpml:actionGroupStartIndex>0</wpml:actionGroupStartIndex>',
+    '<wpml:actionGroupStartIndex>1</wpml:actionGroupStartIndex>');
+  assert.ok(validateDocuments(built.templateXml,reversed).errors.some(
+    x=>x.message.includes('end index precedes start')));
   const badInterval=built.waylinesXml.replace(
     '<wpml:actionTriggerParam>12</wpml:actionTriggerParam>',
     '<wpml:actionTriggerParam>0</wpml:actionTriggerParam>');
