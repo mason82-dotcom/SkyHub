@@ -44,6 +44,22 @@ function unknownFormat(name){
   if(suffix==='TIF'||suffix==='TIFF')return 'TIFF';
   return UNKNOWN_FORMATS.includes(suffix)?suffix:'OTHER_EXTENSION';
 }
+
+// Fixed and deliberately narrow TIFF naming hints. These describe only
+// literal suffix/tokens in the object filename, never verified TIFF contents.
+// Priority is exclusive, so the four categories always sum to the unknown
+// TIFF filename count; arbitrary identifiers never enter the report.
+const TIFF_HINT_BANDS=Object.freeze(['G','R','RE','NIR']);
+function classifyUnknownTiffName(name){
+  const stem=name.replace(/\.TIFF?$/i,'').toUpperCase();
+  const spectral=/(?:^|[_-])MS[_-](G|R|RE|NIR)$/.exec(stem);
+  if(spectral)return {category:'spectralBandSuffix',band:spectral[1]};
+  if(/(?:^|[_-])(NDVI|NDRE|GNDVI|OSAVI|SAVI|EVI)(?:[_-]|$)/.test(stem))
+    return {category:'vegetationIndex'};
+  if(/(?:^|[_-])(ORTHOMOSAIC|ORTHO|MOSAIC|DSM|DTM|DEM)(?:[_-]|$)/.test(stem))
+    return {category:'mosaicOrElevation'};
+  return {category:'other'};
+}
 function inventoryMediaNames(names){
   if(!Array.isArray(names)||names.length>MAX_ENTRIES)
     throw new RangeError('M3M inventory count out of bounds');
@@ -59,6 +75,12 @@ function inventoryMediaNames(names){
     djiPrefixed:Object.fromEntries(imageFormats.map(x=>[x,0])),
     other:Object.fromEntries(imageFormats.map(x=>[x,0]))
   };
+  const unrecognizedTiffNameHints={
+    spectralBandSuffix:Object.fromEntries(TIFF_HINT_BANDS.map(x=>[x,0])),
+    vegetationIndex:0,
+    mosaicOrElevation:0,
+    other:0
+  };
   for(const value of names){
     const n=typeof value==='string'?value:null;
     const item=identify(n);
@@ -67,6 +89,13 @@ function inventoryMediaNames(names){
         unrecognized++;
         const format=unknownFormat(n);
         unrecognizedFormats[format]++;
+        if(format==='TIFF'){
+          const hint=classifyUnknownTiffName(n);
+          if(hint.category==='spectralBandSuffix')
+            unrecognizedTiffNameHints.spectralBandSuffix[hint.band]++;
+          else
+            unrecognizedTiffNameHints[hint.category]++;
+        }
         if(imageFormats.includes(format)){
           if(/^DJI_/i.test(n)){
             unrecognizedDjiPrefixedImages++;
@@ -107,7 +136,7 @@ function inventoryMediaNames(names){
     classification:'filename-hints-only',
     totalEntries:names.length,classified,unrecognized,invalid,
     unrecognizedFormats,unrecognizedDjiPrefixedImages,unrecognizedOtherImages,
-    unrecognizedImagesByPrefix,
+    unrecognizedImagesByPrefix,unrecognizedTiffNameHints,
     bandCounts,captureGroups:groups.size,
     spectralSets,fiveChannelSets,partialSets,duplicateSets,missingBands,
     radiometricCalibrationVerified:false,bandCoregistrationVerified:false,
