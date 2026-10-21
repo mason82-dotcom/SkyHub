@@ -124,8 +124,12 @@ function createRegistry(limit = 200) {
             d.positionTimeVerified=message.timestamp!==null;
           }
         }
-        d.lastTelemetryAt=observedAt;
-        d.telemetryTimeVerified=message.timestamp!==null;
+        // A lone latitude or longitude is not a complete GPS measurement
+        // and must not refresh general OSD-telemetry freshness either.
+        if(hasPair||values.some(([key])=>key!=='latitude'&&key!=='longitude')){
+          d.lastTelemetryAt=observedAt;
+          d.telemetryTimeVerified=message.timestamp!==null;
+        }
       }
       // Null position never becomes a new track point or a fresh GPS fix.
       if (hasPair&&!nullPosition) {
