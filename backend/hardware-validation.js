@@ -3,6 +3,16 @@
 // Input comes from existing, authorized read-only backend endpoints.
 // Never print serial numbers, GPS coordinates, measurement values or secrets.
 const {summarizeTelemetryFields}=require('./telemetry-field-profile');
+const catalog=require('./data/dji-cloud-api-118-fields.json');
+// Never echo unrecognized MQTT property keys: a producer can encode an ID
+// or arbitrary secret as an object key. Show only documented root names.
+const knownShapeKeys=new Set(['app_version','mode_code','sub_devices','domain',
+  'type','sub_type','thing_version','list','data','timestamp','firmware_version']);
+for(const p of Object.values(catalog.profiles)){
+  for(const f of p.fields){
+    if(!f.path.includes('.'))knownShapeKeys.add(f.path);
+  }
+}
 
 const RC='2:144:0',M3M='0:77:2';
 const keyOf=d=>d?.model&&[d.model.domain,d.model.type,d.model.subType].join(':');
@@ -51,7 +61,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
   const shapeList=Array.isArray(shapes)?shapes:[];
   const shapeKeys=channel=>[...new Set(shapeList.filter(s=>s?.channel===channel)
     .flatMap(s=>Array.isArray(s.dataKeys)?s.dataKeys:[])
-    .filter(k=>typeof k==='string'&&/^[a-zA-Z0-9_]{1,48}$/.test(k)))].sort().slice(0,70);
+    .filter(k=>typeof k==='string'&&knownShapeKeys.has(k)))].sort().slice(0,70);
   const transport={
     mqttConnected:health?.mqtt===true,subscribed:health?.subscribed===true,
     ackEnabled:health?.topologyReplyEnabled===true,
