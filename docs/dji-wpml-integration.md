@@ -325,7 +325,10 @@ können die tatsächlichen Zeiten und Positionen abweichend gestalten.
 
 `backend/wpml.js` prüft nun zusätzlich doppelte
 Aktionsgruppen-IDs im gesamten `waylines.wpml` sowie
-leere periodische Aktionsbereiche. Die gemeinsamen DJI-IDs in
+ungültige Reihenfolge der Aktionsbereichs-Indizes. Ein Start-/Endindex
+am selben Wegpunkt bleibt gemäß DJI-Felddefinition zulässig; dies
+bestätigt nicht, dass eine periodische Aktion an einem solchen Einzelpunkt
+sinnvoll ausgeführt wird. Die gemeinsamen DJI-IDs in
 Template und Waylines sind nicht automatisch als globaler
 ID-Konflikt anzusehen; der neue Test bezieht sich auf
 Aktionsgruppen im ausführbaren Dokument.
