@@ -51,7 +51,11 @@
         invalid('photo flag '+index);
       return Object.freeze({lat,lon,height,photo:point.photo===true});
     });
+    // Avoid inventing EGM96/ellipsoid conversions in the editable template.
+    // This first editor supports a single relative-to-takeoff height only.
     for(let i=1;i<waypoints.length;i++){
+      if(waypoints[i].height!==waypoints[0].height)
+        invalid('first editor requires a uniform relative flight height');
       const a=waypoints[i-1],b=waypoints[i];
       if(a.lat===b.lat&&a.lon===b.lon)invalid('consecutive identical waypoints');
     }
@@ -100,11 +104,12 @@
       field('heightMode','relativeToStartPoint')+
       '</wpml:waylineCoordinateSysParam>'+
       field('autoFlightSpeed',p.speed)+
+      field('globalHeight',p.waypoints[0].height)+
       field('gimbalPitchMode','manual')+
       field('globalWaypointTurnMode','toPointAndStopWithDiscontinuityCurvature')+
       p.waypoints.map((point,index)=>
         '<Placemark>'+coordinate(point)+field('index',index)+
-        field('height',point.height)+field('useGlobalHeight',0)+
+        field('height',point.height)+field('useGlobalHeight',1)+
         field('useGlobalSpeed',1)+field('useGlobalHeadingParam',1)+
         field('useGlobalTurnParam',1)+'</Placemark>').join('')+
       '</Folder>\n';
