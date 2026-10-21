@@ -60,6 +60,47 @@ const GENERIC_AIRCRAFT_CANDIDATES=Object.freeze([
   'distance_limit_status','rth_altitude','rc_lost_action',
   'payloads','wpmz_version'
 ]);
+
+// Reports accepted, typed read-only properties, never their values. The
+// model-scoped MQTT root catalog proves a field name was seen, while this
+// separately checks what the versioned sanitizing parser accepted.
+// An old backend without the M3M overlay must not report missing DJI values.
+const M3M_EXTENSION_PATHS=Object.freeze([
+  'distance_limit_status','distance_limit_status.state',
+  'distance_limit_status.distance_limit',
+  'distance_limit_status.is_near_distance_limit',
+  'rth_altitude','rc_lost_action'
+]);
+function acceptedPath(root,path){
+  let cursor=root;
+  for(const component of path.split('.')){
+    if(!isObject(cursor)||!Object.hasOwn(cursor,component))return false;
+    cursor=cursor[component];
+  }
+  return cursor!==null&&cursor!==undefined;
+}
+function m3mExtensionAudit(device,now){
+  const capable=hasPropertyDiagnostics(device)&&
+    device?.propertyProfile?.name==='mavic3m';
+  if(!capable)return {available:false,accepted:0,fresh:0,stale:0,
+    unobserved:null,fields:[]};
+  const data=device.deviceProperties.osd;
+  const times=device.propertyFieldObservedAt.osd;
+  const fields=M3M_EXTENSION_PATHS.map(path=>{
+    const at=times[path];
+    const seen=acceptedPath(data,path)&&
+      Number.isFinite(at)&&at>0&&at<=now;
+    const state=!seen?'NICHT BEOBACHTET':
+      now-at<15000?'FRISCH':'HISTORISCH';
+    return {path,status:state};
+  });
+  return {available:true,
+    accepted:fields.filter(f=>f.status!=='NICHT BEOBACHTET').length,
+    fresh:fields.filter(f=>f.status==='FRISCH').length,
+    stale:fields.filter(f=>f.status==='HISTORISCH').length,
+    unobserved:fields.filter(f=>f.status==='NICHT BEOBACHTET').length,
+    fields};
+}
 function deviceSummary(device,now){
   if(!device)return {seen:false,modelConfirmed:false,role:null,topologyOnline:null,
     osdFresh:false,osdAgeSeconds:null,stateObserved:false,stateAgeSeconds:null,
@@ -153,6 +194,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
       !transport.m3mConfirmedGenericAircraftRoots.includes(root));
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
+  const m3mExtensions=m3mExtensionAudit(air,now);
   // DJI pushMode=1 is event-driven: state is pushed on change, unlike
   // fixed-frequency OSD. A state packet that is 16 s old is evidence that
   // the channel works, not an indication of failed controller/aircraft.
@@ -171,7 +213,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
     {step:'M3M State-Daten empfangen (bei Änderung)',status:stateStatus(aircraft)}
   ];
   return {target:'DJI RC Pro Enterprise + Mavic 3M',mode:'nur Lesen',
-    transport,controller,aircraft,linked,stages,
+    transport,controller,aircraft,m3mExtensions,linked,stages,
     notes:[
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Globale MQTT-Shapes erlauben keine Gerätezuordnung. Nur der optionale modellbezogene Katalog nach akzeptiertem Paket und bestätigter Topologie kann Rootfelder der M3M zurechnen.',
@@ -222,6 +264,19 @@ function formatReport(r){
       (p.missingNestedUnderObservedRoot.slice(0,40).join(', ')||'keine'));
     lines.push('Nicht beobachtete Unterfelder ohne beobachtetes Root ('+
       p.missingNestedWithAbsentRoot.length+'); keine unabhängige Sensor-Nichtverfügbarkeit ableiten.');
+  }
+  lines.push('--- M3M-Erweiterung: typisierte OSD-Wertannahme (ohne Werte) ---');
+  if(!r.m3mExtensions?.available){
+    lines.push('M3M-150-Feldparser: NICHT AKTIV (nur Rootnamen-Nachweis, keine Werteprüfung).');
+  }else{
+    lines.push('M3M-150-Feldparser: verfügbar; gültig übernommene Felder: '+
+      r.m3mExtensions.accepted+' / '+M3M_EXTENSION_PATHS.length+
+      ' | frisch: '+r.m3mExtensions.fresh+
+      ' | historisch: '+r.m3mExtensions.stale+
+      ' | nicht übernommen: '+r.m3mExtensions.unobserved);
+    for(const field of r.m3mExtensions.fields)
+      lines.push(field.status.padEnd(17)+' osd:'+field.path);
+    lines.push('HINWEIS: Keine Annahme bedeutet auch: Feld fehlt, hat keinen gültigen Typ oder wurde vom Filter verworfen; keine Ursache ableitbar.');
   }
   lines.push('Bekannte MQTT OSD-Rootfelder (backendweit): '+(r.transport.osdShapeFields.join(', ')||'keine'));
   lines.push('Bekannte MQTT State-Rootfelder (backendweit): '+(r.transport.stateShapeFields.join(', ')||'keine'));
