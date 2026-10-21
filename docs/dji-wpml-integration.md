@@ -252,6 +252,49 @@ exportiert. Für verlässlich nutzbare 2D-Mapping-Missionen sind
 validierte Sensorprofile, Geländemodell und DJI-Pilot-2-Vergleichstests
 weiter erforderlich.
 
+## Geometrische Fotopositionen: Punktvorschau, kein DJI-Trigger
+
+Das neue browser-/Node-kompatible Modul
+`frontend/public/wpml-capture-preview-core.js` baut auf bereits
+geprüften Streifenpolygonen und den ausdrücklich eingegebenen Kamera-
+/AGL-Daten auf. Für jedes **unabhängige gerade Streifensegment** wird
+eine theoretische Folge gleichmäßig verteilter Foto-Mittelpunkte erzeugt.
+Die Anzahl pro Segment wird konservativ als
+`ceil(Segmentlänge / Zielabstand) + 1` gewählt. Dadurch sind
+**beide Segment-Endpunkte** enthalten und der nominale Abstand
+zwischen den berechneten Mittelpunkten überschreitet im
+vereinfachten lokalen Modell den Zielabstand nicht.
+
+Die Karte kann diese **theoretischen Fotopunkte** über der geometrischen
+2D-Vorschau anzeigen. Die Grafik ist ausdrücklich **keine von der
+Kamera bestätigte tatsächliche Belichtung**. Gerade bei konkaven
+Polygonen werden voneinander getrennte Liniensegmente weiterhin
+separat behandelt; SkyHub erfindet keine verbindenden Wendeflüge.
+
+Für Performance und Missbrauchsschutz werden maximal **2.000
+Fotopunkte** gerendert. Falls die Gesamtschätzung darüber liegt,
+zeigt SkyHub nur den Anfang und das Ende jedes Segments (bei maximal
+400 Segmenten also höchstens 800 markierte Punkte) und bezeichnet
+dies explizit als **Teilmenge**. Die vollständige rechnerische
+Bildanzahl wird separat angezeigt. Der lokale GeoJSON-Export trägt
+`sampleOnly`, `estimatedImageCount` sowie
+`exportableAsWaylines:false` und `flightReady:false`.
+
+**DJI-Referenz:** `wpml:actionTriggerType=multipleDistance` in
+`40.common-element.md` ist ein periodischer Distanz-Auslöser und
+`wpml:actionTriggerParam` hat dabei die Einheit Meter;
+`multipleTiming` verwendet Sekunden. Diese DJI-Aktionen werden
+**noch nicht generiert**, weil ihre Interaktion mit Wendemanövern,
+Segmentgrenzen und Pilot-2-Missionsprofilen erst anhand realer
+Exporte verifiziert werden muss.
+
+Grenzen der Fotopunktvorschau: keine Richtungsänderungs-/Roll-
+oder Schwenkaufnahme, keine Auslöseverzögerung, kein Gelände-
+oder GSD-Variationsmodell, kein vollständiger Kamerabetriebsmodus
+(auch nicht für einzelne Mavic-3M-Multispektralkanäle), keine
+DJI-Flugfähigkeit. Regressionstests:
+`backend/test/wpml-capture-preview.test.js`.
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
