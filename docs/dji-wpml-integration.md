@@ -63,6 +63,21 @@ Gilt für feste Hauptkamera am gimbalindex 0. Mavic 3M Typ 77/2 und Kamera
 68 basieren auf der DJI-WPML-Tabelle, die allgemeinere aktuelle
 Produkt-Support-Tabelle führt M3M teils nicht separat; Pilot-2-KMZ prüfen.
 
+## Vollständiges Referenz-Feldinventar (Cloud-API-Doc)
+
+Das zusätzliche Inventar `backend/data/dji-wpml-fields.json` bildet alle **250**
+Feldzeilen der offiziellen englischen Markdown-Tabellen ab: 99 Zeilen aus
+Template.kml, 22 aus Waylines.wpml, 129 aus Common Elements; insgesamt
+160 unterschiedliche Elementnamen. Wiederholte Felder werden je Kontext
+getrennt geführt. Für jede Zeile sind Elementname, Dokumentationskontext,
+Typ, Einheit, Pflichtfeldklassifizierung, Quelldatei und Quellzeile hinterlegt.
+Die exakten Versions-SHAs der DJI-Quelldateien stehen im JSON-Provenienzblock.
+Eine Regressionstestdatei kontrolliert Inventarumfang, Dubletten und Zuordnung.
+
+**Wichtig:** Die Aufnahme eines DJI-Feldes im Inventar bedeutet nicht,
+dass dieses Feld im Validator bereits semantisch verarbeitet wird.
+Die vollständige normative Implementierung von Spezialparametern ist offen.
+
 ## Feldabgleich: WPML-Unterseiten
 
 | Bereich | Referenzfelder/Mechanismen | Code-Abdeckung |
