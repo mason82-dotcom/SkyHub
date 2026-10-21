@@ -91,7 +91,8 @@ function dynamicPayloadEntry(raw,key) {
     delete out.measure_target_latitude;
     delete out.measure_target_longitude;
   }
-  return out;
+  // After rejecting an incomplete target pair, a key alone is not telemetry.
+  return Object.keys(out).length>1 ? out : undefined;
 }
 function dynamicPayloadEntries(data) {
   if (!isObject(data)) return [];
@@ -246,7 +247,8 @@ function fieldDefinitions(model) {
   if (!profile) return null;
   const source = catalog.profiles[profile.name];
   return {profile:profile.name,confidence:profile.confidence,
-    source:source.source,fields:source.fields};
+    source:source.source,fields:source.fields,
+    dynamicPayload:source.dynamicPayload??null};
 }
 module.exports = {deviceProfile,fieldDefinitions,fieldAvailabilityPolicy,
   sanitizeKnownProperties,sanitizeDeviceProperties,MAX_ARRAY_ITEMS,
