@@ -22,7 +22,7 @@ const air={
   role:'subdevice',model:{domain:'0',type:77,subType:2},
   modelName:'Mavic 3M',topologyOnline:true,aircraftConnected:true,
   lastTelemetryAt:now-1200,fresh:true,positionFresh:true,
-  propertyProfile:{name:'mavic3',confidence:'shared-family-unverified'},
+  propertyProfile:{name:'mavic3m',confidence:'shared-family-three-generic-roots-observed-values-unverified'},
   propertyObservedAt:{osd:now-1200,state:now-4200},
   propertyFieldObservedAt:{osd:{mode_code:now-1200,'battery.capacity_percent':now-1200},
     state:{firmware_version:now-4200}},
@@ -49,7 +49,7 @@ test('healthy paired RC Pro Enterprise and Mavic 3M are linked and have current 
   assert.equal(report.aircraft.osdFresh,true);
   assert.equal(report.aircraft.aircraftConnected,true);
   assert.equal(report.controller.propertyFields.documented,48);
-  assert.equal(report.aircraft.propertyFields.documented,144);
+  assert.equal(report.aircraft.propertyFields.documented,150);
   assert.ok(report.aircraft.propertyFields.freshNames.includes('osd:mode_code'));
   const text=formatReport(report);
   assert.match(text,/RC Pro Enterprise \+ Mavic 3M/);
@@ -122,7 +122,7 @@ test('legacy backend without new DJI-property API remains transport-valid but fi
   assert.equal(report.controller.propertyDiagnosticsAvailable,false);
   assert.equal(report.aircraft.propertyDiagnosticsAvailable,false);
   assert.equal(report.controller.propertyFields.documented,48);
-  assert.equal(report.aircraft.propertyFields.documented,144);
+  assert.equal(report.aircraft.propertyFields.documented,150);
   assert.equal(report.controller.propertyFields.observed,null);
   assert.equal(report.aircraft.propertyFields.missing,null);
   assert.ok(report.stages.filter(x=>x.step.includes('State-Daten empfangen'))
@@ -170,7 +170,7 @@ test('backend-wide generic aircraft property extensions are not misattributed to
     ['distance_limit_status','rth_altitude','rc_lost_action','payloads','wpmz_version']);
   assert.ok(report.notes.some(x=>x.includes('Globale MQTT-Shapes erlauben keine Gerätezuordnung')));
   assert.match(formatReport(report),/Kein M3M-Nachweis/);
-  assert.equal(report.aircraft.propertyFields.documented,144);
+  assert.equal(report.aircraft.propertyFields.documented,150);
   assert.ok(!report.aircraft.propertyFields.observedNames.includes('state:payloads'));
 });
 
