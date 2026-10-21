@@ -49,6 +49,49 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertNotIn("s3:PutObject", actions)
         self.assertNotIn("s3:DeleteObject", actions)
 
+    def test_audit_identifies_multiple_stopped_minio_with_distinct_mounts(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "pi_minio_audit", ROOT / "scripts/pi-minio-audit.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertTrue(module.identify_minio(
+            "abc123\\taeronexusadvanced-cloud-minio-1\\taeronexus/minio:2025"
+        ))
+        self.assertFalse(module.identify_minio(
+            "abc123\\tskyhub-next-postgres-1\\tpostgis/postgis:15"
+        ))
+        def item(name, source, state="exited"):
+            return {
+                "Name": "/" + name,
+                "Config": {"Image": "aeronexus/minio:2025",
+                           "Labels": {"com.docker.compose.project": "aeronexus"}},
+                "State": {"Status": state, "ExitCode": 0},
+                "Mounts": [{"Type": "bind", "Source": source,
+                            "Destination": "/data", "RW": True}],
+                "NetworkSettings": {"Networks": {"aeronexus_default": {}}},
+            }
+        rows = module.records([
+            item("aeronexusadvanced-cloud-minio-1", "/srv/cloud-minio"),
+            item("aeronexus-edge-minio-1", "/srv/edge-minio"),
+        ])
+        report = module.report(rows)
+        self.assertIn("2 non-running MinIO container(s)", report)
+        self.assertNotIn("CAUTION: storage source used by multiple containers", report)
+        rows = module.records([
+            item("aeronexusadvanced-cloud-minio-1", "/srv/shared"),
+            item("aeronexus-edge-minio-1", "/srv/shared"),
+        ])
+        self.assertIn("CAUTION: storage source used by multiple containers",
+                      module.report(rows))
+
+    def test_adoption_does_not_require_deleting_old_stopped_minio_containers(self):
+        helper = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("docker ps --no-trunc --format", helper)
+        self.assertIn("expected exactly one running MinIO server", helper)
+        self.assertIn("Stopped historical containers remain untouched", helper)
+
     def test_existing_profile_and_persistent_volume_are_preserved(self):
         compose = ROOT_COMPOSE.read_text(encoding="utf-8")
         self.assertIn('profiles: ["media"]', compose)
