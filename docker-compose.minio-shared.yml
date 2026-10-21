@@ -5,14 +5,14 @@
 # Site-specific facts audited 2026-10-21:
 # Migrated MinIO data after atomic same-filesystem rename from /mnt/hc4backup/aeronexus-data/minio.
 # Expected MinIO data: /mnt/hc4backup/skyhub-next/minio (mounted ext4 NVMe)
-# Existing local image: linux/arm64 aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1
+# Source image: linux/arm64 aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1\n# An additional local skyhub/minio tag reuses identical image layers without copying.
 #
 # Deployment is opt-in via scripts/pi-minio-shared-runtime.sh; default is plan.
 name: skyhub-storage
 services:
   minio:
     container_name: skyhub-shared-minio
-    image: aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1
+    image: skyhub/minio:RELEASE.2025-10-15T17-29-55Z-an1
     pull_policy: never
     restart: "no"  # No restart before a systemd mount dependency is configured.
     entrypoint: ["/usr/bin/minio"]
