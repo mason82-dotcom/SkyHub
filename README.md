@@ -37,7 +37,11 @@ lokal `template.kml` und `waylines.wpml` im `.kmz`-Archiv. Er unterstützt
 Mavic 3E/3T/3M und Matrice 4E/4T, einheitliche relative Höhe oder im
 Expertenmodus individuelle relative Höhen mit **explizit gemessener
 WGS84-Ellipsoidhöhe je Wegpunkt**, sowie optionale `takePhoto`-Aktionen.
-Die Flugsteuerung bleibt vollständig deaktiviert. Eine getrennte
+Die Flugsteuerung bleibt vollständig deaktiviert. DJI-Intervall-Fotoaktionen (`multipleDistance` in Metern, `multipleTiming` in Sekunden)
+lassen sich als **experimentelle** Offline-Aktionsgruppen zusätzlich zu
+Einzelbild-Aktionen (jeweils alternativ, nicht kombiniert) erzeugen.
+Start-/Endauslösung, Kameraaufnahmeintervalle und echte Gerätekompatibilität
+sind nicht hardwaregeprüft; die Dateien erhalten keine Flugfreigabe. Eine getrennte
 [2D-Vermessungsvorschau](frontend/public/wpml-survey-preview.html) zeigt
 abgeschnittene parallele Streifen über kleinen Polygonen und bietet nur
 GeoJSON-Export – **keine** DJI-Wayline-Berechnung.
