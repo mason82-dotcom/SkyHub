@@ -125,23 +125,26 @@ DJI-Firmware kann zusätzliche Parameter und Produktschranken durchsetzen.
 
 ## Lokaler grafischer Wegpunkteditor (nächster Ausbau)
 
-Die statische Seite \`/wpml-editor.html\` ist über einen Link im
+Die statische Seite `/wpml-editor.html` ist über einen Link im
 SkyHub-Dashboard erreichbar. Sie wird beim nächsten regulären Backend-Build
-aus \`frontend/public\` ausgeliefert; es wurde **kein** Pi-Dienst aktualisiert.
+aus `frontend/public` ausgeliefert; es wurde **kein** Pi-Dienst aktualisiert.
 
 - Karte mit Leaflet/OSM: Wegpunkte durch Kartenklick oder direkte Eingabe
   von Breitengrad/Längengrad setzen, Marker verschieben, Reihenfolge
   ändern, löschen und Route einpassen.
 - Geräteprofile: Mavic 3E/3T/3M, Matrice 4E/4T. Unterstützt vorerst
-  geradlinige Wegpunktreihenfolge, optionale einzelne \`takePhoto\`-Aktionen
-  und durchgängige \`relativeToStartPoint\`-Höhe.
+  geradlinige Wegpunktreihenfolge, optionale einzelne `takePhoto`-Aktionen
+  und `relativeToStartPoint`-Höhen (einheitlich oder individuell mit
+  ausdrücklich eingegebener WGS84-Ellipsoidhöhe je Wegpunkt).
 - Name, globaler Fluggeschwindigkeitswert, Höhe über dem **Startpunkt**,
   Sicherheitssteighöhe und Aktion nach Missionsende sind im Formular
-  einstellbar. Alle Höhen der exportierten Wegpunkte sind in dieser ersten
-  Version **identisch**. Es werden keine EGM96-/Ellipsoidhöhen erfunden.
-- Der Browser erzeugt mit \`frontend/public/wpml-editor-core.js\` ohne
-  Upload und ohne Serverzugriff \`wpmz/template.kml\` und
-  \`wpmz/waylines.wpml\` in einem standardkonformen *Stored ZIP* (KMZ).
+  einstellbar. Standardmäßig gilt eine **einheitliche relative Höhe**;
+  ein ausdrücklich aktivierter Expertenmodus ermöglicht unterschiedliche
+  relative Höhen **nur** mit eigenständig bekannten WGS84-Ellipsoidhöhen
+  für alle Punkte. Das Tool erfindet keine EGM96-/WGS84-Konversion.
+- Der Browser erzeugt mit `frontend/public/wpml-editor-core.js` ohne
+  Upload und ohne Serverzugriff `wpmz/template.kml` und
+  `wpmz/waylines.wpml` in einem standardkonformen *Stored ZIP* (KMZ).
   Die erzeugten XML-Dokumente werden in Backend-Tests durch den
   unabhängigen WPML-Validator und KMZ-Reader geprüft.
 - Bei verfügbarer Internetverbindung bezieht die Leaflet-Karte
@@ -149,7 +152,7 @@ aus \`frontend/public\` ausgeliefert; es wurde **kein** Pi-Dienst aktualisiert.
   funktionieren auch ohne Kacheldienst über manuelle Koordinaten.
 - **Keinerlei Flugsteuerung:** kein Pilot-Bootstrap, keine MQTT-Publishes,
   keine Wayline-Cloud-Upload-API, kein Datenbankschreibzugriff.
-  \`flightReady=false\` gilt auch für erfolgreich erzeugte Dateien.
+  `flightReady=false` gilt auch für erfolgreich erzeugte Dateien.
   Eine DJI-Pilot-2-Importprüfung mit genau der verwendeten Firmware ist
   vor jeder Verwendung weiterhin erforderlich.
 
@@ -162,7 +165,7 @@ Die JSON-Datei enthält ausschließlich synthetische Testpunkte. Vorhandene
 Zieldateien werden **nicht** überschrieben; der CLI-Export prüft das
 generierte KMZ erneut mit dem unabhängigen Backend-Validator. Die CLI
 öffnet keine Netzwerkverbindung und aktiviert keine Missionsroute.
-\`backend/test/wpml-editor.test.js\` prüft Roundtrips mit allen fünf
+`backend/test/wpml-editor.test.js` prüft Roundtrips mit allen fünf
 Geräteprofilen, XML-Escaping, Eingabegrenzen und den CLI-Schreibschutz.
 
 **Nicht enthalten:** Mapping2D/3D aus Polygonen zu Waylines berechnen,
@@ -170,6 +173,39 @@ AGL/Terrain- und Geoid-Höhenumrechnung, M3M-Kameraspezialfunktionen,
 geprüfte Geschwindigkeits-/Kollisionsprofile oder eine Zusicherung der
 Pilot-2-Importierbarkeit.
 
+
+## Neue 2D-Vermessungsvorschau (kein WPML-Wayline-Export)
+
+Unter `/wpml-survey-preview.html` kann eine kleine Vermessungsfläche
+gezeichnet oder als Koordinatenpolygon eingegeben werden. Die rein lokale
+JavaScript-Berechnung `wpml-survey-preview-core.js` ermittelt parallele
+Streifen anhand von Richtung und Streifenabstand, schneidet sie an der
+Polygonkontur ab und zeigt einzelne voneinander getrennte Segmente. Eine
+Approximation der Gesamtstreckenlänge **innerhalb der Fläche** wird
+angezeigt. Außerdem ist ausschließlich ein geometrischer GeoJSON-Export
+möglich, **kein** DJI-KMZ/waylines.wpml-Export aus diesem Modus.
+
+Strikte Grenzen: 3 bis 80 Eckpunkte, weniger als 2 km Ausdehnung,
+Breitengrad zwischen -85° und +85°, Abstand 2–200 m, keine
+selbstschneidenden oder degenerierten Polygone, höchstens 200
+Scanstreifen und 400 Liniensegmente. Für die Vorschau wird eine lokale
+equirektanguläre Projektion verwendet – keine vermessungstechnische oder
+geodätische Missionstransformation. Konkave Flächen können mehrere
+gesonderte Linien pro Streifen erzeugen; die Vorschau verbindet
+keine getrennten Segmente durch erfundene Wendeflüge.
+
+Die Vorschau berücksichtigt **weder** GSD/FOV/Kameraparameter noch
+Überlappungsanforderungen, Hindernisse, Terrain, Geofencing, Luftraum,
+Flugleistungsgrenzen, Stromverbrauch, die erforderlichen Wendemanöver
+oder DJI-Pilot-2-Kompatibilität. Sie darf nicht mit einer DJI-Pilot-2-
+Mapping-Mission gleichgesetzt werden. `flightReady:false` und
+`exportableAsWaylines:false` werden in jedem Ergebnis mitgeliefert.
+
+`backend/test/wpml-survey-preview.test.js` sichert geometrische Grenzfälle,
+Selbstschnitt-/Konkavitätstests und die Trennung vom Missionsversand.
+Der Expertenmodus für individuelle Wegpunkthöhen wird in
+`backend/test/wpml-editor.test.js` mit dem unabhängigen KMZ-Validator
+geprüft; WGS84-Ellipsoidhöhen werden **nie** automatisch ergänzt.
 
 ## Betriebsschutz und Grenzen
 
@@ -180,8 +216,8 @@ weiterhin mit HTTP 501. Der Pi und seine Docker-Dienste bleiben unberührt.
 
 Dies ist ausdrücklich ein ERSTER offline-fähiger WPML-Kern und **keine
 vollständige DJI-1.18-Zertifizierung**. Noch offen sind die komplette
-verschachtelte Feldvalidierung, ein visueller Missionseditor,
-Vermessungs-/Oblique-Planungsalgorithmen, Geoid-/AGL-Umrechnung,
+verschachtelte Feldvalidierung, produktionsreife visuelle Missionsplanung,
+vollständige Vermessungs-/Oblique-Planungsalgorithmen, Geoid-/AGL-Umrechnung,
 Terrain Follow, DJI-Wayline-Upload/Download, Medien-/res-Verwaltung,
 Missionsstatus samt Gerätebestätigung und Firmware-spezifische Tests.
 
