@@ -24,7 +24,7 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3E | `0/77/0` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3T | `0/77/1` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
-| Matrice 4T | `0/99/1` | `aircraftCommon`, 162 Pfade | **vorläufiges** allgemeines Aircraft-Profil; DJI-Modellkennung offiziell |
+| Matrice 4T | `0/99/1` | `matrice4T`, 168 Pfade | **vorläufig**: 162 archivierte Aircraft-Pfade + sechs dokumentierte allgemeine Aircraft-Erweiterungen; M4T-Verfügbarkeit nicht verifiziert |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
 | RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; Hardwareprüfung ausstehend |
 
@@ -41,6 +41,17 @@ abgeglichenen Felder sind `wireless_link.4g_link_state`,
 `cloud_control_auth` (absichtlich redigiert) und `drc_state`.
 Das im älteren RC-Pro-Profil enthaltene `country` fehlt in dieser
 RC-Plus-2-Seite und wurde nicht ungeprüft übernommen.
+
+Das Matrice-4T-Profil erweitert die allgemeine Aircraft-Tabelle um sechs
+belegbare Pfade aus der [DJI Pilot-to-Cloud Aircraft Property-Referenz](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html)
+(Seitenstand 28.06.2024): `distance_limit_status` samt drei Unterfeldern,
+`rth_altitude` und `rc_lost_action`. Diese Referenz erschien **vor** der
+Matrice 4T und ist keine gerätespezifische Unterstützungsgarantie. Die Werte
+werden nur gelesen, niemals als `property/set` oder Flugkommando gesendet.
+Weitere mögliche Felder wie PSDK-Erweiterungen, `wpmz_version` und
+`current_rth_mode` werden ohne belastbaren M4T-Nachweis nicht freigeschaltet.
+Dokumentierte Enumerationen werden auf bekannte Codes begrenzt; neue Codes
+müssen nach DJI-Schema-Abgleich ausdrücklich ergänzt werden.
 
 ## Implementierte Verarbeitung
 
