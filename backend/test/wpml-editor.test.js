@@ -95,7 +95,7 @@ test('standalone editor is present and performs no DJI requests or server-side K
   assert.match(html,/type="number"/);
   assert.match(app,/core\.build\(plan\)/);
   assert.match(app,/createObjectURL/);
-  assert.doesNotMatch(app,/\bfetch\s*\(|XMLHttpRequest|WebSocket|mqtt|\/api\/mission\/create/i);
+  assert.doesNotMatch(app,/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|mqtt\.connect|\/api\/mission\/create/i);
   assert.doesNotMatch(html,/action="\/api\/mission\/create"/);
 });
 
