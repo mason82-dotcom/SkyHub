@@ -127,4 +127,7 @@ Der Betriebshelfer `scripts/pi-minio-network.sh` bietet einen lesenden
 `plan`, `apply` für ein neues SkyHub-MinIO, `adopt` für ein vorhandenes
 fremdes MinIO, explizites `attach` sowie lesendes `verify`. Der bisherige Root-MinIO-Datenträger bleibt erhalten.
 Die historische 2023er Image-Vorgabe wird für `apply` vorsorglich gesperrt.
+Dazu gehören getrennte, nicht automatisch aktivierte Bucket-IAM-Policies und
+ein authentifizierter S3-Test mit read-only Standard und optionalem
+PUT/GET/DELETE für ein isoliertes Testbucket.
 Siehe [Gemeinsamer MinIO-Objektspeicher](docs/minio-shared-storage.md).
