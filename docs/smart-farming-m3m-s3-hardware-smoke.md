@@ -104,3 +104,70 @@ Integrations-PR teilen Teile ihres Codes; vor einem Merge
 muss die Reihenfolge und Doppelung geprüft werden.
 Bei positivem Nameninventar sind M3M-RGB-/TIFF-XMP-Verifikation,
 radiometrische Korrektur und Bandregistrierung separat abzunehmen.
+
+
+## Echte Pi-5-Live-Abnahme: 424 direkte Objekte (21.10.2026)
+
+Der Benutzer hat aus dem Worktree auf Commit `211c214` acht
+Node-Tests erfolgreich ausgeführt und anschließend den bereits
+laufenden authentifizierten Medien-GET-Endpunkt mit
+`--auto-first-page` gelesen. Der aktive Pi-Container wurde
+dabei weder neu gestartet noch verändert. Die anonyme Zählung:
+
+| Merkmal | Wert |
+|---|---:|
+| Direkt gelistete Objekte im eindeutig erkannten Prefix | 424 |
+| Strikt passende M3M-Dateinamen | 3 |
+| Noch nicht klassifizierte Namen | **421** |
+| Invalide Namen | 0 |
+| RGB / Green / Red / RedEdge / NIR | **1 / 0 / 1 / 0 / 1** |
+| Mutmaßliche Capture-Gruppen | 2 |
+| Vier-Spektral-/Fünf-Kanal-Sets | **0 / 0** |
+| Unvollständige Gruppen | 2 |
+| Doppelbelegte Kanäle | 0 |
+
+Die **komplette Paginierung innerhalb des ausgewählten Prefixes**
+war erfolgreich; `discoveryScope=first-100-entries-only` bezieht
+sich ausschließlich auf die **Suche des Prefixes**, nicht auf
+die darauf folgende 424-Objekte-Inventur. Andere Prefixe im Bucket
+wurden nicht vollständig durchsucht.
+
+**Kein Nachweis fehlender M3M-Sensoraufnahmen:**
+421 der 424 Objekte sind unter den streng unterstützten
+Original-Dateinamensmustern noch *unbekannt*. Der erste
+Live-Scan konnte nicht unterscheiden, ob darunter weitere
+JPG/TIF-Varianten, fremde Medienformate oder anders benannte
+Multispektralbilder liegen. Deshalb **nicht** automatisch fehlende
+Bildkanäle nachladen, S3-Objekte umbenennen oder
+Vegetationsindizes berechnen.
+
+### Folgeprüfung: anonyme Dateiformat-Verteilung
+
+Die Offline-Inventur wurde um eine ausschließlich
+**kategorienbasierte** Aufschlüsselung der nicht erkannten
+Objektnamen ergänzt:
+
+- `unrecognizedFormats`: feste Schlüssel JPEG, TIFF,
+  DNG, PNG, MP4, MOV, LRF, SRT, JSON, XML, KMZ,
+  OTHER_EXTENSION, NO_EXTENSION mit **ausschließlich Zählwerten**;
+- `unrecognizedDjiPrefixedImages`: Anzahl sonstiger
+  JPEG-/TIFF-/DNG-/PNG-Namen, die mit `DJI_` beginnen;
+- `unrecognizedOtherImages`: Anzahl anderer Bildnamen.
+
+Weder beliebige Dateiendungen, Objektschlüssel, Aufnahmezeiten,
+Dateinamen, S3-Prefixe noch sonstige Metadaten werden kopiert
+oder im Ergebnis wiedergegeben. Dateiendungen sind **kein
+Dateiinhaltsbeweis**. Zur Messung den aktualisierten Branch
+per Fast-forward ziehen und **denselben**, rein lesenden
+Aufruf wiederholen:
+
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-s3-inventory-check.js --auto-first-page
+
+Eine hohe `unrecognizedFormats.JPEG`-/TIFF-Anzahl und
+ein hoher `unrecognizedDjiPrefixedImages`-Zähler würden
+zunächst eine sichere Analyse alternativer Namensmuster
+rechtfertigen. Sind überwiegend MP4/andere Formate vorhanden,
+ist eine Änderung des M3M-Dateinamenparsers voraussichtlich
+nicht zielführend. Keine Originaldatei muss zur Entscheidung
+heruntergeladen werden.
