@@ -4474,8 +4474,108 @@
             1,
             2
           ]
+        },
+        {
+          "path": "payloads",
+          "type": "array",
+          "access": "r",
+          "push": 1,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "payloads.control_source",
+          "type": "text",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "payloads.payload_index",
+          "type": "text",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "payloads.firmware_version",
+          "type": "text",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "payloads.sn",
+          "type": "text",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "rid_state",
+          "type": "bool",
+          "access": "r",
+          "push": 0,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "wpmz_version",
+          "type": "text",
+          "access": "r",
+          "push": 1,
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "commander_mode_lost_action",
+          "type": "enum_int",
+          "access": "rw",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "current_commander_flight_mode",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "commander_flight_height",
+          "type": "float",
+          "access": "rw",
+          "push": 1,
+          "min": 2,
+          "max": 3000,
+          "unit": "Meters / m",
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "current_rth_mode",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ],
+          "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
         }
-      ]
+      ],
+      "dynamicPayload": {
+        "propertyKeyPattern": "{type-subtype-gimbalindex}",
+        "source": "https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html",
+        "fields": [
+          "gimbal_pitch",
+          "gimbal_roll",
+          "gimbal_yaw",
+          "measure_target_longitude",
+          "measure_target_latitude",
+          "measure_target_altitude",
+          "measure_target_distance",
+          "measure_target_error_state",
+          "zoom_factor"
+        ],
+        "confidence": "generic-aircraft-only; Matrice 4T applicability unconfirmed"
+      }
     }
   },
   "devices": {
