@@ -51,7 +51,7 @@ test('generated waypoint actions are correctly indexed, consistent and isolated'
 test('user-generated names are XML-escaped and input data never become markup',()=>{
   const xml=planner.build(plan()).templateXml;
   assert.doesNotMatch(xml,/Prüfung & <DJI>/);
-  // The plain name is not serialized; document metadata remains fixed.
+  assert.match(xml,/<name>Prüfung &amp; &lt;DJI&gt; &quot;SkyHub&quot;<\/name>/);
   const invalid=plan();
   invalid.name='a'.repeat(71);
   assert.throws(()=>planner.build(invalid),/mission name/);
