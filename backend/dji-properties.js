@@ -86,7 +86,15 @@ function dynamicPayloadEntry(raw,key) {
   // A key by itself is not an observed gimbal value.
   if (!count) return undefined;
   const lat=out.measure_target_latitude,lon=out.measure_target_longitude;
-  if ((lat!==undefined || lon!==undefined) &&
+  // The documented ranging states 1/2/3 mean too close, too far or no signal.
+  // Preserve the diagnostic enum but never surface a laser target or range as
+  // freshly measured when the sensor reports a ranging error.
+  if (out.measure_target_error_state!==undefined && out.measure_target_error_state!==0) {
+    delete out.measure_target_latitude;
+    delete out.measure_target_longitude;
+    delete out.measure_target_altitude;
+    delete out.measure_target_distance;
+  } else if ((lat!==undefined || lon!==undefined) &&
       (lat===undefined || lon===undefined || (lat===0 && lon===0))) {
     delete out.measure_target_latitude;
     delete out.measure_target_longitude;
