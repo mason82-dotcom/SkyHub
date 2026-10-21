@@ -1,26 +1,45 @@
 #!/usr/bin/env node
 'use strict';
-// Read-only Pi hardware diagnosis; no restart, MQTT subscription or writes.
+// Read-only Pi hardware diagnosis. Existing container is NOT rebuilt/restarted.
+// Sensitive API data travels in an in-memory local stdout pipe, never printed.
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
+const {evaluateHardwareSession,formatReport}=require('../backend/hardware-validation');
 if(process.argv.length!==2){
   if(process.argv.length===3&&process.argv[2]==='--help'){
     console.log('Nutzung: node scripts/pi-rc-pro-m3m-check.js');
     console.log('Nur Lesen: RC Pro Enterprise + Mavic 3M, Feldnamen und Status.');
     console.log('Keine Seriennummern, GPS-Koordinaten, Rohdaten oder Tokens.');
+    console.log('Keine Containeränderung und kein Backend-Deployment erforderlich.');
   }else{
     console.error('Unbekannte Parameter. Verwende --help.');
     process.exitCode=2;
   }
 }else{
-  const code="'use strict';\nconst {evaluateHardwareSession,formatReport}=require('./hardware-validation');\n(async()=>{\n  const token=process.env.SKYHUB_VIEW_TOKEN;\n  if(!token){console.error('Hardwarecheck: View-Token im Backend fehlt.');process.exitCode=1;return;}\n  async function get(uri,authorized){\n    const res=await fetch('http://127.0.0.1:4000'+uri,{\n      headers:authorized?{Authorization:'Bearer '+token}:{},\n      signal:AbortSignal.timeout(5000)\n    });\n    if(!res.ok)throw Error('api');\n    return res.json();\n  }\n  try{\n    const [health,devices,shapes]=await Promise.all([\n      get('/api/health',false),get('/api/devices',true),\n      get('/api/diagnostics/mqtt-shapes',true)\n    ]);\n    const report=evaluateHardwareSession(devices,health,shapes);\n    console.log(formatReport(report));\n    if(!report.controller.seen||!report.aircraft.seen||!report.linked){\n      console.log('Abnahme unvollständig: Ziel-Hardware nicht gemeinsam erkannt.');\n      process.exitCode=3;\n    }else if(!report.controller.osdFresh||!report.aircraft.osdFresh){\n      console.log('Abnahme unvollständig: OSD-Werte nicht aktuell.');\n      process.exitCode=3;\n    }else{\n      console.log('Topologie und OSD-Frische beider Geräte bestätigt.');\n    }\n  }catch(_){\n    console.error('Hardwarecheck nicht möglich: Backend-API/Timeout prüfen. Keine Details oder Zugangsdaten ausgegeben.');\n    process.exitCode=1;\n  }\n})();";
+  const code="'use strict';\n(async()=>{\n  const token=process.env.SKYHUB_VIEW_TOKEN;\n  if(!token){process.exitCode=1;return;}\n  async function get(uri,authorized){\n    const res=await fetch('http://127.0.0.1:4000'+uri,{\n      headers:authorized?{Authorization:'Bearer '+token}:{},\n      signal:AbortSignal.timeout(5000)\n    });\n    if(!res.ok)throw Error('api');\n    return res.json();\n  }\n  try{\n    const [health,devices,shapes]=await Promise.all([\n      get('/api/health',false),get('/api/devices',true),\n      get('/api/diagnostics/mqtt-shapes',true)\n    ]);\n    // Values and device IDs stay solely in this bounded, local stdout pipe;\n    // the parent captures stdout and prints a sanitized summary only.\n    const data=JSON.stringify({health,devices,shapes});\n    if(data.length>3000000)throw Error('too-large');\n    process.stdout.write(data);\n  }catch(_){process.exitCode=1;}\n})();";
   const p=spawnSync('docker',
     ['compose','-p','skyhub-next','exec','-T','backend','node','-e',code],
-    {cwd:path.resolve(__dirname,'..'),stdio:'inherit',timeout:30000});
-  if(p.error){
-    console.error('Docker-Ausführung fehlgeschlagen.');
+    {cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:30000,maxBuffer:4*1024*1024});
+  if(p.error || p.status!==0 || !p.stdout){
+    console.error('Hardwarecheck nicht möglich: bestehende Backend-APIs oder Docker prüfen.');
     process.exitCode=1;
-  }else if(p.status!==0){
-    process.exitCode=p.status??1;
+  }else{
+    try{
+      const data=JSON.parse(p.stdout);
+      const report=evaluateHardwareSession(data.devices,data.health,data.shapes);
+      console.log(formatReport(report));
+      if(!report.controller.seen||!report.aircraft.seen||!report.linked){
+        console.log('Abnahme unvollständig: Ziel-Hardware nicht gemeinsam erkannt.');
+        process.exitCode=3;
+      }else if(!report.controller.osdFresh||!report.aircraft.osdFresh){
+        console.log('Abnahme unvollständig: OSD-Werte nicht aktuell.');
+        process.exitCode=3;
+      }else{
+        console.log('Topologie und OSD-Frische beider Geräte bestätigt.');
+      }
+    }catch(_){
+      console.error('Hardwarecheck nicht möglich: Antwort nicht auswertbar.');
+      process.exitCode=1;
+    }
   }
 }
