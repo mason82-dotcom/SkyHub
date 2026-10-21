@@ -62,7 +62,9 @@
       item.appendChild(detail);
       const photoLabel=document.createElement('label');photoLabel.className='photo';
       const checkbox=document.createElement('input');checkbox.type='checkbox';
-      checkbox.checked=point.photo;checkbox.setAttribute('aria-label','Foto an Wegpunkt '+(index+1));
+      checkbox.checked=point.photo;
+      checkbox.disabled=$('photo-trigger').value!=='reachPoint';
+      checkbox.setAttribute('aria-label','Foto an Wegpunkt '+(index+1));
       checkbox.addEventListener('change',()=>{point.photo=checkbox.checked;renderMessage('Entwurf aktualisiert.');});
       photoLabel.append(checkbox,document.createTextNode('Einzelbild aufnehmen'));
       item.appendChild(photoLabel);
@@ -150,14 +152,33 @@
   });
   $('fit').addEventListener('click',fitRoute);
   $('local-heights').addEventListener('change',render);
+  function photoModeUpdate(){
+    const mode=$('photo-trigger').value,interval=mode!=='reachPoint';
+    $('photo-interval-fields').hidden=!interval;
+    $('photo-interval-label').textContent=mode==='multipleTiming'?
+      'Auslöseintervall (s)':'Auslöseabstand (m)';
+    $('photo-interval').max=mode==='multipleTiming'?'60':'1000';
+    $('photo-interval').value=mode==='multipleTiming'?'3':'12';
+    if(interval)for(const p of points)p.photo=false;
+    render();
+    if(interval)renderMessage('Experimentelle Intervall-Fotoaktion: kein gerätegeprüfter DJI-Flugauftrag.');
+  }
+  $('photo-trigger').addEventListener('change',photoModeUpdate);
   $('mission-form').addEventListener('submit',event=>{
     event.preventDefault();
     if(!event.currentTarget.reportValidity())return;
     try{
       const height=Number($('height').value);
+      const triggerMode=$('photo-trigger').value;
+      const intervalPhotos=triggerMode==='reachPoint'?undefined:{
+        type:triggerMode,interval:$('photo-interval').value,
+        ...($('photo-camera-min').value.trim()===''?{}:{
+          cameraMinIntervalSeconds:$('photo-camera-min').value})
+      };
       const plan={
         name:$('name').value,model:$('model').value,speed:Number($('speed').value),
         takeoffHeight:Number($('takeoff').value),finishAction:$('finish').value,
+        ...(intervalPhotos?{intervalPhotos}:{}),
         waypoints:points.map(p=>$('local-heights').checked?
           {lat:p.lat,lon:p.lon,height:p.height,ellipsoidHeight:p.ellipsoidHeight,photo:p.photo}:
           {lat:p.lat,lon:p.lon,height,photo:p.photo})
@@ -172,8 +193,11 @@
       document.body.appendChild(anchor);anchor.click();anchor.remove();
       setTimeout(()=>URL.revokeObjectURL(url),30000);
       renderMessage('Lokaler KMZ-Entwurf erzeugt: '+output.summary.waypointCount+
-        ' Wegpunkte, '+output.summary.photoCount+
-        ' Fotoaktionen. NICHT fluggeprüft. Vor Verwendung in DJI Pilot 2 prüfen.');
+        ' Wegpunkte, '+output.summary.photoCount+' einzelne Fotoaktionen'+
+        (output.summary.intervalPhotos?
+          ', experimenteller '+output.summary.intervalPhotos.type+'-Trigger ('+
+          output.summary.intervalPhotos.interval+' '+output.summary.intervalPhotos.unit+')':'')+
+        '. NICHT fluggeprüft. Vor Verwendung in DJI Pilot 2 prüfen.');
     }catch(error){
       renderMessage(error instanceof Error?error.message:'KMZ konnte nicht erzeugt werden.',true);
     }
