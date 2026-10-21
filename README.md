@@ -57,6 +57,9 @@ Ohne UI lässt sich der Export mit synthetischen Beispieldaten reproduzieren:
 ```bash
 node scripts/wpml-plan.js docs/examples/wpml-waypoint-plan.json /tmp/waypoint-draft.kmz
 node scripts/wpml-inspect.js /tmp/waypoint-draft.kmz
+
+# Optional: Vergleich zweier lokal vorhandener KMZ-Dateien (kein Gerätezugriff)
+node scripts/wpml-compare.js /pfad/pilot2-export.kmz /tmp/waypoint-draft.kmz
 ```
 
 **Keine Flugfreigabe:** WPML-XML/KMZ sind offline generierbar und auf Struktur
