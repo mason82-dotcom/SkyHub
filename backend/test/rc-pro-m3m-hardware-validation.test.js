@@ -419,3 +419,38 @@ test('malformed or unavailable rejected metadata never leaks extra reason names'
   assert.doesNotMatch(JSON.stringify(r),/SECRET_PAYLOAD_XYZ/);
   assert.equal(evaluateHardwareSession([rc,air],health,shapes,now).stateDrops.available,false);
 });
+
+
+test('RC and M3M expose documented State field coverage without values or serials',()=>{
+  const report=evaluateHardwareSession([rc,air],health,shapes,now);
+  const rcState=report.controller.stateFields;
+  const m3State=report.aircraft.stateFields;
+  assert.ok(rcState.documented>0);
+  assert.ok(m3State.documented>0);
+  assert.equal(rcState.observed,1);
+  assert.equal(m3State.observed,1);
+  assert.equal(rcState.fresh,1);
+  assert.equal(m3State.fresh,1);
+  assert.ok(rcState.observedNames.includes('state:firmware_version'));
+  assert.ok(m3State.observedNames.includes('state:firmware_version'));
+  for(const sf of [rcState,m3State]){
+    assert.equal(sf.documented,
+      sf.observed+sf.notObserved+sf.redacted+sf.unsupported);
+    assert.equal(sf.observed,sf.fresh+sf.stale);
+    assert.ok(sf.observedNames.every(s=>s.startsWith('state:')));
+    assert.ok(sf.missingRootNames.every(s=>
+      s.startsWith('state:')&&!s.slice(6).includes('.')));
+  }
+  const printed=formatReport(report);
+  assert.match(printed,/--- DJI State-Feldabdeckung je Geraet/);
+  assert.match(printed,/M3M beobachtete State-Feldnamen: state:firmware_version/);
+  assert.doesNotMatch(printed,/PRIVATE_RC_SERIAL|PRIVATE_AIR_SERIAL|9\.8\.7|1\.2\.3/);
+});
+
+test('missing State property diagnostics cannot be counted as absent DJI capabilities',()=>{
+  const older={...air,propertyProfile:undefined,deviceProperties:undefined,
+    propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
+  const report=evaluateHardwareSession([rc,older],health,shapes,now);
+  assert.equal(report.aircraft.stateFields,null);
+  assert.match(formatReport(report),/M3M: NICHT PRUEFBAR/);
+});
