@@ -9,6 +9,7 @@ Diese Übersicht bezieht sich auf das **aktive SkyHub-Next-Repository-Root**. Ei
 | Tool | Aufruf / Modus | Wirkung | Betriebsregel |
 |---|---|---|---|
 | `pi-minio-shared-mount-check.sh` | ohne Argumente | **Lesend**: Prüft tatsächliches Dateisystem und identische MinIO-Bind-Mount-Quellen unter `/mnt/hc4backup` | Pflicht vor dem Start eines historischen MinIO auf dem Backup-Datenträger |
+| `pi-minio-network.sh adopt` | Containername, erwarteter `/data`-Pfad per Umgebungsvariable | Übernimmt genau einen laufenden, persistenten MinIO mit internem S3-Docker-Port | Lehnt öffentlich oder lokal veröffentlichte S3-HostPorts 9000 ab |
 | `pi-minio-audit.py` | ohne Argumente | **Lesend**: Inventar gestoppter/laufender MinIO-Container und Mount-Metadaten | Keine Containerstarts, Secrets oder Objektzugriffe; lokale Pfade vor Weitergabe ggf. anonymisieren |
 | `pi-minio-network.sh` | `plan` / `verify` | **Lesend**: Docker-Netz-/Volume-Status bzw. HTTP-Readiness | Keine Buckets oder Datenwrites; Output ohne Secrets |
 | `pi-minio-network.sh` | `apply` / `adopt` / `attach` | **Live-Änderung**: MinIO-Container/Netz starten oder vorhandenen MinIO/Clients verbinden | `adopt` startet keinen Container; keine Neustarts anderer Dienste |
