@@ -37,7 +37,7 @@ const UNKNOWN_FORMATS=Object.freeze([
 ]);
 function unknownFormat(name){
   if(typeof name!=='string')return 'NO_EXTENSION';
-  const ext=/\.([a-z0-9]{1,12})$/i.exec(name);
+  const ext=/\.([a-z0-9]{1,32})$/i.exec(name);
   if(!ext)return 'NO_EXTENSION';
   const suffix=ext[1].toUpperCase();
   if(suffix==='JPG'||suffix==='JPEG')return 'JPEG';
