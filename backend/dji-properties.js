@@ -46,7 +46,7 @@ function cleanText(value, path, length) {
   if (path === 'country' && /^[A-Za-z]{2,3}$/.test(value)) return value;
   if ((path.endsWith('payload_index') || path.endsWith('camera_index')) &&
       /^\d{1,4}-\d{1,4}-\d{1,2}$/.test(value)) return value;
-  if (path.endsWith('.video_index') && /^\\d{1,3}$/.test(value)) return value;
+  if (path.endsWith('.video_index') && /^\d{1,3}$/.test(value)) return value;
   // DJI documents video lens types as finite labels, not user-supplied strings.
   if ((path.endsWith('.video_type') || path.endsWith('.switchable_video_types')) &&
       ['normal','wide','zoom','ir','infrared','thermal','visible','narrow_band','fpv'].includes(value))
