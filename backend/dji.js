@@ -63,7 +63,17 @@ function extractTelemetry(p) {
     rtkFixState:integer(position.is_fixed,0,3),
     positionQuality:integer(position.quality,0,10),
     // RC (gateway) OSD: SDR video/control link quality, 0-5.
-    linkQuality:integer(link.sdr_quality,0,5)
+    linkQuality:integer(link.sdr_quality,0,5),
+    // Additional read-only DJI OSD fields. Missing values stay null.
+    windSpeed:finite(p.wind_speed,0),
+    // DJI defines eight compass sectors, not degrees.
+    windDirectionCode:integer(p.wind_direction,1,8),
+    totalFlightTime:finite(p.total_flight_time,0),
+    totalFlightDistance:finite(p.total_flight_distance,0),
+    // Gateway wireless_link: 65535 is an invalid/unavailable sentinel.
+    sdrLinkState:integer(link.sdr_link_state,0,1),
+    fourGLinkState:integer(link['4g_link_state'],0,1),
+    fourGLinkQuality:integer(link['4g_quality'],0,5)
   };
 }
 function extractState(data) {

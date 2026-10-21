@@ -56,7 +56,9 @@ function createRegistry(limit = 200) {
         heading:null,horizontalSpeed:null,verticalSpeed:null,
         attitudePitch:null,attitudeRoll:null,homeDistance:null,remainingFlightTime:null,
         gpsSatellites:null,rtkSatellites:null,rtkFixState:null,positionQuality:null,
-        linkQuality:null }
+        linkQuality:null,windSpeed:null,windDirectionCode:null,
+        totalFlightTime:null,totalFlightDistance:null,
+        sdrLinkState:null,fourGLinkState:null,fourGLinkQuality:null }
     };
     devices.set(sn, d);
     return d;

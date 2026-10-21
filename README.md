@@ -45,7 +45,11 @@ Die lokale `.env` bleibt unverändert.
 
 Das Dashboard zeigt neben den bisherigen Basiswerten zusätzliche bereits
 durch den DJI-Parser unterstützte OSD-Felder an: Kurs, Vertikalgeschwindigkeit,
-Nick-/Rollwinkel und Positionsqualitätscode. Nicht gemeldete optionale Felder
+Nick-/Rollwinkel und Positionsqualitätscode. Außerdem wertet der Parser
+optionale DJI-OSD-Felder für Wind (Geschwindigkeit und achtteiliger Richtungssektor),
+kumulierte Flugzeit/-strecke sowie SDR-/4G-Verbindungszustände und 4G-Qualität
+aus. Fehlende oder durch DJI mit ungültigen Sentinelwerten gemeldete
+Messwerte werden nicht erraten. Nicht gemeldete optionale Felder
 werden nicht als Messwerte ausgegeben; ein RTK-Fix-Code wird nicht mit dem
 RTK-Ein/Aus-Schalter gleichgesetzt. Der Geräte-Snapshot enthält zuletzt
 beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
@@ -55,7 +59,12 @@ bleiben unverändert.
 ## Read-only-Feldinventar für Pilot 2
 
 Auf dem Pi lässt sich mit `node scripts/pi-telemetry-fields-check.js` die
-Verfügbarkeit von DJI-OSD-Feldern prüfen. Die Ausführung nutzt nur
+Verfügbarkeit von DJI-OSD-Feldern **getrennt nach Geräteklasse** prüfen.
+Die fünf typischen RC-Felder werden separat von Fluggeräte-Telemetrie
+ausgewertet. Weitere optionale Felder und gerätespezifisch nicht anwendbare
+Felder werden getrennt aufgeführt. „Nicht beobachtet“ bedeutet weder
+„nicht unterstützt“ noch „Parser defekt“.
+ Die Ausführung nutzt nur
 `docker compose exec` und den vorhandenen Backend-Zugriff auf die Geräte-API.
 Ausgegeben werden ausschließlich Feldnamen und boolesche GPS-/OSD-Zustände,
 **keine** Seriennummern, GPS-Koordinaten, Messwerte oder Zugangsdaten.

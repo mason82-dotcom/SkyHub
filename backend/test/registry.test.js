@@ -118,6 +118,30 @@ test('partial coordinates do not revive a missing GPS fix',()=>{
   assert.equal(d.lastPositionAt,null);
   assert.equal(d.telemetry.battery,75);
 });
+test('additional RC and aircraft OSD measurements are merged without GPS history writes',()=>{
+  const registry=createRegistry();
+  const aircraft=receive('thing/product/AIR01/osd',{
+    data:{latitude:0,longitude:0,wind_speed:3.2,wind_direction:2,
+      total_flight_time:15,total_flight_distance:0}
+  });
+  const result=registry.ingest(aircraft,1760000001000);
+  assert.equal(result.point,null);
+  let device=registry.get('AIR01',1760000001001);
+  assert.equal(device.telemetry.windSpeed,3.2);
+  assert.equal(device.telemetry.windDirectionCode,2);
+  assert.equal(device.telemetry.totalFlightTime,15);
+  assert.equal(device.telemetry.totalFlightDistance,0);
+  assert.equal(device.positionUnavailable,true);
+  const rc=receive('thing/product/RC01/osd',{data:{wireless_link:{
+    sdr_link_state:1,'4g_link_state':0,'4g_quality':0
+  }}});
+  registry.ingest(rc,1760000002000);
+  device=registry.get('RC01',1760000002001);
+  assert.equal(device.telemetry.sdrLinkState,1);
+  assert.equal(device.telemetry.fourGLinkState,0);
+  assert.equal(device.telemetry.fourGLinkQuality,0);
+  assert.equal(device.lastPositionAt,null);
+});
 test('empty OSD does not pretend to be fresh telemetry',()=>{
   const registry=createRegistry();
   registry.ingest(receive('thing/product/AIR01/osd',{data:{}}),1760000001000);

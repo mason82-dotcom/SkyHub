@@ -304,7 +304,14 @@ function update(){
       ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
       ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
         Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
-      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')]]
+      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')],
+      ['SDR-Linkstatus',t.sdrLinkState,t.sdrLinkState===1?'Verbunden':'Getrennt'],
+      ['4G-Linkstatus',t.fourGLinkState,t.fourGLinkState===1?'Verbunden':'Getrennt'],
+      ['4G-Signalqualität',t.fourGLinkQuality,show(t.fourGLinkQuality,' / 5')],
+      ['Windgeschwindigkeit (DJI)',t.windSpeed,show(t.windSpeed,' m/s')],
+      ['Windrichtungssektor (DJI)',t.windDirectionCode,show(t.windDirectionCode,' / 8')],
+      ['Flugzeit gesamt',t.totalFlightTime,show(t.totalFlightTime,' s')],
+      ['Flugstrecke gesamt',t.totalFlightDistance,show(t.totalFlightDistance,' m')]]
       .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
     for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],
       [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude)],
