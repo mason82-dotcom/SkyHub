@@ -122,9 +122,12 @@ verify_compose_version() {
   ver="$(docker compose version --short 2>/dev/null)" ||
     die "Docker Compose plugin missing"
   python3 - "$ver" <<'PY'
-import re, sys
-match = re.search(r"v?(\\d+)\\.(\\d+)(?:\\.(\\d+))?", sys.argv[1])
-if not match or tuple(int(n or "0") for n in match.groups()) < (2, 30, 0):
+import sys
+parts = sys.argv[1].lstrip("v").split("-")[0].split(".")
+if not len(parts) >= 2 or not all(part.isdigit() for part in parts[:2]):
+    raise SystemExit("ERROR: cannot parse Docker Compose version.")
+version = tuple(int(p) for p in (parts + ["0"])[:3])
+if version < (2, 30, 0):
     raise SystemExit("ERROR: Compose 2.30+ required for raw env_file format.")
 PY
 }
