@@ -468,3 +468,23 @@ test('ranging sensor errors invalidate target coordinates and distance but keep 
   assert.equal(ok.payload_gimbals[0].measure_target_latitude,49.1);
   assert.equal(ok.payload_gimbals[0].measure_target_distance,20);
 });
+
+
+test('field-definition endpoint exposes both pinned and web-only extension provenance',()=>{
+  const m=fieldDefinitions(models[3][0]);
+  assert.equal(m.fields.length,199);
+  assert.match(m.source,/dji-sdk\/Cloud-API-Doc\/blob\/4ec6b0c7/);
+  assert.equal(m.extensionSource,
+    'https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html');
+  assert.equal(m.extensionSourceEdition,'2024-06-28');
+  assert.equal(m.extensionVerifiedAt,'2026-10-21');
+  assert.match(m.provenance,/generic|Generic|aircraft/i);
+  assert.equal(m.dynamicPayload.fields.length,9);
+  const rc=fieldDefinitions(models[5][0]);
+  assert.equal(rc.fields.length,54);
+  assert.equal(rc.sourceEdition,'2025-09-03');
+  assert.equal(rc.extensionSource,null);
+  const mavic=fieldDefinitions(models[0][0]);
+  assert.equal(mavic.extensionSource,null);
+  assert.equal(mavic.sourceEdition,null);
+});
