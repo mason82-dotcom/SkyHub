@@ -47,6 +47,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .device .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .device .metrics strong{display:block;margin-top:2px}
 .metric-provenance{margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.metric-age{display:block;margin-top:3px;font-size:10px;font-weight:400;color:var(--muted);line-height:1.35}
+.metric-age.is-stale{color:#efb77b}
 .state{font-size:12px;color:#84dfb8;white-space:nowrap}.state.stale{color:#efb77b}
 .notice{border:1px solid #655338;border-radius:8px;padding:8px 10px;color:#dfc69f;font-size:12px;line-height:1.4;margin-bottom:9px}
 #message{font-size:12px;color:var(--muted)}
@@ -167,6 +169,23 @@ const worstHms=d=>activeHms(d).reduce((worst,a)=>Number.isInteger(a.level)&&a.le
 const HMS_LEVEL=['Hinweis','Achtung','Warnung'];
 const tooltips=new Map();
 const positionFresh=d=>d.positionUnavailable!==true&&Number.isFinite(d.lastPositionAt)&&Date.now()>=d.lastPositionAt&&Date.now()-d.lastPositionAt<15000;
+// DJI source timestamps are preferred; if absent, the backend records arrival time.
+// Freshness is per field, not inferred from the last packet's overall OSD age.
+function metricFreshness(d,key){
+  const t=d.telemetry||{},at=d.telemetryFieldAt?.[key];
+  if(!Number.isFinite(t[key]))return 'nicht empfangen';
+  if(!Number.isFinite(at))return 'Zeitpunkt unbekannt';
+  if((key==='latitude'||key==='longitude')&&d.positionUnavailable===true)
+    return 'kein aktueller GPS-Fix · letzter Wert';
+  if(d.aircraftConnected===false)return 'veraltet · Fluggerät getrennt';
+  const age=Date.now()-at;
+  if(age<0)return 'Zeitpunkt ungeprüft';
+  const seconds=Math.floor(age/1000);
+  if(age>=15000)return 'veraltet · vor '+seconds+' s';
+  if(d.telemetryFieldTimeVerified?.[key]!==true)
+    return 'Zeit ungeprüft · vor '+seconds+' s';
+  return 'aktuell · vor '+seconds+' s';
+}
 const validPosition=d=>{
   const t=d.telemetry||{};
   return Number.isFinite(t.latitude)&&Number.isFinite(t.longitude)&&
@@ -265,12 +284,19 @@ function update(){
     head.append(name,state);card.append(head);
     const t=d.telemetry||{};
     const quick=document.createElement('dl');quick.className='quick';
-    const quickValues=[['Akku',show(t.battery,' %')],['Höhe rel.',show(t.altitude,' m')],
+    const quickValues=[['Akku',show(t.battery,' %'),'battery'],['Höhe rel.',show(t.altitude,' m'),'altitude'],
       ['Position',d.positionUnavailable===true?'DJI meldet (0/0)':!validPosition(d)?'fehlt':positionFresh(d)?(d.positionTimeVerified===false?'Zeit offen':'frisch'):
-        Number.isFinite(d.lastPositionAt)?Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt']];
-    for(const [label,value] of quickValues){
+        Number.isFinite(d.lastPositionAt)?Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt',null]];
+    for(const [label,value,field] of quickValues){
       const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
-      term.textContent=label;description.textContent=value;item.append(term,description);quick.append(item);
+      term.textContent=label;description.textContent=value;
+      if(field){
+        const age=document.createElement('small');age.className='metric-age';
+        age.textContent=metricFreshness(d,field);
+        if(age.textContent.startsWith('veraltet'))age.classList.add('is-stale');
+        description.append(age);
+      }
+      item.append(term,description);quick.append(item);
     }
     card.append(quick);
     const important=activeHms(d).filter(a=>Number.isInteger(a.level)&&a.level>=1)
@@ -293,36 +319,45 @@ function update(){
     const grid=document.createElement('div');grid.className='metrics';
     // RTK 0 is a reported device code, not proof that the RTK switch is enabled.
     // Optional DJI fields are only shown when the device actually reports them.
-    const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
-      ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites)],
-      ['RTK-Fix-Code',t.rtkFixState,show(t.rtkFixState)],
-      ['Positionsqualitätscode',t.positionQuality,show(t.positionQuality)],
-      ['Kurs / Heading',t.heading,show(t.heading,' °')],
-      ['Vertikalgeschwindigkeit',t.verticalSpeed,show(t.verticalSpeed,' m/s')],
-      ['Nickwinkel',t.attitudePitch,show(t.attitudePitch,' °')],
-      ['Rollwinkel',t.attitudeRoll,show(t.attitudeRoll,' °')],
-      ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
+    const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites),'gpsSatellites'],
+      ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites),'rtkSatellites'],
+      ['RTK-Fix-Code',t.rtkFixState,show(t.rtkFixState),'rtkFixState'],
+      ['Positionsqualitätscode',t.positionQuality,show(t.positionQuality),'positionQuality'],
+      ['Kurs / Heading',t.heading,show(t.heading,' °'),'heading'],
+      ['Vertikalgeschwindigkeit',t.verticalSpeed,show(t.verticalSpeed,' m/s'),'verticalSpeed'],
+      ['Nickwinkel',t.attitudePitch,show(t.attitudePitch,' °'),'attitudePitch'],
+      ['Rollwinkel',t.attitudeRoll,show(t.attitudeRoll,' °'),'attitudeRoll'],
+      ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m'),'homeDistance'],
       ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
-        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
-      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')],
-      ['SDR-Linkstatus',t.sdrLinkState,t.sdrLinkState===1?'Verbunden':'Getrennt'],
-      ['4G-Linkstatus',t.fourGLinkState,t.fourGLinkState===1?'Verbunden':'Getrennt'],
-      ['4G-Signalqualität',t.fourGLinkQuality,show(t.fourGLinkQuality,' / 5')],
-      ['Windgeschwindigkeit (DJI)',t.windSpeed,show(t.windSpeed,' m/s')],
-      ['Windrichtungssektor (DJI)',t.windDirectionCode,show(t.windDirectionCode,' / 8')],
-      ['Flugzeit gesamt',t.totalFlightTime,show(t.totalFlightTime,' s')],
-      ['Flugstrecke gesamt',t.totalFlightDistance,show(t.totalFlightDistance,' m')]]
-      .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
-    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],
-      [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude)],
-      [d.positionUnavailable===true?'Länge (letzter Fix)':'Länge',show(t.longitude)],...optional]){
-      const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
-      caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
+        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—','remainingFlightTime'],
+      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5'),'linkQuality'],
+      ['SDR-Linkstatus',t.sdrLinkState,t.sdrLinkState===1?'Verbunden':'Getrennt','sdrLinkState'],
+      ['4G-Linkstatus',t.fourGLinkState,t.fourGLinkState===1?'Verbunden':'Getrennt','fourGLinkState'],
+      ['4G-Signalqualität',t.fourGLinkQuality,show(t.fourGLinkQuality,' / 5'),'fourGLinkQuality'],
+      ['Windgeschwindigkeit (DJI)',t.windSpeed,show(t.windSpeed,' m/s'),'windSpeed'],
+      ['Windrichtungssektor (DJI)',t.windDirectionCode,show(t.windDirectionCode,' / 8'),'windDirectionCode'],
+      ['Flugzeit gesamt',t.totalFlightTime,show(t.totalFlightTime,' s'),'totalFlightTime'],
+      ['Flugstrecke gesamt',t.totalFlightDistance,show(t.totalFlightDistance,' m'),'totalFlightDistance']]
+      .filter(([,raw])=>Number.isFinite(raw)).map(([label,,value,field])=>[label,value,field]);
+    for(const [label,value,field] of [
+      ['Höhe relativ zum Start',show(t.altitude,' m'),'altitude'],
+      ['Höhe Ellipsoid',show(t.heightEllipsoid,' m'),'heightEllipsoid'],
+      ['Akku',show(t.battery,' %'),'battery'],
+      ['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s'),'horizontalSpeed'],
+      [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude),'latitude'],
+      [d.positionUnavailable===true?'Länge (letzter Fix)':'Länge',show(t.longitude),'longitude'],
+      ...optional]){
+      const cell=document.createElement('div'),caption=document.createElement('small'),
+        number=document.createElement('strong'),age=document.createElement('small');
+      caption.textContent=label;number.textContent=value;
+      age.className='metric-age';age.textContent=metricFreshness(d,field);
+      if(age.textContent.startsWith('veraltet'))age.classList.add('is-stale');
+      cell.append(caption,number,age);grid.append(cell);
     }
     details.append(grid);
     const provenance=document.createElement('p');provenance.className='metric-provenance';
     provenance.textContent='Letztes OSD: '+healthAge(d.lastTelemetryAt)+
-      ' · Einzelwerte können älter sein. RTK-Fix-Code ist kein Schalterstatus.';
+      ' · Zeitangaben gelten je Messwert. RTK-Fix-Code ist kein RTK-Ein/Aus-Schalter.';
     details.append(provenance);
     const meta=document.createElement('small');
     meta.className='meta';
@@ -672,6 +707,8 @@ el('clearSearch').addEventListener('click',()=>{
 el('deviceFilter').addEventListener('change',update);
 setInterval(()=>{if(socket)loadTracks({background:true});},30000);
 setInterval(loadHealth,30000);
+// Mark values stale even when the telemetry stream stops and no socket update arrives.
+setInterval(()=>{if(records.size)update();},10000);
 loadHealth();
 el('connect').addEventListener('click',()=>connect());
 el('connect').disabled=false;
