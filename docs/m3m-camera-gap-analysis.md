@@ -5,16 +5,18 @@ kein Backend-Update erforderlich · DJI Cloud API 1.18
 
 ## Hardwareevidenz
 
-Im echten Raspberry-Pi-Hardwaretest (RC Pro Enterprise + Mavic 3M)
-wurden nach kontrolliertem Backend-Update 10/10 OSD-Meldungen verarbeitet.
-M3M-Telemetrie war etwa 1 s alt. Der mit der Topologie eindeutig
-zugeordneten M3M wurden 64 von 150 M3M-Feldpfaden als frisch bestätigt,
-einschließlich sechs von sechs neuen, durch den Feldparser typisiert
-angenommenen Generic-Aircraft-Erweiterungspfaden.
+Der erste reale Raspberry-Pi-Hardwaretest nach der 150-Pfad-Erweiterung
+verarbeitete 10/10 OSD-Pakete und zeigte 64 von 150 Feldern frisch.
+Der **anschließende echte Pi-Folgetest** auf diesem Diagnose-Testbranch
+lieferte 964/964 akzeptierte OSD-Pakete (backendweit) mit ca. 2 Sekunden
+altem OSD beider realen Geräte und 66 von 150 auf M3M beobachteten
+Feldpfaden (63 frisch, 3 historisch), darunter erneut alle sechs
+typisiert angenommenen Generic-Aircraft-Erweiterungspfade.
 
-**Offen:** 76 auswertbare Pfade waren in der kurzen Sitzung noch nicht
-beobachtet; 8 sind absichtlich redigiert und 2 untypisierte Felder
-nicht inspectierbar. Die 76 sind keine 76 Fehler.
+**Offen im Folgetest:** 74 auswertbare Feldpfade nicht beobachtet,
+8 absichtlich redigiert und 2 untypisierte Felder nicht inspectierbar.
+Die 74 sind **keine 74 Gerätefehler**; die im Pi-Test bestätigte
+Aufteilung wird unten dokumentiert.
 
 ## Warum das gemeinsame Kameraschema mehr Felder enthält
 
@@ -75,6 +77,58 @@ MQTT-Kanal` samt sechs Summen; ältere Backends melden
 `NICHT PRUEFBAR` statt Nullwerten. Die reale Pi-Ausgabe wird
 separat als Hardwareevidenz ausgewertet, bevor Änderungen in
 Produktiv-`main` übernommen werden.
+
+## Reale Feldluecken-Klassifizierung: Pi-Test am 21.10.2026
+
+Der Benutzer hat den isolierten Hardware-Testbranch
+`fd1a5ce` auf dem Raspberry Pi getestet. **22 von 22 lokalen
+Node-Tests bestanden**, dazu OSD-Live-Telemetrie ohne Neustart
+oder Änderungen an den produktiven Containern.
+
+| Funktion/Kanal | Nicht beobachtete Feldpfade |
+|---|---:|
+| Thermische IR-Mess-/Zoomfelder | **20** |
+| Zoom/FOV der gemeinsamen M3-Kamerafamilie | **17** |
+| RGB-/Wide-Belichtung | **4** |
+| Sonstige Kamera-/Anzeigefunktionen | **1** |
+| Ereignisgesteuerte State-Felder | **27** |
+| Andere OSD-Felder | **5** |
+| **Summe** | **74** |
+
+Zusätzlich waren **14 vollständige Rootfelder** nicht beobachtet,
+43 Unterpfade trotz beobachteter Rootstruktur und 17 Unterpfade
+unter fehlenden Roots. Diese Rootstruktur-Gruppen betrachten
+dieselben 74 Pfade aus einer **anderen Perspektive**; ihre Zahlen
+dürfen nicht zusätzlich zu den obigen 74 addiert werden.
+
+**State-Befund:** Trotz 964 OSD-Paketen wurden auf dem Backend
+`mqttObservedChannelCounts.state=0` und 0 State/Status-Meldungen
+seit dem letzten Backendstart gemessen. Die Subscription
+`thing/product/+/state` ist im Quellcode vorhanden und wird
+zusammen mit insgesamt fünf Themen geprüft. Der beobachtete
+State-Zähler wird *vor* Parsing und Property-Filterung erhöht;
+ein fehlerhafter M3M-Sanitizer erklärt 0 Zustellungen also nicht.
+State ist ereignisgesteuert – anhaltendes Ausbleiben verlangt
+vor Schlussfolgerungen eine gesonderte MQTT-/Pilot2-Beobachtung.
+
+### Weitere ausschließlich lesende State-Kanalanalyse
+
+Der Hardwareprüfer zeigt jetzt zusätzlich drei Ebenen an:
+(1) `mqttObservedChannelCounts.state` (Topic empfangen, auch vor
+Filterung), (2) `mqttChannelCounts.state` (nach Guard/Registry
+angenommen), (3) modellbezogene RC-/M3M-State-Zähler aus der
+validierten MQTT-Shape-Erfassung, soweit verfügbar. Diese Ebenen
+sind voneinander zu unterscheiden und werden niemals aus einem
+`osd`-Zähler abgeleitet.
+
+Ein Gerät kann ein State-Paket erhalten, ohne darin einen
+bekannten typisierten Eigenschaftswert zu besitzen. Deswegen
+wird die individuelle Eigenschaftsannahme zusätzlich separat
+ausgewiesen. Die Auswertung zeigt **ausschließlich Zähler und
+fest definierte Statuswörter**, keine SN, GPS-Werte, Settings,
+Tokens oder unbearbeiteten Payload-Keys. Sie wird im Test-Worktree
+gegen das bereits laufende Pi-Backend ohne erneutes Deployment
+ausgeführt.
 
 ## Unveränderte Grenzen
 
