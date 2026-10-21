@@ -53,3 +53,30 @@ test('privacy-safe telemetry audit help does not contact Docker',()=>{
   assert.match(out.stdout,/Nur empfangene Feldnamen/);
   assert.doesNotMatch(out.stdout,/latitude.*[0-9]/);
 });
+
+test('all six DJI device families expose value-free documented field coverage',()=>{
+  const ids=[
+    ['Mavic 3E','0',77,0,144],['Mavic 3T','0',77,1,144],
+    ['Mavic 3M','0',77,2,144],['Matrice 4T','0',99,1,162],
+    ['DJI RC Pro Enterprise','2',144,0,48],
+    ['DJI RC Plus 2 Enterprise','2',174,0,48]
+  ];
+  for(const [name,domain,type,subType,total] of ids){
+    const [report]=summarizeTelemetryFields([{
+      model:{domain,type,subType},modelName:name,
+      role:domain==='2'?'gateway':'subdevice',
+      deviceCategory:domain==='2'?'controller':'aircraft',
+      deviceProperties:{
+        osd:{latitude:49.12345,battery:{capacity_percent:55}},
+        state:{firmware_version:'1.2.3'}
+      }
+    }]);
+    assert.equal(report.model,name);
+    assert.equal(report.documentedTotal,total);
+    assert.ok(report.observedDocumented.includes('osd:latitude'));
+    assert.ok(report.observedDocumented.includes('state:firmware_version'));
+    assert.ok(!JSON.stringify(report).includes('49.12345'));
+    assert.ok(!JSON.stringify(report).includes('1.2.3'));
+    assert.ok(!JSON.stringify(report).includes('55'));
+  }
+});
