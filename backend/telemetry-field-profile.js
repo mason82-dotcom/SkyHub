@@ -54,6 +54,14 @@ function summarizeTelemetryFields(devices){
     const accepted=d.deviceProperties&&typeof d.deviceProperties==='object'?d.deviceProperties:{};
     const observedDocumented=[],notObservedDocumented=[];
     const redactedDocumented=[],unsupportedDocumented=[];
+    // Dynamic DJI payload property keys are per-camera indices. Report
+    // only the bounded field *names*, never their keys or measurement data.
+    const dynamicNames=definitions?.dynamicPayload?.fields??[];
+    const payloadItems=Array.isArray(accepted.osd?.payload_gimbals)?
+      accepted.osd.payload_gimbals.slice(0,8):[];
+    const observedDynamic=dynamicNames.filter(name=>payloadItems.some(item=>
+      item&&typeof item==='object'&&Object.hasOwn(item,name)));
+    const notObservedDynamic=dynamicNames.filter(name=>!observedDynamic.includes(name));
     const pushByRoot=Object.create(null);
     for(const field of documented){
       if(!field.path.includes('.'))pushByRoot[field.path]=field.push;
@@ -81,7 +89,8 @@ function summarizeTelemetryFields(devices){
       documentedInspectableTotal:documented.length-redactedDocumented.length-unsupportedDocumented.length,
       documentedSource:definitions?.source??null,
       documentedConfidence:definitions?.confidence??null,
-      observedDocumented,notObservedDocumented,redactedDocumented,unsupportedDocumented
+      observedDocumented,notObservedDocumented,redactedDocumented,unsupportedDocumented,
+      dynamicDocumentedTotal:dynamicNames.length,observedDynamic,notObservedDynamic
     };
   });
 }
