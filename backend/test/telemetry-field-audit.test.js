@@ -57,7 +57,7 @@ test('privacy-safe telemetry audit help does not contact Docker',()=>{
 test('all six DJI device families expose value-free documented field coverage',()=>{
   const ids=[
     ['Mavic 3E','0',77,0,144],['Mavic 3T','0',77,1,144],
-    ['Mavic 3M','0',77,2,144],['Matrice 4T','0',99,1,168],
+    ['Mavic 3M','0',77,2,144],['Matrice 4T','0',99,1,179],
     ['DJI RC Pro Enterprise','2',144,0,48],
     ['DJI RC Plus 2 Enterprise','2',174,0,54]
   ];
