@@ -134,6 +134,32 @@ Bei vorläufiger M3M-OSD-Feldprüfung sind mindestens zu unterscheiden:
 einzelnes Unterfeld/Enum-Wert tatsächlich validiert und schließlich
 hardwarebestätigte Funktion. Jede Stufe benötigt gesonderte Evidenz.
 
+### Rein lesende Hardwareabnahme der sechs M3M-Erweiterungspfade
+
+Die Ergänzung `backend/hardware-validation.js` zeigt künftig getrennt
+vom modellbezogenen **Rootnamen-Nachweis** die tatsächlich vom neuen
+`mavic3m`-Parser angenommenen **typisierten** Feldpfade an. Erfasst
+werden die Roots `distance_limit_status`, `rth_altitude` und
+`rc_lost_action` sowie die drei Kinder von `distance_limit_status`.
+
+Der Bericht zeigt pro fest codiertem Pfad nur `FRISCH`, `HISTORISCH`
+oder `NICHT BEOBACHTET` sowie Summen. Keine Zahlenwerte von RTH-
+Höhen, Distanzbegrenzungen oder Flugsteuer-Konfigurationen werden
+ausgegeben. Der Status setzt einen durch den Parser übernommenen
+Wert **und** den zugehörigen gültigen per-Field-Zeitstempel voraus.
+
+Wird noch das vorherige Pi-Backend mit `propertyProfile.name=mavic3`
+verwendet, lautet der Status explizit `M3M-150-Feldparser: NICHT AKTIV`;
+die nicht geladene Profil-Erweiterung wird nicht als fehlende DJI-Hardware
+fehlinterpretiert. `NICHT BEOBACHTET` kann außerdem Abwesenheit,
+ungültigen Eingabedatentyp oder eine Sanitizer-Ablehnung bedeuten.
+Für die endgültige Gerätevalidierung sind diese Ursachen zu trennen;
+eine akzeptierte Eigenschaft ist insbesondere **keine Bestätigung**
+ihrer sicherheitsrelevanten Wirkung oder korrekten DJI-Firmwaresemantik.
+
+Auf dem Pi wird ausschließlich die vorhandene Diagnoseschnittstelle
+gelesen; das Prüfsystem publiziert keine MQTT-Nachricht, verändert
+keine Einstellung und löst keine Flug- oder Kameraaktion aus.
 ## Absichtlich nicht umgesetzt
 
 Keine DJI-`property/set`-Aufrufe, Flight Control, Missionsstarts, Kameraaktionen
