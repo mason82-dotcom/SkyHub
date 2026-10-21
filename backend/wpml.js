@@ -342,14 +342,14 @@ function validateDocuments(templateXml,waylinesXml){
   let template,execution;
   try{template=parseXml(templateXml);}catch(e){pathError(errors,'template.kml',e.message);}
   try{execution=parseXml(waylinesXml);}catch(e){pathError(errors,'waylines.wpml',e.message);}
-  if(!template||!execution)return {valid:false,errors,warnings,templates,waylines};
+  if(!template||!execution)return {valid:false,flightReady:false,validationScope:'offline-partial',errors,warnings,templates,waylines};
   const fieldCoverage=fieldInventoryCoverage([template,execution]);
   if(fieldCoverage.undocumentedFields.length)
     warnings.push('Input contains WPML elements absent from the reference inventory');
   const td=one(template,'Document'),wd=one(execution,'Document');
   if(!td)pathError(errors,'template.kml','Document missing');
   if(!wd)pathError(errors,'waylines.wpml','Document missing');
-  if(!td||!wd)return {valid:false,errors,warnings,templates,waylines};
+  if(!td||!wd)return {valid:false,flightReady:false,validationScope:'offline-partial',errors,warnings,templates,waylines};
   const meta=mission(td,'template.kml',errors);
   const execMeta=mission(wd,'waylines.wpml',errors);
   if(meta){
@@ -446,6 +446,6 @@ function validateDocuments(templateXml,waylinesXml){
   if(templates.some(t=>t.templateType==='mapping3d')&&waylines.length!==5)
     warnings.push('mapping3d commonly generates five executable waylines; verify with DJI Pilot 2');
   warnings.push('Static validation is not aircraft compatibility certification or flight authorization');
-  return {valid:errors.length===0,errors,warnings,aircraft:meta,templates,waylines,fieldCoverage};
+  return {valid:errors.length===0,flightReady:false,validationScope:'offline-partial',errors,warnings,aircraft:meta,templates,waylines,fieldCoverage};
 }
 module.exports={parseXml,validateDocuments,MODES};
