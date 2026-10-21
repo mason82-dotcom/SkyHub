@@ -102,10 +102,27 @@ function m3mExtensionAudit(device,now){
     unobserved:fields.filter(f=>f.status==='NICHT BEOBACHTET').length,
     fields};
 }
+// Catalog-filtered, value-free state path coverage. Snapshot values and
+// serials never enter the result. State event arrival is not the same as
+// a currently fresh property; do not erase historical observations.
+function statePathSummary(audit){
+  const stateOnly=key=>audit[key].filter(path=>path.startsWith('state:'));
+  const observed=stateOnly('observedDocumented');
+  const fresh=stateOnly('freshDocumented');
+  const stale=stateOnly('staleDocumented');
+  const missing=stateOnly('notObservedDocumented');
+  const redacted=stateOnly('redactedDocumented');
+  const unsupported=stateOnly('unsupportedDocumented');
+  return {documented:observed.length+missing.length+redacted.length+unsupported.length,
+    observed:observed.length,fresh:fresh.length,stale:stale.length,
+    notObserved:missing.length,redacted:redacted.length,unsupported:unsupported.length,
+    observedNames:observed.slice(0,48),
+    missingRootNames:missing.filter(path=>!path.slice(6).includes('.')).slice(0,48)};
+}
 function deviceSummary(device,now){
   if(!device)return {seen:false,modelConfirmed:false,role:null,topologyOnline:null,
     osdFresh:false,osdAgeSeconds:null,stateObserved:false,stateAgeSeconds:null,
-    propertyDiagnosticsAvailable:false,
+    propertyDiagnosticsAvailable:false,stateFields:null,
     propertyFields:{documented:0,inspectable:null,observed:null,fresh:null,stale:null,
       missing:null,redacted:null,untyped:null,observedNames:[],freshNames:[]}};
   const capable=hasPropertyDiagnostics(device);
@@ -123,6 +140,7 @@ function deviceSummary(device,now){
     stateObserved:stateAge!==null,
     stateAgeSeconds:stateAge,
     propertyDiagnosticsAvailable:capable,
+    stateFields:capable?statePathSummary(audit):null,
     aircraftConnected:device.aircraftConnected===true,
     positionFixFresh:device.positionFresh===true,
     fieldProfileConfidence:device.propertyProfile?.confidence??null,
@@ -339,6 +357,17 @@ function formatReport(r){
       (p.missingNestedUnderObservedRoot.slice(0,40).join(', ')||'keine'));
     lines.push('Nicht beobachtete Unterfelder ohne beobachtetes Root ('+
       p.missingNestedWithAbsentRoot.length+'); keine unabhängige Sensor-Nichtverfügbarkeit ableiten.');
+  }
+  lines.push('--- DJI State-Feldabdeckung je Geraet (nur validierte Feldnamen) ---');
+  for(const [name,device] of [['RC Pro',r.controller],['M3M',r.aircraft]]){
+    const sf=device?.stateFields;
+    if(!sf){lines.push(name+': NICHT PRUEFBAR');continue;}
+    lines.push(name+': dokumentiert='+sf.documented+' | beobachtet='+sf.observed+
+      ' | frisch='+sf.fresh+' | historisch='+sf.stale+
+      ' | nicht beobachtet='+sf.notObserved+' | redigiert='+sf.redacted+
+      ' | nicht typisiert='+sf.unsupported);
+    lines.push(name+' beobachtete State-Feldnamen: '+(sf.observedNames.join(', ')||'keine'));
+    lines.push(name+' fehlende State-Rootnamen: '+(sf.missingRootNames.join(', ')||'keine'));
   }
   const state=r.stateEvidence;
   lines.push('--- DJI State-Kanalanalyse (nur Zaehlwerte, keine Nutzdaten) ---');
