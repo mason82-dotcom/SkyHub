@@ -41,6 +41,28 @@ meldet dann `trackRecordingEnabled:false`. Erst explizites `true`
 und ein gezieltes Backend-Update aktivieren die Aufnahme wieder.
 Die lokale `.env` bleibt unverändert.
 
+## Erweiterte Live-Telemetrie
+
+Das Dashboard zeigt neben den bisherigen Basiswerten zusätzliche bereits
+durch den DJI-Parser unterstützte OSD-Felder an: Kurs, Vertikalgeschwindigkeit,
+Nick-/Rollwinkel und Positionsqualitätscode. Nicht gemeldete optionale Felder
+werden nicht als Messwerte ausgegeben; ein RTK-Fix-Code wird nicht mit dem
+RTK-Ein/Aus-Schalter gleichgesetzt. Der Geräte-Snapshot enthält zuletzt
+beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
+Die DJI-MQTT-Verbindung, die Positionsaufzeichnung und die Pilot-Kopplung
+bleiben unverändert.
+
+## Read-only-Feldinventar für Pilot 2
+
+Auf dem Pi lässt sich mit `node scripts/pi-telemetry-fields-check.js` die
+Verfügbarkeit von DJI-OSD-Feldern prüfen. Die Ausführung nutzt nur
+`docker compose exec` und den vorhandenen Backend-Zugriff auf die Geräte-API.
+Ausgegeben werden ausschließlich Feldnamen und boolesche GPS-/OSD-Zustände,
+**keine** Seriennummern, GPS-Koordinaten, Messwerte oder Zugangsdaten.
+Keine Datei wird geschrieben. Der Report zeigt Felder, die im aktuellen
+Geräte-Snapshot schon einmal beobachtet wurden; er ist kein Nachweis
+für Werte im letzten einzelnen OSD-Paket.
+
 ## Sicher prüfen – ohne Deployment
 
 ```bash

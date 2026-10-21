@@ -46,6 +46,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .device h3{margin:0;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
 .device .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .device .metrics strong{display:block;margin-top:2px}
+.metric-provenance{margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
 .state{font-size:12px;color:#84dfb8;white-space:nowrap}.state.stale{color:#efb77b}
 .notice{border:1px solid #655338;border-radius:8px;padding:8px 10px;color:#dfc69f;font-size:12px;line-height:1.4;margin-bottom:9px}
 #message{font-size:12px;color:var(--muted)}
@@ -290,11 +291,16 @@ function update(){
       if(details.open)expanded.add(d.sn);else expanded.delete(d.sn);
     });
     const grid=document.createElement('div');grid.className='metrics';
-    const rtk=['nicht gestartet','fixiert gerade','Fix','Fix fehlgeschlagen'];
+    // RTK 0 is a reported device code, not proof that the RTK switch is enabled.
     // Optional DJI fields are only shown when the device actually reports them.
     const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
       ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites)],
-      ['RTK-Status',t.rtkFixState,rtk[t.rtkFixState]||'—'],
+      ['RTK-Fix-Code',t.rtkFixState,show(t.rtkFixState)],
+      ['Positionsqualitätscode',t.positionQuality,show(t.positionQuality)],
+      ['Kurs / Heading',t.heading,show(t.heading,' °')],
+      ['Vertikalgeschwindigkeit',t.verticalSpeed,show(t.verticalSpeed,' m/s')],
+      ['Nickwinkel',t.attitudePitch,show(t.attitudePitch,' °')],
+      ['Rollwinkel',t.attitudeRoll,show(t.attitudeRoll,' °')],
       ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
       ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
         Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
@@ -307,6 +313,10 @@ function update(){
       caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
     }
     details.append(grid);
+    const provenance=document.createElement('p');provenance.className='metric-provenance';
+    provenance.textContent='Letztes OSD: '+healthAge(d.lastTelemetryAt)+
+      ' · Einzelwerte können älter sein. RTK-Fix-Code ist kein Schalterstatus.';
+    details.append(provenance);
     const meta=document.createElement('small');
     meta.className='meta';
     meta.textContent='Rolle: '+(d.role||'unbekannt')+(d.gatewaySn?' · Gateway '+d.gatewaySn:'')+
