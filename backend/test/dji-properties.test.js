@@ -126,7 +126,7 @@ test('Matrice 4T provisional aircraft schema exposes six sourced read-only candi
   },'osd'),'osd',model);
   assert.equal(invalid.distance_limit_status.distance_limit,undefined);
   assert.equal(invalid.rth_altitude,undefined);
-  // Unknown enum values remain numeric under the forward-compatible parser,
-  // but do not authorize any control path.
-  assert.equal(invalid.rc_lost_action,65535);
+  // Unknown enum codes and DJI 65535 sentinels are rejected, not treated
+  // as valid RC-loss actions.
+  assert.equal(invalid.rc_lost_action,undefined);
 });
