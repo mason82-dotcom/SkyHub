@@ -47,6 +47,10 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .device .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .device .metrics strong{display:block;margin-top:2px}
 .metric-provenance{margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.field-age{display:block;color:var(--muted);font-size:10px;font-weight:400;margin-top:3px;line-height:1.3}
+.field-age.current{color:#84dfb8}
+.field-age.stale,.field-age.unverified,.field-age.unavailable{color:#efb77b}
+.quick dd .field-age{font-weight:400}
 .state{font-size:12px;color:#84dfb8;white-space:nowrap}.state.stale{color:#efb77b}
 .notice{border:1px solid #655338;border-radius:8px;padding:8px 10px;color:#dfc69f;font-size:12px;line-height:1.4;margin-bottom:9px}
 #message{font-size:12px;color:var(--muted)}
@@ -142,10 +146,31 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/telemetry-freshness.js"></script>
 <script>
 (function(){
 'use strict';
 const el=id=>document.getElementById(id);
+const fieldFreshness=window.SkyHubTelemetryFreshness;
+function fieldAge(element,d,key){
+  const status=fieldFreshness.evaluateField(d,key);
+  element.dataset.field=key;
+  element.className='field-age '+status.kind;
+  element.textContent=status.text;
+}
+function refreshFieldAges(){
+  const root=el('devices');
+  for(const node of root.querySelectorAll('.field-age[data-field]')){
+    const card=node.closest('.device');
+    const d=card&&records.get(card.dataset.deviceSn);
+    if(d)fieldAge(node,d,node.dataset.field);
+  }
+  for(const node of root.querySelectorAll('dd[data-quick-position]')){
+    const card=node.closest('.device');
+    const d=card&&records.get(card.dataset.deviceSn);
+    if(d)node.textContent=positionLabel(d);
+  }
+}
 const map=window.L?L.map('map').setView([51.1657,10.4515],6):null;
 // OSM's tile policy requires a Referer; the page itself stays on no-referrer.
 if(map)L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -173,6 +198,11 @@ const validPosition=d=>{
     Math.abs(t.latitude)<=90&&Math.abs(t.longitude)<=180&&
     (t.latitude!==0||t.longitude!==0)&&Number.isFinite(d.lastPositionAt);
 };
+const positionLabel=d=>d.positionUnavailable===true?'DJI meldet (0/0)':
+  !validPosition(d)?'fehlt':positionFresh(d)?
+    (d.positionTimeVerified===false?'Zeit offen':'frisch'):
+    Number.isFinite(d.lastPositionAt)?
+      Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt';
 const searchText=d=>[d.modelName,d.sn,d.gatewaySn,d.role].filter(Boolean).join(' ').toLocaleLowerCase('de');
 function visibleDevice(d){
   const query=el('deviceSearch').value.trim().toLocaleLowerCase('de');
@@ -265,12 +295,16 @@ function update(){
     head.append(name,state);card.append(head);
     const t=d.telemetry||{};
     const quick=document.createElement('dl');quick.className='quick';
-    const quickValues=[['Akku',show(t.battery,' %')],['Höhe rel.',show(t.altitude,' m')],
-      ['Position',d.positionUnavailable===true?'DJI meldet (0/0)':!validPosition(d)?'fehlt':positionFresh(d)?(d.positionTimeVerified===false?'Zeit offen':'frisch'):
-        Number.isFinite(d.lastPositionAt)?Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt']];
-    for(const [label,value] of quickValues){
+    const quickValues=[['Akku',show(t.battery,' %'),'battery'],
+      ['Höhe rel.',show(t.altitude,' m'),'altitude'],
+      ['Position',positionLabel(d),null]];
+    for(const [label,value,field] of quickValues){
       const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
-      term.textContent=label;description.textContent=value;item.append(term,description);quick.append(item);
+      term.textContent=label;description.textContent=value;
+      if(field){
+        const age=document.createElement('small');fieldAge(age,d,field);description.append(age);
+      }else description.dataset.quickPosition='true';
+      item.append(term,description);quick.append(item);
     }
     card.append(quick);
     const important=activeHms(d).filter(a=>Number.isInteger(a.level)&&a.level>=1)
@@ -293,36 +327,47 @@ function update(){
     const grid=document.createElement('div');grid.className='metrics';
     // RTK 0 is a reported device code, not proof that the RTK switch is enabled.
     // Optional DJI fields are only shown when the device actually reports them.
-    const optional=[['GNSS-Satelliten',t.gpsSatellites,show(t.gpsSatellites)],
-      ['RTK-Satelliten',t.rtkSatellites,show(t.rtkSatellites)],
-      ['RTK-Fix-Code',t.rtkFixState,show(t.rtkFixState)],
-      ['Positionsqualitätscode',t.positionQuality,show(t.positionQuality)],
-      ['Kurs / Heading',t.heading,show(t.heading,' °')],
-      ['Vertikalgeschwindigkeit',t.verticalSpeed,show(t.verticalSpeed,' m/s')],
-      ['Nickwinkel',t.attitudePitch,show(t.attitudePitch,' °')],
-      ['Rollwinkel',t.attitudeRoll,show(t.attitudeRoll,' °')],
-      ['Home-Distanz',t.homeDistance,show(t.homeDistance,' m')],
-      ['Restflugzeit',t.remainingFlightTime,Number.isInteger(t.remainingFlightTime)?
-        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
-      ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')],
-      ['SDR-Linkstatus',t.sdrLinkState,t.sdrLinkState===1?'Verbunden':'Getrennt'],
-      ['4G-Linkstatus',t.fourGLinkState,t.fourGLinkState===1?'Verbunden':'Getrennt'],
-      ['4G-Signalqualität',t.fourGLinkQuality,show(t.fourGLinkQuality,' / 5')],
-      ['Windgeschwindigkeit (DJI)',t.windSpeed,show(t.windSpeed,' m/s')],
-      ['Windrichtungssektor (DJI)',t.windDirectionCode,show(t.windDirectionCode,' / 8')],
-      ['Flugzeit gesamt',t.totalFlightTime,show(t.totalFlightTime,' s')],
-      ['Flugstrecke gesamt',t.totalFlightDistance,show(t.totalFlightDistance,' m')]]
-      .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
-    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],
-      [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude)],
-      [d.positionUnavailable===true?'Länge (letzter Fix)':'Länge',show(t.longitude)],...optional]){
+    const maybe=(label,field,formatted)=>Number.isFinite(t[field])?[label,formatted,field]:null;
+    const optional=[
+      maybe('GNSS-Satelliten','gpsSatellites',show(t.gpsSatellites)),
+      maybe('RTK-Satelliten','rtkSatellites',show(t.rtkSatellites)),
+      maybe('RTK-Fix-Code','rtkFixState',show(t.rtkFixState)),
+      maybe('Positionsqualitätscode','positionQuality',show(t.positionQuality)),
+      maybe('Kurs / Heading','heading',show(t.heading,' °')),
+      maybe('Vertikalgeschwindigkeit','verticalSpeed',show(t.verticalSpeed,' m/s')),
+      maybe('Nickwinkel','attitudePitch',show(t.attitudePitch,' °')),
+      maybe('Rollwinkel','attitudeRoll',show(t.attitudeRoll,' °')),
+      maybe('Home-Distanz','homeDistance',show(t.homeDistance,' m')),
+      maybe('Restflugzeit','remainingFlightTime',Number.isInteger(t.remainingFlightTime)?
+        Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'),
+      maybe('Funkqualität (SDR)','linkQuality',show(t.linkQuality,' / 5')),
+      maybe('SDR-Linkstatus','sdrLinkState',t.sdrLinkState===1?'Verbunden':'Getrennt'),
+      maybe('4G-Linkstatus','fourGLinkState',t.fourGLinkState===1?'Verbunden':'Getrennt'),
+      maybe('4G-Signalqualität','fourGLinkQuality',show(t.fourGLinkQuality,' / 5')),
+      maybe('Windgeschwindigkeit (DJI)','windSpeed',show(t.windSpeed,' m/s')),
+      maybe('Windrichtungssektor (DJI)','windDirectionCode',show(t.windDirectionCode,' / 8')),
+      maybe('Flugzeit gesamt','totalFlightTime',show(t.totalFlightTime,' s')),
+      maybe('Flugstrecke gesamt','totalFlightDistance',show(t.totalFlightDistance,' m'))
+    ].filter(Boolean);
+    const metrics=[
+      ['Höhe relativ zum Start',show(t.altitude,' m'),'altitude'],
+      ['Höhe Ellipsoid',show(t.heightEllipsoid,' m'),'heightEllipsoid'],
+      ['Akku',show(t.battery,' %'),'battery'],
+      ['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s'),'horizontalSpeed'],
+      [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude),'latitude'],
+      [d.positionUnavailable===true?'Länge (letzter Fix)':'Länge',show(t.longitude),'longitude'],
+      ...optional
+    ];
+    for(const [key,value,field] of metrics){
       const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
-      caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
+      caption.textContent=key;number.textContent=value;
+      const age=document.createElement('small');fieldAge(age,d,field);
+      cell.append(caption,number,age);grid.append(cell);
     }
     details.append(grid);
     const provenance=document.createElement('p');provenance.className='metric-provenance';
     provenance.textContent='Letztes OSD: '+healthAge(d.lastTelemetryAt)+
-      ' · Einzelwerte können älter sein. RTK-Fix-Code ist kein Schalterstatus.';
+      ' · Einzelwert-Alter und Zeitprüfung stehen am jeweiligen Messwert. RTK-Fix-Code ist kein Schalterstatus.';
     details.append(provenance);
     const meta=document.createElement('small');
     meta.className='meta';
@@ -672,6 +717,8 @@ el('clearSearch').addEventListener('click',()=>{
 el('deviceFilter').addEventListener('change',update);
 setInterval(()=>{if(socket)loadTracks({background:true});},30000);
 setInterval(loadHealth,30000);
+// Age only existing labels; never rebuild a card, move focus or change stored telemetry.
+setInterval(()=>{if(records.size)refreshFieldAges();},5000);
 loadHealth();
 el('connect').addEventListener('click',()=>connect());
 el('connect').disabled=false;

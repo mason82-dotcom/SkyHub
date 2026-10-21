@@ -56,6 +56,20 @@ beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
 Die DJI-MQTT-Verbindung, die Positionsaufzeichnung und die Pilot-Kopplung
 bleiben unverändert.
 
+### Feldgenaue Aktualität ohne Speicherung
+
+SkyHub hält zu jedem empfangenen DJI-OSD-Feld `telemetryFieldAt` und
+`telemetryFieldTimeVerified` ausschließlich im RAM. Diese Metadaten
+erscheinen in der bestehenden authentifizierten Geräte-API und ermöglichen
+dem Dashboard, Einzelwerte als aktuell (weniger als 15 Sekunden),
+veraltet, nicht empfangen oder „Zeit ungeprüft“ zu markieren. `(0,0)`
+und unvollständige Koordinaten aktualisieren die Zeiten früherer gültiger
+GPS-Fixes nicht. Ein anderes, frisch empfangenes OSD-Feld macht einen
+alten Messwert nicht frisch. Die automatische Aktualisierung der Feld-
+statuslabels baut die Gerätekarten nicht neu auf. Es werden keine
+neuen PostGIS-Daten geschrieben und
+`SKYHUB_TRACK_RECORDING_ENABLED=false` bleibt unverändert.
+
 ## Read-only-Feldinventar für Pilot 2
 
 Auf dem Pi lässt sich mit `node scripts/pi-telemetry-fields-check.js` die

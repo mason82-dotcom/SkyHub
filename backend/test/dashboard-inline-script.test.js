@@ -19,3 +19,11 @@ test('inline checker ignores external scripts and rejects malformed JavaScript',
 test('inline checker rejects broken script markup',()=>{
   assert.throws(()=>checkInlineScripts('<script>let active=true;'),/unmatched script tag/);
 });
+
+test('dashboard references local field freshness helper before inline JS',()=>{
+  const filename=path.resolve(__dirname,'../../frontend/public/index.html');
+  const html=fs.readFileSync(filename,'utf8');
+  assert.ok(html.indexOf('<script src="/telemetry-freshness.js"></script>')>0);
+  assert.ok(html.indexOf('<script src="/telemetry-freshness.js"></script>')<
+    html.indexOf('<script>\\n(function(){'));
+});
