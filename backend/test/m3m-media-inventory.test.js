@@ -176,3 +176,54 @@ test('M3M unknown filename cross-tab stays consistent with format totals for all
   ]);
   assert.doesNotMatch(JSON.stringify(report),/DJI_UNKNOWN|DJI_OTHER|OTHER.JPG|PRIVATE/);
 });
+
+
+test('unknown TIFF naming hints classify six synthetic candidates without revealing stems',()=>{
+  const names=[
+    'PRIVATE_MS_G.TIF',
+    'PRIVATE_MS_RE.TIFF',
+    'SECRET_NDVI.TIF',
+    'PRIVATE_ORTHOMOSAIC.TIF',
+    'PRIVATE_DSM.TIF',
+    'PERSONAL_ABC123.TIF',
+    'DJI_20261021190530_0001_MS_G.TIF'
+  ];
+  const report=inventoryMediaNames(names);
+  assert.equal(report.unrecognizedFormats.TIFF,6);
+  assert.equal(report.classified,1);
+  assert.deepEqual(report.unrecognizedTiffNameHints,{
+    spectralBandSuffix:{G:1,R:0,RE:1,NIR:0},
+    vegetationIndex:1,
+    mosaicOrElevation:2,
+    other:1
+  });
+  assert.equal(
+    Object.values(report.unrecognizedTiffNameHints.spectralBandSuffix)
+      .reduce((sum,x)=>sum+x,0)+
+      report.unrecognizedTiffNameHints.vegetationIndex+
+      report.unrecognizedTiffNameHints.mosaicOrElevation+
+      report.unrecognizedTiffNameHints.other,
+    report.unrecognizedFormats.TIFF);
+  assert.doesNotMatch(JSON.stringify(report),
+    /PRIVATE|SECRET|PERSONAL|20261021190530|ABC123/);
+  for(const flag of ['radiometricCalibrationVerified','bandCoregistrationVerified',
+    'reflectanceReady','ndviReady','ndreReady'])
+    assert.equal(report[flag],false);
+});
+
+test('TIFF naming hints use bounded complete tokens and do not infer NIR from arbitrary text',()=>{
+  const report=inventoryMediaNames([
+    'SERIAL_NIRPOWER.TIF',
+    'GROWING.TIF',
+    'MOSAICSHOTS.TIF',
+    'SECRET_MS_NIR_extra.TIF',
+    'SECRET_MS_NIR.TIF',
+    'SECRET_NDRE_report.TIFF',
+    'SECRET_DEM.TIF'
+  ]);
+  assert.equal(report.unrecognizedTiffNameHints.other,4);
+  assert.equal(report.unrecognizedTiffNameHints.spectralBandSuffix.NIR,1);
+  assert.equal(report.unrecognizedTiffNameHints.vegetationIndex,1);
+  assert.equal(report.unrecognizedTiffNameHints.mosaicOrElevation,1);
+  assert.doesNotMatch(JSON.stringify(report),/SERIAL|GROWING|SHOTS|SECRET/);
+});
