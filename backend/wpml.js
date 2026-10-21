@@ -22,7 +22,7 @@ const MODES={
   actionTriggerType:['reachPoint','betweenAdjacentPoints','multipleTiming','multipleDistance'],
   actionActuatorFunc:['takePhoto','startRecord','stopRecord','focus','zoom',
     'customDirName','gimbalRotate','rotateYaw','hover','gimbalEvenlyRotate',
-    'accurateShoot','orientedShoot','panoShot','searchlight'],
+    'accurateShoot','orientedShoot','panoShot','searchlight','recordPointCloud'],
   actionGroupMode:['sequence'],
   coordinateMode:['WGS84']
 };
@@ -242,7 +242,7 @@ function checkGroup(group,path,errors){
     const id=fieldNumber(action,'actionId',0,65535,p,errors,true,true);
     if(id!==null){if(used.has(id))pathError(errors,p,'duplicate action ID');used.add(id);}
     const type=fieldEnum(action,'actionActuatorFunc',p,errors,true);
-    if(['zoom','takePhoto','startRecord','gimbalRotate','orientedShoot'].includes(type)&&
+    if(['zoom','takePhoto','startRecord','gimbalRotate','orientedShoot','recordPointCloud'].includes(type)&&
       !one(action,'wpml:actionActuatorFuncParam'))
       pathError(errors,p+'/actionActuatorFuncParam','action parameter missing');
     checkActionParams(one(action,'wpml:actionActuatorFuncParam'),type,p,errors);
@@ -252,9 +252,19 @@ function checkActionParams(param,type,path,errors){
   if(!param)return;
   const p=path+'/actionActuatorFuncParam';
   if(['takePhoto','startRecord','stopRecord','focus','zoom','customDirName','gimbalRotate',
-    'gimbalEvenlyRotate','searchlight'].includes(type))
+    'gimbalEvenlyRotate','searchlight','recordPointCloud'].includes(type))
     fieldNumber(param,'payloadPositionIndex',0,7,p,errors,true,true);
   if(type==='zoom')fieldNumber(param,'focalLength',0.000001,10000,p,errors,true);
+  if(type==='recordPointCloud'){
+    const operation=value(param,'recordPointCloudOperate');
+    if(!['startRecord','pauseRecord','resumeRecord','stopRecord'].includes(operation))
+      pathError(errors,p+'/recordPointCloudOperate','unsupported or missing point-cloud operation');
+  }
+  if(type==='focus'){
+    ['focusX','focusY','focusRegionWidth','focusRegionHeight'].forEach(name=>
+      fieldNumber(param,name,0,1,p,errors));
+    optionalBool(param,'isInfiniteFocus',p,errors);
+  }
   if(type==='focus')optionalBool(param,'isPointFocus',p,errors);
   if(type==='hover')fieldNumber(param,'hoverTime',0.000001,3600,p,errors,true);
   if(type==='rotateYaw')fieldNumber(param,'aircraftHeading',-180,180,p,errors,true);
