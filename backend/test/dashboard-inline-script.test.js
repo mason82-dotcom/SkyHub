@@ -11,6 +11,15 @@ test('dashboard inline JavaScript parses without executing the page',()=>{
   assert.equal(checkInlineScripts(html,{filename}),1);
 });
 
+test('dashboard has explicit per-field freshness and unavailable-GPS labels',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  assert.match(html,/function metricFreshness\(d,key\)/);
+  assert.match(html,/telemetryFieldAt/);
+  assert.match(html,/telemetryFieldTimeVerified/);
+  assert.match(html,/kein aktueller GPS-Fix/);
+  assert.match(html,/veraltet · vor/);
+  assert.match(html,/Zeit ungeprüft/);
+});
 test('inline checker ignores external scripts and rejects malformed JavaScript',()=>{
   const html='<script src="/app.js"></script><script>const = ;</script>';
   assert.throws(()=>checkInlineScripts(html),/inline script 1/);
