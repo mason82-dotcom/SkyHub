@@ -56,6 +56,8 @@ jobs:
         run: docker compose --env-file .env.example config --quiet
       - name: Validate explicit ARM64 PostGIS overlay
         run: docker compose -f docker-compose.yml -f docker-compose.arm64.yml --env-file .env.example config --quiet
+      - name: Validate opt-in shared MinIO overlay (configuration only)
+        run: docker compose -f docker-compose.yml -f docker-compose.storage.yml --profile media --env-file .env.example config --quiet
       - name: Assert Pi MQTT endpoint on port 1884
         run: |
           node -e 'const {execFileSync}=require("node:child_process"); const x=JSON.parse(execFileSync("docker",["compose","--env-file",".env.example","config","--format","json"],{encoding:"utf8"})); const b=x.services.backend.environment; if(b.MQTT_BROKER_URL!=="mqtt://host.docker.internal:1884" || b.SKYHUB_MQTT_REQUIRED_PORT!=="1884") process.exit(1);'
