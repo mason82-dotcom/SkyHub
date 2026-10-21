@@ -223,3 +223,48 @@ Weiterhin sind alle Kalibrierungs-, Bandregistrierungs- und
 NDVI/NDRE-Freigabeflags \`false\`. Ein Bilddownload,
 Umbenennen oder Dateiinhaltscheck wurde nicht durchgeführt.
 
+
+
+## Nachtest: Unbekannte TIFF-Dateien getrennt nach DJI-Präfix (21.10.2026)
+
+Der Nutzer hat 18/18 lokale Node-Tests auf dem Pi bestanden und den
+vollständig paginierten, automatisch ausgewählten Prefix erneut analysiert:
+
+- 424 direkte Objekte; 421 unbekannte Dateinamen.
+- Davon 398 unbekannte JPEG, 6 unbekannte TIFF und 17 KMZ.
+- Die **37 unbekannten DJI_-präfigierten Bilder sind ausschließlich JPEG**.
+  Unter den **sechs unbekannten TIFF-Dateien beginnen null mit DJI_**.
+- Die 361 übrigen unbekannten JPEGs und sechs TIFFs tragen kein
+  DJI_-Präfix. Drei ausdrücklich erkannte M3M-Dateien (RGB, R, NIR)
+  ändern diese Einteilung nicht.
+- In dieser Namensanalyse: 0 vollständige Vierband-/Fünfband-Sets.
+  Das ist keine Aussage über Sensorwerte oder vollständige
+  M3M-Bildbestände in anderen S3-Prefixen.
+
+### Zusätzliche streng begrenzte TIFF-Namenshinweise
+
+Die Diagnose zeigt künftig ausschließlich die **Anzahl**
+von *nicht bereits erkannten* TIFF-Namen in folgenden
+**gegenseitig ausschließenden** Kategorien:
+
+| Fixer Ergebnisname | Sicheres Interpretationsniveau |
+|---|---|
+| spectralBandSuffix.G/R/RE/NIR | Name endet mit \`_MS_G/R/RE/NIR.tif(f)\` oder \`-MS-...\` |
+| vegetationIndex | Name enthält den abgegrenzten Marker NDVI/NDRE/GNDVI/OSAVI/SAVI/EVI |
+| mosaicOrElevation | Name enthält abgegrenzten ORTHO/MOSAIC/ORTHOMOSAIC/DSM/DTM/DEM-Marker |
+| other | Kein unterstützter Marker |
+
+Der Bericht erzeugt \`unrecognizedTiffNameHints\`. Die
+Kategorien summieren sich immer auf
+\`unrecognizedFormats.TIFF\`; sie ersetzen weder
+Datei-Inhaltsprüfung noch Georeferenzierung oder
+radiometrische Validierung. Insbesondere ist die
+Namensendung \`_MS_NIR\` **kein Nachweis eines funktionierenden
+NIR-Bilds**. Auch für andere Präfixe (nicht DJI_) wird nie
+automatisch M3M-Herkunft behauptet.
+
+Die Pi-Abnahme dieser neuen TIFF-Namenshinweise steht noch aus.
+Dafür nach Fast-forward von PR #24 denselben bestehenden
+\`--auto-first-page\`-Test wiederholen. Es werden nur
+aggregierte Zahlen ausgegeben; der Speicherinhalt,
+die Backend-Container und die DJI-Verbindung bleiben unangetastet.
