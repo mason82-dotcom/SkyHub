@@ -41,6 +41,9 @@ ist für einen zukünftigen exakten gerätespezifischen Import relevant.
 - Zahlen, Integer, Boolesche Werte und wenige strikt validierte kurze Geräte- beziehungsweise Firmwarekennungen werden angenommen. Andere Texte, etwa IMEI, EID, Akku-SN, Geräte-SN, Streaming-URL, freie Zeichenketten und `control_source`, bleiben **absichtlich redigiert**.
 - Array-Größe ist auf acht Elemente beschränkt; dynamische und unbekannte Eigenschaften werden verworfen. Keine MQTT-Rohpayloads oder Gerätesecrets gelangen in Socket.IO, API, Redis oder Logs.
 - `backend/registry.js` stellt `deviceProperties.osd` und `deviceProperties.state`, jeweils mit `propertyObservedAt`, bereit. Der originale 24-Werte-Telemetrieadapter bleibt unverändert.
+- Die für [DJI RC Plus 2 Enterprise dokumentierten](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html) Streamfelder `video_index`, `video_type` und `switchable_video_types` werden nun als validierte Kurzindizes und feste Kameratyp-Bezeichnungen verarbeitet. `video_id` und `sn` bleiben aus Datenschutzgründen redigiert.
+- Für `latitude`/`longitude` gilt WGS84 (-90..90 und -180..180). Die maschinenlesbaren älteren DJI-Tabellen verwenden teilweise ungeeignete Float-Mindestwerte (`-1.4E-45`); diese dürfen **gültige westliche/südliche Koordinaten nicht verhindern**. DJI-Nullposition (`0,0`) und partielle Koordinatenpaare überschreiben kein zuvor geprüftes Positionspaar, auch nicht im Raw-Properties-Snapshot.
+- Ein Aircraft-OSD **ohne `mode_code`** markiert ein zuvor getrenntes Fluggerät nicht automatisch wieder als verbunden. Erst eine neue explizite Zustandsmeldung darf die Replay-Sperre aufheben.
 - Meldungen mit `mode_code=14` (Fluggerät nicht verbunden) dürfen weiterhin keinen angeblich frischen OSD-Wert erzeugen.
 - Die registrierte Topologie entscheidet das verwendete Modellprofil; zuvor empfangene oder unbekannte Daten werden nicht blind einem Gerätetyp zugeordnet.
 - `GET /api/diagnostics/dji-fields?model=0:77:2` liefert die Wert-freien Definitionen nach regulärer View-Token-Authentifizierung. Dieselbe API unterstützt alle sechs genannten DJI-Typen.
@@ -67,6 +70,7 @@ node scripts/pi-telemetry-fields-check.js
 ```
 
 Die Testfälle validieren Kennungen, Datenkanäle, Array-Grenzen,
+Streamtyp-Whitelist, WGS84-Negativkoordinaten, Nullposition/Teilkoordinaten,
 Datenschutz und den Replay-Schutz. Sie ersetzen weder den Vergleich mit
 den noch zu importierenden neueren 1.18-Geräteschemas noch reale Pilot-2-/
 M4T-/RC-Plus-2-Hardwaretests. Ein GitHub-PR ist kein Pi-Deployment.
