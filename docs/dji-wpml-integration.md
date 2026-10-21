@@ -341,6 +341,19 @@ Missionsdispatch-Route oder DJI-MQTT-Kommandos wurden aktiviert.
 
 Tests: `backend/test/wpml-interval-actions.test.js`.
 
+Beispiel eines **synthetischen, nicht hardwaregeprüften**
+Distanzaufnahme-Entwurfs:
+
+    node scripts/wpml-plan.js docs/examples/wpml-interval-photo-plan.json /tmp/interval-photo-draft.kmz
+    node scripts/wpml-inspect.js /tmp/interval-photo-draft.kmz
+
+Die erste Zeile schreibt die KMZ-Datei nur, wenn der lokale
+strukturell/semantische Validator keine Fehler findet. Ein
+ausdrücklich unbekanntes Kamera-Mindestintervall wird nicht automatisch
+als verifiziert betrachtet. Der Dateiexport ersetzt **keinen**
+Import- und Verhaltensversuch mit DJI Pilot 2/RC Pro Enterprise.
+
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
