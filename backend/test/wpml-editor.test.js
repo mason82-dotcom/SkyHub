@@ -98,3 +98,23 @@ test('standalone editor is present and performs no DJI requests or server-side K
   assert.doesNotMatch(app,/\bfetch\s*\(|XMLHttpRequest|WebSocket|mqtt|\/api\/mission\/create/i);
   assert.doesNotMatch(html,/action="\/api\/mission\/create"/);
 });
+
+test('offline JSON CLI writes a valid KMZ without contacting any live service',()=>{
+  const fs=require('node:fs');
+  const os=require('node:os');
+  const {spawnSync}=require('node:child_process');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'skyhub-wpml-plan-'));
+  try{
+    const input=path.join(dir,'route.json'),output=path.join(dir,'route.kmz');
+    fs.writeFileSync(input,JSON.stringify(plan()));
+    const cmd=path.join(__dirname,'../../scripts/wpml-plan.js');
+    const result=spawnSync(process.execPath,[cmd,input,output],{encoding:'utf8',timeout:15000});
+    assert.equal(result.status,0,result.stderr);
+    assert.equal(inspectKmz(fs.readFileSync(output)).valid,true);
+    assert.equal(inspectKmz(fs.readFileSync(output)).flightReady,false);
+    const duplicate=spawnSync(process.execPath,[cmd,input,output],{encoding:'utf8',timeout:15000});
+    assert.equal(duplicate.status,2);
+    assert.match(duplicate.stderr,/generation rejected/);
+    assert.doesNotMatch(duplicate.stderr,/49.124|8.612|route\.json/);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
