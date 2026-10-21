@@ -142,3 +142,44 @@ test('partial DJI property interface is not treated as a complete field audit',(
   assert.equal(report.controller.propertyDiagnosticsAvailable,true);
   assert.ok(report.stages.some(x=>x.step.includes('M3M State-Daten')&&x.status==='NICHT PRÜFBAR'));
 });
+
+
+test('missing DJI root fields and absent nested paths are counted separately',()=>{
+  const report=evaluateHardwareSession([rc,air],health,shapes,now);
+  for(const d of [report.controller,report.aircraft]){
+    const p=d.propertyFields;
+    assert.equal(p.missingRoots.length+p.missingNestedUnderObservedRoot.length+
+      p.missingNestedWithAbsentRoot.length,p.missing);
+  }
+  assert.ok(report.aircraft.propertyFields.missingNestedUnderObservedRoot
+    .includes('osd:cameras.screen_split_enable'));
+  assert.ok(report.aircraft.propertyFields.missingRoots.includes('osd:wind_speed'));
+  // The root was observed, so its missing child is not an absent root.
+  assert.ok(!report.aircraft.propertyFields.missingRoots.includes('osd:cameras'));
+  assert.match(formatReport(report),/Nicht beobachtete Rootfelder/);
+  assert.doesNotMatch(formatReport(report),/PRIVATE_RC_SERIAL|PRIVATE_AIR_SERIAL/);
+});
+
+test('backend-wide generic aircraft property extensions are not misattributed to M3M',()=>{
+  const found=[
+    {channel:'osd',dataKeys:['distance_limit_status','rth_altitude','rc_lost_action']},
+    {channel:'state',dataKeys:['payloads','wpmz_version']}
+  ];
+  const report=evaluateHardwareSession([rc,air],health,found,now);
+  assert.deepEqual(report.transport.genericAircraftCandidatesInBackendShapes,
+    ['distance_limit_status','rth_altitude','rc_lost_action','payloads','wpmz_version']);
+  assert.ok(report.notes.some(x=>x.includes('NICHT der M3M zugeschrieben')));
+  assert.match(formatReport(report),/KEIN M3M-Nachweis/);
+  assert.equal(report.aircraft.propertyFields.documented,144);
+  assert.ok(!report.aircraft.propertyFields.observedNames.includes('state:payloads'));
+});
+
+test('older backend yields no speculative missing-root classifications',()=>{
+  const old={...air,propertyProfile:undefined,deviceProperties:undefined,
+    propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
+  const result=evaluateHardwareSession([rc,old],health,shapes,now);
+  assert.equal(result.aircraft.propertyFields.missingRoots,undefined);
+  assert.equal(result.aircraft.propertyFields.missingNestedUnderObservedRoot,undefined);
+  assert.equal(result.aircraft.propertyFields.missingNestedWithAbsentRoot,undefined);
+  assert.doesNotMatch(formatReport(result),/PRIVATE_AIR_SERIAL/);
+});
