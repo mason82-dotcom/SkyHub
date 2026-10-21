@@ -52,16 +52,71 @@ test('older OSD cannot overwrite newer telemetry or refresh freshness',()=>{
   assert.equal(d.lastTelemetryAt,1760000000200);
   assert.equal(d.gatewaySn,'RC123');
 });
-test('OSD point persisted only if both coordinates occur in same packet',()=>{
+test('OSD point requires a usable same-packet coordinate pair',()=>{
   const registry=createRegistry();
   let result=registry.ingest(receive('thing/product/AIR01/osd',{data:{latitude:49}}),1760000001000);
   assert.equal(result.point,null);
   result=registry.ingest(receive('thing/product/AIR01/osd',{data:{longitude:8}}),1760000002000);
   assert.equal(result.point,null);
   result=registry.ingest(receive('thing/product/AIR01/osd',{data:{latitude:0,longitude:0,capacity_percent:0}}),1760000003000);
-  assert.equal(result.point.latitude,0);
-  assert.equal(result.point.longitude,0);
-  assert.equal(result.point.battery,0);
+  assert.equal(result.point,null);
+  const d=registry.get('AIR01',1760000003001);
+  assert.equal(d.positionUnavailable,true);
+  assert.equal(d.positionFresh,false);
+  assert.equal(d.lastPositionAt,null);
+  assert.equal(d.telemetry.latitude,null);
+  assert.equal(d.telemetry.longitude,null);
+  assert.equal(d.telemetry.battery,0);
+  assert.equal(d.fresh,true);
+});
+test('0/0 preserves the previous fix without extending its freshness',()=>{
+  const registry=createRegistry(),ts=1760000000000;
+  const osd=(at,data)=>receive('thing/product/AIR01/osd',{timestamp:at,data});
+  assert.ok(registry.ingest(osd(ts+1000,{latitude:49.1,longitude:8.4,battery_percentage:40}),ts+1000).point);
+  assert.equal(registry.get('AIR01',ts+1001).positionFresh,true);
+  const missing=registry.ingest(osd(ts+2000,{latitude:0,longitude:0,battery_percentage:39}),ts+2000);
+  assert.equal(missing.point,null);
+  let d=registry.get('AIR01',ts+2001);
+  assert.equal(d.positionUnavailable,true);
+  assert.equal(d.positionFresh,false);
+  assert.equal(d.lastPositionAt,ts+1000);
+  assert.equal(d.telemetry.latitude,49.1);
+  assert.equal(d.telemetry.longitude,8.4);
+  assert.equal(d.telemetry.battery,39);
+  assert.equal(d.lastTelemetryAt,ts+2000);
+  assert.equal(d.fresh,true);
+  // One zero coordinate remains valid, only 0/0 is the DJI null placeholder.
+  assert.ok(registry.ingest(osd(ts+3000,{latitude:49.2,longitude:0,battery_percentage:38}),ts+3000).point);
+  d=registry.get('AIR01',ts+3001);
+  assert.equal(d.positionUnavailable,false);
+  assert.equal(d.positionFresh,true);
+  assert.equal(d.telemetry.longitude,0);
+  assert.equal(d.lastPositionAt,ts+3000);
+});
+test('regular GNSS is accepted when RTK is disabled or absent',()=>{
+  const registry=createRegistry(),topic='thing/product/AIR01/osd';
+  assert.ok(registry.ingest(receive(topic,{
+    data:{latitude:49.2,longitude:8.5,position_state:{is_fixed:0},capacity_percent:25}
+  }),1760000001000).point);
+  let d=registry.get('AIR01',1760000001001);
+  assert.equal(d.positionFresh,true);
+  assert.equal(d.telemetry.rtkFixState,0);
+  assert.ok(registry.ingest(receive(topic,{data:{latitude:49.3,longitude:8.6}}),1760000002000).point);
+  d=registry.get('AIR01',1760000002001);
+  assert.equal(d.positionUnavailable,false);
+  assert.equal(d.lastPositionAt,1760000002000);
+});
+test('partial coordinates do not revive a missing GPS fix',()=>{
+  const registry=createRegistry(),topic='thing/product/AIR01/osd';
+  registry.ingest(receive(topic,{data:{latitude:0,longitude:0}}),1760000001000);
+  const result=registry.ingest(receive(topic,{data:{latitude:49,capacity_percent:75}}),1760000002000);
+  assert.equal(result.point,null);
+  const d=registry.get('AIR01',1760000002001);
+  assert.equal(d.positionUnavailable,true);
+  assert.equal(d.positionFresh,false);
+  assert.equal(d.telemetry.latitude,null);
+  assert.equal(d.lastPositionAt,null);
+  assert.equal(d.telemetry.battery,75);
 });
 test('empty OSD does not pretend to be fresh telemetry',()=>{
   const registry=createRegistry();

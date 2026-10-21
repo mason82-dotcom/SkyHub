@@ -25,10 +25,12 @@ function createRegistry(limit = 200) {
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
       lastPositionAt: d.lastPositionAt,
+      positionUnavailable: d.positionUnavailable,
       telemetryTimeVerified: d.telemetryTimeVerified,
       positionTimeVerified: d.positionTimeVerified,
       fresh: fresh(d.lastTelemetryAt, now),
-      positionFresh: fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry },
+      // DJI can report 0/0 in fresh OSD without providing a valid GPS fix.
+      positionFresh: !d.positionUnavailable && fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry },
       hms: d.hms.map(alert => ({...alert,
         text: describeHms(alert, {domain: d.model.domain, modeCode: d.modeCode})})),
       lastHmsAt: d.lastHmsAt, hmsTimeVerified: d.hmsTimeVerified,
@@ -47,6 +49,7 @@ function createRegistry(limit = 200) {
       modeCode: null, firmwareVersion: null, lastSeenAt: null,
       lastTelemetryAt: null, lastPositionAt: null,
       telemetryTimeVerified: null, positionTimeVerified: null,
+      positionUnavailable: false,
       hms: [], lastHmsAt: null, hmsTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
@@ -88,23 +91,29 @@ function createRegistry(limit = 200) {
     // Replayed last-known values of a disconnected aircraft are not telemetry.
     if (message.telemetry && d.aircraftConnected !== false) {
       const values = Object.entries(message.telemetry).filter(([,v]) => v !== null);
+      // An atomic WGS84 coordinate pair is valid with or without RTK.
+      const lat=message.telemetry.latitude,lon=message.telemetry.longitude;
+      const hasPair=Number.isFinite(lat)&&Number.isFinite(lon);
+      const nullPosition=hasPair&&lat===0&&lon===0;
       if (values.length) {
-        // A GPS fix is atomic: never synthesize coordinates from separate OSD packets.
-        // Other readings can be merged individually without changing GPS age.
+        // Retain non-position telemetry (battery, radio etc.) even without GPS.
         for (const [key, value] of values) {
           if (key !== 'latitude' && key !== 'longitude') d.telemetry[key] = value;
         }
-        if (message.telemetry.latitude !== null && message.telemetry.longitude !== null) {
-          d.telemetry.latitude = message.telemetry.latitude;
-          d.telemetry.longitude = message.telemetry.longitude;
-          d.lastPositionAt = observedAt;
-          d.positionTimeVerified = message.timestamp !== null;
+        if (hasPair) {
+          d.positionUnavailable=nullPosition;
+          if (!nullPosition) {
+            d.telemetry.latitude=lat;
+            d.telemetry.longitude=lon;
+            d.lastPositionAt=observedAt;
+            d.positionTimeVerified=message.timestamp!==null;
+          }
         }
-        d.lastTelemetryAt = observedAt;
-        d.telemetryTimeVerified = message.timestamp !== null;
+        d.lastTelemetryAt=observedAt;
+        d.telemetryTimeVerified=message.timestamp!==null;
       }
-      // Both coordinates must be present in the SAME genuine OSD packet.
-      if (message.telemetry.latitude !== null && message.telemetry.longitude !== null) {
+      // Null position never becomes a new track point or a fresh GPS fix.
+      if (hasPair&&!nullPosition) {
         point = {
           deviceSn: d.sn, gatewaySn: d.gatewaySn,
           latitude: message.telemetry.latitude,

@@ -165,7 +165,7 @@ const activeHms=d=>hmsFresh(d)&&Array.isArray(d.hms)?d.hms:[];
 const worstHms=d=>activeHms(d).reduce((worst,a)=>Number.isInteger(a.level)&&a.level>worst?a.level:worst,-1);
 const HMS_LEVEL=['Hinweis','Achtung','Warnung'];
 const tooltips=new Map();
-const positionFresh=d=>Number.isFinite(d.lastPositionAt)&&Date.now()>=d.lastPositionAt&&Date.now()-d.lastPositionAt<15000;
+const positionFresh=d=>d.positionUnavailable!==true&&Number.isFinite(d.lastPositionAt)&&Date.now()>=d.lastPositionAt&&Date.now()-d.lastPositionAt<15000;
 const validPosition=d=>{
   const t=d.telemetry||{};
   return Number.isFinite(t.latitude)&&Number.isFinite(t.longitude)&&
@@ -265,7 +265,7 @@ function update(){
     const t=d.telemetry||{};
     const quick=document.createElement('dl');quick.className='quick';
     const quickValues=[['Akku',show(t.battery,' %')],['Höhe rel.',show(t.altitude,' m')],
-      ['Position',!validPosition(d)?'fehlt':positionFresh(d)?(d.positionTimeVerified===false?'Zeit offen':'frisch'):
+      ['Position',d.positionUnavailable===true?'DJI meldet (0/0)':!validPosition(d)?'fehlt':positionFresh(d)?(d.positionTimeVerified===false?'Zeit offen':'frisch'):
         Number.isFinite(d.lastPositionAt)?Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'fehlt']];
     for(const [label,value] of quickValues){
       const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
@@ -300,7 +300,9 @@ function update(){
         Math.floor(t.remainingFlightTime/60)+':'+String(t.remainingFlightTime%60).padStart(2,'0')+' min':'—'],
       ['Funkqualität (SDR)',t.linkQuality,show(t.linkQuality,' / 5')]]
       .filter(([,raw])=>raw!==null&&raw!==undefined).map(([key,,value])=>[key,value]);
-    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],['Breite',show(t.latitude)],['Länge',show(t.longitude)],...optional]){
+    for(const [key,value] of [['Höhe relativ zum Start',show(t.altitude,' m')],['Höhe Ellipsoid',show(t.heightEllipsoid,' m')],['Akku',show(t.battery,' %')],['Horizontalgeschwindigkeit',show(t.horizontalSpeed,' m/s')],
+      [d.positionUnavailable===true?'Breite (letzter Fix)':'Breite',show(t.latitude)],
+      [d.positionUnavailable===true?'Länge (letzter Fix)':'Länge',show(t.longitude)],...optional]){
       const cell=document.createElement('div'),caption=document.createElement('small'),number=document.createElement('strong');
       caption.textContent=key;number.textContent=value;cell.append(caption,number);grid.append(cell);
     }
@@ -311,7 +313,7 @@ function update(){
       (d.topologyRestored?' · Topologie aus Speicher':'')+
       (Number.isInteger(d.modeCode)?' · Flugmodus '+d.modeCode:'')+
       (d.firmwareVersion?' · FW '+d.firmwareVersion:'')+
-      ' · GPS '+(!validPosition(d)?'keine gültige Position':positionFresh(d)?
+      ' · GPS '+(d.positionUnavailable===true?'kein aktueller Fix (0/0); letzter Fix unverändert':!validPosition(d)?'keine gültige Position':positionFresh(d)?
         (d.positionTimeVerified===false?'empfangen (Zeit ungeprüft)':'frisch'):Number.isFinite(d.lastPositionAt)?
         Math.max(0,Math.round((Date.now()-d.lastPositionAt)/1000))+' s alt':'nicht empfangen');
     details.append(meta);
