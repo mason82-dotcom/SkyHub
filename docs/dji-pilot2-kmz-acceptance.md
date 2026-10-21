@@ -79,6 +79,22 @@ ist dabei die Richtung im **Vergleichsaufruf**, keine Aussage über
 erforderliche DJI-Felder. Unterschiedliche Anzahl/Reihenfolge
 wiederholter Wegpunkte kann ebenfalls Feldpfaddifferenzen auslösen.
 
+Die neu hinzugefügten `left.cameraActionSummary` und
+`right.cameraActionSummary` zählen die tatsächlichen WPML-`actionGroup`-
+Vorkommen sowie die darin verwendeten Aktionstypen. So lässt sich direkt
+unterscheiden, ob ein Entwurf z. B. **zwei `reachPoint`-`takePhoto`-Aktionen**
+oder **eine `multipleDistance`-Aktionsgruppe** enthält. Zähler für
+`periodicDistancePhotoActions` und `periodicTimePhotoActions` meinen
+**Konfigurationen der Auslösung, nicht tatsächlich ausgelöste Einzelbilder**.
+Die genaue Fotoanzahl, reale Abstände, Firmwareunterstützung und
+Gerätekompatibilität sind nicht bestätigt; es werden keine XML-Rohwerte
+oder realen Koordinaten ausgegeben.
+
+`summary.cameraActionSummariesDiffer` zeigt an, ob sich die kompakten
+Aktionsübersichten unterscheiden, unabhängig von der Anzahl der einzelnen
+XML-Feldabweichungen.
+
+
 Das JSON zeigt keine Feldwerte, keine GPS-Koordinaten, keine
 Missionsnamen und keine Rohinhalte eingebetteter Ressourcen. Auch
 unbekannte XML-Feld- und Attributnamen werden maskiert. Die
