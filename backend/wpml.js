@@ -177,7 +177,7 @@ function mission(document,file,errors){
     fieldEnum(config,'executeRCLostAction',path,errors,true);
   else fieldEnum(config,'executeRCLostAction',path,errors);
   fieldNumber(config,'takeOffSecurityHeight',1.2,1500,path,errors,true);
-  fieldNumber(config,'globalTransitionalSpeed',0.000001,100,path,errors,true);
+  fieldNumber(config,'globalTransitionalSpeed',0.000001,file==='waylines.wpml'?15:100,path,errors,true);
   const drone=one(config,'wpml:droneInfo');
   const payload=one(config,'wpml:payloadInfo');
   if(!drone)pathError(errors,path+'/droneInfo','required element missing');
@@ -190,7 +190,8 @@ function mission(document,file,errors){
     path+'/payloadInfo',errors,true,true):null;
   const reroute=one(config,'wpml:autoRerouteInfo');
   if(reroute)for(const n of ['missionAutoRerouteMode','transitionalAutoRerouteMode'])
-    optionalBool(reroute,n,path+'/autoRerouteInfo',errors);
+    if(!optionalBool(reroute,n,path+'/autoRerouteInfo',errors))
+      pathError(errors,path+'/autoRerouteInfo/'+n,'required reroute mode missing');
   return {droneType,droneSubtype,payloadType,payloadPosition};
 }
 function heading(node,path,errors){
@@ -202,18 +203,19 @@ function heading(node,path,errors){
     const poi=required(node,'waypointPoiPoint',path,errors);
     if(poi){
       const a=poi.split(',').map(Number);
-      if(a.length!==3||a.some(x=>!Number.isFinite(x))||Math.abs(a[0])>90||Math.abs(a[1])>180)
+      if(a.length!==3||poi.split(',').some(x=>x.trim()==='')||
+        a.some(x=>!Number.isFinite(x))||Math.abs(a[0])>90||Math.abs(a[1])>180)
         pathError(errors,path+'/waypointPoiPoint','expected latitude,longitude,altitude');
     }
   }
   fieldEnum(node,'waypointHeadingPathMode',path,errors);
 }
-function turn(node,path,errors){
+function turn(node,path,errors,useStraightLine){
   if(!node)return;
   const mode=fieldEnum(node,'waypointTurnMode',path,errors,true);
   const dist=value(node,'waypointTurnDampingDist');
   if(mode==='coordinateTurn'||
-     (mode==='toPointAndPassWithContinuityCurvature'&&value(node,'useStraightLine')==='1'))
+     (mode==='toPointAndPassWithContinuityCurvature'&&useStraightLine==='1'))
     fieldNumber(node,'waypointTurnDampingDist',0,100000,path,errors,true);
   else if(dist)numeric(dist,0,100000,path+'/waypointTurnDampingDist',errors);
 }
@@ -297,7 +299,8 @@ function validatePoint(placemark,path,errors,executable){
   }
   const headingNode=one(placemark,'wpml:waypointHeadingParam');
   heading(headingNode,path+'/waypointHeadingParam',errors);
-  turn(one(placemark,'wpml:waypointTurnParam'),path+'/waypointTurnParam',errors);
+  turn(one(placemark,'wpml:waypointTurnParam'),path+'/waypointTurnParam',errors,
+    value(placemark,'useStraightLine'));
   optionalBool(placemark,'useGlobalSpeed',path,errors);
   optionalBool(placemark,'useGlobalHeight',path,errors);
   optionalBool(placemark,'useGlobalHeadingParam',path,errors);
