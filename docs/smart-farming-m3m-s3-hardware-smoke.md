@@ -317,3 +317,27 @@ Die betreffenden Flags bleiben `false`.
 Der Prüfer schreibt keine Dateien oder Buckets, ändert keine
 Docker-/MinIO-Konfiguration und startet den Backend-Container
 nicht neu. Ein GET-Ablehnungsbefund ist kein Schreibfehler.
+
+## Hardwareabnahme: 6/6 echte TIFF-Header (22.10.2026)
+
+Der Raspberry Pi 5 hat den opt-in-Headerprüfer gegen den bestehenden
+MinIO-Lesezugang erfolgreich ausgeführt. Im automatisch gewählten
+S3-Unterordner wurden **sechs bislang nicht nach Dateinamen erkannte
+TIFF-Objekte** untersucht, jeweils mit einem GET-Bytebereich von
+höchstens 16 Bytes. **6/6 = Classic TIFF Little Endian**,
+**0** BigTIFF, **0** ungültige Signaturen, **0** verweigerte GETs,
+**0** nicht respektierte Byte-Range-Antworten. Die Erfolgszahl gilt
+**nur** für diese sechs TIFF-Signaturen und den zuvor begrenzt
+ausgewählten S3-Prefix.
+
+Kein Bildinhalt, TIFF-IFD, EXIF/XMP, Kameramodell, Bandidentität,
+GPS, Radiometrie oder NDVI/NDRE wurde mit diesem Test geprüft.
+Der im vorausgehenden Commit `0a94f0c` korrigierte Offline-Test
+verhindert die Verwechslung wiederholter Continuation Tokens mit
+doppelten Objekt-Keys. Der Nutzer meldete bei der Headerprüfung
+einen vollständigen anonymisierten Ergebnisbericht, aber keinen
+ausführlichen Offline-Test-Report des korrigierten Einzeltests.
+
+Nächster unabhängiger Freigabeschritt ist eine **separate, freiwillige,
+streng begrenzte IFD-Strukturprüfung** mit festen Kategorieausgaben.
+Auch ein IFD-Nachweis ist keine Multispektral- oder Kalibrierfreigabe.
