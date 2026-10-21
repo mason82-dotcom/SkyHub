@@ -295,6 +295,52 @@ oder GSD-Variationsmodell, kein vollständiger Kamerabetriebsmodus
 DJI-Flugfähigkeit. Regressionstests:
 `backend/test/wpml-capture-preview.test.js`.
 
+## DJI WPML `multipleDistance` / `multipleTiming` (experimenteller Offline-Export)
+
+DJI definiert in `40.common-element.md` zwei periodische
+`wpml:actionTriggerType`-Auslöser:
+`multipleDistance` (Meter zwischen Auslösungen) und
+`multipleTiming` (Sekunden zwischen Auslösungen), wobei
+`wpml:actionTriggerParam` den jeweiligen Abstand trägt.
+Mit einer `takePhoto`-Aktion ist so periodisches Fotografieren
+während einer Wayline grundsätzlich beschrieben.
+
+`frontend/public/wpml-interval-actions.js` generiert daraus
+**offline** und ohne Gerätezugriff ein XML-`wpml:actionGroup`-Fragment
+mit `sequence`, `takePhoto` und Payload-Index 0.
+Der Wegpunkteditor und der JSON-basierte CLI-Missionsentwurf können
+diese Fragmente optional im generierten `waylines.wpml` verwenden.
+Die Gruppe gilt im aktuellen Entwurf von Wegpunkt 0 bis zum letzten
+Wegpunkt. Einzelbilder mit `reachPoint` und periodische
+Aufnahmen schließen sich hier explizit aus, damit keine
+konkurrierenden Fotoaktionen entstehen.
+
+Die Grenzen sind vorsichtig gewählt: 1–1.000 m Distanz oder 1–60 s
+Zeitabstand. Falls die Kamera-Mindestaufnahmezeit vom Anwender
+angegeben ist, wird ein theoretisch zu kurzes Aufnahmeintervall
+abgewiesen. Ohne diese Hersteller-/Firmwareangabe bleibt die
+Kamera- und Gerätekompatibilität **ungeprüft**. Eine variable
+Fluggeschwindigkeit, Zwischenstopps und komplexe Wendemanöver
+können die tatsächlichen Zeiten und Positionen abweichend gestalten.
+
+`backend/wpml.js` prüft nun zusätzlich doppelte
+Aktionsgruppen-IDs im gesamten `waylines.wpml` sowie
+leere periodische Aktionsbereiche. Die gemeinsamen DJI-IDs in
+Template und Waylines sind nicht automatisch als globaler
+ID-Konflikt anzusehen; der neue Test bezieht sich auf
+Aktionsgruppen im ausführbaren Dokument.
+
+**Wichtig:** Der erzeugte KMZ-Entwurf hat weiter
+`flightReady:false`. Die semantisch prüfbare
+Aktionsgruppe beweist nicht, dass DJI Pilot 2 diese Datei auf
+Mavic 3M/3E/3T oder Matrice 4T übernimmt. Ebenso sind
+Abstands-Zähler, Start-/Endpunkt-Auslösung,
+Aufnahmestopps und Multispektral-Linsenkonfiguration
+noch nicht an realer Hardware abgeglichen. Keine
+Missionsdispatch-Route oder DJI-MQTT-Kommandos wurden aktiviert.
+
+Tests: `backend/test/wpml-interval-actions.test.js`.
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
