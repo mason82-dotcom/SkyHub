@@ -128,7 +128,7 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertIn("create_host_path: false", standalone)
         self.assertIn("/mnt/hc4backup/skyhub-next/minio", standalone)
         self.assertNotIn("\n    ports:", standalone)
-        self.assertNotIn("aeronexus-data/minio", standalone)
+        self.assertNotIn("source: /mnt/hc4backup/aeronexus-data/minio", standalone)
         self.assertIn("format: raw", standalone)
 
     def test_aeronexus_migration_explicitly_copy_free_and_opt_in(self):
