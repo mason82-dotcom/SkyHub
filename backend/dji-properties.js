@@ -45,7 +45,7 @@ function cleanText(value, path, length) {
   if (path.endsWith('firmware_version') && /^[A-Za-z0-9_.-]{1,64}$/.test(value)) return value;
   if (path === 'country' && /^[A-Za-z]{2,3}$/.test(value)) return value;
   if ((path.endsWith('payload_index') || path.endsWith('camera_index')) &&
-      /^\\d{1,4}-\\d{1,4}-\\d{1,2}$/.test(value)) return value;
+      /^\d{1,4}-\d{1,4}-\d{1,2}$/.test(value)) return value;
   // All other text fields can contain SNs, IMEIs, video URLs, arbitrary
   // operator text, network configuration or account identifiers.
   return undefined;
