@@ -47,10 +47,21 @@ Flugkompatibilitätszertifizierung.
       /privater/pfad/pilot2-original.kmz \
       /tmp/skyhub-offline-waypoint-draft.kmz
 
+    # Kürzere Abnahmeansicht für Kameras, Aktionen, Höhen und Payload
+    node scripts/wpml-compare.js --review \
+      /privater/pfad/pilot2-original.kmz \
+      /tmp/skyhub-offline-waypoint-draft.kmz
+
 Die Beispiel-KMZ nutzt **synthetische GPS-Koordinaten**. Für einen
 sachlichen Feldvergleich müssen später beide Missionen in ihren
 Einstellungen möglichst weit übereinstimmen; andernfalls sind
 Unterschiede in Wegpunkten und Höhen zu erwarten.
+
+**Achtung:** `--review` filtert **ausschließlich die Anzeige** auf
+`actions`, `cameraFormats`, `heightReferences`, `payload` und
+`mission`. Auch hier zählen alle anderen, ausgeblendeten Unterschiede
+für den Rückgabecode. Für eine lückenlose Prüfung stets die
+**ungefilterte JSON-Ausgabe** zusätzlich verwenden.
 
 Rückgabecodes: `0` = keine erkannten strukturellen Abweichungen
 bei zwei offline-validen Dokumenten; `1` = Unterschiede;
