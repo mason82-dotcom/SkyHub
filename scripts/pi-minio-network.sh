@@ -35,6 +35,13 @@ require_docker() {
 
 network_exists() { docker network inspect "$NETWORK" >/dev/null 2>&1; }
 
+ensure_network() {
+  if ! network_exists; then
+    docker network create --driver bridge "$NETWORK" >/dev/null
+    echo "Created shared Docker bridge: $NETWORK"
+  fi
+}
+
 check_network() {
   if network_exists; then
     local driver
@@ -130,10 +137,6 @@ apply() {
     echo "SKYHUB_MINIO_IMAGE in private .env, or use --allow-legacy-image for isolated tests." >&2
     exit 2
   fi
-  if ! network_exists; then
-    docker network create --driver bridge "$NETWORK" >/dev/null
-    echo "Created shared Docker bridge: $NETWORK"
-  fi
   # Adopt a running SkyHub MinIO without recreating it (and without
   # changing root credentials or rewriting its existing data mount).
   local -a existing=()
@@ -154,6 +157,7 @@ apply() {
       echo "Do not replace storage silently; audit image and mount privately." >&2
       exit 2
     }
+    ensure_network
     if [[ "$running" == true ]]; then
       if is_connected "${existing[0]}"; then
         echo "OK: running SkyHub MinIO already on the shared bridge"
@@ -166,6 +170,7 @@ apply() {
     fi
   else
     # First installation: only start MinIO, never backend/DB/Redis/EMQX.
+    ensure_network
     "${COMPOSE[@]}" up -d --no-deps minio
   fi
 
