@@ -11,7 +11,6 @@ import argparse
 import os
 from pathlib import Path
 import re
-import shutil
 import stat
 import subprocess
 import sys
@@ -113,6 +112,10 @@ def current_values() -> dict[str, str]:
 
 def assert_minio_stopped() -> None:
     # A changed root credential must never be injected into a running MinIO.
+    daemon = subprocess.run(["docker", "info", "--format", "{{.ServerVersion}}"],
+                            capture_output=True, text=True, check=False)
+    if daemon.returncode != 0:
+        raise ConfigurationError("Cannot verify Docker daemon state; credentials left unchanged")
     for name in ("aeronexusadvanced-cloud-minio-1",
                  "aeronexus-edge-minio-1", "skyhub-shared-minio"):
         proc = subprocess.run(
@@ -187,6 +190,8 @@ def main() -> int:
                         choices=("locate", "check", "import"))
     parser.add_argument("--source", type=Path,
                         help="Explicit local AeroNexusAdvanced .env file; never paste its content")
+    parser.add_argument("--require-match", action="store_true",
+                        help="For check only: fail unless project and SkyHub root credentials match")
     parser.add_argument("--accept-different", action="store_true",
                         help="For import only: back up and replace differing MINIO_ROOT credentials")
     args = parser.parse_args()
@@ -210,7 +215,7 @@ def main() -> int:
         print("Comparison with existing SkyHub private env: " + ("MATCH" if same else "DIFFER"))
         if args.mode == "check":
             print("Read-only; no secrets, files or Docker containers changed.")
-            return 0
+            return 0 if same or not args.require_match else 2
         print(import_from_project(source, desired, args.accept_different))
         return 0
     except (ConfigurationError, OSError, UnicodeError) as exc:
