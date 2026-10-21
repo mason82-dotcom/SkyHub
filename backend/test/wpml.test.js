@@ -44,6 +44,9 @@ test('DJI WPML valid waypoint template/action and executable route',()=>{
   assert.deepEqual(x.templates,[{templateId:0,templateType:'waypoint'}]);
   assert.equal(x.waylines[0].waypointCount,1);
   assert.equal(x.aircraft.droneType,67);
+  assert.equal(x.fieldCoverage.referenceRows,250);
+  assert.equal(x.fieldCoverage.documentedUniqueFields,160);
+  assert.deepEqual(x.fieldCoverage.undocumentedFields,[]);
 });
 test('KMZ pack/inspect reads wpmz paths and validates CRC',()=>{
   const b=packageKmz(template,waylines);
