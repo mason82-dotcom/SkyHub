@@ -70,6 +70,7 @@ function parseXml(xml){
       else if(str.trim())xmlError('content outside root');
       i=next;continue;
     }
+    if(xml.startsWith('<!',i))xmlError('DTD/entities forbidden');
     let end=i+1,quote=null;
     for(;end<xml.length;end++){
       const c=xml[end];
