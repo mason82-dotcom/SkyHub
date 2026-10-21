@@ -259,7 +259,13 @@ function fieldDefinitions(model) {
   if (!profile) return null;
   const source = catalog.profiles[profile.name];
   return {profile:profile.name,confidence:profile.confidence,
-    source:source.source,fields:source.fields,
+    source:source.source,
+    sourceEdition:source.sourceEdition??null,
+    extensionSource:source.extensionSource??null,
+    extensionSourceEdition:source.extensionSourceEdition??null,
+    extensionVerifiedAt:source.extensionVerifiedAt??null,
+    provenance:source.provenance??null,
+    fields:source.fields,
     dynamicPayload:source.dynamicPayload??null};
 }
 module.exports = {deviceProfile,fieldDefinitions,fieldAvailabilityPolicy,
