@@ -33,6 +33,33 @@ function hasPropertyDiagnostics(device){
     isObject(device.propertyFieldObservedAt?.osd) &&
     isObject(device.propertyFieldObservedAt?.state);
 }
+function rootGapSummary(audit){
+  const observed=new Set(audit.observedDocumented);
+  const missing=audit.notObservedDocumented;
+  const absentRoots=[],nestedUnderSeenRoot=[],nestedWithAbsentRoot=[];
+  for(const label of missing){
+    const split=label.indexOf(':');
+    if(split<0)continue;
+    const channel=label.slice(0,split),field=label.slice(split+1);
+    const dot=field.indexOf('.');
+    if(dot<0){absentRoots.push(label);continue;}
+    const root=channel+':'+field.slice(0,dot);
+    if(observed.has(root))nestedUnderSeenRoot.push(label);
+    else nestedWithAbsentRoot.push(label);
+  }
+  return {
+    absentRoots:absentRoots.sort(),
+    nestedUnderSeenRoot:nestedUnderSeenRoot.sort(),
+    nestedWithAbsentRoot:nestedWithAbsentRoot.sort()
+  };
+}
+// These are documented by DJI for a generic aircraft, not in the pinned
+// Mavic 3 family table. The MQTT shape catalog is BACKEND-WIDE, so this
+// must not be presented as evidence that the M3M produced these keys.
+const GENERIC_AIRCRAFT_CANDIDATES=Object.freeze([
+  'distance_limit_status','rth_altitude','rc_lost_action',
+  'payloads','wpmz_version'
+]);
 function deviceSummary(device,now){
   if(!device)return {seen:false,modelConfirmed:false,role:null,topologyOnline:null,
     osdFresh:false,osdAgeSeconds:null,stateObserved:false,stateAgeSeconds:null,
@@ -41,6 +68,7 @@ function deviceSummary(device,now){
       missing:null,redacted:null,untyped:null,observedNames:[],freshNames:[]}};
   const capable=hasPropertyDiagnostics(device);
   const [audit]=summarizeTelemetryFields([device],now);
+  const rootGaps=capable?rootGapSummary(audit):null;
   const stateAge=capable?age(device.propertyObservedAt?.state,now):null;
   return {
     seen:true,modelConfirmed:true,
@@ -64,7 +92,10 @@ function deviceSummary(device,now){
       redacted:capable?audit.redactedDocumented.length:null,
       untyped:capable?audit.unsupportedDocumented.length:null,
       observedNames:capable?audit.observedDocumented.slice(0,60):[],
-      freshNames:capable?audit.freshDocumented.slice(0,60):[]
+      freshNames:capable?audit.freshDocumented.slice(0,60):[],
+      missingRoots:rootGaps?.absentRoots??null,
+      missingNestedUnderObservedRoot:rootGaps?.nestedUnderSeenRoot??null,
+      missingNestedWithAbsentRoot:rootGaps?.nestedWithAbsentRoot??null
     }
   };
 }
@@ -92,6 +123,9 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     osdShapeFields:shapeKeys('osd'),
     stateShapeFields:shapeKeys('state')
   };
+  transport.genericAircraftCandidatesInBackendShapes=
+    GENERIC_AIRCRAFT_CANDIDATES.filter(key=>
+      transport.osdShapeFields.includes(key)||transport.stateShapeFields.includes(key));
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
   // DJI pushMode=1 is event-driven: state is pushed on change, unlike
@@ -115,6 +149,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     transport,controller,aircraft,linked,stages,
     notes:[
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
+      'Generische Aircraft-Kandidaten in den backendweiten MQTT-Shapes dürfen NICHT der M3M zugeschrieben werden, solange kein gerätespezifischer Nachweis vorliegt.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
       'M3M (0:77:2) nutzt ein vorläufiges Mavic-3-Familienprofil.',
       'DJI State (pushMode 1) wird bei Zustandsänderung gesendet. Ältere State-Zeitstempel bedeuten nicht automatisch einen Kommunikationsfehler.',
@@ -155,9 +190,18 @@ function formatReport(r){
       ' | nicht typisiert: '+d.propertyFields.untyped);
     lines.push('Frische Feldnamen (max. 60): '+(d.propertyFields.freshNames.join(', ')||'keine'));
     lines.push('Beobachtete Feldnamen (max. 60): '+(d.propertyFields.observedNames.join(', ')||'keine'));
+    const p=d.propertyFields;
+    lines.push('Nicht beobachtete Rootfelder ('+p.missingRoots.length+'): '+(p.missingRoots.join(', ')||'keine'));
+    lines.push('Nicht beobachtete Unterfelder trotz beobachtetem Root ('+
+      p.missingNestedUnderObservedRoot.length+'), erste 40: '+
+      (p.missingNestedUnderObservedRoot.slice(0,40).join(', ')||'keine'));
+    lines.push('Nicht beobachtete Unterfelder ohne beobachtetes Root ('+
+      p.missingNestedWithAbsentRoot.length+'); keine unabhängige Sensor-Nichtverfügbarkeit ableiten.');
   }
   lines.push('Bekannte MQTT OSD-Rootfelder (backendweit): '+(r.transport.osdShapeFields.join(', ')||'keine'));
   lines.push('Bekannte MQTT State-Rootfelder (backendweit): '+(r.transport.stateShapeFields.join(', ')||'keine'));
+  lines.push('Generische Aircraft-Erweiterungen in MQTT-Shapes (nur backendweit, KEIN M3M-Nachweis): '+
+    (r.transport.genericAircraftCandidatesInBackendShapes.join(', ')||'keine'));
   lines.push(...r.notes.map(x=>'Hinweis: '+x));
   lines.push('Keine Geräte-IDs, Koordinaten, Messwerte oder Zugangsdaten ausgegeben.');
   return lines.join('\n');
