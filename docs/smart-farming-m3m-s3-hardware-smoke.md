@@ -171,3 +171,55 @@ rechtfertigen. Sind überwiegend MP4/andere Formate vorhanden,
 ist eine Änderung des M3M-Dateinamenparsers voraussichtlich
 nicht zielführend. Keine Originaldatei muss zur Entscheidung
 heruntergeladen werden.
+
+
+## Realer Pi-Nachtest: 421 unbekannte Dateien nach Dateityp
+
+Der Benutzer hat am 21.10.2026 die private MinIO-Medieninventur
+erneut ausgeführt; die beiden lokalen Node-Suiten meldeten
+**17/17 bestandene Tests**. **Alle 424 direkten Objekte**
+des automatisch ausgewählten Prefixes wurden vollständig
+paginiert, ohne Namen oder Schlüssel auszugeben.
+
+Die **421** bislang unbekannten Dateinamen lassen sich bereits
+anhand ihrer Endung aufschlüsseln:
+
+| Kategorie | Unbekannte Namen |
+|---|---:|
+| JPEG/JPG | 398 |
+| TIFF/TIF | 6 |
+| KMZ | 17 |
+| Alle anderen Kategorien | 0 |
+| **Summe** | **421** |
+
+Unter den **404 unbekannten Bildern** beginnen **37 mit**
+dem festen Namensprefix \`DJI_\`, **367 nicht**.
+Die zusätzlichen **3 bereits erkannten M3M-Dateinamen**
+teilen sich in RGB=1, Red=1 und NIR=1 auf, verteilt auf
+zwei partielle Aufnahmegruppen. Green/RedEdge und vollständige
+Fünf-Kanal-Gruppen waren unter den *bereits unterstützten
+Namensmustern* nicht nachgewiesen.
+
+**Keine Schlussfolgerung über tatsächliche Bildinhalte:**
+Die sechs TIFF-Dateien sind der wichtigste nächste
+Namensformat-Kandidat. Aus der bisherigen Summe
+\`unrecognizedDjiPrefixedImages=37\` allein lässt sich jedoch
+**nicht** erkennen, wie viele davon TIFFs statt JPEGs sind.
+Ebenso kann ein anders benanntes JPEG anderen Geräten oder
+Diensten zugeordnet sein. Es gibt keinen Anlass, 398 JPEGs als
+M3M-RGB-Aufnahmen oder 17 KMZ-Dateien als einzelne Flüge
+zu zählen.
+
+Der nachfolgende Code-Stand ergänzt daher
+\`unrecognizedImagesByPrefix.djiPrefixed\` und
+\`unrecognizedImagesByPrefix.other\`, jeweils nur mit den
+**festen** Unterkategorien JPEG/TIFF/DNG/PNG.
+Diese Zähler erlauben eine sichere Entscheidung, ob
+DJI-artig benannte TIFFs tatsächlich im unbekannten Bestand
+vorliegen. **Dieser zusätzliche Cross-Tab ist noch nicht mit
+echten Pi-Daten getestet**.
+
+Weiterhin sind alle Kalibrierungs-, Bandregistrierungs- und
+NDVI/NDRE-Freigabeflags \`false\`. Ein Bilddownload,
+Umbenennen oder Dateiinhaltscheck wurde nicht durchgeführt.
+
