@@ -26,6 +26,8 @@ const {createTrackRecorder}=require('./track-recorder');
 const {createMapElementStore}=require('./map-element-store');
 const {createMapElementHandler}=require('./map-element-api');
 const {mapPrincipal}=require('./map-element-permissions');
+const {createS3Storage}=require('./s3-storage');
+const {createMediaRouter}=require('./media-api');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -363,6 +365,11 @@ app.get('/api/health',(req,res)=>res.json({
   trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
+if(process.env.SKYHUB_MEDIA_ENABLED==='true'){
+  const mediaStorage=createS3Storage(process.env);
+  app.use('/api/media',createMediaRouter(mediaStorage));
+}
+
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
 app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
   lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));
