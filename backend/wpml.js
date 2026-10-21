@@ -234,8 +234,11 @@ function checkGroup(group,path,errors){
   if(!trigger)pathError(errors,path+'/actionTrigger','required element missing');
   else{
     const type=fieldEnum(trigger,'actionTriggerType',path+'/actionTrigger',errors,true);
-    if(['multipleTiming','multipleDistance'].includes(type))
+    if(['multipleTiming','multipleDistance'].includes(type)){
       fieldNumber(trigger,'actionTriggerParam',0.000001,100000,path+'/actionTrigger',errors,true);
+      if(start!==null&&end!==null&&end===start)
+        pathError(errors,path,'periodic photo/action trigger needs a waypoint range');
+    }
   }
   const actions=kids(group,'wpml:action'),used=new Set();
   if(!actions.length)pathError(errors,path,'action list missing');
@@ -369,7 +372,7 @@ function validateDocuments(templateXml,waylinesXml){
   }
   if(meta&&execMeta&&JSON.stringify(meta)!==JSON.stringify(execMeta))
     pathError(errors,'waylines.wpml/missionConfig','aircraft/payload differs from template');
-  const templateIds=new Set(),waylineIds=new Set();
+  const templateIds=new Set(),waylineIds=new Set(),actionGroupIds=new Set();
   for(const [i,folder] of kids(td,'Folder').entries()){
     const p='template.kml/Folder/'+i;
     const id=fieldNumber(folder,'templateId',0,65535,p,errors,true,true);
@@ -435,14 +438,27 @@ function validateDocuments(templateXml,waylinesXml){
       if(index!==null&&index!==j)pathError(errors,pp+'/index','indices must be continuous from 0');
       validatePoint(pm,pp,errors,true);
       for(const g of kids(pm,'wpml:actionGroup')){
+        const groupKey=value(g,'actionGroupId');
+        if(/^\d+$/.test(groupKey)){
+          if(actionGroupIds.has(groupKey))
+            pathError(errors,pp+'/actionGroup','duplicate action group ID across waylines');
+          actionGroupIds.add(groupKey);
+        }
         const from=Number(value(g,'actionGroupStartIndex'));
         const to=Number(value(g,'actionGroupEndIndex'));
         if(from>=placemarks.length||to>=placemarks.length)
           pathError(errors,pp+'/actionGroup','action index outside route');
       }
     }
-    for(const g of kids(folder,'wpml:startActionGroup'))
+    for(const g of kids(folder,'wpml:startActionGroup')){
       checkGroup(g,p+'/startActionGroup',errors);
+      const groupKey=value(g,'actionGroupId');
+      if(/^\d+$/.test(groupKey)){
+        if(actionGroupIds.has(groupKey))
+          pathError(errors,p+'/startActionGroup','duplicate action group ID across waylines');
+        actionGroupIds.add(groupKey);
+      }
+    }
     waylines.push({templateId:id,waylineId,executeHeightMode:heightMode,waypointCount:placemarks.length});
   }
   if(!waylines.length)pathError(errors,'waylines.wpml','no executable folders');
