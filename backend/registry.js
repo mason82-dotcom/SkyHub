@@ -31,6 +31,9 @@ function createRegistry(limit = 200) {
       fresh: fresh(d.lastTelemetryAt, now),
       // DJI can report 0/0 in fresh OSD without providing a valid GPS fix.
       positionFresh: !d.positionUnavailable && fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry },
+      // Field clocks exist only in the live Registry/API, not in Redis/PostGIS.
+      telemetryFieldAt: { ...d.telemetryFieldAt },
+      telemetryFieldTimeVerified: { ...d.telemetryFieldTimeVerified },
       hms: d.hms.map(alert => ({...alert,
         text: describeHms(alert, {domain: d.model.domain, modeCode: d.modeCode})})),
       lastHmsAt: d.lastHmsAt, hmsTimeVerified: d.hmsTimeVerified,
@@ -50,6 +53,8 @@ function createRegistry(limit = 200) {
       lastTelemetryAt: null, lastPositionAt: null,
       telemetryTimeVerified: null, positionTimeVerified: null,
       positionUnavailable: false,
+      telemetryFieldAt: Object.create(null),
+      telemetryFieldTimeVerified: Object.create(null),
       hms: [], lastHmsAt: null, hmsTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
@@ -92,21 +97,29 @@ function createRegistry(limit = 200) {
     }
     // Replayed last-known values of a disconnected aircraft are not telemetry.
     if (message.telemetry && d.aircraftConnected !== false) {
-      const values = Object.entries(message.telemetry).filter(([,v]) => v !== null);
-      // An atomic WGS84 coordinate pair is valid with or without RTK.
+      const values = Object.entries(message.telemetry).filter(
+        ([key,value])=>Object.hasOwn(d.telemetry,key)&&Number.isFinite(value));
+      // Atomic WGS84 coordinates are valid with or without RTK.
       const lat=message.telemetry.latitude,lon=message.telemetry.longitude;
       const hasPair=Number.isFinite(lat)&&Number.isFinite(lon);
       const nullPosition=hasPair&&lat===0&&lon===0;
       if (values.length) {
-        // Retain non-position telemetry (battery, radio etc.) even without GPS.
-        for (const [key, value] of values) {
-          if (key !== 'latitude' && key !== 'longitude') d.telemetry[key] = value;
+        // Refresh only values present and normalized in this accepted OSD packet.
+        // Absent data, incomplete coordinates and invalid values retain their older age.
+        for (const [key,value] of values) {
+          if(key==='latitude'||key==='longitude')continue;
+          d.telemetry[key]=value;
+          d.telemetryFieldAt[key]=observedAt;
+          d.telemetryFieldTimeVerified[key]=message.timestamp!==null;
         }
-        if (hasPair) {
+        if(hasPair){
           d.positionUnavailable=nullPosition;
-          if (!nullPosition) {
-            d.telemetry.latitude=lat;
-            d.telemetry.longitude=lon;
+          if(!nullPosition){
+            for(const key of ['latitude','longitude']){
+              d.telemetry[key]=message.telemetry[key];
+              d.telemetryFieldAt[key]=observedAt;
+              d.telemetryFieldTimeVerified[key]=message.timestamp!==null;
+            }
             d.lastPositionAt=observedAt;
             d.positionTimeVerified=message.timestamp!==null;
           }

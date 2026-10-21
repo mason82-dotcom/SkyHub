@@ -191,7 +191,11 @@ function onMessage(topic,payload,packet){
     }
     for(const item of result.updates){
       io.emit('device_update',item);
-      redis.set('skyhub:device:'+item.sn,JSON.stringify(item),'EX',3600)
+      // Individual field timestamps stay in RAM/API/WebSocket, not Redis AOF.
+      const cacheItem={...item};
+      delete cacheItem.telemetryFieldAt;
+      delete cacheItem.telemetryFieldTimeVerified;
+      redis.set('skyhub:device:'+item.sn,JSON.stringify(cacheItem),'EX',3600)
         .catch(err=>console.error('[redis write]',err.message));
     }
     if(result.event)io.emit('device_event',result.event);
