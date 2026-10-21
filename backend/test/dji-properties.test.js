@@ -364,3 +364,20 @@ test('dynamic gimbal rejects sentinels, incomplete target coordinates and unsafe
   const invalid=sanitizeDeviceProperties({payload_gimbals:[{payload_index:'__proto__',password:'HIDDEN'}]},'osd',model);
   assert.equal(invalid.payload_gimbals,undefined);
 });
+
+test('empty dynamic DJI target-only entries are ignored and arrays are bounded',()=>{
+  const data={'89-0-0':{measure_target_latitude:40},
+    '89-0-1':{measure_target_longitude:4},
+    '89-0-2':{gimbal_roll:1}};
+  for(let i=3;i<20;i++)data['89-0-'+i]={gimbal_roll:i};
+  const properties=sanitizeKnownProperties(data,'osd');
+  const d=sanitizeDeviceProperties(properties,'osd',models[3][0]);
+  assert.equal(d.payload_gimbals.length,MAX_ARRAY_ITEMS);
+  assert.equal(d.payload_gimbals[0].payload_index,'89-0-2');
+  assert.equal(d.payload_gimbals[0].gimbal_roll,1);
+  assert.equal(d.payload_gimbals[0].measure_target_latitude,undefined);
+  const source=fieldDefinitions(models[3][0]);
+  assert.ok(source.dynamicPayload.fields.includes('measure_target_error_state'));
+  assert.ok(source.dynamicPayload.source.includes('aircraft/properties.html'));
+  assert.equal(fieldDefinitions(models[0][0]).dynamicPayload,null);
+});
