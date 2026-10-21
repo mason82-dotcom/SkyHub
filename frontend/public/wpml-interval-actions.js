@@ -25,7 +25,7 @@
     const speed=strictNumber(speedMps,'route speed',0.2,15);
     const interval=strictNumber(config.interval,'trigger interval',1,
       config.type==='multipleDistance'?1000:60);
-    const knownMin=config.cameraMinIntervalSeconds===undefined?null:
+    const knownMin=config.cameraMinIntervalSeconds==null?null:
       strictNumber(config.cameraMinIntervalSeconds,'camera minimum interval',0.1,60);
     const seconds=config.type==='multipleTiming'?interval:interval/speed;
     if(knownMin!==null&&seconds<knownMin)
