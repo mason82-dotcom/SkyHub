@@ -152,6 +152,26 @@ function sanitizeDeviceProperties(known, channel, model) {
   if (!profile) return {};
   return sanitizeProfile(known, trees[profile.name], channel);
 }
+// Field inventory must not report intentionally censored identifiers as
+// missing telemetry. This reports capability, never an observed field value.
+function fieldAvailabilityPolicy(field, profileFields) {
+  if (!field || typeof field.path !== 'string') return 'unavailable';
+  if (field.type === 'text') {
+    const p=field.path;
+    const safe=p === 'country' || p.endsWith('firmware_version') ||
+      p.endsWith('.payload_index') || p.endsWith('.camera_index') ||
+      p.endsWith('.video_index') || p.endsWith('.video_type');
+    return safe ? 'inspectable' : 'redacted';
+  }
+  if (field.type === 'array') {
+    if (field.path.endsWith('.switchable_video_types')) return 'inspectable';
+    // DJI's legacy spec leaves the item schema out for these arrays.
+    // A raw, untyped array must never be forwarded.
+    if (!profileFields.some(other=>other.path.startsWith(field.path+'.')))
+      return 'unsupported-array';
+  }
+  return 'inspectable';
+}
 function fieldDefinitions(model) {
   const profile = deviceProfile(model);
   if (!profile) return null;
@@ -159,5 +179,5 @@ function fieldDefinitions(model) {
   return {profile:profile.name,confidence:profile.confidence,
     source:source.source,fields:source.fields};
 }
-module.exports = {deviceProfile,fieldDefinitions,sanitizeKnownProperties,
-  sanitizeDeviceProperties,MAX_ARRAY_ITEMS};
+module.exports = {deviceProfile,fieldDefinitions,fieldAvailabilityPolicy,
+  sanitizeKnownProperties,sanitizeDeviceProperties,MAX_ARRAY_ITEMS};
