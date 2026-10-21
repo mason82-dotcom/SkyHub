@@ -86,6 +86,26 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertIn("CAUTION: storage source used by multiple containers",
                       module.report(rows))
 
+    def test_shared_mount_preflight_is_readonly_and_checks_external_mount(self):
+        helper = ROOT / "scripts/pi-minio-shared-mount-check.sh"
+        self.assertTrue(helper.is_file())
+        result = subprocess.run(["bash", "-n", str(helper)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = helper.read_text(encoding="utf-8")
+        self.assertIn("/mnt/hc4backup/aeronexus-data/minio", text)
+        self.assertIn("findmnt --target", text)
+        self.assertIn('mount_target" != "/"', text)
+        for destructive in ("docker start", "docker stop", "docker rm ", "mkdir -p", "mount ", "docker network connect"):
+            self.assertNotIn(destructive, text)
+
+    def test_adopt_requires_explicit_data_source_and_real_mount(self):
+        helper = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("SKYHUB_MINIO_EXPECTED_DATA_SOURCE", helper)
+        self.assertIn('if [[ "$mount_type" == bind ]]; then', helper)
+        self.assertIn("findmnt --target", helper)
+        self.assertIn('mount_target" != "/"', helper)
+        self.assertIn('Destination "/data"', helper)
+
     def test_adoption_does_not_require_deleting_old_stopped_minio_containers(self):
         helper = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("docker ps --no-trunc --format", helper)
