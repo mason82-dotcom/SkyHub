@@ -48,6 +48,32 @@ Nur wenn der vorhandene lokale Branch sauber ist:
 
     node scripts/pi-m3m-s3-inventory-check.js --help
 
+### Ohne Angabe eines privaten Bucket-Pfads starten
+
+Wenn der genaue Ordnername nicht bekannt ist, kann der Prüfer den
+**ersten 100 Einträgen** des bereits geschützten dji-cloud-Buckets
+einen einzigen wahrscheinlichen M3M-Ordner zuordnen.
+Er verlangt dafür mindestens **zwei** passend benannte Dateien in
+**genau einem** Verzeichnis. Bei mehr als einem passenden Verzeichnis,
+ungültigen Schlüsseln oder nur einer passenden Datei bricht er ab.
+Er gibt weder den ermittelten S3-Prefix noch einzelne Namen aus.
+
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-s3-inventory-check.js \
+      --auto-first-page
+
+Wenn die erste Seite einen eindeutigen Ordner identifiziert, wird
+**nur dieser** Prefix anschließend bis zum bestehenden Limit von
+101 S3-Seiten vollständig inventarisiert. Die JSON-Antwort enthält
+discoveryScope=first-100-entries-only. Das bezieht sich **nur auf
+die Ordnersuche**; es ist kein Beweis, dass dieser Ordner der
+einzige M3M-Ordner des ganzen Buckets ist.
+
+Beim zuvor auf dem Pi berichteten Teilausschnitt fanden sich
+3 M3M-ähnliche Dateien in genau einem gemeinsamen Unterverzeichnis.
+Das rechtfertigt diesen vorsichtigen Versuch, bestätigt jedoch
+keine Vollständigkeit des gesamten Buckets.
+
 Anschließend den **tatsächlich bekannten** M3M-Prefix auswählen.
 Nicht die vorhandenen Objekt-IDs, Positionsdaten, Bucket-Schlüssel
 oder den Prefix hierher kopieren. Beispiel mit **Platzhalter**, der
