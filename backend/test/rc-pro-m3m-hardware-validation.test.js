@@ -87,6 +87,21 @@ test('unrecognized status/OSD root keys are excluded from printed shape field na
   assert.doesNotMatch(JSON.stringify(report),/PRIVATE_RC_SERIAL|PRIVATE_AIR_SERIAL|49\.123456|9\.8\.7/);
 });
 
+test('event-triggered state is confirmed even after 16 seconds without a change',()=>{
+  const sixteenSecondsAgo=now-16000;
+  const rcState={...rc,propertyObservedAt:{osd:now-1500,state:sixteenSecondsAgo}};
+  const airState={...air,propertyObservedAt:{osd:now-1200,state:sixteenSecondsAgo}};
+  const report=evaluateHardwareSession([rcState,airState],health,shapes,now);
+  assert.equal(report.controller.stateAgeSeconds,16);
+  assert.equal(report.aircraft.stateAgeSeconds,16);
+  assert.ok(report.stages.filter(x=>x.step.includes('State-Daten empfangen'))
+    .every(x=>x.status==='BESTÄTIGT'));
+  const displayed=formatReport(report);
+  assert.match(displayed,/State Alter \(s\): 16/);
+  assert.match(displayed,/redigiert: /);
+  assert.match(displayed,/nicht typisiert: /);
+});
+
 test('Pi hardware-check help does not use Docker or require a connected drone',()=>{
   const file=path.resolve(__dirname,'../../scripts/pi-rc-pro-m3m-check.js');
   const out=spawnSync(process.execPath,[file,'--help'],{encoding:'utf8',timeout:5000});
@@ -110,7 +125,7 @@ test('legacy backend without new DJI-property API remains transport-valid but fi
   assert.equal(report.aircraft.propertyFields.documented,144);
   assert.equal(report.controller.propertyFields.observed,null);
   assert.equal(report.aircraft.propertyFields.missing,null);
-  assert.ok(report.stages.filter(x=>x.step.includes('State-Feldbeobachtung'))
+  assert.ok(report.stages.filter(x=>x.step.includes('State-Daten empfangen'))
     .every(x=>x.status==='NICHT PRÜFBAR'));
   const printed=formatReport(report);
   assert.match(printed,/Feldparser: NICHT PRÜFBAR/);
@@ -125,5 +140,5 @@ test('partial DJI property interface is not treated as a complete field audit',(
   assert.equal(report.aircraft.propertyDiagnosticsAvailable,false);
   assert.equal(report.aircraft.propertyFields.observed,null);
   assert.equal(report.controller.propertyDiagnosticsAvailable,true);
-  assert.ok(report.stages.some(x=>x.step.includes('M3M State-')&&x.status==='NICHT PRÜFBAR'));
+  assert.ok(report.stages.some(x=>x.step.includes('M3M State-Daten')&&x.status==='NICHT PRÜFBAR'));
 });
