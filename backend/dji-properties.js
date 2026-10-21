@@ -104,13 +104,28 @@ function sanitizeProfile(data, tree, channel) {
   }
   return result;
 }
+// Preserve distinct documented children when two official aircraft families
+// share the same top-level struct/array. Never merge unsanitized raw objects.
+function mergeKnown(target, source) {
+  for (const [key, value] of Object.entries(source)) {
+    const prior = target[key];
+    if (Array.isArray(value) && Array.isArray(prior)) {
+      value.forEach((item,index) => {
+        if (isObject(item) && isObject(prior[index])) mergeKnown(prior[index],item);
+        else if (prior[index] === undefined) prior[index] = item;
+      });
+    } else if (isObject(value) && isObject(prior)) {
+      mergeKnown(prior,value);
+    } else if (prior === undefined) target[key] = value;
+  }
+  return target;
+}
 // Superset is built before lookup because update_topo and OSD may arrive
 // in different orders. All unrecognized keys and untrusted strings are discarded.
 function sanitizeKnownProperties(data, channel) {
   const out = Object.create(null);
-  for (const tree of Object.values(trees)) {
-    Object.assign(out, sanitizeProfile(data, tree, channel));
-  }
+  for (const tree of Object.values(trees))
+    mergeKnown(out, sanitizeProfile(data, tree, channel));
   return out;
 }
 function sanitizeDeviceProperties(known, channel, model) {
