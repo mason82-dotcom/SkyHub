@@ -153,7 +153,56 @@ echter Hardware bestätigt; dokumentierte Property-Auswertung ist
 nachgewiesen, die feldweise Vollständigkeit sowie RTK/Multispektral-
 Medienfunktionen bleiben offen.
 
-## 6. Falls die Verbindung fehlt
+## 6. Tiefere Ursachenanalyse der noch nicht beobachteten M3M-Felder
+
+Die **vierte Live-Sitzung** (laufendes Backend, zweite Abnahme nach Update)
+bestätigte erneut beide Gerätetypen, Zuordnung und aktuellen OSD-Verkehr
+mit ca. zwei Sekunden Alter je Gerät. Backendweit: 700/700 OSD-Pakete
+übernommen, 700 verwertbare Updates. Die RC lieferte 17/48 auswertbare
+Feldpfade (10 frisch, 7 historisch). Für die M3M waren es inzwischen
+**75/144** (58 frisch, 17 historisch), während **59** auswertbare
+Definitionen nicht beobachtet wurden. Redigierte und untypisierte Pfade
+(8+2 bei M3M) sind davon separat zu zählen.
+
+Die neue, ausschließlich lokale Diagnose gruppiert die nicht
+beobachteten Feldpfade:
+
+1. **Root komplett unobserviert:** beispielweise ein nicht auftauchendes
+   Top-Level-Statusobjekt. Das ist kein Nachweis mangelnder
+   Geräteunterstützung; manche Rootfelder werden nur unter besonderen
+   Bedingungen übertragen.
+2. **Kind nicht vorhanden trotz beobachtetem Root:** zum Beispiel
+   optionale Kamera-/Akkuattribute innerhalb eines aktiv gesendeten
+   Arrays oder Objekts. Die fehlende Kind-Eigenschaft darf nicht als
+   komplett fehlende Kamera interpretiert werden.
+3. **Kind unter einem nicht beobachteten Root:** Dieses Unterfeld kann
+   während der Beobachtung definitionsgemäß ebenfalls nicht auftreten.
+   Die Zahlen sind keine weiteren eigenständigen Fehlermeldungen.
+
+Außerdem wertet der Diagnosebericht **fünf nur generisch dokumentierte
+DJI-Aircraft-Erweiterungs-Rootfelder** separat aus:
+`distance_limit_status`, `rth_altitude`, `rc_lost_action`,
+`payloads`, `wpmz_version`. Sie sind in den globalen
+MQTT-Shape-Sammlungen sichtbar, jedoch **noch nicht einem konkreten
+Sender zugeordnet**. Sie dürfen deswegen **nicht** nachträglich zum
+M3M-Modellprofil hinzugefügt werden, nur weil sie backendweit auftreten.
+
+Zunächst das Test-Worktree aktualisieren (keine Änderung an
+`~/Projekte/SkyHub-Next` und keine Neustarts):
+
+~~~bash
+git -C ~/Projekte/SkyHub-HW-Test fetch origin
+git -C ~/Projekte/SkyHub-HW-Test switch --detach origin/test/rc-pro-m3m-hardware-validation
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node ~/Projekte/SkyHub-HW-Test/scripts/pi-rc-pro-m3m-check.js
+~~~
+
+Die neuen Zeilen `Nicht beobachtete Rootfelder`,
+`Nicht beobachtete Unterfelder trotz beobachtetem Root` und
+`Generische Aircraft-Erweiterungen in MQTT-Shapes` enthalten
+ausschließlich offizielle Feldnamen, niemals SNs oder Messwerte.
+
+## 7. Falls die Verbindung fehlt
 
 Für die bestehende Diagnose ohne Änderung am laufenden System:
 
@@ -167,6 +216,6 @@ Ein Merge auf GitHub installiert keine neue Backend-Version auf dem Pi. Veraltet
 
 Bitte nur den sanitisierten Bericht aus dem Hardwarecheck teilen, **keine** MQTT-Rohpayloads, Geräteseriennummern, GPS-Koordinaten, Tokens oder .env-Inhalte.
 
-## 7. Grenzen
+## 8. Grenzen
 
 Die Prüfung löst weder property/set noch Flugsteuerung, Missionen, Medienaufnahmen, neue MQTT-Abos oder Pairing aus. Erst die Ausführung auf realer, eingeschalteter Hardware und die Auswertung des Ergebnisses ermöglichen eine belastbare Abnahme. GitHub-CI prüft lediglich synthetische RC-/M3M-Snapshots und die CLI-Argumentverarbeitung.
