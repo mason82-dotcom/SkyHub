@@ -9,7 +9,12 @@ SOURCE="/mnt/hc4backup/aeronexus-data/minio"
 TARGET="/mnt/hc4backup/skyhub-next/minio"
 TARGET_PARENT="${TARGET%/*}"
 MOUNT="/mnt/hc4backup"
-LINK="$ROOT/storage/minio-data"
+PROJECT_DIR="${SKYHUB_PROJECT_DIR:-$ROOT}"
+[[ "$PROJECT_DIR" = /* && -d "$PROJECT_DIR/storage" ]] || {
+  echo "ERROR: SKYHUB_PROJECT_DIR must be an absolute SkyHub checkout containing storage/" >&2
+  exit 2
+}
+LINK="$PROJECT_DIR/storage/minio-data"
 OLD_IMAGE="aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1"
 NEW_IMAGE="skyhub/minio:RELEASE.2025-10-15T17-29-55Z-an1"
 EXPECTED_IMAGE_ID="sha256:117cf7edd050e6acd4a2d06be79b15eaecd5af76ad73e8927a4bf67528f19d10"
@@ -112,8 +117,21 @@ verify_new_state() {
     die "MinIO env file must have mode 0600"
 }
 
+verify_compose_version() {
+  local ver
+  ver="$(docker compose version --short 2>/dev/null)" ||
+    die "Docker Compose plugin missing"
+  python3 - "$ver" <<'PY'
+import re, sys
+match = re.search(r"v?(\\d+)\\.(\\d+)(?:\\.(\\d+))?", sys.argv[1])
+if not match or tuple(int(n or "0") for n in match.groups()) < (2, 30, 0):
+    raise SystemExit("ERROR: Compose 2.30+ required for raw env_file format.")
+PY
+}
+
 preflight() {
   require docker;require findmnt;require python3;require stat
+  verify_compose_version
   check_mount
   verify_old_stopped
   verify_image
