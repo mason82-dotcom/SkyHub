@@ -399,6 +399,69 @@ Neuverbindung nicht einfach als aktuelle Feldabdeckung ausgegeben
 werden. Der Check selbst ändert weder MQTT-Abonnements noch
 Backend-Prozesse oder DJI-Einstellungen.
 
+## Abschluss des feldgenauen RC-/M3M-State-Hardwaretests (21.10.2026)
+
+Der Benutzer hat den Test-Worktree `bde2416` auf dem realen Pi mit
+`node --test backend/test/rc-pro-m3m-hardware-validation.test.js` und
+`node scripts/pi-rc-pro-m3m-check.js` ausgeführt. **27/27
+Node-Tests erfolgreich.** Sämtliche folgenden Informationen stammen
+aus dem vom Prüfer ausgegebenen **wertfreien** Live-Bericht.
+
+| State-Feldabdeckung | RC Pro Enterprise | Mavic 3M |
+|---|---:|---:|
+| Dokumentierte Pfade | **37** | **33** |
+| Vom Parser akzeptiert und beobachtet | **7** | **5** |
+| Innerhalb von 15 s frisch | **0** | **0** |
+| Historisch gültig beobachtet | **7** | **5** |
+| Nicht beobachtet (auswertbar) | **24** | **22** |
+| Aus Datenschutzgründen redigiert | **6** | **6** |
+| Nicht typisiert | 0 | 0 |
+
+Beobachtete **RC-Pro-State-Feldnamen**:
+
+- `state:live_capacity`
+- `state:live_capacity.available_video_number`
+- `state:live_capacity.coexist_video_number_max`
+- `state:live_capacity.device_list`
+- `state:live_capacity.device_list.available_video_number`
+- `state:live_capacity.device_list.coexist_video_number_max`
+- `state:firmware_version`
+
+Beobachtete **M3M-State-Feldnamen**:
+
+- `state:mode_code_reason`
+- `state:serious_low_battery_warning_threshold`
+- `state:low_battery_warning_threshold`
+- `state:home_latitude`
+- `state:home_longitude`
+
+Kein tatsächlicher Akku-Schwellenwert, Homepoint-Koordinaten,
+Firmwarewert, Streamzustand, Identifikator oder Schlüssel wurde
+ausgegeben. **Historisch** ist hier ein normaler Berichtswert:
+`pushMode=1` erfordert keinen periodischen Neusend.
+Die frühere M3M-Lücke von **27 nicht beobachteten State-Pfaden**
+sank nach Pilot-2-Neuverbindung auf **22**; diese Beobachtung
+beweist keine Abdeckung aller möglichen M3M-Firmwarezustände.
+
+Der erneut ausgegebene MQTT-Befund war **29 State empfangen,
+24 akzeptiert, modellbezogen RC 13 / M3M 11 und 5 Duplikate
+verworfen**. Bei vollständiger kanalübergreifender
+Zählerbilanz wurden diese fünf tatsächlich dem State-Kanal
+zugeordnet; sie sind damit **kein unbehandelter Parserverlust**.
+
+Noch nicht beobachtete RC-Pro-State-Rootfelder:
+`dongle_infos`, `live_status`.
+Noch nicht beobachtete M3M-State-Rootfelder:
+`dongle_infos`, `firmware_upgrade_status`,
+`compatible_status`, `firmware_version`,
+`camera_watermark_settings`.
+
+**Abnahmegrenze:** Die RC-/M3M-State-Datenübertragung,
+Gerätezuordnung, Typannahme und die Duplikatabwehr sind
+hardwarebestätigt. Die **22 fehlenden auswertbaren M3M-State-Pfade**
+sind weiterhin funktions- und firmwareabhängig; sie sind kein
+Nachweis defekter Hardware.
+
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
