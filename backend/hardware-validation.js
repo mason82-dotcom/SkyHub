@@ -99,7 +99,7 @@ function deviceSummary(device,now){
     }
   };
 }
-function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
+function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShapes=null){
   const list=Array.isArray(devices)?devices:[];
   const rc=list.find(d=>keyOf(d)===RC&&d.role==='gateway');
   const air=list.find(d=>keyOf(d)===M3M&&d.role==='subdevice');
@@ -126,6 +126,31 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
   transport.genericAircraftCandidatesInBackendShapes=
     GENERIC_AIRCRAFT_CANDIDATES.filter(key=>
       transport.osdShapeFields.includes(key)||transport.stateShapeFields.includes(key));
+  // Optional evidence from the new backend endpoint. Strictly bind to
+  // pinned model keys and documented roots; never echo arbitrary device keys.
+  const modelScopeAvailable=Array.isArray(modelShapes);
+  const scopedRoots=(model,channel)=>{
+    const profile=model===RC?'rcPro':'mavic3';
+    const allowed=new Set(catalog.profiles[profile].fields
+      .filter(field=>!field.path.includes('.')).map(field=>field.path));
+    if(model===M3M)for(const key of GENERIC_AIRCRAFT_CANDIDATES)allowed.add(key);
+    return modelScopeAvailable?[...new Set(modelShapes
+      .filter(item=>item&&item.model===model&&item.channel===channel&&
+        Number.isSafeInteger(item.count)&&item.count>0&&Array.isArray(item.dataKeys))
+      .flatMap(item=>item.dataKeys)
+      .filter(key=>typeof key==='string'&&allowed.has(key)))].sort():[];
+  };
+  transport.modelScopeAvailable=modelScopeAvailable;
+  transport.rcModelOsdRoots=scopedRoots(RC,'osd');
+  transport.rcModelStateRoots=scopedRoots(RC,'state');
+  transport.m3mModelOsdRoots=scopedRoots(M3M,'osd');
+  transport.m3mModelStateRoots=scopedRoots(M3M,'state');
+  transport.m3mConfirmedGenericAircraftRoots=
+    GENERIC_AIRCRAFT_CANDIDATES.filter(root=>
+      transport.m3mModelOsdRoots.includes(root)||transport.m3mModelStateRoots.includes(root));
+  transport.globalCandidateRootsNotAttributedToM3M=
+    transport.genericAircraftCandidatesInBackendShapes.filter(root=>
+      !transport.m3mConfirmedGenericAircraftRoots.includes(root));
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
   // DJI pushMode=1 is event-driven: state is pushed on change, unlike
@@ -149,7 +174,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     transport,controller,aircraft,linked,stages,
     notes:[
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
-      'Generische Aircraft-Kandidaten in den backendweiten MQTT-Shapes dürfen NICHT der M3M zugeschrieben werden, solange kein gerätespezifischer Nachweis vorliegt.',
+      'Globale MQTT-Shapes erlauben keine Gerätezuordnung. Nur der optionale modellbezogene Katalog nach akzeptiertem Paket und bestätigter Topologie kann Rootfelder der M3M zurechnen.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
       'M3M (0:77:2) nutzt ein vorläufiges Mavic-3-Familienprofil.',
       'DJI State (pushMode 1) wird bei Zustandsänderung gesendet. Ältere State-Zeitstempel bedeuten nicht automatisch einen Kommunikationsfehler.',
@@ -200,8 +225,24 @@ function formatReport(r){
   }
   lines.push('Bekannte MQTT OSD-Rootfelder (backendweit): '+(r.transport.osdShapeFields.join(', ')||'keine'));
   lines.push('Bekannte MQTT State-Rootfelder (backendweit): '+(r.transport.stateShapeFields.join(', ')||'keine'));
-  lines.push('Generische Aircraft-Erweiterungen in MQTT-Shapes (nur backendweit, KEIN M3M-Nachweis): '+
+  lines.push('Generische Aircraft-Erweiterungen in MQTT-Shapes (nur backendweit): '+
     (r.transport.genericAircraftCandidatesInBackendShapes.join(', ')||'keine'));
+  if(!r.transport.modelScopeAvailable){
+    lines.push('Modellbezogene MQTT-Feldzuordnung: NICHT VERFÜGBAR (erfordert separates Backend-Update).');
+    lines.push('Kein M3M-Nachweis für die globalen Erweiterungs-Rootfelder.');
+  }else{
+    lines.push('Modellbezogene MQTT-Feldzuordnung: verfügbar, ab Backend-Start erfasst.');
+    lines.push('RC Pro OSD/State-Rootfelder: '+
+      (r.transport.rcModelOsdRoots.join(', ')||'keine')+' / '+
+      (r.transport.rcModelStateRoots.join(', ')||'keine'));
+    lines.push('M3M OSD/State-Rootfelder: '+
+      (r.transport.m3mModelOsdRoots.join(', ')||'keine')+' / '+
+      (r.transport.m3mModelStateRoots.join(', ')||'keine'));
+    lines.push('Generische Aircraft-Rootfelder durch M3M-MQTT konkret nachgewiesen: '+
+      (r.transport.m3mConfirmedGenericAircraftRoots.join(', ')||'keine'));
+    lines.push('Backendweit bekannte Kandidaten OHNE M3M-Zuordnungsnachweis: '+
+      (r.transport.globalCandidateRootsNotAttributedToM3M.join(', ')||'keine'));
+  }
   lines.push(...r.notes.map(x=>'Hinweis: '+x));
   lines.push('Keine Geräte-IDs, Koordinaten, Messwerte oder Zugangsdaten ausgegeben.');
   return lines.join('\n');
