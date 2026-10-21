@@ -41,6 +41,8 @@ const waylines=START+MISSION+'<Folder><wpml:templateId>0</wpml:templateId>'+
 test('DJI WPML valid waypoint template/action and executable route',()=>{
   const x=validateDocuments(template,waylines);
   assert.equal(x.valid,true,JSON.stringify(x.errors));
+  assert.equal(x.flightReady,false);
+  assert.equal(x.validationScope,'offline-partial');
   assert.deepEqual(x.templates,[{templateId:0,templateType:'waypoint'}]);
   assert.equal(x.waylines[0].waypointCount,1);
   assert.equal(x.aircraft.droneType,67);
