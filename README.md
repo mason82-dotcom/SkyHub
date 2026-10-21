@@ -41,6 +41,17 @@ meldet dann `trackRecordingEnabled:false`. Erst explizites `true`
 und ein gezieltes Backend-Update aktivieren die Aufnahme wieder.
 Die lokale `.env` bleibt unverändert.
 
+## Erweiterte Live-Telemetrie
+
+Das Dashboard zeigt neben den bisherigen Basiswerten zusätzliche bereits
+durch den DJI-Parser unterstützte OSD-Felder an: Kurs, Vertikalgeschwindigkeit,
+Nick-/Rollwinkel und Positionsqualitätscode. Nicht gemeldete optionale Felder
+werden nicht als Messwerte ausgegeben; ein RTK-Fix-Code wird nicht mit dem
+RTK-Ein/Aus-Schalter gleichgesetzt. Der Geräte-Snapshot enthält zuletzt
+beobachtete Einzelwerte, deren Zeitstempel nicht individuell vorliegen.
+Die DJI-MQTT-Verbindung, die Positionsaufzeichnung und die Pilot-Kopplung
+bleiben unverändert.
+
 ## Sicher prüfen – ohne Deployment
 
 ```bash
