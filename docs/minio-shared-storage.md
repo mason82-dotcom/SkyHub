@@ -26,6 +26,13 @@ ein neuer, Compose-verwalteter MinIO **ohne Download und ohne Kopie der
 Image-Layer** angelegt. Der neue Container heißt `skyhub-shared-minio`,
 Image-Tag `skyhub/minio:RELEASE.2025-10-15T17-29-55Z-an1`.
 
+Ein frisch angelegter SkyHub-Checkout besitzt gegebenenfalls noch
+keinen Ordner `storage/`. Das ist **kein Fehler**: `plan` verlangt
+nur den gültigen Checkout (`docker-compose.yml` und `backend/`)
+und bleibt rein lesend. Erst `move` erzeugt bei Bedarf
+`storage/` und den `minio-data`-Symlink. Ein bereits vorhandener
+Symlink oder ein nicht reguläres `storage/`-Verzeichnis wird abgelehnt.
+
 Der MinIO-Datenbestand wird **innerhalb derselben NVMe-Partition**
 mittels `os.rename` von
 `/mnt/hc4backup/aeronexus-data/minio` nach
