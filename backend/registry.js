@@ -98,8 +98,11 @@ function createRegistry(limit = 200) {
     }
     let point = null;
     const aircraft = d.model.domain === '0' || (d.model.domain === null && d.role === 'subdevice');
-    if (aircraft && message.channel === 'osd') {
-      d.aircraftConnected = message.state?.modeCode !== AIRCRAFT_NOT_CONNECTED;
+    if (aircraft && message.channel === 'osd' &&
+        Number.isInteger(message.state?.modeCode)) {
+      // OSD without a mode_code is not proof a previously disconnected
+      // aircraft has reconnected. Keep replay protection until a code arrives.
+      d.aircraftConnected = message.state.modeCode !== AIRCRAFT_NOT_CONNECTED;
     }
     // Replayed last-known values of a disconnected aircraft are not telemetry.
     if (message.telemetry && d.aircraftConnected !== false) {
@@ -141,6 +144,19 @@ function createRegistry(limit = 200) {
     if (message.propertyValues && ['osd','state'].includes(message.channel) &&
         (message.channel !== 'osd' || d.aircraftConnected !== false)) {
       const properties = sanitizeDeviceProperties(message.propertyValues,message.channel,d.model);
+      if (message.channel === 'osd' &&
+          (d.model.domain === '0' || d.model.domain === '2')) {
+        // Keep the raw-property snapshot consistent with the validated GPS
+        // adapter: a partial coordinate pair or DJI's (0,0) placeholder
+        // must never overwrite the last accepted position.
+        const lat=properties.latitude, lon=properties.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
+            (lat === 0 && lon === 0) ||
+            Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+          delete properties.latitude;
+          delete properties.longitude;
+        }
+      }
       if (Object.keys(properties).length) {
         Object.assign(d.deviceProperties[message.channel],properties);
         d.propertyObservedAt[message.channel] = observedAt;
