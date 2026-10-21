@@ -71,12 +71,30 @@ test('planner fails closed on malformed position, waypoint limits and unknown ai
   const tooLong=plan();tooLong.waypoints=Array.from({length:501},()=>tooLong.waypoints[0]);
   assert.throws(()=>planner.build(tooLong),/2 to 500/);
 });
-test('no false geoid conversion or varying per-waypoint altitude is generated',()=>{
+test('local waypoint heights require explicit WGS84 ellipsoid values at every point',()=>{
   const mismatch=plan();mismatch.waypoints[2].height=60;
-  assert.throws(()=>planner.build(mismatch),/uniform relative flight height/);
-  const xml=planner.build(plan()).templateXml;
-  assert.doesNotMatch(xml,/<wpml:ellipsoidHeight>/);
-  assert.doesNotMatch(xml,/WGS84<\/wpml:heightMode>/);
+  assert.throws(()=>planner.build(mismatch),/explicit ellipsoidHeight/);
+  mismatch.waypoints[0].ellipsoidHeight=210.3;
+  assert.throws(()=>planner.build(mismatch),/ellipsoidHeight is required at every waypoint/);
+  mismatch.waypoints[1].ellipsoidHeight=211;
+  mismatch.waypoints[2].ellipsoidHeight=212.8;
+  const output=planner.build(mismatch),report=inspectKmz(Buffer.from(output.kmz));
+  assert.equal(report.valid,true,JSON.stringify(report.errors));
+  assert.equal(report.flightReady,false);
+  assert.equal(output.summary.localHeightMode,true);
+  assert.equal(output.summary.maxRelativeHeight,60);
+  assert.equal(output.summary.minRelativeHeight,50);
+  assert.match(output.templateXml,/<wpml:ellipsoidHeight>212.8<\/wpml:ellipsoidHeight>/);
+  assert.equal((output.templateXml.match(/<wpml:useGlobalHeight>0<\/wpml:useGlobalHeight>/g)||[]).length,3);
+  assert.match(output.waylinesXml,/<wpml:executeHeight>60<\/wpml:executeHeight>/);
+  assert.match(output.templateXml,/<wpml:heightMode>relativeToStartPoint<\/wpml:heightMode>/);
+  assert.doesNotMatch(output.templateXml,/WGS84<\/wpml:heightMode>/);
+  const invalid=plan();
+  invalid.waypoints.forEach(w=>w.ellipsoidHeight='unknown');
+  assert.throws(()=>planner.build(invalid),/ellipsoidHeight/);
+  const flat=planner.build(plan());
+  assert.equal(flat.summary.localHeightMode,false);
+  assert.doesNotMatch(flat.templateXml,/<wpml:ellipsoidHeight>/);
 });
 test('flight controls disallow unsafe out-of-range numbers and unsupported enum strings',()=>{
   for(const [key,value] of [['speed',16],['speed',0],['takeoffHeight',0],['takeoffHeight',121],
@@ -93,6 +111,8 @@ test('standalone editor is present and performs no DJI requests or server-side K
   assert.match(html,/wpml-editor\.js/);
   assert.match(html,/type="submit" id="export"/);
   assert.match(html,/type="number"/);
+  assert.match(html,/id="local-heights"/);
+  assert.match(app,/ellipsoidHeight/);
   assert.match(app,/core\.build\(plan\)/);
   assert.match(app,/createObjectURL/);
   assert.doesNotMatch(app,/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|mqtt\.connect|\/api\/mission\/create/i);
