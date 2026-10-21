@@ -207,6 +207,51 @@ Der Expertenmodus für individuelle Wegpunkthöhen wird in
 `backend/test/wpml-editor.test.js` mit dem unabhängigen KMZ-Validator
 geprüft; WGS84-Ellipsoidhöhen werden **nie** automatisch ergänzt.
 
+## Optikgestützte 2D-Fotogrammetrie-Schätzung (kein DJI-Wayline-Export)
+
+Ein optionaler Expertenmodus in `/wpml-survey-preview.html` verwendet die
+**vom Anwender vollständig und ausdrücklich angegebenen** physikalischen
+Kameradaten: Sensorbreite/-höhe in mm, tatsächliche Brennweite (kein
+Kleinbildäquivalent), Pixelanzahl je Achse, reale AGL-Höhe, Seiten- und
+Längsüberlappung sowie angenommene Geschwindigkeit.
+
+Für senkrecht nach unten ausgerichtete Kamera, flache Geländeoberfläche und
+konstante AGL-Höhe nutzt `frontend/public/wpml-photogrammetry-core.js`
+vereinfachte Lochkamera-Geometrie:
+
+- Quer-Footprint = `H_AGL × Sensorbreite / Brennweite`
+- Längs-Footprint = `H_AGL × Sensorhöhe / Brennweite`
+- Quer-GSD = `Quer-Footprint / Bildbreite_px` (m/Pixel)
+- Längs-GSD = `Längs-Footprint / Bildhöhe_px` (m/Pixel)
+- Streifenabstand = `Quer-Footprint × (1 − Seitenüberlappung/100)`
+- Aufnahmeabstand = `Längs-Footprint × (1 − Längsüberlappung/100)`
+- Theoretisches Intervall = `Aufnahmeabstand / konstante Geschwindigkeit`
+
+Der Streifenabstand speist lediglich den vorhandenen geometrischen
+Survey-Vorschauberechner. Aufnahmen werden pro getrenntem Liniensegment
+**endpunktinklusiv überschlägig gezählt**, keine Auslösepunkte oder
+Kameraaktionen erzeugt. Ein vom Anwender ausdrücklich mitgeteiltes
+minimales Kameraaufnahmeintervall wird gegen das theoretische Intervall
+geprüft; unbekannte Fähigkeiten werden als unbekannt ausgewiesen. Die
+Eingabe ist auf sinnvolle Zahlenbereiche begrenzt und schließt zu enge
+Streifen, unrealistisch kurze Fotoabstände und mehr als 50.000 geschätzte
+Bilder aus.
+
+**Nicht berücksichtigt:** Linsenverzeichnung, Tilt/Yaw, Multispektral-
+Einzelbandunterschiede, rolling shutter, reale Geländeoberfläche,
+Photogrammetriequalität, Flugtrajektorien, Start-/Wende-/Transitwege,
+Hindernisse, RTK und Mission-Firmware. Insbesondere werden keine
+unbestätigten DJI-Mavic-3M- oder Matrice-4T-Kamerapresets hinterlegt.
+`calibratedFromDevice:false`, `flightReady:false` und
+`exportableAsWaylines:false` stehen ausdrücklich im Ergebnis.
+Der GeoJSON-Export bleibt eine **rein geometrische Vorschau**.
+
+Unit- und Negativtests: `backend/test/wpml-photogrammetry.test.js`.
+Die Datei wird nicht zum Flug beauftragt und nicht als DJI-Wayline-KMZ
+exportiert. Für verlässlich nutzbare 2D-Mapping-Missionen sind
+validierte Sensorprofile, Geländemodell und DJI-Pilot-2-Vergleichstests
+weiter erforderlich.
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
