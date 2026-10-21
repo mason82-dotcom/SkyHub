@@ -169,7 +169,7 @@ test('backend-wide generic aircraft property extensions are not misattributed to
   assert.deepEqual(report.transport.genericAircraftCandidatesInBackendShapes,
     ['distance_limit_status','rth_altitude','rc_lost_action','payloads','wpmz_version']);
   assert.ok(report.notes.some(x=>x.includes('NICHT der M3M zugeschrieben')));
-  assert.match(formatReport(report),/KEIN M3M-Nachweis/);
+  assert.match(formatReport(report),/Kein M3M-Nachweis/);
   assert.equal(report.aircraft.propertyFields.documented,144);
   assert.ok(!report.aircraft.propertyFields.observedNames.includes('state:payloads'));
 });
@@ -182,4 +182,56 @@ test('older backend yields no speculative missing-root classifications',()=>{
   assert.equal(result.aircraft.propertyFields.missingNestedUnderObservedRoot,null);
   assert.equal(result.aircraft.propertyFields.missingNestedWithAbsentRoot,null);
   assert.doesNotMatch(formatReport(result),/PRIVATE_AIR_SERIAL/);
+});
+
+
+test('model-scoped MQTT attribution distinguishes actual M3M roots from backend-wide candidates',()=>{
+  const perModel=[
+    {model:'2:144:0',channel:'osd',count:15,dataKeys:['wireless_link','capacity_percent','SECRET_DEVICE']},
+    {model:'0:77:2',channel:'osd',count:12,dataKeys:['mode_code','rth_altitude','distance_limit_status','GPS_SECRET']},
+    {model:'0:77:2',channel:'state',count:4,dataKeys:['payloads','wpmz_version']},
+    {model:'0:99:1',channel:'state',count:3,dataKeys:['rc_lost_action']}
+  ];
+  const global=[
+    {channel:'osd',dataKeys:['rth_altitude','distance_limit_status','rc_lost_action']},
+    {channel:'state',dataKeys:['payloads','wpmz_version']}
+  ];
+  const report=evaluateHardwareSession([rc,air],health,global,now,perModel);
+  assert.equal(report.transport.modelScopeAvailable,true);
+  assert.deepEqual(report.transport.rcModelOsdRoots,['capacity_percent','wireless_link']);
+  assert.deepEqual(report.transport.m3mModelOsdRoots,['distance_limit_status','mode_code','rth_altitude']);
+  assert.deepEqual(report.transport.m3mModelStateRoots,['payloads','wpmz_version']);
+  assert.deepEqual(report.transport.m3mConfirmedGenericAircraftRoots,
+    ['distance_limit_status','rth_altitude','payloads','wpmz_version']);
+  assert.deepEqual(report.transport.globalCandidateRootsNotAttributedToM3M,['rc_lost_action']);
+  assert.match(formatReport(report),/konkret nachgewiesen/);
+  assert.doesNotMatch(JSON.stringify(report),/GPS_SECRET|SECRET_DEVICE/);
+});
+
+test('old backend has no model attribution, even when global MQTT shapes mention candidate fields',()=>{
+  const global=[
+    {channel:'osd',dataKeys:['rth_altitude','distance_limit_status']},
+    {channel:'state',dataKeys:['payloads']}
+  ];
+  const report=evaluateHardwareSession([rc,air],health,global,now);
+  assert.equal(report.transport.modelScopeAvailable,false);
+  assert.deepEqual(report.transport.m3mConfirmedGenericAircraftRoots,[]);
+  assert.match(formatReport(report),/NICHT VERFÜGBAR/);
+  assert.match(formatReport(report),/Kein M3M-Nachweis/);
+});
+
+test('model attribution is strictly whitelisted and ignores spoofed or unsupported model keys',()=>{
+  const modelShapes=[
+    {model:'0:77:2',channel:'osd',count:1,
+      dataKeys:['mode_code','rth_altitude','SERIAL_FROM_INPUT','__proto__']},
+    {model:'0:77:2',channel:'state',count:0,dataKeys:['payloads']},
+    {model:'2:144:0',channel:'state',count:1,dataKeys:['payloads','live_capacity']},
+    {model:'0:77:2',channel:'events',count:1,dataKeys:['rth_altitude']},
+    {model:'ANY_SECRET',channel:'osd',count:1,dataKeys:['mode_code']}
+  ];
+  const report=evaluateHardwareSession([rc,air],health,[],now,modelShapes);
+  assert.deepEqual(report.transport.m3mModelOsdRoots,['mode_code','rth_altitude']);
+  assert.deepEqual(report.transport.m3mModelStateRoots,[]);
+  assert.deepEqual(report.transport.rcModelStateRoots,['live_capacity']);
+  assert.doesNotMatch(JSON.stringify(report),/SERIAL_FROM_INPUT|ANY_SECRET|__proto__/);
 });
