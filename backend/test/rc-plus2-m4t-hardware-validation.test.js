@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
-const {evaluateHardwareSession,formatReport}=
+const {evaluateHardwareSession:evaluate,formatReport}=
   require('../rc-plus2-m4t-hardware-validation');
 const {fieldDefinitions}=require('../dji-properties');
 const NOW=1792609000000;
@@ -48,10 +48,22 @@ const drone={
   }
 };
 const health={
-  mqtt:true,subscribed:true,topologyReplyEnabled:true,
+  mqtt:true,subscribed:true,topologyReplyEnabled:true,topologyReplyConnected:true,
   topologyReplySent:3,topologyReplyErrors:0,
   mqttObservedOsdPackets:200,mqttOsdMessages:190
 };
+const pairings={
+  devices:[
+    {id:'PRIVATE_PAIR_PLUS',model:'DJI RC Plus 2 Enterprise',
+      lastUsedAt:NOW-1800,createdAt:NOW-60000},
+    {id:'PRIVATE_PAIR_OLD',model:'DJI RC Pro Enterprise',
+      lastUsedAt:NOW-18000,createdAt:NOW-900000}
+  ],
+  pending:[{code:'987654',model:'DJI RC Plus 2 Enterprise'}]
+};
+function evaluateHardwareSession(devices,healthValue,shapesValue,now=NOW,pairingData=pairings){
+  return evaluate(devices,healthValue,shapesValue,now,pairingData);
+}
 const shapes=[
   {channel:'osd',dataKeys:['mode_code','capacity_percent','latitude',
     'PRIVATE_RC_PLUS_2','device_secret','malicious-token',
@@ -86,8 +98,9 @@ test('genuine linked RC Plus 2 and Matrice 4T pass transport smoke test',()=>{
 test('read-only report never exposes device IDs, GPS values or firmware versions',()=>{
   const report=evaluateHardwareSession([rc,drone],health,shapes,NOW);
   const print=formatReport(report);
-  assert.match(print,/Smoketest: BESTANDEN/);
-  for(const secret of ['PRIVATE_RC_PLUS_2','PRIVATE_M4T','49.123456',
+  assert.match(print,/Gesamtabnahme: BESTANDEN/);
+  for(const secret of ['PRIVATE_RC_PLUS_2','PRIVATE_M4T','PRIVATE_PAIR_PLUS',
+    'PRIVATE_PAIR_OLD','987654','49.123456',
     '8.123456','2.0.0','3.0.0','-5.5','device_secret',
     'malicious-token']){
     assert.ok(!print.includes(secret),secret+' leaked to report');
@@ -164,4 +177,55 @@ test('Pi CLI --help requires neither hardware nor Docker',()=>{
   assert.equal(exec.status,0,exec.stderr);
   assert.match(exec.stdout,/Cloud API 1.18/);
   assert.match(exec.stdout,/Nur Modell/);
+});
+
+test('pairing metadata verifies both independently paired controllers by count only',()=>{
+  const report=evaluateHardwareSession([rc,drone],health,shapes,NOW);
+  assert.equal(report.pairing.available,true);
+  assert.equal(report.pairing.rcPlus2Paired,1);
+  assert.equal(report.pairing.rcProPaired,1);
+  assert.equal(report.pairing.rcPlus2RecentlyUsed,1);
+  assert.equal(report.pairing.rcPlus2Pending,1);
+  assert.equal(report.pairingConfirmed,true);
+  assert.equal(report.transportPassed,true);
+});
+test('no pairing API is unknown, never misreported as zero pairings',()=>{
+  const report=evaluateHardwareSession([rc,drone],health,shapes,NOW,null);
+  assert.equal(report.transportPassed,true);
+  assert.equal(report.pairing.available,false);
+  assert.equal(report.pairing.rcPlus2Paired,null);
+  assert.equal(report.passed,false);
+  assert.match(formatReport(report),/Pilot-2-Geräte-Token: NICHT PRÜFBAR/);
+});
+test('a registered RC Plus 2 with no recent token use is not accepted',()=>{
+  const stale={devices:[{...pairings.devices[0],lastUsedAt:NOW-1800001}],pending:[]};
+  const report=evaluateHardwareSession([rc,drone],health,shapes,NOW,stale);
+  assert.equal(report.transportPassed,true);
+  assert.equal(report.pairing.rcPlus2Paired,1);
+  assert.equal(report.pairing.rcPlus2RecentlyUsed,0);
+  assert.equal(report.passed,false);
+});
+test('topology-ACK publisher must really be connected',()=>{
+  const report=evaluateHardwareSession([rc,drone],
+    {...health,topologyReplyConnected:false},shapes,NOW);
+  assert.equal(report.passed,false);
+  assert.equal(report.transportPassed,false);
+  assert.ok(report.stages.some(x=>x.step.includes('Topologie-Antwort')&&
+    x.status==='NICHT AKTUELL'));
+});
+test('unknown and attacker-controlled pairing labels are ignored',()=>{
+  const fake={devices:[
+    {id:'SECRET_WRONG',model:'DJI RC Plus 2 Enterprise SECRET',lastUsedAt:NOW},
+    {id:'SERIAL_SNEAK',model:'DJI RC Plus 2 Enterprise',lastUsedAt:NOW+9999}],
+    pending:[{code:'123456',model:'FAKE RC Plus 2'}]};
+  const report=evaluateHardwareSession([rc,drone],health,shapes,NOW,fake);
+  assert.equal(report.pairing.rcPlus2Paired,1);
+  assert.equal(report.pairing.rcPlus2RecentlyUsed,0);
+  assert.equal(report.pairing.rcPlus2Pending,0);
+  assert.equal(report.passed,false);
+  for(const bad of ['SECRET_WRONG','SERIAL_SNEAK','123456',
+    'DJI RC Plus 2 Enterprise SECRET']){
+    assert.ok(!JSON.stringify(report).includes(bad));
+    assert.ok(!formatReport(report).includes(bad));
+  }
 });
