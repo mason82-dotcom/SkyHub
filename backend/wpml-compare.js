@@ -135,6 +135,64 @@ function compareDocuments(a,b,file){
     }
   };
 }
+
+// Semantic counts from the executable file, independent of where WPML action groups
+// are attached in the XML tree. Values are whitelisted enums or static placeholders;
+// no coordinates, IDs, free-text fields or raw trigger intervals are returned.
+const TRIGGER_MODES=new Set(['reachPoint','betweenAdjacentPoints','multipleDistance','multipleTiming']);
+const ACTUATORS=new Set(['takePhoto','startRecord','stopRecord','focus','zoom',
+  'customDirName','gimbalRotate','rotateYaw','hover','gimbalEvenlyRotate',
+  'accurateShoot','orientedShoot','panoShot','searchlight','recordPointCloud']);
+function actionInventory(waylinesXml){
+  const root=parseXml(waylinesXml);
+  const get=(node,name)=>node?node.children.filter(c=>c.name===name):[];
+  const text=(node,name)=>(get(node,name)[0]?.text??'').trim();
+  const folders=get(get(root,'Document')[0],'Folder');
+  const triggerModes={},actuatorFunctions={};
+  const result={
+    actionGroupCount:0,
+    actionCount:0,
+    actionGroupsByWayline:[],
+    initialActionGroups:0,
+    triggerModes,actuatorFunctions,
+    reachPointPhotoActions:0,
+    periodicDistancePhotoActions:0,
+    periodicTimePhotoActions:0,
+    photoCountIsActionsNotCapturedImages:true,
+    cameraHardwareVerified:false
+  };
+  for(const folder of folders){
+    const placemarks=get(folder,'Placemark');
+    const atStart=get(folder,'wpml:startActionGroup');
+    const groups=[
+      ...atStart,
+      ...placemarks.flatMap(p=>get(p,'wpml:actionGroup'))
+    ];
+    result.actionGroupsByWayline.push(groups.length);
+    result.initialActionGroups+=atStart.length;
+    result.actionGroupCount+=groups.length;
+    for(const group of groups){
+      const trigger=get(group,'wpml:actionTrigger')[0];
+      const rawMode=text(trigger,'wpml:actionTriggerType');
+      const mode=TRIGGER_MODES.has(rawMode)?rawMode:'unrecognized';
+      triggerModes[mode]=(triggerModes[mode]||0)+1;
+      const actions=get(group,'wpml:action');
+      result.actionCount+=actions.length;
+      for(const action of actions){
+        const rawFn=text(action,'wpml:actionActuatorFunc');
+        const fn=ACTUATORS.has(rawFn)?rawFn:'unrecognized';
+        actuatorFunctions[fn]=(actuatorFunctions[fn]||0)+1;
+        if(fn==='takePhoto'){
+          if(mode==='reachPoint')result.reachPointPhotoActions++;
+          if(mode==='multipleDistance')result.periodicDistancePhotoActions++;
+          if(mode==='multipleTiming')result.periodicTimePhotoActions++;
+        }
+      }
+    }
+  }
+  return result;
+}
+
 function inspection(template,waylines,resourceCount){
   const v=validateDocuments(template,waylines);
   return {
@@ -149,6 +207,7 @@ function inspection(template,waylines,resourceCount){
     aircraftModel:v.aircraft?.model??null,
     undocumentedFieldCount:v.fieldCoverage?.undocumentedFields?.length??null,
     resourceCount,
+    cameraActionSummary:actionInventory(waylines),
     flightReady:false
   };
 }
@@ -182,6 +241,8 @@ function compareKmz(leftBytes,rightBytes){
       structurallyEqualExcludingVolatileMetadata:differences===0,
       resourceCountMatches:left.resourceCount===right.resourceCount,
       bothOfflineValid:l.valid&&r.valid,
+      cameraActionSummariesDiffer:
+        JSON.stringify(l.cameraActionSummary)!==JSON.stringify(r.cameraActionSummary),
       pilot2HardwareVerified:false,
       flightReady:false
     },
