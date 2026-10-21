@@ -144,6 +144,34 @@ function deviceSummary(device,now){
     }
   };
 }
+// Classify observation layers without collecting raw MQTT payloads, IDs or
+// per-device values. The backend health counts are process-local; per-model
+// shape counts start at backend boot too and require confirmed topology.
+function stateChannelEvidence(health,modelShapes,controller,aircraft){
+  const raw=health?.mqttObservedChannelCounts?.state;
+  const accepted=health?.mqttChannelCounts?.state;
+  const observed=Number.isSafeInteger(raw)&&raw>=0?raw:null;
+  const passed=Number.isSafeInteger(accepted)&&accepted>=0?accepted:null;
+  const available=Array.isArray(modelShapes);
+  const countFor=model=>available?modelShapes.reduce((sum,item)=>
+    item&&item.channel==='state'&&item.model===model&&
+      Number.isSafeInteger(item.count)&&item.count>0?
+      sum+item.count:sum,0):null;
+  const rc=countFor(RC),m3m=countFor(M3M);
+  let status='NICHT PRUEFBAR';
+  if(observed===0)status='KEIN STATE-TOPIC BEOBACHTET';
+  else if(observed>0&&passed===0)status='STATE-TOPIC BEOBACHTET, NICHT ANGENOMMEN';
+  else if(passed>0&&available&&rc===0&&m3m===0)
+    status='STATE ANGENOMMEN, NICHT RC/M3M ZUGEORDNET';
+  else if(passed>0&&available&&(rc>0||m3m>0))
+    status='STATE MODELLBEZOGEN BEOBACHTET';
+  else if(passed>0)status='STATE ANGENOMMEN, MODELLZUORDNUNG UNBEKANNT';
+  return {status,observed,accepted:passed,
+    modelScopedAvailable:available,
+    modelRc:rc,modelM3m:m3m,
+    rcTypedPropertiesObserved:controller.stateObserved,
+    m3mTypedPropertiesObserved:aircraft.stateObserved};
+}
 function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShapes=null){
   const list=Array.isArray(devices)?devices:[];
   const rc=list.find(d=>keyOf(d)===RC&&d.role==='gateway');
@@ -199,6 +227,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
   const controller=deviceSummary(rc,now);
   const aircraft=deviceSummary(air,now);
   const m3mExtensions=m3mExtensionAudit(air,now);
+  const stateEvidence=stateChannelEvidence(health,modelShapes,controller,aircraft);
   // DJI pushMode=1 is event-driven: state is pushed on change, unlike
   // fixed-frequency OSD. A state packet that is 16 s old is evidence that
   // the channel works, not an indication of failed controller/aircraft.
@@ -217,12 +246,12 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
     {step:'M3M State-Daten empfangen (bei Änderung)',status:stateStatus(aircraft)}
   ];
   return {target:'DJI RC Pro Enterprise + Mavic 3M',mode:'nur Lesen',
-    transport,controller,aircraft,m3mExtensions,linked,stages,
+    transport,controller,aircraft,m3mExtensions,stateEvidence,linked,stages,
     notes:[
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Globale MQTT-Shapes erlauben keine Gerätezuordnung. Nur der optionale modellbezogene Katalog nach akzeptiertem Paket und bestätigter Topologie kann Rootfelder der M3M zurechnen.',
       'Nicht beobachtet ist kein Beweis für eine von DJI nicht unterstützte Eigenschaft.',
-      'M3M (0:77:2) nutzt das vorläufige Mavic-3-Profil mit drei hardwarebeobachteten generischen OSD-Rootnamen; deren Wertebereiche sind noch nicht mit echter M3M validiert.',
+      'M3M (0:77:2): drei neue OSD-Rootnamen und sechs typisierte Feldpfade auf echter Hardware angenommen. Tatsächliche Werte, Grenzfälle und sicherheitsbezogene Wirkungen wurden nicht unabhängig geprüft.',
       'DJI State (pushMode 1) wird bei Zustandsänderung gesendet. Ältere State-Zeitstempel bedeuten nicht automatisch einen Kommunikationsfehler.',
       'Ohne deviceProperties, propertyProfile und propertyFieldObservedAt kann der Container keine feldgenaue 1.18-Abnahme liefern.',
       'Ein Hardwaretest erfordert echte, zeitnahe Pilot-2-MQTT-Meldungen; synthetische Tests sind kein Ersatz.'
@@ -269,6 +298,18 @@ function formatReport(r){
     lines.push('Nicht beobachtete Unterfelder ohne beobachtetes Root ('+
       p.missingNestedWithAbsentRoot.length+'); keine unabhängige Sensor-Nichtverfügbarkeit ableiten.');
   }
+  const state=r.stateEvidence;
+  lines.push('--- DJI State-Kanalanalyse (nur Zaehlwerte, keine Nutzdaten) ---');
+  lines.push('State auf MQTT-Topic beobachtet: '+(state.observed??'nicht ermittelbar')+
+    ' | nach Pruefung angenommen: '+(state.accepted??'nicht ermittelbar'));
+  lines.push('State-MQTT-Modellzuordnung: '+
+    (state.modelScopedAvailable?'verfuegbar':'NICHT VERFUEGBAR')+
+    ' | RC: '+(state.modelRc??'n/v')+' | M3M: '+(state.modelM3m??'n/v'));
+  lines.push('State-Status: '+state.status);
+  lines.push('Geraeteseitige typisierte State-Feldannahme: RC '+
+    (state.rcTypedPropertiesObserved?'ja':'nein')+
+    ' | M3M '+(state.m3mTypedPropertiesObserved?'ja':'nein'));
+  lines.push('HINWEIS: State wird bei Aenderung gesendet. 0 empfangene State-Topics sind kein Beweis eines Defekts, sollten bei laengerem Betrieb jedoch geprueft werden.');
   lines.push('--- M3M-Feldluecken nach Kamerafunktion und MQTT-Kanal (nur Namen) ---');
   const gaps=r.aircraft?.propertyFields?.m3mGapGroups;
   if(!gaps){
