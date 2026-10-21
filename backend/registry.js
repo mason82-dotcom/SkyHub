@@ -12,6 +12,23 @@ const AIRCRAFT_NOT_CONNECTED = 14;
 // HMS lists are pushed repeatedly while alerts are active; older lists are shown as stale.
 const HMS_FRESH_MS = 30000;
 
+// Collect sanitized DJI property paths only; array indexes and payload
+// device identifiers are never embedded in the observation-time keys.
+function propertyPaths(obj,prefix='',out=new Set()) {
+  if (Array.isArray(obj)) {
+    for (const value of obj) propertyPaths(value,prefix,out);
+    return out;
+  }
+  if (!obj || typeof obj!=='object') return out;
+  for(const [key,value] of Object.entries(obj)) {
+    if (prefix==='payload_gimbals' && key==='payload_index') continue;
+    const p=prefix ? prefix+'.'+key : key;
+    out.add(p);
+    propertyPaths(value,p,out);
+  }
+  return out;
+}
+
 function createRegistry(limit = 200) {
   const devices = new Map();
   const events = [];
@@ -32,6 +49,10 @@ function createRegistry(limit = 200) {
         state: {...d.deviceProperties.state}
       },
       propertyObservedAt: {...d.propertyObservedAt},
+      propertyFieldObservedAt: {
+        osd: {...d.propertyFieldObservedAt.osd},
+        state: {...d.propertyFieldObservedAt.state}
+      },
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
       lastPositionAt: d.lastPositionAt,
       positionUnavailable: d.positionUnavailable,
@@ -62,6 +83,7 @@ function createRegistry(limit = 200) {
       hms: [], lastHmsAt: null, hmsTimeVerified: null,
       deviceProperties: {osd: Object.create(null),state: Object.create(null)},
       propertyObservedAt: {osd:null,state:null},
+      propertyFieldObservedAt: {osd:Object.create(null),state:Object.create(null)},
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
         heading:null,horizontalSpeed:null,verticalSpeed:null,
@@ -160,6 +182,9 @@ function createRegistry(limit = 200) {
       if (Object.keys(properties).length) {
         Object.assign(d.deviceProperties[message.channel],properties);
         d.propertyObservedAt[message.channel] = observedAt;
+        // A newly reported field does not refresh absent, older fields.
+        for(const key of propertyPaths(properties))
+          d.propertyFieldObservedAt[message.channel][key]=observedAt;
       }
     }
     // Each HMS message carries the complete list of currently active alerts.
@@ -183,6 +208,7 @@ function createRegistry(limit = 200) {
       if (previousProfile !== deviceProfile(d.model)?.name) {
         d.deviceProperties = {osd:Object.create(null),state:Object.create(null)};
         d.propertyObservedAt = {osd:null,state:null};
+        d.propertyFieldObservedAt = {osd:Object.create(null),state:Object.create(null)};
       }
       const priorChildren = new Set(d.children);
       const children = message.topology.children.map(x => x.sn).filter(sn => sn !== d.sn);
@@ -213,6 +239,7 @@ function createRegistry(limit = 200) {
         if (previousChildProfile !== deviceProfile(child.model)?.name) {
           child.deviceProperties = {osd:Object.create(null),state:Object.create(null)};
           child.propertyObservedAt = {osd:null,state:null};
+          child.propertyFieldObservedAt = {osd:Object.create(null),state:Object.create(null)};
         }
         updates.set(child.sn, child);
       }
@@ -288,4 +315,4 @@ function createRegistry(limit = 200) {
     count() { return devices.size; }
   };
 }
-module.exports = { createRegistry };
+module.exports = { createRegistry,propertyPaths };
