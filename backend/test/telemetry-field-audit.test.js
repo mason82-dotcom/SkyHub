@@ -80,3 +80,24 @@ test('all six DJI device families expose value-free documented field coverage',(
     assert.doesNotMatch(JSON.stringify(report), /\\"capacity_percent\\"\\s*:\\s*55/);
   }
 });
+
+test('redacted and unsupported array fields are excluded from missing-field counts',()=>{
+  const [rc]=summarizeTelemetryFields([{
+    model:{domain:'2',type:174,subType:0},modelName:'DJI RC Plus 2 Enterprise',
+    role:'gateway',deviceProperties:{state:{live_capacity:{
+      device_list:[{camera_list:[{video_list:[{video_index:'0',
+        video_type:'wide',switchable_video_types:['wide','zoom']}]}]}]
+    }},osd:{}}
+  }]);
+  assert.equal(rc.documentedTotal,48);
+  assert.ok(rc.documentedInspectableTotal<rc.documentedTotal);
+  assert.ok(rc.redactedDocumented.includes('state:live_capacity.device_list.sn'));
+  assert.ok(rc.redactedDocumented.includes('state:live_status.video_id'));
+  assert.ok(!rc.notObservedDocumented.includes('state:live_status.video_id'));
+  assert.ok(rc.observedDocumented.includes(
+    'state:live_capacity.device_list.camera_list.video_list.switchable_video_types'));
+  assert.ok(rc.observedDocumented.includes(
+    'state:live_capacity.device_list.camera_list.video_list.video_index'));
+  assert.equal(rc.observedDocumented.length+rc.notObservedDocumented.length+
+    rc.redactedDocumented.length+rc.unsupportedDocumented.length,48);
+});
