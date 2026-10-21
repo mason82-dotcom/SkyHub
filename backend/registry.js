@@ -31,6 +31,9 @@ function createRegistry(limit = 200) {
       fresh: fresh(d.lastTelemetryAt, now),
       // DJI can report 0/0 in fresh OSD without providing a valid GPS fix.
       positionFresh: !d.positionUnavailable && fresh(d.lastPositionAt, now), telemetry: { ...d.telemetry },
+      // Per-field timestamps and source-time provenance live only in memory.
+      telemetryFieldAt: {...d.telemetryFieldAt},
+      telemetryFieldTimeVerified: {...d.telemetryFieldTimeVerified},
       hms: d.hms.map(alert => ({...alert,
         text: describeHms(alert, {domain: d.model.domain, modeCode: d.modeCode})})),
       lastHmsAt: d.lastHmsAt, hmsTimeVerified: d.hmsTimeVerified,
@@ -50,6 +53,8 @@ function createRegistry(limit = 200) {
       lastTelemetryAt: null, lastPositionAt: null,
       telemetryTimeVerified: null, positionTimeVerified: null,
       positionUnavailable: false,
+      telemetryFieldAt: Object.create(null),
+      telemetryFieldTimeVerified: Object.create(null),
       hms: [], lastHmsAt: null, hmsTimeVerified: null,
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
@@ -100,7 +105,11 @@ function createRegistry(limit = 200) {
       if (values.length) {
         // Retain non-position telemetry (battery, radio etc.) even without GPS.
         for (const [key, value] of values) {
-          if (key !== 'latitude' && key !== 'longitude') d.telemetry[key] = value;
+          if (key === 'latitude' || key === 'longitude' ||
+              !Object.hasOwn(d.telemetry,key) || !Number.isFinite(value)) continue;
+          d.telemetry[key] = value;
+          d.telemetryFieldAt[key] = observedAt;
+          d.telemetryFieldTimeVerified[key] = message.timestamp !== null;
         }
         if (hasPair) {
           d.positionUnavailable=nullPosition;
@@ -109,6 +118,11 @@ function createRegistry(limit = 200) {
             d.telemetry.longitude=lon;
             d.lastPositionAt=observedAt;
             d.positionTimeVerified=message.timestamp!==null;
+            // GPS is an atomic pair: 0/0 and partial packets never refresh either field.
+            d.telemetryFieldAt.latitude=observedAt;
+            d.telemetryFieldAt.longitude=observedAt;
+            d.telemetryFieldTimeVerified.latitude=message.timestamp!==null;
+            d.telemetryFieldTimeVerified.longitude=message.timestamp!==null;
           }
         }
         d.lastTelemetryAt=observedAt;
