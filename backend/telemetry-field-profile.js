@@ -32,7 +32,7 @@ const ALL_FIELDS=Object.freeze([...new Set([
 ])]);
 
 function isPresent(t,key){return Number.isFinite(t[key]);}
-function summarizeTelemetryFields(devices){
+function summarizeTelemetryFields(devices, now=Date.now()){
   if(!Array.isArray(devices))return [];
   return devices.slice(0,200).map((device,index)=>{
     const d=device&&typeof device==='object'?device:{};
@@ -52,7 +52,14 @@ function summarizeTelemetryFields(devices){
     const definitions=fieldDefinitions(d.model);
     const documented=definitions ? definitions.fields : [];
     const accepted=d.deviceProperties&&typeof d.deviceProperties==='object'?d.deviceProperties:{};
+    const times=d.propertyFieldObservedAt&&typeof d.propertyFieldObservedAt==='object'?
+      d.propertyFieldObservedAt:{};
+    const recent=(channel,path)=>{
+      const at=times[channel]?.[path];
+      return Number.isFinite(at) && at<=now && now-at<15000;
+    };
     const observedDocumented=[],notObservedDocumented=[];
+    const freshDocumented=[],staleDocumented=[];
     const redactedDocumented=[],unsupportedDocumented=[];
     // Dynamic DJI payload property keys are per-camera indices. Report
     // only the bounded field *names*, never their keys or measurement data.
@@ -62,6 +69,7 @@ function summarizeTelemetryFields(devices){
     const observedDynamic=dynamicNames.filter(name=>payloadItems.some(item=>
       item&&typeof item==='object'&&Object.hasOwn(item,name)));
     const notObservedDynamic=dynamicNames.filter(name=>!observedDynamic.includes(name));
+    const freshDynamic=observedDynamic.filter(name=>recent('osd','payload_gimbals.'+name));
     const pushByRoot=Object.create(null);
     for(const field of documented){
       if(!field.path.includes('.'))pushByRoot[field.path]=field.push;
@@ -72,8 +80,13 @@ function summarizeTelemetryFields(devices){
       const policy=fieldAvailabilityPolicy(field,documented);
       if(policy==='redacted'){redactedDocumented.push(channel+':'+field.path);continue;}
       if(policy==='unsupported-array'){unsupportedDocumented.push(channel+':'+field.path);continue;}
-      (hasPath(accepted[channel],field.path)?observedDocumented:notObservedDocumented)
-        .push(channel+':'+field.path);
+      const label=channel+':'+field.path;
+      if(!hasPath(accepted[channel],field.path)){
+        notObservedDocumented.push(label);
+      }else{
+        observedDocumented.push(label);
+        (recent(channel,field.path)?freshDocumented:staleDocumented).push(label);
+      }
     }
     // Only fixed known model labels; do not reflect raw DJI fields/identifiers.
     const model=['DJI RC Pro Enterprise','DJI RC Plus 2 Enterprise','Mavic 3E',
@@ -90,7 +103,8 @@ function summarizeTelemetryFields(devices){
       documentedSource:definitions?.source??null,
       documentedConfidence:definitions?.confidence??null,
       observedDocumented,notObservedDocumented,redactedDocumented,unsupportedDocumented,
-      dynamicDocumentedTotal:dynamicNames.length,observedDynamic,notObservedDynamic
+      freshDocumented,staleDocumented,
+      dynamicDocumentedTotal:dynamicNames.length,observedDynamic,notObservedDynamic,freshDynamic
     };
   });
 }
