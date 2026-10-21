@@ -47,7 +47,7 @@ ist für einen zukünftigen exakten gerätespezifischen Import relevant.
 - Meldungen mit `mode_code=14` (Fluggerät nicht verbunden) dürfen weiterhin keinen angeblich frischen OSD-Wert erzeugen.
 - Die registrierte Topologie entscheidet das verwendete Modellprofil; zuvor empfangene oder unbekannte Daten werden nicht blind einem Gerätetyp zugeordnet.
 - `GET /api/diagnostics/dji-fields?model=0:77:2` liefert die Wert-freien Definitionen nach regulärer View-Token-Authentifizierung. Dieselbe API unterstützt alle sechs genannten DJI-Typen.
-- `node scripts/pi-telemetry-fields-check.js` zeigt zusätzlich dokumentierte Pfadzahlen und beobachtete Feldnamen pro Gerät an; kein Rohwert oder Seriennummer wird ausgegeben.
+- `node scripts/pi-telemetry-fields-check.js` zeigt zusätzlich dokumentierte Pfadzahlen und beobachtete Feldnamen pro Gerät an; kein Rohwert oder Seriennummer wird ausgegeben. Die Diagnose zählt **auswertbare**, absichtlich **redigierte** und wegen untypisierter Arrays **nicht unterstützte** Felder getrennt. Absichtlich aus Datenschutzgründen verworfene Kennungen gelten nicht als `nicht beobachtet`.
 
 ## Absichtlich nicht umgesetzt
 
