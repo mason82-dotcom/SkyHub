@@ -276,9 +276,9 @@ test('M3M extension audit reports accepted typed fields and age, never their val
     'rth_altitude','rc_lost_action'
   ]);
   const output=formatReport(report);
-  assert.match(output,/HISTORISCH\\s+osd:rc_lost_action/);
-  assert.doesNotMatch(output,/125|300|PRIVATE|SECRET|49\\.123456|8\\.123456/);
-  assert.doesNotMatch(JSON.stringify(report),/125|300|PRIVATE|SECRET|49\\.123456/);
+  assert.match(output,/HISTORISCH\s+osd:rc_lost_action/);
+  assert.doesNotMatch(output,/125|300|PRIVATE|SECRET|49\.123456|8\.123456/);
+  assert.doesNotMatch(JSON.stringify(report),/125|300|PRIVATE|SECRET|49\.123456/);
 });
 
 test('typed M3M fields without accepted times or value are not reported as valid',()=>{
