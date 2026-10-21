@@ -287,6 +287,63 @@ Erst wenn die **modellbezogenen State-Zähler und die wirklich
 akzeptierten State-Feldnamen** vorliegen, können die 27 zuvor
 fehlenden State-Pfade neu bewertet werden.
 
+## Erfolgreiche Pilot-2-Neuverbindung: Status und State jetzt empfangen
+
+Nach einer regulären Neuverbindung am **21.10.2026** hat der
+Raspberry Pi folgende Health-Zähler geliefert:
+
+| MQTT-Kanal | Beobachtet | Akzeptiert | Nicht akzeptiert |
+|---|---:|---:|---:|
+| `status` | **2** | **2** | 0 |
+| `state` | **18** | **13** | **5** |
+| `osd` | **2052** | **2052** | 0 |
+| `events` | **1026** | **1026** | 0 |
+| `services_reply` | 0 | 0 | 0 |
+
+Auch `topologyReplySent=2` ist bestätigt.
+`topologyRestoredDevices=2` bleibt der frühere Redis-Restore-Zähler
+und darf **nicht** zu den zwei frischen Statuspaketen addiert werden.
+
+**Interpretation:** Beide vormals fehlenden MQTT-Kanäle
+(`thing/product/+/state` und `sys/product/+/status`) funktionieren
+nach der normalen Pilot-2-Neuverbindung. Es liegt **kein Nachweis
+eines generellen MQTT- oder Property-Parser-Ausfalls** vor.
+Dass die Neuverbindung der Auslöser war, ist anhand der
+Vorher-/Nachher-Messungen plausibel; welcher Pilot-2-Mechanismus
+die 18 State-Nachrichten generiert hat, ist nicht aus den
+Zählerständen allein bestimmbar.
+
+Die Differenz von fünf nicht angenommenen State-Paketen belegt
+**noch keine** fünf Fehler. Der Guard verwirft beispielsweise
+veraltete oder duplizierte Pakete absichtlich. Die genaue Ursache
+wurde im Pi-Bericht nicht mitgeliefert.
+
+### Neue reine Health-Auswertung der Ablehnungsgründe
+
+Die bereits vorhandenen Metriken `mqttRejectedMessages` und
+`mqttDroppedByReason` sind **backendweit**, nicht pro Gerät oder
+MQTT-Kanal. Der aktualisierte Hardwareprüfer zeigt diese
+Ablehnungsgründe nur als bekannte Schlüssel und numerische Zähler.
+Er schreibt sie **nur dann** State zu, wenn die gesamte Bilanz
+aus allen fünf Kanälen vollständig ist, exakt aufgeht und alle
+anderen beobachteten Kanäle vollständig angenommen wurden.
+Andernfalls: **NEIN / nicht eindeutig zuordenbar**.
+So werden Gründe nie aus einer bloßen Differenz erfunden.
+
+**Read-only Pi-Nachtest ohne Backend-Deployment:**
+
+```bash
+git -C ~/Projekte/SkyHub-HW-Test fetch origin
+git -C ~/Projekte/SkyHub-HW-Test switch --detach origin/test/m3m-camera-capability-gap-audit-20261021
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node ~/Projekte/SkyHub-HW-Test/scripts/pi-rc-pro-m3m-check.js \
+  | sed -n '/^--- DJI State-Kanalanalyse/,/^--- M3M-Feldluecken/p'
+```
+
+Es werden weder DJI-Kommandos noch weitere MQTT-Abonnements
+ausgeführt, und keine Rohwerte, Koordinaten, Seriennummern oder
+Zugangsdaten ausgegeben.
+
 ## Unveränderte Grenzen
 
 Es werden weder Multispektralbilddateien noch DJI SmartFarm-Indices
