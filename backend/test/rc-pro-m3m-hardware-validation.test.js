@@ -299,3 +299,25 @@ test('typed M3M fields without accepted times or value are not reported as valid
   assert.equal(report.m3mExtensions.fields.find(x=>x.path==='rc_lost_action').status,
     'NICHT BEOBACHTET');
 });
+
+test('M3M gap audit reports each missing path exactly once and no hardware settings',()=>{
+  const report=evaluateHardwareSession([rc,air],health,shapes,now);
+  const p=report.aircraft.propertyFields;
+  assert.ok(p.m3mGapGroups);
+  assert.equal(p.m3mGapGroups.classified,p.missing);
+  assert.equal(Object.values(p.m3mGapGroups.groups).reduce((n,g)=>n+g.count,0),p.missing);
+  assert.ok(p.m3mGapGroups.groups.thermalCamera.count>0);
+  assert.ok(p.m3mGapGroups.groups.zoomCamera.count>0);
+  const printed=formatReport(report);
+  assert.match(printed,/M3M-Feldluecken nach Kamerafunktion/);
+  assert.match(printed,/KEINE thermische Waermebildmessung/);
+  assert.doesNotMatch(printed,/PRIVATE_AIR_SERIAL|PRIVATE_RC_SERIAL|49\\.123456|8\\.123456/);
+});
+
+test('missing M3M on an older backend is not invented as camera capability data',()=>{
+  const oldAir={...air,propertyProfile:undefined,deviceProperties:undefined,
+    propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
+  const report=evaluateHardwareSession([rc,oldAir],health,shapes,now);
+  assert.equal(report.aircraft.propertyFields.m3mGapGroups,null);
+  assert.match(formatReport(report),/M3M-Feldluecken-Klassifikation: NICHT PRUEFBAR/);
+});
