@@ -52,9 +52,34 @@ als `Exited (0)` gemeldet. In `docker volume ls` ist kein
 offensichtlich benanntes MinIO-Datenvolume zu sehen. **Aus dieser
 Beobachtung folgt nicht, dass keine Daten existieren**: Bind-Mounts,
 anonyme Volumes und externe Storage-Verzeichnisse sind möglich.
+**Mount-Zuordnung am 21.10.2026 bestätigt:** Beide gestoppten
+Server `aeronexusadvanced-cloud-minio-1` und `aeronexus-edge-minio-1`
+verwenden denselben **Bind-Mount**
+`/mnt/hc4backup/aeronexus-data/minio -> /data`.
+Der gestoppte `aeronexus-edge-minio-init-1` bindet dagegen ausschließlich
+`/home/mason/Projekte/AeroNexus/evidence/scripts/minio-init.sh`
+unter `/init/minio-init.sh` ein. Es gibt damit **einen gemeinsamen
+Datenpfad, aber zwei historische Servercontainer**. Ob der Pfad tatsächlich
+auf einem eingehängten externen Dateisystem liegt, ist noch nicht geprüft.
 Das Image `aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1`
-wird von beiden Containern verwendet; seine Herkunft und Sicherheitslage
-sind noch nicht geprüft.
+wird von beiden Servercontainern verwendet; Herkunft, Sicherheitslage,
+verwendete Zugangsdaten und Datenintegrität sind noch nicht geprüft.
+
+**Pflichtprüfung vor jeglichem Containerstart (nur lesen):**
+
+```bash
+# Auf dem Pi in einem Checkout mit dem MinIO-PR-Branch:
+bash scripts/pi-minio-shared-mount-check.sh
+```
+
+Das Skript kontrolliert, dass das Verzeichnis vorhanden ist und sich
+auf einem tatsächlich eingehängten **Nicht-Root-Dateisystem** befindet.
+Es meldet Filesystem, Kapazität und Container, die denselben
+`/data`-Bind-Pfad referenzieren – ohne Bucketnamen oder Secrets
+auszulesen. Ist der Datenträger nicht eingehängt, **niemals MinIO
+starten**: Ein fehlender Bind-Mount könnte sonst auf dem Pi-Bootmedium
+als leeres Verzeichnis entstehen. Ein vorhandenes Verzeichnis oder
+`.minio.sys` allein ist weder ein Backup- noch ein Integritätsnachweis.
 
 Vor irgendeinem Start oder `adopt` zunächst rein lesend ausführen:
 
@@ -142,14 +167,22 @@ Objekte oder Buckets.
 Nach der lesenden Bestandsaufnahme und Sichtprüfung aller Container:
 
 ```bash
-# NUR den konkret geprüften, laufenden MinIO-Container einsetzen:
-bash scripts/pi-minio-network.sh adopt NAME_DES_BESTEHENDEN_MINIO
+# NUR nach erfolgreichem Storage-Audit und kontrolliertem Start
+# von GENAU EINEM geprüften alten MinIO-Server:
+SKYHUB_MINIO_EXPECTED_DATA_SOURCE=/mnt/hc4backup/aeronexus-data/minio \
+  bash scripts/pi-minio-network.sh adopt NAME_DES_BESTEHENDEN_MINIO
 bash scripts/pi-minio-network.sh verify
 ```
 
 Dieser Modus startet **keinen** MinIO-Container, legt keine Buckets an,
 wechselt kein Image und ändert weder das MinIO-Datenvolume noch dessen
-Credentials. Er prüft vor der Anbindung, dass MinIO läuft, eine
+Credentials. Vor dem Aufruf muss der geprüfte Originalcontainer bereits
+bewusst gestartet worden sein und der Backup-Datenträger korrekt
+eingehängt sein. Für `adopt` ist die erwartete Quelle von `/data`
+**ausdrücklich** als Umgebungsvariable anzugeben, beispielsweise
+`SKYHUB_MINIO_EXPECTED_DATA_SOURCE=/mnt/hc4backup/aeronexus-data/minio`.
+Bei Abweichung, fehlendem Verzeichnis, Symlink oder Auflösung auf dem
+Root-Dateisystem bricht die Übernahme ab. Er prüft vor der Anbindung, dass MinIO läuft, eine
 Speicher-Einbindung besitzt, über eine Bridge angebunden werden kann
 und keine zweite MinIO-Instanz/kein doppelter DNS-Alias existiert.
 Anschließend erhalten der bestehende MinIO und das SkyHub-Backend
