@@ -123,6 +123,54 @@ Die Ergebnisse bleiben **offline, partiell semantisch validiert**. Auch eine
 Datei ohne gemeldete Fehler wird nicht automatisch zur Flugfreigabe; die
 DJI-Firmware kann zusätzliche Parameter und Produktschranken durchsetzen.
 
+## Lokaler grafischer Wegpunkteditor (nächster Ausbau)
+
+Die statische Seite \`/wpml-editor.html\` ist über einen Link im
+SkyHub-Dashboard erreichbar. Sie wird beim nächsten regulären Backend-Build
+aus \`frontend/public\` ausgeliefert; es wurde **kein** Pi-Dienst aktualisiert.
+
+- Karte mit Leaflet/OSM: Wegpunkte durch Kartenklick oder direkte Eingabe
+  von Breitengrad/Längengrad setzen, Marker verschieben, Reihenfolge
+  ändern, löschen und Route einpassen.
+- Geräteprofile: Mavic 3E/3T/3M, Matrice 4E/4T. Unterstützt vorerst
+  geradlinige Wegpunktreihenfolge, optionale einzelne \`takePhoto\`-Aktionen
+  und durchgängige \`relativeToStartPoint\`-Höhe.
+- Name, globaler Fluggeschwindigkeitswert, Höhe über dem **Startpunkt**,
+  Sicherheitssteighöhe und Aktion nach Missionsende sind im Formular
+  einstellbar. Alle Höhen der exportierten Wegpunkte sind in dieser ersten
+  Version **identisch**. Es werden keine EGM96-/Ellipsoidhöhen erfunden.
+- Der Browser erzeugt mit \`frontend/public/wpml-editor-core.js\` ohne
+  Upload und ohne Serverzugriff \`wpmz/template.kml\` und
+  \`wpmz/waylines.wpml\` in einem standardkonformen *Stored ZIP* (KMZ).
+  Die erzeugten XML-Dokumente werden in Backend-Tests durch den
+  unabhängigen WPML-Validator und KMZ-Reader geprüft.
+- Bei verfügbarer Internetverbindung bezieht die Leaflet-Karte
+  Kacheln von OpenStreetMap. Das Dateiformat und der Export
+  funktionieren auch ohne Kacheldienst über manuelle Koordinaten.
+- **Keinerlei Flugsteuerung:** kein Pilot-Bootstrap, keine MQTT-Publishes,
+  keine Wayline-Cloud-Upload-API, kein Datenbankschreibzugriff.
+  \`flightReady=false\` gilt auch für erfolgreich erzeugte Dateien.
+  Eine DJI-Pilot-2-Importprüfung mit genau der verwendeten Firmware ist
+  vor jeder Verwendung weiterhin erforderlich.
+
+### Reproduzierbarer CLI-Export (ohne Browser)
+
+    node scripts/wpml-plan.js docs/examples/wpml-waypoint-plan.json /tmp/waypoint-draft.kmz
+    node scripts/wpml-inspect.js /tmp/waypoint-draft.kmz
+
+Die JSON-Datei enthält ausschließlich synthetische Testpunkte. Vorhandene
+Zieldateien werden **nicht** überschrieben; der CLI-Export prüft das
+generierte KMZ erneut mit dem unabhängigen Backend-Validator. Die CLI
+öffnet keine Netzwerkverbindung und aktiviert keine Missionsroute.
+\`backend/test/wpml-editor.test.js\` prüft Roundtrips mit allen fünf
+Geräteprofilen, XML-Escaping, Eingabegrenzen und den CLI-Schreibschutz.
+
+**Nicht enthalten:** Mapping2D/3D aus Polygonen zu Waylines berechnen,
+AGL/Terrain- und Geoid-Höhenumrechnung, M3M-Kameraspezialfunktionen,
+geprüfte Geschwindigkeits-/Kollisionsprofile oder eine Zusicherung der
+Pilot-2-Importierbarkeit.
+
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
