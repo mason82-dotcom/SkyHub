@@ -152,10 +152,10 @@ test('missing DJI root fields and absent nested paths are counted separately',()
       p.missingNestedWithAbsentRoot.length,p.missing);
   }
   assert.ok(report.aircraft.propertyFields.missingNestedUnderObservedRoot
-    .includes('osd:cameras.screen_split_enable'));
+    .includes('osd:battery.remain_flight_time'));
   assert.ok(report.aircraft.propertyFields.missingRoots.includes('osd:wind_speed'));
   // The root was observed, so its missing child is not an absent root.
-  assert.ok(!report.aircraft.propertyFields.missingRoots.includes('osd:cameras'));
+  assert.ok(!report.aircraft.propertyFields.missingRoots.includes('osd:battery'));
   assert.match(formatReport(report),/Nicht beobachtete Rootfelder/);
   assert.doesNotMatch(formatReport(report),/PRIVATE_RC_SERIAL|PRIVATE_AIR_SERIAL/);
 });
