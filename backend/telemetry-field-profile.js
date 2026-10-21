@@ -101,6 +101,8 @@ function summarizeTelemetryFields(devices, now=Date.now()){
       documentedTotal:documented.length,
       documentedInspectableTotal:documented.length-redactedDocumented.length-unsupportedDocumented.length,
       documentedSource:definitions?.source??null,
+      documentedExtensionSource:definitions?.extensionSource??null,
+      documentedExtensionEdition:definitions?.extensionSourceEdition??null,
       documentedConfidence:definitions?.confidence??null,
       observedDocumented,notObservedDocumented,redactedDocumented,unsupportedDocumented,
       freshDocumented,staleDocumented,
