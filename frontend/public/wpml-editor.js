@@ -32,7 +32,8 @@
     if(points.length&&points[points.length-1].lat===latitude&&points[points.length-1].lon===longitude){
       renderMessage('Aufeinanderfolgende identische Wegpunkte sind nicht erlaubt.',true);return;
     }
-    points.push({lat:latitude,lon:longitude,photo:false});
+    const defaultHeight=Number($('height').value);
+    points.push({lat:latitude,lon:longitude,height:defaultHeight,photo:false});
     $('latitude').value=String(latitude);
     $('longitude').value=String(longitude);
     render();
@@ -65,6 +66,34 @@
       checkbox.addEventListener('change',()=>{point.photo=checkbox.checked;renderMessage('Entwurf aktualisiert.');});
       photoLabel.append(checkbox,document.createTextNode('Einzelbild aufnehmen'));
       item.appendChild(photoLabel);
+      if($('local-heights').checked){
+        const alt=document.createElement('div');alt.className='rows';
+        const relative=document.createElement('label');
+        relative.textContent='Relative Höhe (m)';
+        const relInput=document.createElement('input');
+        relInput.type='number';relInput.min='2';relInput.max='120';relInput.step='any';
+        relInput.required=true;
+        relInput.value=point.height===undefined?'':String(point.height);
+        relInput.setAttribute('aria-label','Wegpunkt '+(index+1)+' relative Höhe');
+        relInput.addEventListener('input',()=>{
+          point.height=relInput.value===''?undefined:Number(relInput.value);
+        });
+        relative.appendChild(relInput);
+        const geodetic=document.createElement('label');
+        geodetic.textContent='WGS84-Ellipsoidhöhe (m)';
+        const ellipsoid=document.createElement('input');
+        ellipsoid.type='number';ellipsoid.min='-10000';ellipsoid.max='100000';
+        ellipsoid.step='any';ellipsoid.required=true;
+        ellipsoid.value=point.ellipsoidHeight===undefined?'':String(point.ellipsoidHeight);
+        ellipsoid.setAttribute('aria-label','Wegpunkt '+(index+1)+' WGS84 Ellipsoidhöhe');
+        ellipsoid.addEventListener('input',()=>{
+          if(ellipsoid.value==='')delete point.ellipsoidHeight;
+          else point.ellipsoidHeight=Number(ellipsoid.value);
+        });
+        geodetic.appendChild(ellipsoid);
+        alt.append(relative,geodetic);
+        item.appendChild(alt);
+      }
       const controls=document.createElement('div');controls.className='actions';
       const up=action('↑',()=>swap(index,index-1));up.disabled=index===0;up.title='Wegpunkt nach oben';
       const down=action('↓',()=>swap(index,index+1));down.disabled=index===points.length-1;down.title='Wegpunkt nach unten';
@@ -120,6 +149,7 @@
     points.length=0;hasFit=false;render();
   });
   $('fit').addEventListener('click',fitRoute);
+  $('local-heights').addEventListener('change',render);
   $('mission-form').addEventListener('submit',event=>{
     event.preventDefault();
     if(!event.currentTarget.reportValidity())return;
@@ -128,7 +158,9 @@
       const plan={
         name:$('name').value,model:$('model').value,speed:Number($('speed').value),
         takeoffHeight:Number($('takeoff').value),finishAction:$('finish').value,
-        waypoints:points.map(p=>({...p,height}))
+        waypoints:points.map(p=>$('local-heights').checked?
+          {lat:p.lat,lon:p.lon,height:p.height,ellipsoidHeight:p.ellipsoidHeight,photo:p.photo}:
+          {lat:p.lat,lon:p.lon,height,photo:p.photo})
       };
       const output=core.build(plan);
       // ZIP construction and XML generation run only on this device.
