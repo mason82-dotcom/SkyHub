@@ -161,3 +161,24 @@ test('KMZ rejects unsafe resource paths and mismatched local headers',()=>{
   flags.writeUInt16LE(1,directoryOffset+6);
   assert.throws(()=>readKmz(flags),/ZIP flags disagree/);
 });
+
+test('DJI LiDAR recordPointCloud requires a valid capture operation',()=>{
+  const lidar=waylines.replace('>takePhoto<','>recordPointCloud<')
+    .replace('</wpml:actionActuatorFuncParam>',
+      '<wpml:recordPointCloudOperate>startRecord</wpml:recordPointCloudOperate>'+
+      '</wpml:actionActuatorFuncParam>');
+  const good=validateDocuments(template,lidar);
+  assert.equal(good.valid,true,JSON.stringify(good.errors));
+  assert.equal(validateDocuments(template,lidar.replace('>startRecord</wpml:recordPointCloudOperate>',
+    '>launch</wpml:recordPointCloudOperate>')).valid,false);
+  assert.equal(validateDocuments(template,waylines.replace('>takePhoto<','>recordPointCloud<')).valid,false);
+});
+test('focus coordinates and sensor flag obey DJI 0–1 normalized range',()=>{
+  const focus=waylines.replace('>takePhoto<','>focus<')
+    .replace('</wpml:actionActuatorFuncParam>',
+      '<wpml:isPointFocus>1</wpml:isPointFocus><wpml:focusX>0.5</wpml:focusX>'+
+      '<wpml:focusY>0.5</wpml:focusY></wpml:actionActuatorFuncParam>');
+  assert.equal(validateDocuments(template,focus).valid,true);
+  const invalid=focus.replace('<wpml:focusX>0.5','<wpml:focusX>1.5');
+  assert.ok(validateDocuments(template,invalid).errors.some(x=>x.path.endsWith('/focusX')));
+});
