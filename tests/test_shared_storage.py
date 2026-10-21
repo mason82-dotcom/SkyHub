@@ -106,6 +106,13 @@ class SharedMinioStorageTest(unittest.TestCase):
         self.assertIn('mount_target" != "/"', helper)
         self.assertIn('Destination "/data"', helper)
 
+    def test_adopt_refuses_host_published_s3_port_9000(self):
+        helper = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('index .HostConfig.PortBindings "9000/tcp"', helper)
+        self.assertIn('[[ -z "$s3_host_bindings" ]]', helper)
+        self.assertIn("MinIO publishes S3/tcp 9000 to the Docker host", helper)
+        self.assertIn("Recreate the chosen container from reviewed Compose", helper)
+
     def test_adoption_does_not_require_deleting_old_stopped_minio_containers(self):
         helper = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("docker ps --no-trunc --format", helper)
