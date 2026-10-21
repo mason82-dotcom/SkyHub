@@ -77,11 +77,11 @@ Auf dem Pi im aktiven SkyHub-Checkout:
 cd ~/Projekte/SkyHub-Next
 git status --short --branch
 git show -s --oneline feature/m3m-minio-integration-20261021
-git diff --check feature/m3m-minio-integration-20261021
+git diff --check origin/main...feature/m3m-minio-integration-20261021
 # Zu diesem Branch gehoerende getrackte Dateinamen auf
 # versehentlich versionierte Secrets pruefen (niemals Werte posten):
 git ls-tree -r --name-only feature/m3m-minio-integration-20261021 |
-  grep -E '(^|/)\.env($|\.[^.]+$)|(^|/)(id_rsa|credentials|secrets\.json)$' || true
+  grep -E '(^|/)(\.env$|\.env\.(local|production|development)$|id_rsa$|credentials(\.json)?$|secrets\.json$)' || true
 
 # NUR wenn keine privaten Konfigurationsdateien versioniert sind:
 git push -u origin \
