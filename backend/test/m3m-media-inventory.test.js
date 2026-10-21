@@ -55,8 +55,9 @@ test('mixed captures do not join across different sequence or time keys',()=>{
   const r=inventoryMediaNames([...full,full[4].replace('_0001_','_0002_'),
     'DJI_20261021190531_0001_MS_NIR.TIF']);
   assert.equal(r.captureGroups,3);
-  assert.equal(r.fiveChannelSets,0);
-  assert.equal(r.partialSets,3);
+  assert.equal(r.fiveChannelSets,1);
+  assert.equal(r.spectralSets,1);
+  assert.equal(r.partialSets,2);
 });
 test('unknown names, geographic metadata and path traversal are never reflected',()=>{
   assert.equal(identify('DJI_0001_MS_NIR.TIF'),null);
