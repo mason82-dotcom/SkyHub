@@ -94,3 +94,36 @@ test('Pi hardware-check help does not use Docker or require a connected drone',(
   assert.match(out.stdout,/RC Pro Enterprise \+ Mavic 3M/);
   assert.doesNotMatch(out.stdout,/PRIVATE|192\.168\./);
 });
+
+test('legacy backend without new DJI-property API remains transport-valid but field coverage is unknown',()=>{
+  const legacyRC={...rc,propertyProfile:undefined,deviceProperties:undefined,
+    propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
+  const legacyM3M={...air,propertyProfile:undefined,deviceProperties:undefined,
+    propertyObservedAt:undefined,propertyFieldObservedAt:undefined};
+  const report=evaluateHardwareSession([legacyRC,legacyM3M],health,shapes,now);
+  assert.equal(report.linked,true);
+  assert.equal(report.controller.osdFresh,true);
+  assert.equal(report.aircraft.osdFresh,true);
+  assert.equal(report.controller.propertyDiagnosticsAvailable,false);
+  assert.equal(report.aircraft.propertyDiagnosticsAvailable,false);
+  assert.equal(report.controller.propertyFields.documented,48);
+  assert.equal(report.aircraft.propertyFields.documented,144);
+  assert.equal(report.controller.propertyFields.observed,null);
+  assert.equal(report.aircraft.propertyFields.missing,null);
+  assert.ok(report.stages.filter(x=>x.step.includes('State-Feldbeobachtung'))
+    .every(x=>x.status==='NICHT PRÜFBAR'));
+  const printed=formatReport(report);
+  assert.match(printed,/Feldparser: NICHT PRÜFBAR/);
+  assert.match(printed,/beobachtete\/fehlende Pfade: nicht ermittelbar/);
+  assert.doesNotMatch(printed,/beobachtet: 0 \| frisch: 0/);
+  assert.doesNotMatch(printed,/PRIVATE|49\.123456|8\.123456/);
+});
+
+test('partial DJI property interface is not treated as a complete field audit',()=>{
+  const incomplete={...air,propertyFieldObservedAt:undefined};
+  const report=evaluateHardwareSession([rc,incomplete],health,shapes,now);
+  assert.equal(report.aircraft.propertyDiagnosticsAvailable,false);
+  assert.equal(report.aircraft.propertyFields.observed,null);
+  assert.equal(report.controller.propertyDiagnosticsAvailable,true);
+  assert.ok(report.stages.some(x=>x.step.includes('M3M State-')&&x.status==='NICHT PRÜFBAR'));
+});
