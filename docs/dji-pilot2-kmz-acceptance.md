@@ -34,7 +34,8 @@ Flugkompatibilitätszertifizierung.
 
 ## Tests (auf lokalem Checkout des Entwicklungsbranches)
 
-    cd ~/Projekte/SkyHub
+    # Das SEPARATE Test-Clone verwenden, niemals das produktive Pi-Verzeichnis
+    cd ~/Projekte/SkyHub-WPML-Test
 
     # Nur lokale Testdaten: kein MQTT, keine Cloud-API, keine DJI-Aktion
     node scripts/wpml-plan.js \
@@ -56,8 +57,20 @@ bei zwei offline-validen Dokumenten; `1` = Unterschiede;
 `2` = Fehler beim Einlesen oder mindestens ein Dokument
 offline nicht valide.
 
+Das JSON trennt jetzt `leftOnlyFieldOccurrences` (nur im linken Export),
+`rightOnlyFieldOccurrences` (nur in der rechten SkyHub-Datei) und
+`changedValueOccurrences` (auf beiden Seiten vorhanden, aber unterschiedlich).
+Die Abschnitte `documents[].patterns` bündeln Wiederholungen wie
+`Placemark[0]`, `Placemark[1]` zu `Placemark[*]`.
+So lassen sich WPML-/Payload-/Kameraaktionslücken von bloßen Unterschieden
+der Wegpunktkoordinaten unterscheiden. `leftOnly`/ `rightOnly`
+ist dabei die Richtung im **Vergleichsaufruf**, keine Aussage über
+erforderliche DJI-Felder. Unterschiedliche Anzahl/Reihenfolge
+wiederholter Wegpunkte kann ebenfalls Feldpfaddifferenzen auslösen.
+
 Das JSON zeigt keine Feldwerte, keine GPS-Koordinaten, keine
-Missionsnamen und keine Rohinhalte eingebetteter Ressourcen. Die
+Missionsnamen und keine Rohinhalte eingebetteter Ressourcen. Auch
+unbekannte XML-Feld- und Attributnamen werden maskiert. Die
 Ausgabe darf dennoch nur nach Prüfung geteilt werden, weil sie
 Aufbau/Größe/Typen der Mission offenlegen kann. Die **Original-KMZ
 nicht hochladen oder in einem öffentlichen GitHub-Issue anhängen.**
