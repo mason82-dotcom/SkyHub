@@ -34,8 +34,13 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 Der eigenständige browserbasierte [WPML-Missionsentwurf](frontend/public/wpml-editor.html)
 setzt Wegpunkte auf einer Leaflet-Karte oder über GPS-Koordinaten und exportiert
 lokal `template.kml` und `waylines.wpml` im `.kmz`-Archiv. Er unterstützt
-Mavic 3E/3T/3M und Matrice 4E/4T, einheitliche relative Höhe und optionale
-`takePhoto`-Aktionen. Die Flugsteuerung bleibt vollständig deaktiviert.
+Mavic 3E/3T/3M und Matrice 4E/4T, einheitliche relative Höhe oder im
+Expertenmodus individuelle relative Höhen mit **explizit gemessener
+WGS84-Ellipsoidhöhe je Wegpunkt**, sowie optionale `takePhoto`-Aktionen.
+Die Flugsteuerung bleibt vollständig deaktiviert. Eine getrennte
+[2D-Vermessungsvorschau](frontend/public/wpml-survey-preview.html) zeigt
+abgeschnittene parallele Streifen über kleinen Polygonen und bietet nur
+GeoJSON-Export – **keine** DJI-Wayline-Berechnung.
 
 Ohne UI lässt sich der Export mit synthetischen Beispieldaten reproduzieren:
 
