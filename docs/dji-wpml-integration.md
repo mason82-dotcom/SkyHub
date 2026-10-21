@@ -94,6 +94,35 @@ Die vollständige normative Implementierung von Spezialparametern ist offen.
 | Spezial | accurateShoot, panoShot, searchlight, LiDAR/recordPointCloud, AI Spot-Check | Nicht vollständig geprüft |
 | Höhen | WGS84, EGM96, relativeToStartPoint, AGL, realTimeFollowSurface | Enum-Prüfung; Umrechnung OFFEN |
 
+## Folgeausbau: Mapping, Multispektral, LiDAR und KMZ-Härtung
+
+Der erweiterte offline-Vorlagenvalidator `backend/wpml-mapping.js` prüft nun
+folgende Felder entsprechend den Tabellen unter Template.kml und Common Elements:
+
+- 2D-Mapping: `shootType`, `direction`, `margin`, Höhenpaare,
+  `elevationOptimizeEnable`, Smart-Oblique-Flags, `mappingHeadingParam`,
+  optionale feste Gimbal-Pitch-Winkel und Overlap-Prozente.
+- 3D-Mapping: zusätzliche Schrägkamera-Parameter
+  `inclinedGimbalPitch` und `inclinedFlightSpeed`. **Keine** automatische
+  Ableitung der fünf Flugrouten aus einer Vermessungsfläche.
+- MappingStrip: Korridorlänge, Seiten-Erweiterungen, Einzellinien-/Optimierungs-
+  Flags sowie ungültige Boolean-/Zahlenkombinationen.
+- `payloadParam`: Kamera-Linsen `visible` und `narrow_band` für Mavic 3M,
+  LiDAR-Return-Mode, Samplingrate, Scanmodus und De-Warping.
+- `recordPointCloud`: Offline-Aktionsprüfung für Start, Pause, Fortsetzen
+  und Stopp. Es wird keine Kamera oder Punktwolkenaufnahme ausgelöst.
+- Geometrie: abgelehnte entartete Polygone/Korridore (keine Wegberechnung).
+- ZIP: CRC32-Verifikation **aller** Mitglieder einschließlich `res/`,
+  Vergleich lokaler/zentraler Header und Verbot überlappender Member.
+
+Relevante Regressionstests: `backend/test/wpml-mapping.test.js` sowie
+`backend/test/wpml.test.js`. Die Container-CI lädt jetzt die WPML-Module
+explizit bei einem isolierten Runtime-Smoke-Test.
+
+Die Ergebnisse bleiben **offline, partiell semantisch validiert**. Auch eine
+Datei ohne gemeldete Fehler wird nicht automatisch zur Flugfreigabe; die
+DJI-Firmware kann zusätzliche Parameter und Produktschranken durchsetzen.
+
 ## Betriebsschutz und Grenzen
 
 Keine Flugbefehlserzeugung, kein MQTT-Publish, keine Kopplung an den
