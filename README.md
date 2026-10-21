@@ -28,6 +28,28 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
 - [DJI WPML 1.18: KMZ-Inspektion, Feldabgleich und Einschränkungen](docs/dji-wpml-integration.md)
+
+### WPML-Wegpunkteditor (noch nicht produktiv ausgerollt)
+
+Der eigenständige browserbasierte [WPML-Missionsentwurf](frontend/public/wpml-editor.html)
+setzt Wegpunkte auf einer Leaflet-Karte oder über GPS-Koordinaten und exportiert
+lokal `template.kml` und `waylines.wpml` im `.kmz`-Archiv. Er unterstützt
+Mavic 3E/3T/3M und Matrice 4E/4T, einheitliche relative Höhe und optionale
+`takePhoto`-Aktionen. Die Flugsteuerung bleibt vollständig deaktiviert.
+
+Ohne UI lässt sich der Export mit synthetischen Beispieldaten reproduzieren:
+
+```bash
+node scripts/wpml-plan.js docs/examples/wpml-waypoint-plan.json /tmp/waypoint-draft.kmz
+node scripts/wpml-inspect.js /tmp/waypoint-draft.kmz
+```
+
+**Keine Flugfreigabe:** WPML-XML/KMZ sind offline generierbar und auf Struktur
+prüfbar, aber nicht automatisch durch DJI Pilot 2 oder ein Fluggerät akzeptiert.
+Mapping-Routen, AGL/EGM96, Terrain-Follow und gerätespezifische Kameraaktionen
+werden in diesem Editor noch nicht berechnet. Die Dokumentation enthält die
+Einschränkungen und Sicherheitsgrenzen.
+
 - [Archivhinweise](stacks/README.md)
 
 ## Positionsaufzeichnung (standardmäßig deaktiviert)
