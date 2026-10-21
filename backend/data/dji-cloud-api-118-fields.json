@@ -2783,6 +2783,338 @@
           "step": 0.01
         }
       ]
+    },
+    "rcPlus2": {
+      "source": "https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html",
+      "sourceEdition": "2025-09-03",
+      "verifiedAt": "2026-10-21",
+      "provenance": "official DJI Web reference; unlike archived rcPro profile not pinned to a Git blob",
+      "fields": [
+        {
+          "path": "live_capacity",
+          "type": "struct",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "live_capacity.available_video_number",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.coexist_video_number_max",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.device_list",
+          "type": "array"
+        },
+        {
+          "path": "live_capacity.device_list.sn",
+          "type": "text"
+        },
+        {
+          "path": "live_capacity.device_list.available_video_number",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.device_list.coexist_video_number_max",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list",
+          "type": "array"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.camera_index",
+          "type": "text"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.available_video_number",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.coexist_video_number_max",
+          "type": "int"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.video_list",
+          "type": "array"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.video_list.video_index",
+          "type": "text"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.video_list.video_type",
+          "type": "text"
+        },
+        {
+          "path": "live_capacity.device_list.camera_list.video_list.switchable_video_types",
+          "type": "array"
+        },
+        {
+          "path": "capacity_percent",
+          "type": "int",
+          "access": "r",
+          "push": 0,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "Percentage / %"
+        },
+        {
+          "path": "height",
+          "type": "double",
+          "access": "r",
+          "push": 0,
+          "unit": "Meters / m"
+        },
+        {
+          "path": "dongle_infos",
+          "type": "array",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "dongle_infos.imei",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.dongle_type",
+          "type": "enum_int",
+          "enum": [
+            6,
+            10
+          ]
+        },
+        {
+          "path": "dongle_infos.eid",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.esim_activate_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_card_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_slot",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "dongle_infos.esim_infos",
+          "type": "array"
+        },
+        {
+          "path": "dongle_infos.esim_infos.telecom_operator",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "dongle_infos.esim_infos.enabled",
+          "type": "bool"
+        },
+        {
+          "path": "dongle_infos.esim_infos.iccid",
+          "type": "text"
+        },
+        {
+          "path": "dongle_infos.sim_info",
+          "type": "struct"
+        },
+        {
+          "path": "dongle_infos.sim_info.telecom_operator",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_info.sim_type",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "dongle_infos.sim_info.iccid",
+          "type": "text"
+        },
+        {
+          "path": "live_status",
+          "type": "array",
+          "access": "r",
+          "push": 1
+        },
+        {
+          "path": "live_status.video_id",
+          "type": "text"
+        },
+        {
+          "path": "live_status.video_type",
+          "type": "text",
+          "length": 24
+        },
+        {
+          "path": "live_status.video_quality",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "path": "live_status.status",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "live_status.error_status",
+          "type": "int",
+          "length": 6
+        },
+        {
+          "path": "wireless_link",
+          "type": "struct",
+          "access": "r",
+          "push": 0
+        },
+        {
+          "path": "wireless_link.dongle_number",
+          "type": "int"
+        },
+        {
+          "path": "wireless_link.sdr_link_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "wireless_link.link_workmode",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "wireless_link.sdr_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5,
+          "step": 1
+        },
+        {
+          "path": "wireless_link.sdr_freq_band",
+          "type": "float"
+        },
+        {
+          "path": "wireless_link.4g_link_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "wireless_link.4g_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
+        },
+        {
+          "path": "wireless_link.4g_uav_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
+        },
+        {
+          "path": "wireless_link.4g_gnd_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
+        },
+        {
+          "path": "wireless_link.4g_freq_band",
+          "type": "float"
+        },
+        {
+          "path": "firmware_version",
+          "type": "text",
+          "access": "r",
+          "push": 1,
+          "length": 64
+        },
+        {
+          "path": "latitude",
+          "type": "double",
+          "access": "r",
+          "push": 0,
+          "min": -90,
+          "max": 90,
+          "step": 0.01
+        },
+        {
+          "path": "longitude",
+          "type": "double",
+          "access": "r",
+          "push": 0,
+          "min": -180,
+          "max": 180,
+          "step": 0.01
+        },
+        {
+          "path": "cloud_control_auth",
+          "type": "array",
+          "access": "r",
+          "push": 1,
+          "privacy": "redacted"
+        },
+        {
+          "path": "drc_state",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        }
+      ]
     }
   },
   "devices": {
@@ -2807,8 +3139,8 @@
       "confidence": "official-device"
     },
     "2:174:0": {
-      "profile": "rcPro",
-      "confidence": "shared-rc-unverified"
+      "profile": "rcPlus2",
+      "confidence": "official-device-web"
     }
   }
 }
