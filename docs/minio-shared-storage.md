@@ -86,10 +86,14 @@ bash scripts/pi-minio-network.sh apply
 bash scripts/pi-minio-network.sh verify
 ```
 
-`apply` prüft die Compose-Konfiguration, erstellt bei Bedarf genau
-das externe Docker-Bridge-Netzwerk und führt ausschließlich
-`docker compose ... up -d --no-deps minio` aus. Ein bereits laufender
-SkyHub-Next-Backend-Container wird per `docker network connect`
+`apply` prüft die Compose-Konfiguration und erstellt bei Bedarf das
+externe Docker-Bridge-Netzwerk. Ein bereits laufender SkyHub-MinIO-Container
+mit **erwartetem Image und vorhandenem Originalvolume** wird nur per
+`docker network connect --alias skyhub-minio` angebunden, **ohne ihn neu
+zu erstellen**. Bei abweichendem Image oder Mount wird abgebrochen.
+Nur für einen fehlenden oder gestoppten SkyHub-MinIO verwendet das Skript
+`docker compose ... up -d --no-deps minio`. Ein laufender
+SkyHub-Next-Backend-Container wird anschließend per `docker network connect`
 angebunden: **kein Backend-Restart** und keine Änderungen an PostgreSQL,
 Redis, EMQX oder Caddy. Ein vorhandenes `skyhub-next_minio_data`
 bleibt unverändert. Beim **ersten** MinIO-Start erzeugt Docker das
