@@ -19,7 +19,7 @@ const GROUPS=Object.freeze([
     pattern:/^osd:cameras\.wide_[a-z_]+(?:\.|$)/},
   {key:'otherCameraOptions',label:'Sonstige Kamera-/Anzeigefunktionen (nicht nachgewiesen)',
     pattern:/^osd:cameras(?:\.|$)/},
-  {key:'eventState',label:'Ereignisbasierte State-Felder (seit Backend-Start nicht beobachtet)',
+  {key:'eventState',label:'Einzelne State-Feldpfade bislang nicht beobachtet (pushMode 1)',
     pattern:/^state:/},
   {key:'otherOsd',label:'Andere OSD-Felder (nicht beobachtet)',
     pattern:/^osd:/}
