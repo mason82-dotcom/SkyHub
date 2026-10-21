@@ -66,7 +66,7 @@ alias_owners() {
   network_exists || return 0
   local -a ids=()
   local id
-  mapfile -t ids < <(docker ps --filter "network=$NETWORK" --format '{{.ID}}')
+  mapfile -t ids < <(docker ps --no-trunc --filter "network=$NETWORK" --format '{{.ID}}')
   for id in "${ids[@]}"; do
     if docker inspect --format '{{with index .NetworkSettings.Networks "skyhub-storage-net"}}{{range .Aliases}}{{println .}}{{end}}{{end}}' "$id" |
       grep -Fxq skyhub-minio; then
@@ -189,10 +189,16 @@ apply() {
       echo "Do not replace storage silently; audit image and mount privately." >&2
       exit 2
     }
-    assert_alias_available "${existing[0]}"
+    assert_alias_available "$(docker inspect --format '{{.Id}}' "${existing[0]}")"
     ensure_network
     if [[ "$running" == true ]]; then
       if is_connected "${existing[0]}"; then
+        local -a owners=()
+        mapfile -t owners < <(alias_owners)
+        [[ ${#owners[@]} == 1 ]] || {
+          echo "ERROR: SkyHub MinIO joined without skyhub-minio alias; manual correction required" >&2
+          exit 2
+        }
         echo "OK: running SkyHub MinIO already on the shared bridge"
       else
         docker network connect --alias skyhub-minio "$NETWORK" "${existing[0]}"
@@ -280,7 +286,7 @@ adopt() {
   if is_connected "$name"; then
     local -a owners=()
     mapfile -t owners < <(alias_owners)
-    [[ ${#owners[@]} == 1 && "${owners[0]}" == "${chosen:0:12}" ]] || {
+    [[ ${#owners[@]} == 1 && "${owners[0]}" == "$chosen" ]] || {
       echo "ERROR: existing network membership lacks the skyhub-minio alias" >&2
       echo "Do not disconnect a production MinIO container automatically." >&2
       exit 2
