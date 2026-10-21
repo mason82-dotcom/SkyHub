@@ -95,7 +95,7 @@
   }
   function documents(plan){
     const p=normalize(plan);
-    const metadata=field('author','SkyHub')+field('createTime',p.timestamp)+
+    const metadata='<name>'+esc(p.name)+'</name>'+field('author','SkyHub')+field('createTime',p.timestamp)+
       field('updateTime',p.timestamp);
     const config=missionConfig(p);
     const templateFolder='<Folder>'+field('templateType','waypoint')+
