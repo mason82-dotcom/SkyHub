@@ -9,14 +9,6 @@ const OMIT_NAMES=new Set([
   'name','description','wpml:author','wpml:createTime','wpml:updateTime',
   'wpml:missionName','wpml:fileSuffix','wpml:directoryName'
 ]);
-const PRIVATE_NAMES=new Set([
-  'coordinates','wpml:waypointPoiPoint',
-  'wpml:ellipsoidHeight','wpml:executeHeight','wpml:height','wpml:globalHeight',
-  'wpml:globalRTHHeight','wpml:takeOffSecurityHeight'
-]);
-const IDENTIFIER_NAMES=new Set([
-  'wpml:templateId','wpml:waylineId','wpml:index','wpml:actionGroupId','wpml:actionId'
-]);
 function safeError(message){
   // Only static diagnostic words are allowed in CLI output; never raw XML/file content.
   throw Error('WPML comparison rejected: '+message);
@@ -39,6 +31,8 @@ function values(tree){
     const path=prefix+'/'+node.name;
     const ignored=OMIT_NAMES.has(node.name);
     if(!ignored){
+      // Capture empty elements too: removing a self-closing XML node is a structural change.
+      nodes.set(path+'/#present','1');
       const value=node.text.trim().replace(/\s+/g,' ');
       // Store actual strings only transiently in RAM to compare. Never return them.
       if(value)nodes.set(path,value);
@@ -57,19 +51,12 @@ function values(tree){
   walk(tree,'',0);
   return nodes;
 }
-function aggregate(map,flag){
-  return [...map.entries()].reduce((acc,[path])=>{
-    const category=classify(path);
-    acc[category]=(acc[category]||0)+1;
-    return acc;
-  },{});
-}
 function compareDocuments(a,b,file){
   const left=values(parseXml(a)),right=values(parseXml(b));
   const union=new Set([...left.keys(),...right.keys()]);
   if(union.size>40000)safeError('XML comparison complexity limit');
   const groups={},changes=[];
-  let total=0,same=0,ignoredVolatile=0;
+  let total=0,same=0;
   for(const path of [...union].sort()){
     if(left.has(path)&&right.has(path)&&left.get(path)===right.get(path)){
       same++;continue;
