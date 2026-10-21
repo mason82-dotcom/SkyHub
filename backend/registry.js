@@ -97,7 +97,9 @@ function createRegistry(limit = 200) {
     }
     // Replayed last-known values of a disconnected aircraft are not telemetry.
     if (message.telemetry && d.aircraftConnected !== false) {
-      const values = Object.entries(message.telemetry).filter(([,v]) => v !== null);
+      // Only recognized, normalized numeric DJI measurements can influence freshness.
+      const values=Object.entries(message.telemetry).filter(
+        ([key,value])=>Object.hasOwn(d.telemetry,key)&&Number.isFinite(value));
       // An atomic WGS84 coordinate pair is valid with or without RTK.
       const lat=message.telemetry.latitude,lon=message.telemetry.longitude;
       const hasPair=Number.isFinite(lat)&&Number.isFinite(lon);
@@ -125,8 +127,12 @@ function createRegistry(limit = 200) {
             d.telemetryFieldTimeVerified.longitude=message.timestamp!==null;
           }
         }
-        d.lastTelemetryAt=observedAt;
-        d.telemetryTimeVerified=message.timestamp!==null;
+        // Lone latitude/longitude packets contain no complete GPS measurement.
+        // Keep the last actual OSD measurement time unchanged for those packets.
+        if(hasPair||values.some(([key])=>key!=='latitude'&&key!=='longitude')){
+          d.lastTelemetryAt=observedAt;
+          d.telemetryTimeVerified=message.timestamp!==null;
+        }
       }
       // Null position never becomes a new track point or a fresh GPS fix.
       if (hasPair&&!nullPosition) {

@@ -13,6 +13,7 @@ const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
 const {createShapeCatalog}=require('./mqtt-shape');
 const {createRegistry}=require('./registry');
+const {deviceCachePayload}=require('./device-cache');
 const {pilotConfiguration}=require('./pilot-config');
 const {createStatusReply}=require('./topology-ack');
 const {createPilotPairing,redisStore}=require('./pilot-pairing');
@@ -191,7 +192,7 @@ function onMessage(topic,payload,packet){
     }
     for(const item of result.updates){
       io.emit('device_update',item);
-      redis.set('skyhub:device:'+item.sn,JSON.stringify(item),'EX',3600)
+      redis.set('skyhub:device:'+item.sn,JSON.stringify(deviceCachePayload(item)),'EX',3600)
         .catch(err=>console.error('[redis write]',err.message));
     }
     if(result.event)io.emit('device_event',result.event);
