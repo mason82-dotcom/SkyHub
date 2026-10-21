@@ -98,6 +98,12 @@ function cleanValue(value, node, path, depth) {
   if (['int','enum_int','enum','date','float','double'].includes(type)) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
     if (['int','enum_int','enum','date'].includes(type) && !Number.isSafeInteger(value)) return undefined;
+    // DJI's older Mavic 3/aircraft documents use a positive float-machine
+    // bound (-1.4E-45) for GPS longitude/latitude. It is not a valid WGS84
+    // geographic bound and would reject the entire Western/Southern world.
+    // Validate geographical coordinates explicitly instead.
+    if (path === 'latitude') return value >= -90 && value <= 90 ? value : undefined;
+    if (path === 'longitude') return value >= -180 && value <= 180 ? value : undefined;
     if (Number.isFinite(node.min) && value < node.min) return undefined;
     if (Number.isFinite(node.max) && value > node.max) return undefined;
     // Do not apply enum constraints to future firmware revisions: a new,
