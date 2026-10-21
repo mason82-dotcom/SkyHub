@@ -60,6 +60,8 @@ node scripts/wpml-inspect.js /tmp/waypoint-draft.kmz
 
 # Optional: Vergleich zweier lokal vorhandener KMZ-Dateien (kein Gerätezugriff)
 node scripts/wpml-compare.js /pfad/pilot2-export.kmz /tmp/waypoint-draft.kmz
+
+# Hardware-/Importabnahme: docs/dji-pilot2-kmz-acceptance.md
 ```
 
 **Keine Flugfreigabe:** WPML-XML/KMZ sind offline generierbar und auf Struktur
