@@ -10,7 +10,7 @@ const source = require('../data/dji-cloud-api-118-fields.json');
 const models = [
   [{domain:'0',type:77,subType:0},'mavic3','official-family'],
   [{domain:'0',type:77,subType:1},'mavic3','official-family'],
-  [{domain:'0',type:77,subType:2},'mavic3','shared-family-unverified'],
+  [{domain:'0',type:77,subType:2},'mavic3m','shared-family-three-generic-roots-observed-values-unverified'],
   [{domain:'0',type:99,subType:1},'matrice4T','shared-aircraft-with-web-extensions-unverified'],
   [{domain:'2',type:144,subType:0},'rcPro','official-device'],
   [{domain:'2',type:174,subType:0},'rcPlus2','official-device-web']
@@ -27,11 +27,13 @@ const topo = (time) => parseMessage('sys/product/RC/status',Buffer.from(JSON.str
 
 test('pinned property tables enumerate all nested fields and preserve provenance',()=>{
   assert.equal(source.profiles.mavic3.fields.length,144);
+  assert.equal(source.profiles.mavic3m.fields.length,6);
+  assert.equal(source.profiles.mavic3m.extends,'mavic3');
   assert.equal(source.profiles.aircraftCommon.fields.length,162);
   assert.equal(source.profiles.matrice4T.fields.length,199);
   assert.equal(source.profiles.rcPro.fields.length,48);
   assert.equal(source.profiles.rcPlus2.fields.length,54);
-  for (const profile of Object.values(source.profiles)) {
+  for (const profile of Object.values(source.profiles).filter(p=>!p.extends)) {
     if(profile!==source.profiles.rcPlus2) assert.match(profile.source,/dji-sdk\/Cloud-API-Doc\/blob\/4ec6b0c7/);
     else assert.match(profile.source,/developer.dji.com\/doc\/cloud-api-tutorial\/en\/api-reference\/pilot-to-cloud\/mqtt\/dji-rc-plus-2\/properties.html/);
     assert.ok(profile.fields.some(f=>f.path==='latitude' && f.push===0));
@@ -53,6 +55,50 @@ test('all six models have documented or explicitly provisional field profiles',(
   }
   assert.equal(fieldDefinitions({domain:'0',type:999,subType:0}),null);
 });
+
+test('M3M overlay inherits 144 DJI Mavic-3 roots and adds only 6 sourced extensions',()=>{
+  const model=models[2][0],defs=fieldDefinitions(model);
+  assert.equal(defs.profile,'mavic3m');
+  assert.equal(defs.inheritedFrom,'mavic3');
+  assert.equal(defs.fields.length,150);
+  assert.match(defs.source,/dji-sdk\/Cloud-API-Doc\/blob\/4ec6b0c7/);
+  assert.match(defs.extensionSource,/developer\.dji\.com\/doc\/cloud-api-tutorial/);
+  assert.match(defs.extensionEvidence,/root names attributed to Mavic 3M/);
+  assert.equal(defs.extensionStatus,'root-names-hardware-observed-values-unverified');
+  for(const field of ['mode_code','battery.capacity_percent','cameras.recording_state',
+    'distance_limit_status','distance_limit_status.distance_limit','rth_altitude','rc_lost_action'])
+    assert.ok(defs.fields.some(item=>item.path===field),field);
+  assert.equal(new Set(defs.fields.map(f=>f.path)).size,defs.fields.length);
+  assert.equal(fieldDefinitions(models[0][0]).fields.length,144);
+  assert.equal(fieldDefinitions(models[1][0]).fields.length,144);
+});
+
+test('M3M generic Aircraft OSD extensions are parsed read-only with strict DJI limits',()=>{
+  const m3m=models[2][0],e=models[0][0],t=models[1][0];
+  const raw={mode_code:4,
+    distance_limit_status:{state:1,distance_limit:250,is_near_distance_limit:0,
+      user_note:'SECRET_OPERATOR'},
+    rth_altitude:120,rc_lost_action:2,secret:'SECRET_DEVICE'};
+  const known=sanitizeKnownProperties(raw,'osd');
+  const out=sanitizeDeviceProperties(known,'osd',m3m);
+  assert.deepEqual(JSON.parse(JSON.stringify(out.distance_limit_status)),
+    {state:1,distance_limit:250,is_near_distance_limit:0});
+  assert.equal(out.rth_altitude,120);
+  assert.equal(out.rc_lost_action,2);
+  assert.equal(out.mode_code,4);
+  assert.doesNotMatch(JSON.stringify(out),/SECRET/);
+  assert.equal(sanitizeDeviceProperties(known,'osd',e).rth_altitude,undefined);
+  assert.equal(sanitizeDeviceProperties(known,'osd',t).rc_lost_action,undefined);
+  const invalid=sanitizeDeviceProperties(sanitizeKnownProperties({
+    distance_limit_status:{state:3,distance_limit:9000,is_near_distance_limit:65535},
+    rth_altitude:501,rc_lost_action:65535
+  },'osd'),'osd',m3m);
+  assert.equal(invalid.distance_limit_status,undefined);
+  assert.equal(invalid.rth_altitude,undefined);
+  assert.equal(invalid.rc_lost_action,undefined);
+  assert.equal(sanitizeDeviceProperties(known,'state',m3m).rth_altitude,undefined);
+});
+
 test('nested camera, GNSS, battery, RC link and stream fields survive read-only filter',()=>{
   const input={
     cameras:[{zoom_factor:3.5,ir_zoom_factor:2,recording_state:1,
