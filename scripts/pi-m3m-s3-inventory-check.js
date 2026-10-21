@@ -124,4 +124,4 @@ if(require.main===module){
     process.exitCode=2;
   });
 }
-module.exports={createApiStorage,discoverFirstPagePrefix,main};
+module.exports={createApiStorage,discoverFirstPagePrefix,piInvoker,main};
