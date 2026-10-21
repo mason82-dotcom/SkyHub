@@ -55,6 +55,61 @@ starten**: Der Bind-Mount könnte ein neues, leeres Verzeichnis anlegen;
 zudem würde Port 9000 auf dem Pi-Host veröffentlicht. Die alten
 Container bleiben als gestoppte Konfigurationsreferenzen erhalten.
 
+### Root-Zugangsdaten direkt aus AeroNexusAdvanced übernehmen
+
+Der bisherige Umzug `move` hat die MinIO-Root-Credentials zunächst aus
+dem gestoppten Cloud-MinIO-Container in
+`~/.config/skyhub/minio-shared.env` übertragen (lokale Datei mit `0600`).
+Wenn **stattdessen die ursprüngliche private Projekt-.env** von
+`~/Projekte/AeroNexusAdvanced` maßgeblich sein soll, verwendet die
+ergänzte Prüfung `scripts/pi-minio-env-from-aeronexusadvanced.py`.
+Sie liest ausschließlich `MINIO_ROOT_USER` und
+`MINIO_ROOT_PASSWORD` aus einer passenden lokalen .env, gleicht sie
+gegen die schon vorhandene SkyHub-Datei ab und **gibt keine Werte aus**.
+Die optionalen Schlüssel `AERONEXUS_MINIO_ACCESS_KEY` und
+`AERONEXUS_MINIO_SECRET_KEY` sind **S3-Client-Zugänge und kein
+Ersatz für die MinIO-Root-Zugangsdaten**.
+
+In der lokalen Migrations-Worktree-Kopie:
+
+```bash
+cd ~/Projekte/SkyHub-Minio-Migration
+# Rein lesend: vorhandene private Env-Pfade und Root-Schlüssel-Präsenz:
+python3 scripts/pi-minio-env-from-aeronexusadvanced.py locate
+
+# Rein lesend: Abgleich, findet bei eindeutigem Fund die passende Env:
+python3 scripts/pi-minio-env-from-aeronexusadvanced.py check
+
+# Bei mehreren .env-Dateien die geprüfte Quelle explizit einsetzen:
+python3 scripts/pi-minio-env-from-aeronexusadvanced.py check \
+  --source "$HOME/Projekte/AeroNexusAdvanced/cloud-server/.env"
+
+# Nur WENN die Werte differieren und die Projekt-.env als autoritativ
+# bestätigt wurde: bestehende SkyHub-Credentials privat sichern
+# und NUR die beiden Root-Werte lokal aus der geprüften Quelle übernehmen.
+python3 scripts/pi-minio-env-from-aeronexusadvanced.py import \
+  --source "$HOME/Projekte/AeroNexusAdvanced/cloud-server/.env" \
+  --accept-different
+```
+
+Die `--source`-Pfade sind Beispiele; **nur tatsächlich vorhandene
+Dateien aus `locate` verwenden**, niemals `.env.example`.
+Wenn `check` `MATCH` meldet, ist kein Import nötig.
+Bei `DIFFER` setzt der Import eine explizite Freigabe voraus und
+verweigert Änderungen, solange ein alter oder neuer MinIO läuft.
+Die bisherigen privaten Credentials werden zuvor mit Zeitstempel
+separat unter `~/.config/skyhub/` gesichert (Rechte `0600`).
+Vor dem Start verlangt `scripts/pi-minio-migrate-from-aeronexus.sh up`
+jetzt einen erfolgreichen `check --require-match` gegen dieselbe
+Projekt-.env. Wenn mehrere passende Dateien existieren oder die Quelle
+nicht automatisch erkannt wird, lässt sie sich per
+`SKYHUB_AERONEXUSADVANCED_ENV_FILE=/absoluter/pfad/.env`
+explizit auswählen.
+
+Der Abgleich bestätigt nur die Konfigurationsidentität.
+Er validiert noch **nicht** Objekt-Integrität, IAM und tatsächliche
+S3-Anmeldung nach dem Start.
+
 ### Drei getrennte Betriebsphasen
 
 Auf einem **lokalen Checkout dieses Entwicklungsbranches** im aktiven
