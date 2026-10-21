@@ -77,6 +77,38 @@ verwenden. Keine Rekursion, kein Verfolgen von Symlinks,
 maximal 20.000 Verzeichniseinträge. Die Existenz konkreter
 M3M-Bilddateien auf dem Raspberry Pi ist noch nicht nachgewiesen.
 
+## Hardwareplattform-Nachweis: Offline-Inventur auf Raspberry Pi 5
+
+**21.10.2026, echter Raspberry Pi 5:** Der Benutzer hat den
+abgetrennten Worktree mit Commit `ac96242` ausgecheckt und
+`node --test backend/test/m3m-media-inventory.test.js` sowie
+`node scripts/pi-m3m-media-inventory.js --help` erfolgreich
+ausgeführt.
+
+- **7 von 7 Node-Tests bestanden**, keine Fehler oder Skips.
+- Vollständige und unvollständige Fünf-Kanal-Gruppierung,
+  Duplikaterkennung, verschiedene Aufnahme-IDs, Whitelisting,
+  Mengengrenzen und nichtrekursiver Verzeichnisscan mit
+  Dummy-Bilddateien wurden erfolgreich getestet.
+- Die CLI-Hilfe bestätigte die unveränderte Schnittstelle
+  `--directory /absolute/path/to/M3M/files`.
+- **Keine echte M3M-Fotodatei untersucht und kein Bildinhalt
+  verifiziert**. Ein produktionsreifer JPEG-/TIFF-Ingest,
+  Radiometrie und die Kalibrierungsmetadaten sind weiterhin offen.
+
+Die Namenskonvention ist außerdem durch die in einem
+wissenschaftlich veröffentlichten Mavic-3M-Datensatz dokumentierten
+Dateibeispiele und die DJI-Mavic-3M-Beispieldateien plausibilisiert;
+sie darf **nicht** mit einer Validierung beliebiger
+DJI-Export-/Umbenennungsvarianten verwechselt werden:
+
+- https://pmc.ncbi.nlm.nih.gov/articles/PMC11101735/
+- https://geoinstrumentoscol.com/wp-content/uploads/2024/12/Brochure-Mavic-3-Multiespectral.pdf
+
+**Entwicklungsfreigabe:** Die offline ausgeführte Dateinamenanalyse
+ist auf dem Pi reproduziert. PR #23 bleibt ein Draft, bis echte
+RGB- und TIFF-Dateien einschließlich Metadatenprüfung vorliegen.
+
 ## Noch nicht implementiert / klare Freigabestufen
 
 1. **Phase 2: Gerätespezifische Dateiproben.**
