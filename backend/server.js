@@ -12,7 +12,7 @@ const {fieldDefinitions}=require('./dji-properties');
 const {classifyMessage}=require('./message-guard');
 const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
-const {createShapeCatalog}=require('./mqtt-shape');
+const {createShapeCatalog,createModelShapeCatalog}=require('./mqtt-shape');
 const {createRegistry}=require('./registry');
 const {deviceCachePayload}=require('./device-cache');
 const {pilotConfiguration}=require('./pilot-config');
@@ -60,6 +60,7 @@ let mqttConnected=false;
 let mqttSubscribed=false;
 const mqttStats=createMqttMetrics();
 const mqttShapes=createShapeCatalog();
+const mqttModelShapes=createModelShapeCatalog();
 const topologyAckEnabled=process.env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
 const topologyAckCredentials={
   username:process.env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'',
@@ -171,6 +172,15 @@ function onMessage(topic,payload,packet){
     const result=registry.ingest(parsed,observedAt);
     if(result.dropReason){mqttStats.rejected(result.dropReason);return;}
     mqttStats.accepted(parsed,result,observedAt);
+    // Only count already validated packets and confirmed topology models.
+    // Nothing from raw DJI identifiers or payload values enters this catalog.
+    if(['osd','state'].includes(parsed.channel)){
+      const device=registry.get(parsed.sn,observedAt);
+      mqttModelShapes.record(parsed,device&&{
+        model:device.model,role:device.role,
+        aircraftConnected:device.aircraftConnected
+      },observedAt);
+    }
     // DJI topology acknowledgement is a protocol reply, never a flight command.
     // Only send for a validated, accepted, non-retained update_topo message.
     if(topologyAckEnabled && parsed.channel==='status' && parsed.topology){
@@ -375,6 +385,9 @@ app.delete('/api/pilot-admin/devices/:id',async(req,res)=>{
 });
 // Field names per channel/method as actually received; no values or serial numbers.
 app.get('/api/diagnostics/mqtt-shapes',(req,res)=>res.json(mqttShapes.snapshot()));
+// View-token protected: only RC Pro/M3M model keys and documented root names.
+// Does not include serials, coordinates, raw DJI telemetry or arbitrary keys.
+app.get('/api/diagnostics/mqtt-model-shapes',(req,res)=>res.json(mqttModelShapes.snapshot()));
 // Authenticated, value-free property definitions for the six targeted devices.
 // Example: /api/diagnostics/dji-fields?model=0:77:2
 app.get('/api/diagnostics/dji-fields',(req,res)=>{
