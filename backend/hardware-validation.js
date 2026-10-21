@@ -147,6 +147,47 @@ function deviceSummary(device,now){
 // Classify observation layers without collecting raw MQTT payloads, IDs or
 // per-device values. The backend health counts are process-local; per-model
 // shape counts start at backend boot too and require confirmed topology.
+const DROP_REASON_KEYS=Object.freeze([
+  'malformed','retained','stale','future','invalid','duplicate',
+  'missing_timestamp_after_verified'
+]);
+// Reject reasons are process-wide in current backend. Attribute them to State
+// ONLY if all other known channels had zero missed deliveries and the total
+// received-minus-accepted equals the sum of bounded rejection reasons.
+function stateDropEvidence(health){
+  const o=health?.mqttObservedChannelCounts;
+  const a=health?.mqttChannelCounts;
+  const raw=health?.mqttDroppedByReason;
+  if(!isObject(o)||!isObject(a)||!isObject(raw))
+    return {available:false,attributed:false,stateNotAccepted:null,
+      totalUnaccepted:null,reasons:[]};
+  const channels=['osd','state','status','events','services_reply'];
+  if(channels.some(c=>!Number.isSafeInteger(o[c])||o[c]<0||
+      !Number.isSafeInteger(a[c])||a[c]<0||a[c]>o[c]))
+    return {available:false,attributed:false,stateNotAccepted:null,
+      totalUnaccepted:null,reasons:[]};
+  const reasons=[];
+  for(const reason of DROP_REASON_KEYS){
+    const count=raw[reason];
+    if(count!==undefined){
+      if(!Number.isSafeInteger(count)||count<0)
+        return {available:false,attributed:false,stateNotAccepted:null,
+          totalUnaccepted:null,reasons:[]};
+      if(count>0)reasons.push({reason,count});
+    }
+  }
+  const stateNotAccepted=o.state-a.state;
+  const totalUnaccepted=channels.reduce((v,c)=>v+o[c]-a[c],0);
+  const totalReasons=reasons.reduce((sum,item)=>sum+item.count,0);
+  const allKnownReasons=Object.keys(raw).every(x=>DROP_REASON_KEYS.includes(x));
+  const otherChannelsFull=channels.every(c=>c==='state'||o[c]===a[c]);
+  const totalRejected=health?.mqttRejectedMessages;
+  const validRejected=Number.isSafeInteger(totalRejected)&&totalRejected>=0;
+  const attributed=otherChannelsFull&&allKnownReasons&&validRejected&&
+    totalRejected===totalUnaccepted&&totalReasons===totalUnaccepted;
+  return {available:true,attributed,stateNotAccepted,totalUnaccepted,
+    reasons:reasons.sort((x,y)=>x.reason.localeCompare(y.reason))};
+}
 function stateChannelEvidence(health,modelShapes,controller,aircraft){
   const raw=health?.mqttObservedChannelCounts?.state;
   const accepted=health?.mqttChannelCounts?.state;
@@ -228,6 +269,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
   const aircraft=deviceSummary(air,now);
   const m3mExtensions=m3mExtensionAudit(air,now);
   const stateEvidence=stateChannelEvidence(health,modelShapes,controller,aircraft);
+  const stateDrops=stateDropEvidence(health);
   // DJI pushMode=1 is event-driven: state is pushed on change, unlike
   // fixed-frequency OSD. A state packet that is 16 s old is evidence that
   // the channel works, not an indication of failed controller/aircraft.
@@ -246,7 +288,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),modelShape
     {step:'M3M State-Daten empfangen (bei Änderung)',status:stateStatus(aircraft)}
   ];
   return {target:'DJI RC Pro Enterprise + Mavic 3M',mode:'nur Lesen',
-    transport,controller,aircraft,m3mExtensions,stateEvidence,linked,stages,
+    transport,controller,aircraft,m3mExtensions,stateEvidence,stateDrops,linked,stages,
     notes:[
       'MQTT- und Shape-Zähler gelten backendweit, nicht individuell für die RC/M3M.',
       'Globale MQTT-Shapes erlauben keine Gerätezuordnung. Nur der optionale modellbezogene Katalog nach akzeptiertem Paket und bestätigter Topologie kann Rootfelder der M3M zurechnen.',
@@ -310,6 +352,17 @@ function formatReport(r){
     (state.rcTypedPropertiesObserved?'ja':'nein')+
     ' | M3M '+(state.m3mTypedPropertiesObserved?'ja':'nein'));
   lines.push('HINWEIS: State wird bei Aenderung gesendet. 0 empfangene State-Topics sind kein Beweis eines Defekts, sollten bei laengerem Betrieb jedoch geprueft werden.');
+  const drop=r.stateDrops;
+  if(drop?.available){
+    lines.push('State-Pakete nicht angenommen (Differenz): '+drop.stateNotAccepted);
+    lines.push('Backendweit verworfene Nachrichten nach Grund: '+
+      (drop.reasons.map(item=>item.reason+'='+item.count).join(', ')||'keine'));
+    lines.push('Ablehnungsgruende dem State-Kanal zurechenbar: '+
+      (drop.attributed?'JA (alle anderen beobachteten Kanaele vollstaendig angenommen, Bilanz stimmt)':
+        'NEIN (backendweite Statistik reicht nicht fuer genaue Zuordnung)'));
+  }else{
+    lines.push('Ablehnungsgruende: NICHT PRUEFBAR (backendweite Metrik unvollstaendig).');
+  }
   lines.push('--- M3M-Feldluecken nach Kamerafunktion und MQTT-Kanal (nur Namen) ---');
   const gaps=r.aircraft?.propertyFields?.m3mGapGroups;
   if(!gaps){
