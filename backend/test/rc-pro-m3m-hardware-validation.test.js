@@ -235,3 +235,67 @@ test('model attribution is strictly whitelisted and ignores spoofed or unsupport
   assert.deepEqual(report.transport.rcModelStateRoots,['live_capacity']);
   assert.doesNotMatch(JSON.stringify(report),/SERIAL_FROM_INPUT|ANY_SECRET|__proto__/);
 });
+
+
+test('M3M extension audit has no value claims while only the old Pi profile is deployed',()=>{
+  const report=evaluateHardwareSession([rc,{...air,propertyProfile:{name:'mavic3',
+    confidence:'shared-family-unverified'}}],health,shapes,now);
+  assert.equal(report.aircraft.seen,true);
+  assert.equal(report.m3mExtensions.available,false);
+  assert.equal(report.m3mExtensions.unobserved,null);
+  assert.deepEqual(report.m3mExtensions.fields,[]);
+  assert.match(formatReport(report),/M3M-150-Feldparser: NICHT AKTIV/);
+});
+
+test('M3M extension audit reports accepted typed fields and age, never their values',()=>{
+  const obsAt=now-1200,oldAt=now-40000;
+  const extended={...air,
+    propertyProfile:{name:'mavic3m',
+      confidence:'shared-family-three-generic-roots-observed-values-unverified'},
+    deviceProperties:{osd:{
+      mode_code:4, rth_altitude:125, rc_lost_action:1,
+      distance_limit_status:{state:1,distance_limit:300,is_near_distance_limit:0}
+    },state:{}},
+    propertyFieldObservedAt:{osd:{
+      rth_altitude:obsAt,rc_lost_action:oldAt,
+      distance_limit_status:obsAt,
+      'distance_limit_status.state':obsAt,
+      'distance_limit_status.distance_limit':obsAt,
+      'distance_limit_status.is_near_distance_limit':obsAt
+    },state:{}}
+  };
+  const report=evaluateHardwareSession([rc,extended],health,shapes,now);
+  assert.equal(report.m3mExtensions.available,true);
+  assert.equal(report.m3mExtensions.accepted,6);
+  assert.equal(report.m3mExtensions.fresh,5);
+  assert.equal(report.m3mExtensions.stale,1);
+  assert.equal(report.m3mExtensions.unobserved,0);
+  assert.deepEqual(report.m3mExtensions.fields.map(f=>f.path),[
+    'distance_limit_status','distance_limit_status.state',
+    'distance_limit_status.distance_limit','distance_limit_status.is_near_distance_limit',
+    'rth_altitude','rc_lost_action'
+  ]);
+  const output=formatReport(report);
+  assert.match(output,/HISTORISCH\\s+osd:rc_lost_action/);
+  assert.doesNotMatch(output,/125|300|PRIVATE|SECRET|49\\.123456|8\\.123456/);
+  assert.doesNotMatch(JSON.stringify(report),/125|300|PRIVATE|SECRET|49\\.123456/);
+});
+
+test('typed M3M fields without accepted times or value are not reported as valid',()=>{
+  const input={...air,propertyProfile:{name:'mavic3m'},
+    deviceProperties:{osd:{rth_altitude:75,
+      distance_limit_status:{state:1}},state:{}},
+    propertyFieldObservedAt:{osd:{rth_altitude:now-2000,
+      distance_limit_status:now-2000,
+      'distance_limit_status.state':now+5000},state:{}}
+  };
+  const report=evaluateHardwareSession([rc,input],health,shapes,now);
+  assert.equal(report.m3mExtensions.available,true);
+  assert.equal(report.m3mExtensions.accepted,2);
+  assert.equal(report.m3mExtensions.fresh,2);
+  assert.equal(report.m3mExtensions.unobserved,4);
+  assert.equal(report.m3mExtensions.fields.find(x=>x.path==='distance_limit_status.state').status,
+    'NICHT BEOBACHTET');
+  assert.equal(report.m3mExtensions.fields.find(x=>x.path==='rc_lost_action').status,
+    'NICHT BEOBACHTET');
+});
