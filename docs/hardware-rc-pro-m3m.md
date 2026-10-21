@@ -91,7 +91,69 @@ und aktualisiert **nur** das Backend, verursacht dabei aber einen
 kurzen Backend-Neustart. Es darf nicht automatisch durch eine
 Hardware-Diagnose ausgeführt werden.
 
-## 5. Falls die Verbindung fehlt
+## 5. Echter Hardwaretest nach Backend-Update (21.10.2026)
+
+Der Pi hat nach dem **kontrollierten** Backend-Update die neuen
+`deviceProperties`-, `propertyProfile`- und
+`propertyFieldObservedAt`-Schnittstellen zur Verfügung gestellt.
+Das Update-Skript bestätigte den Neuaufbau **ausschließlich** des Backends;
+PostGIS, Redis, EMQX und Caddy wurden nicht neu erstellt. Der private
+Konfigurations-/PostGIS-Backupordner wurde in der Pi-Ausgabe ausgewiesen.
+
+### Bestätigte Beobachtungen, ohne Gerätekennungen oder Messwerte
+
+| Signal | RC Pro Enterprise | Mavic 3M |
+|---|---:|---:|
+| Topologie und Zuordnung | bestätigt | bestätigt |
+| Aktuelles OSD | 0 s (gerundet) | 0 s (gerundet) |
+| Dokumentierte statische Feldpfade | 48 | 144 |
+| Beobachtete auswertbare Feldpfade | **17** | **72** |
+| Zuletzt frisch (<15 s) | 10 | 58 |
+| Früher beobachtet, nicht frisch | 7 | 14 |
+| Noch nicht beobachtet | 25 | 62 |
+| Redigiert oder nicht typisiert (Differenz) | 6 | 10 |
+| Letzte State-Beobachtung | vor 16 s | vor 16 s |
+
+Beim Messzeitpunkt lagen backendweit 48 von 48 beobachteten OSD-Paketen
+auch als angenommen vor, 48 gültige Telemetrie-Updates, zwei
+Status-Pakete und 22 State-Pakete. Die Zähler gelten für das
+**gesamte Backend**, nicht separat je Gerät. Der Topologie-ACK
+war aktiviert, zwei Antworten erfolgreich, null Fehler.
+
+RC Pro Enterprise: Live-OSD enthielt unter anderem Batteriekapazität,
+Höhe, GPS-Koordinaten und strukturierten Funklink-Status; State
+enthielt Streaming-Fähigkeiten und Firmwareversion.
+
+Mavic 3M: Live-OSD enthielt unter anderem Flugzustand, Kamera-Array,
+Hinderniserkennung, Position/RTK-Zustand, Akku/Batterie-Array,
+Speicherstatus, Wind, Höhe und Geschwindigkeit. State-Felder enthielten
+u. a. Home-Koordinaten, Akkuschwellwerte und mode_code_reason.
+
+Die reale Mavic-3M-Beobachtung bestätigt damit die **Teilkompatibilität
+des Cloud-API-Feldprofils**. Weder alle 144 Feldpfade noch multispektrale
+Bilddaten/NDVI-Verarbeitung wurden durch diesen Telemetrietest
+nachgewiesen.
+
+### Warum 16 Sekunden alte State-Daten nicht fehlerhaft sind
+
+Die offizielle DJI-Property-Definition unterscheidet
+`pushMode=0` (OSD in stabiler Frequenz, angegeben mit 0,5 Hz)
+und `pushMode=1` (State nur **bei Zustandsänderung**).
+Der vorherige Hardwarecheck legte fälschlich die für OSD sinnvolle
+15-Sekunden-Grenze auch als Bestehensgrenze für State an.
+Die neue Auswertung bestätigt ein **historisch empfangenes** State-Paket
+unabhängig von dessen Alter. Die letzten Beobachtungszeiten bleiben
+sichtbar; sie dürfen nicht als aktuelle Messwerte ausgegeben werden.
+
+Quelle: [DJI Pilot-to-Cloud Aircraft Property Reference](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html)
+und [RC Plus 2 Property Reference](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html).
+
+**Abnahmestatus:** Transport, Topologie und M3M/RC-Live-OSD sind an
+echter Hardware bestätigt; dokumentierte Property-Auswertung ist
+nachgewiesen, die feldweise Vollständigkeit sowie RTK/Multispektral-
+Medienfunktionen bleiben offen.
+
+## 6. Falls die Verbindung fehlt
 
 Für die bestehende Diagnose ohne Änderung am laufenden System:
 
@@ -105,6 +167,6 @@ Ein Merge auf GitHub installiert keine neue Backend-Version auf dem Pi. Veraltet
 
 Bitte nur den sanitisierten Bericht aus dem Hardwarecheck teilen, **keine** MQTT-Rohpayloads, Geräteseriennummern, GPS-Koordinaten, Tokens oder .env-Inhalte.
 
-## 6. Grenzen
+## 7. Grenzen
 
 Die Prüfung löst weder property/set noch Flugsteuerung, Missionen, Medienaufnahmen, neue MQTT-Abos oder Pairing aus. Erst die Ausführung auf realer, eingeschalteter Hardware und die Auswertung des Ergebnisses ermöglichen eine belastbare Abnahme. GitHub-CI prüft lediglich synthetische RC-/M3M-Snapshots und die CLI-Argumentverarbeitung.
