@@ -24,7 +24,7 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3E | `0/77/0` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3T | `0/77/1` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
-| Matrice 4T | `0/99/1` | `matrice4T`, 168 Pfade | **vorläufig**: 162 archivierte Aircraft-Pfade + sechs dokumentierte allgemeine Aircraft-Erweiterungen; M4T-Verfügbarkeit nicht verifiziert |
+| Matrice 4T | `0/99/1` | `matrice4T`, 179 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 17 dokumentierte generische Ergänzungen; M4T-Verfügbarkeit nicht verifiziert |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
 | RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; Hardwareprüfung ausstehend |
 
@@ -48,8 +48,21 @@ belegbare Pfade aus der [DJI Pilot-to-Cloud Aircraft Property-Referenz](https://
 `rth_altitude` und `rc_lost_action`. Diese Referenz erschien **vor** der
 Matrice 4T und ist keine gerätespezifische Unterstützungsgarantie. Die Werte
 werden nur gelesen, niemals als `property/set` oder Flugkommando gesendet.
-Weitere mögliche Felder wie PSDK-Erweiterungen, `wpmz_version` und
-`current_rth_mode` werden ohne belastbaren M4T-Nachweis nicht freigeschaltet.
+Hinzu kommen elf generische Aircraft-Pfade für `payloads` (verschachtelte
+Payload-Statusinformationen), `rid_state`, `wpmz_version`,
+`current_rth_mode` und die dokumentierten Commander-Statusfelder.
+Diese sind **nicht als M4T-validierte Features ausgewiesen**; die Feldwerte
+werden erst verarbeitet, wenn die reale DJI-Firmware sie liefert. Das
+dynamisch benannte DJI-OSD-Objekt `{type-subtype-gimbalindex}` wird
+mit höchstens acht Gimbal-Einträgen und neun numerischen Statusfeldern
+unter `deviceProperties.osd.payload_gimbals` abgelegt. Nur passende
+Geräteprofilkennungen dürfen es verwenden; keine SNs, freien Strings
+oder unbekannten Payload-Attribute werden übernommen. Laser-Zielkoordinaten
+werden nur als vollständiges, gültiges WGS84-Paar akzeptiert.
+
+PSDK-Erweiterungen bleiben ohne belegbare Unterstützung des konkreten
+Fluggeräts ausgeschlossen. Auch diese zusätzlichen Felder sind kein
+Nachweis ihrer tatsächlichen Verfügbarkeit an einer M4T.
 Dokumentierte Enumerationen werden auf bekannte Codes begrenzt; neue Codes
 müssen nach DJI-Schema-Abgleich ausdrücklich ergänzt werden.
 
