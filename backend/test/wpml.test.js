@@ -184,3 +184,29 @@ test('focus coordinates and sensor flag obey DJI 0–1 normalized range',()=>{
   const invalid=focus.replace('<wpml:focusX>0.5','<wpml:focusX>1.5');
   assert.ok(validateDocuments(template,invalid).errors.some(x=>x.path.endsWith('/focusX')));
 });
+
+test('DJI Waylines global transition speed is capped at 15 m/s',()=>{
+  const fast=waylines.replace('<wpml:globalTransitionalSpeed>8',
+    '<wpml:globalTransitionalSpeed>16');
+  assert.ok(validateDocuments(template,fast).errors.some(e=>
+    e.path.endsWith('/globalTransitionalSpeed')));
+});
+test('DJI straight-line through-waypoint turns require a damping distance',()=>{
+  const pass=waylines.replace(
+    'toPointAndStopWithDiscontinuityCurvature</wpml:waypointTurnMode>',
+    'toPointAndPassWithContinuityCurvature</wpml:waypointTurnMode>')
+    .replace('</wpml:waypointTurnParam>',
+      '</wpml:waypointTurnParam><wpml:useStraightLine>1</wpml:useStraightLine>');
+  const missing=validateDocuments(template,pass);
+  assert.ok(missing.errors.some(e=>e.path.endsWith('/waypointTurnDampingDist')));
+  const withDamping=pass.replace('</wpml:waypointTurnParam>',
+    '<wpml:waypointTurnDampingDist>2</wpml:waypointTurnDampingDist></wpml:waypointTurnParam>');
+  assert.equal(validateDocuments(template,withDamping).valid,true);
+});
+test('POI with an empty coordinate component is never silently interpreted as zero',()=>{
+  const param='<wpml:waypointHeadingParam><wpml:waypointHeadingMode>towardPOI</wpml:waypointHeadingMode>'+
+    '<wpml:waypointPoiPoint>48.5,,0</wpml:waypointPoiPoint></wpml:waypointHeadingParam>';
+  const route=waylines.replace('<wpml:executeHeight>40</wpml:executeHeight>',
+    '<wpml:executeHeight>40</wpml:executeHeight>'+param);
+  assert.ok(validateDocuments(template,route).errors.some(e=>e.path.endsWith('/waypointPoiPoint')));
+});
