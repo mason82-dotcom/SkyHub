@@ -41,6 +41,12 @@ Die Flugsteuerung bleibt vollständig deaktiviert. Eine getrennte
 [2D-Vermessungsvorschau](frontend/public/wpml-survey-preview.html) zeigt
 abgeschnittene parallele Streifen über kleinen Polygonen und bietet nur
 GeoJSON-Export – **keine** DJI-Wayline-Berechnung.
+Optional können nach Eingabe der tatsächlich verwendeten Sensorgröße, physischen
+Brennweite, Bildauflösung, AGL-Höhe, Überlappungen und Geschwindigkeit
+fotogrammetrische **Schätzwerte** für GSD, Streifen-/Fotoabstände und
+Aufnahmeintervall berechnet werden. Es sind keine unbestätigten DJI-
+Kamerapresets hinterlegt. Kein Terrainmodell, keine garantierte Bilddeckung,
+keine echte Auslösung und keine Flugfreigabe.
 
 Ohne UI lässt sich der Export mit synthetischen Beispieldaten reproduzieren:
 
