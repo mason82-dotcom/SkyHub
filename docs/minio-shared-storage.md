@@ -59,11 +59,49 @@ verwenden denselben **Bind-Mount**
 Der gestoppte `aeronexus-edge-minio-init-1` bindet dagegen ausschließlich
 `/home/mason/Projekte/AeroNexus/evidence/scripts/minio-init.sh`
 unter `/init/minio-init.sh` ein. Es gibt damit **einen gemeinsamen
-Datenpfad, aber zwei historische Servercontainer**. Ob der Pfad tatsächlich
-auf einem eingehängten externen Dateisystem liegt, ist noch nicht geprüft.
-Das Image `aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1`
+Datenpfad, aber zwei historische Servercontainer**. Der Pi hat
+`findmnt -T` bestätigt: `/dev/nvme0n1p1`, ext4, eingehängt auf
+`/mnt/hc4backup`; der Datenträger ist mit 79 % belegt und hat etwa
+387 GB frei. `.minio.sys` ist vorhanden. **Das beweist noch keine
+fehlerfreie Bucket-/Objektintegrität.** Das Image `aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1`
 wird von beiden Servercontainern verwendet; Herkunft, Sicherheitslage,
 verwendete Zugangsdaten und Datenintegrität sind noch nicht geprüft.
+
+**Port-Befund und Start-Sperre:** Beide historischen Servercontainer
+veröffentlichen `9000/tcp` auf allen Host-Adressen
+(`HostIp=""`, äquivalent zu nicht auf Loopback eingeschränkt).
+Die MinIO-Konsole `9001/tcp` ist nur an `127.0.0.1` veröffentlicht.
+Ihre Restart-Policy lautet `no`. Daher diese Container **nicht einfach
+mit `docker start` starten**: Das würde die unveränderte öffentliche
+S3-Portbindung aktivieren. `adopt` lehnt ab sofort *jede* Host-Veröffentlichung
+des S3-Ports 9000 ab, auch eine Loopback-Bindung. Die spätere
+MinIO-Laufzeitkonfiguration muss den S3-Zugriff ausschließlich über das
+`skyhub-storage-net` ermöglichen. Notwendig sind zunächst ein überprüftes
+Backup und eine kontrollierte Compose-Konfiguration oder ein neuer,
+freigegebener Einzelserver mit dem identischen Datenbestand; weder
+den alten MinIO-Datenpfad löschen noch zwei MinIO-Prozesse parallel betreiben.
+
+**Nächste lesende Diagnoseschritte (keine Secrets ausgeben):**
+
+```bash
+echo '=== Vorhandene Port-Listener ==='
+ss -ltn '( sport = :9000 or sport = :9001 )'
+echo '=== MinIO-Startkonfiguration ==='
+for c in aeronexusadvanced-cloud-minio-1 aeronexus-edge-minio-1; do
+  echo "=== $c ==="
+  docker inspect --format 'Image={{.Config.Image}}
+User={{.Config.User}}
+Entrypoint={{json .Config.Entrypoint}}
+Cmd={{json .Config.Cmd}}
+Restart={{.HostConfig.RestartPolicy.Name}}' "$c"
+done
+echo '=== Docker-Image ==='
+docker image inspect aeronexus/minio:RELEASE.2025-10-15T17-29-55Z-an1 \
+  --format 'OS={{.Os}} Arch={{.Architecture}} ID={{.Id}}'
+```
+
+Keine Umgebungsvariablenwerte, Zugangsschlüssel oder vollständige
+`docker inspect`-JSON-Ausgaben in Chat/GitHub teilen.
 
 **Pflichtprüfung vor jeglichem Containerstart (nur lesen):**
 
@@ -182,7 +220,9 @@ eingehängt sein. Für `adopt` ist die erwartete Quelle von `/data`
 **ausdrücklich** als Umgebungsvariable anzugeben, beispielsweise
 `SKYHUB_MINIO_EXPECTED_DATA_SOURCE=/mnt/hc4backup/aeronexus-data/minio`.
 Bei Abweichung, fehlendem Verzeichnis, Symlink oder Auflösung auf dem
-Root-Dateisystem bricht die Übernahme ab. Er prüft vor der Anbindung, dass MinIO läuft, eine
+Root-Dateisystem bricht die Übernahme ab. **Die S3-Portbindung darf weder
+an eine externe Adresse noch an Loopback veröffentlicht sein.** Er prüft
+vor der Anbindung, dass MinIO läuft, eine
 Speicher-Einbindung besitzt, über eine Bridge angebunden werden kann
 und keine zweite MinIO-Instanz/kein doppelter DNS-Alias existiert.
 Anschließend erhalten der bestehende MinIO und das SkyHub-Backend
