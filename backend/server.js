@@ -8,6 +8,7 @@ const Redis=require('ioredis');
 const {Pool}=require('pg');
 const {Server}=require('socket.io');
 const {parseMessage,serial}=require('./dji');
+const {fieldDefinitions}=require('./dji-properties');
 const {classifyMessage}=require('./message-guard');
 const {validateBrokerConfig}=require('./mqtt-config');
 const {createMqttMetrics}=require('./mqtt-metrics');
@@ -374,6 +375,17 @@ app.delete('/api/pilot-admin/devices/:id',async(req,res)=>{
 });
 // Field names per channel/method as actually received; no values or serial numbers.
 app.get('/api/diagnostics/mqtt-shapes',(req,res)=>res.json(mqttShapes.snapshot()));
+// Authenticated, value-free property definitions for the six targeted devices.
+// Example: /api/diagnostics/dji-fields?model=0:77:2
+app.get('/api/diagnostics/dji-fields',(req,res)=>{
+  const key=req.query.model;
+  if (typeof key!=='string' || !/^[02]:\\d{1,3}:\\d{1,3}$/.test(key))
+    return res.status(400).json({error:'Expected domain:type:sub_type'});
+  const [domain,type,subType]=key.split(':');
+  const schema=fieldDefinitions({domain,type:Number(type),subType:Number(subType)});
+  if (!schema) return res.status(404).json({error:'Model not in schema catalogue'});
+  return res.json(schema);
+});
 // Persisted track for the map: newest points within ?minutes (1-1440, default 60).
 app.get('/api/drone/:sn/track',async(req,res)=>{
   const sn=serial(req.params.sn);

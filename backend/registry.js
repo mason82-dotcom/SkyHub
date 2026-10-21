@@ -1,6 +1,7 @@
 'use strict';
 
 const { fresh, serial } = require('./dji');
+const {deviceProfile,sanitizeDeviceProperties} = require('./dji-properties');
 const { resolveDeviceModel, category } = require('./catalog');
 const { describeHms } = require('./hms-catalog');
 
@@ -10,6 +11,23 @@ const AIRCRAFT_NOT_CONNECTED = 14;
 
 // HMS lists are pushed repeatedly while alerts are active; older lists are shown as stale.
 const HMS_FRESH_MS = 30000;
+
+// Collect sanitized DJI property paths only; array indexes and payload
+// device identifiers are never embedded in the observation-time keys.
+function propertyPaths(obj,prefix='',out=new Set()) {
+  if (Array.isArray(obj)) {
+    for (const value of obj) propertyPaths(value,prefix,out);
+    return out;
+  }
+  if (!obj || typeof obj!=='object') return out;
+  for(const [key,value] of Object.entries(obj)) {
+    if (prefix==='payload_gimbals' && key==='payload_index') continue;
+    const p=prefix ? prefix+'.'+key : key;
+    out.add(p);
+    propertyPaths(value,p,out);
+  }
+  return out;
+}
 
 function createRegistry(limit = 200) {
   const devices = new Map();
@@ -23,6 +41,18 @@ function createRegistry(limit = 200) {
       topologyRestored: d.topologyRestored, aircraftConnected: d.aircraftConnected,
       children: [...d.children], channel: d.channel,
       modeCode: d.modeCode, firmwareVersion: d.firmwareVersion,
+      propertyProfile: deviceProfile(d.model),
+      // Values are allowlisted and redacted; per-channel timestamp prevents
+      // a state update from masquerading as a fresh OSD measurement.
+      deviceProperties: {
+        osd: {...d.deviceProperties.osd},
+        state: {...d.deviceProperties.state}
+      },
+      propertyObservedAt: {...d.propertyObservedAt},
+      propertyFieldObservedAt: {
+        osd: {...d.propertyFieldObservedAt.osd},
+        state: {...d.propertyFieldObservedAt.state}
+      },
       lastSeenAt: d.lastSeenAt, lastTelemetryAt: d.lastTelemetryAt,
       lastPositionAt: d.lastPositionAt,
       positionUnavailable: d.positionUnavailable,
@@ -56,6 +86,9 @@ function createRegistry(limit = 200) {
       telemetryFieldAt: Object.create(null),
       telemetryFieldTimeVerified: Object.create(null),
       hms: [], lastHmsAt: null, hmsTimeVerified: null,
+      deviceProperties: {osd: Object.create(null),state: Object.create(null)},
+      propertyObservedAt: {osd:null,state:null},
+      propertyFieldObservedAt: {osd:Object.create(null),state:Object.create(null)},
       lastByChannel: Object.create(null),
       telemetry: { latitude:null,longitude:null,altitude:null,heightEllipsoid:null,battery:null,
         heading:null,horizontalSpeed:null,verticalSpeed:null,
@@ -92,8 +125,11 @@ function createRegistry(limit = 200) {
     }
     let point = null;
     const aircraft = d.model.domain === '0' || (d.model.domain === null && d.role === 'subdevice');
-    if (aircraft && message.channel === 'osd') {
-      d.aircraftConnected = message.state?.modeCode !== AIRCRAFT_NOT_CONNECTED;
+    if (aircraft && message.channel === 'osd' &&
+        Number.isInteger(message.state?.modeCode)) {
+      // OSD without a mode_code is not proof a previously disconnected
+      // aircraft has reconnected. Keep replay protection until a code arrives.
+      d.aircraftConnected = message.state.modeCode !== AIRCRAFT_NOT_CONNECTED;
     }
     // Replayed last-known values of a disconnected aircraft are not telemetry.
     if (message.telemetry && d.aircraftConnected !== false) {
@@ -145,6 +181,32 @@ function createRegistry(limit = 200) {
         };
       }
     }
+    // Retain only officially documented, schema-typed read-only fields.
+    // Do not update aircraft OSD from Pilot's disconnected replay (mode 14).
+    if (message.propertyValues && ['osd','state'].includes(message.channel) &&
+        (message.channel !== 'osd' || d.aircraftConnected !== false)) {
+      const properties = sanitizeDeviceProperties(message.propertyValues,message.channel,d.model);
+      if (message.channel === 'osd' &&
+          (d.model.domain === '0' || d.model.domain === '2')) {
+        // Keep the raw-property snapshot consistent with the validated GPS
+        // adapter: a partial coordinate pair or DJI's (0,0) placeholder
+        // must never overwrite the last accepted position.
+        const lat=properties.latitude, lon=properties.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
+            (lat === 0 && lon === 0) ||
+            Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+          delete properties.latitude;
+          delete properties.longitude;
+        }
+      }
+      if (Object.keys(properties).length) {
+        Object.assign(d.deviceProperties[message.channel],properties);
+        d.propertyObservedAt[message.channel] = observedAt;
+        // A newly reported field does not refresh absent, older fields.
+        for(const key of propertyPaths(properties))
+          d.propertyFieldObservedAt[message.channel][key]=observedAt;
+      }
+    }
     // Each HMS message carries the complete list of currently active alerts.
     if (Array.isArray(message.hms)) {
       d.hms = message.hms.map(alert => ({...alert}));
@@ -161,7 +223,13 @@ function createRegistry(limit = 200) {
       d.topologyOnline = true;
       d.lastTopologyAt = observedAt;
       d.topologyTimeVerified = message.timestamp !== null;
+      const previousProfile = deviceProfile(d.model)?.name;
       d.model = message.topology.model;
+      if (previousProfile !== deviceProfile(d.model)?.name) {
+        d.deviceProperties = {osd:Object.create(null),state:Object.create(null)};
+        d.propertyObservedAt = {osd:null,state:null};
+        d.propertyFieldObservedAt = {osd:Object.create(null),state:Object.create(null)};
+      }
       const priorChildren = new Set(d.children);
       const children = message.topology.children.map(x => x.sn).filter(sn => sn !== d.sn);
       const unique = [...new Set(children)];
@@ -186,7 +254,13 @@ function createRegistry(limit = 200) {
         child.topologyOnline = true;
         child.lastTopologyAt = observedAt;
         child.topologyTimeVerified = message.timestamp !== null;
+        const previousChildProfile = deviceProfile(child.model)?.name;
         child.model = childData.model;
+        if (previousChildProfile !== deviceProfile(child.model)?.name) {
+          child.deviceProperties = {osd:Object.create(null),state:Object.create(null)};
+          child.propertyObservedAt = {osd:null,state:null};
+          child.propertyFieldObservedAt = {osd:Object.create(null),state:Object.create(null)};
+        }
         updates.set(child.sn, child);
       }
     }
@@ -261,4 +335,4 @@ function createRegistry(limit = 200) {
     count() { return devices.size; }
   };
 }
-module.exports = { createRegistry };
+module.exports = { createRegistry,propertyPaths };

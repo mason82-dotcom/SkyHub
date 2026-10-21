@@ -53,3 +53,90 @@ test('privacy-safe telemetry audit help does not contact Docker',()=>{
   assert.match(out.stdout,/Nur empfangene Feldnamen/);
   assert.doesNotMatch(out.stdout,/latitude.*[0-9]/);
 });
+
+test('all six DJI device families expose value-free documented field coverage',()=>{
+  const ids=[
+    ['Mavic 3E','0',77,0,144],['Mavic 3T','0',77,1,144],
+    ['Mavic 3M','0',77,2,144],['Matrice 4T','0',99,1,199],
+    ['DJI RC Pro Enterprise','2',144,0,48],
+    ['DJI RC Plus 2 Enterprise','2',174,0,54]
+  ];
+  for(const [name,domain,type,subType,total] of ids){
+    const [report]=summarizeTelemetryFields([{
+      model:{domain,type,subType},modelName:name,
+      role:domain==='2'?'gateway':'subdevice',
+      deviceCategory:domain==='2'?'controller':'aircraft',
+      deviceProperties:{
+        osd:{latitude:49.12345,battery:{capacity_percent:55}},
+        state:{firmware_version:'1.2.3'}
+      }
+    }]);
+    assert.equal(report.model,name);
+    assert.equal(report.documentedTotal,total);
+    assert.ok(report.observedDocumented.includes('osd:latitude'));
+    assert.ok(report.observedDocumented.includes('state:firmware_version'));
+    assert.ok(!JSON.stringify(report).includes('49.12345'));
+    assert.ok(!JSON.stringify(report).includes('1.2.3'));
+    assert.doesNotMatch(JSON.stringify(report), /\\"capacity_percent\\"\\s*:\\s*55/);
+  }
+});
+
+test('redacted and unsupported array fields are excluded from missing-field counts',()=>{
+  const [rc]=summarizeTelemetryFields([{
+    model:{domain:'2',type:174,subType:0},modelName:'DJI RC Plus 2 Enterprise',
+    role:'gateway',deviceProperties:{state:{live_capacity:{
+      device_list:[{camera_list:[{video_list:[{video_index:'0',
+        video_type:'wide',switchable_video_types:['wide','zoom']}]}]}]
+    }},osd:{}}
+  }]);
+  assert.equal(rc.documentedTotal,54);
+  assert.ok(rc.documentedInspectableTotal<rc.documentedTotal);
+  assert.ok(rc.redactedDocumented.includes('state:live_capacity.device_list.sn'));
+  assert.ok(rc.redactedDocumented.includes('state:live_status.video_id'));
+  assert.ok(!rc.notObservedDocumented.includes('state:live_status.video_id'));
+  assert.ok(rc.observedDocumented.includes(
+    'state:live_capacity.device_list.camera_list.video_list.switchable_video_types'));
+  assert.ok(rc.observedDocumented.includes(
+    'state:live_capacity.device_list.camera_list.video_list.video_index'));
+  assert.equal(rc.observedDocumented.length+rc.notObservedDocumented.length+
+    rc.redactedDocumented.length+rc.unsupportedDocumented.length,54);
+  assert.ok(rc.redactedDocumented.includes('state:cloud_control_auth'));
+});
+
+
+test('dynamic gimbal inventory reports only field names, not payload indices or values',()=>{
+  const [r]=summarizeTelemetryFields([{
+    model:{domain:'0',type:99,subType:1},modelName:'Matrice 4T',deviceCategory:'aircraft',
+    deviceProperties:{osd:{payload_gimbals:[{payload_index:'89-0-0',
+      gimbal_pitch:12.345,measure_target_distance:55.7}]},state:{}}
+  }]);
+  assert.equal(r.dynamicDocumentedTotal,9);
+  assert.deepEqual(r.observedDynamic,['gimbal_pitch','measure_target_distance']);
+  assert.ok(r.notObservedDynamic.includes('gimbal_yaw'));
+  const asJson=JSON.stringify(r);
+  assert.doesNotMatch(asJson,/89-0-0|12.345|55.7/);
+  assert.equal(summarizeTelemetryFields([{
+    model:{domain:'0',type:77,subType:2},deviceProperties:{osd:{},state:{}}
+  }])[0].dynamicDocumentedTotal,0);
+});
+
+
+test('audit records sources and marks generic Matrice 4T property extensions unverified',()=>{
+  const [d]=summarizeTelemetryFields([{
+    model:{domain:'0',type:99,subType:1},
+    modelName:'Matrice 4T',
+    deviceCategory:'aircraft',
+    deviceProperties:{osd:{},state:{}}
+  }]);
+  assert.equal(d.documentedTotal,199);
+  assert.match(d.documentedSource,/Cloud-API-Doc/);
+  assert.match(d.documentedExtensionSource,/aircraft\/properties\.html/);
+  assert.equal(d.documentedExtensionEdition,'2024-06-28');
+  assert.match(d.documentedConfidence,/unverified/);
+  assert.ok(d.redactedDocumented.includes('state:psdk_widget_values.psdk_sn'));
+  assert.ok(d.redactedDocumented.includes('state:psdk_widget_values.speaker.play_file_name'));
+  assert.ok(d.redactedDocumented.includes('state:psdk_ui_resource.object_key'));
+  assert.ok(d.notObservedDocumented.includes('state:psdk_widget_values.speaker.play_volume'));
+  assert.equal(d.observedDocumented.length+d.notObservedDocumented.length+
+    d.redactedDocumented.length+d.unsupportedDocumented.length,199);
+});

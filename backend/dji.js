@@ -1,5 +1,7 @@
 'use strict';
 
+const {sanitizeKnownProperties} = require('./dji-properties');
+
 // DJI Cloud API v1.18: allowlisted read-only parser. Not a write/onboarding implementation.
 // Never store, log or forward topology keys or any unrecognized message properties.
 function finite(value, min=-Infinity, max=Infinity) {
@@ -168,6 +170,9 @@ function parseMessage(topic,raw) {
     gatewaySn:serial(envelope.gateway),
     needReply:envelope.need_reply===1,
     dataKeys:dataKeys(data),
+    // Bounded, field-allowlisted values only; never expose raw DJI data.
+    propertyValues:['osd','state'].includes(meta.channel) ?
+      sanitizeKnownProperties(data,meta.channel) : null,
     telemetry:meta.channel==='osd' ? extractTelemetry(data) : null,
     state:meta.channel==='state' || meta.channel==='osd' ? extractState(data) : null,
     topology:meta.channel==='status' && method==='update_topo' ? extractTopology(data) : null,
