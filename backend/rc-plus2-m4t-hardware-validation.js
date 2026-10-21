@@ -76,13 +76,32 @@ function summarizeDevice(device,now,profileName,expectedCount){
     }:null
   };
 }
+function pairingSummary(pairings,now){
+  // Treat unavailable endpoint as unknown, not as 'no controllers paired'.
+  if(!isObject(pairings)||!Array.isArray(pairings.devices)||
+     !Array.isArray(pairings.pending)){
+    return {available:false,rcPlus2Paired:null,rcProPaired:null,
+      rcPlus2RecentlyUsed:null,rcPlus2Pending:null};
+  }
+  const plusModel=name=>name==='DJI RC Plus 2 Enterprise'||name==='DJI RC Plus 2';
+  const proModel=name=>name==='DJI RC Pro Enterprise';
+  const plus=pairings.devices.filter(d=>isObject(d)&&plusModel(d.model)).slice(0,200);
+  const pro=pairings.devices.filter(d=>isObject(d)&&proModel(d.model)).slice(0,200);
+  return {
+    available:true,rcPlus2Paired:plus.length,rcProPaired:pro.length,
+    // Token verification means recent Pilot-2 bootstrap, NOT MQTT connection.
+    rcPlus2RecentlyUsed:plus.filter(d=>Number.isFinite(d.lastUsedAt)&&
+      d.lastUsedAt<=now&&now-d.lastUsedAt<30*60*1000).length,
+    rcPlus2Pending:pairings.pending.filter(d=>isObject(d)&&plusModel(d.model)).length
+  };
+}
 function linked(rc,air){
   return typeof rc?.sn==='string'&&rc.sn.length>0&&
     typeof air?.sn==='string'&&air.sn.length>0&&
     air.gatewaySn===rc.sn&&Array.isArray(rc.children)&&
     rc.children.includes(air.sn);
 }
-function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
+function evaluateHardwareSession(devices,health,shapes,now=Date.now(),pairings=null){
   const all=Array.isArray(devices)?devices.slice(0,200):[];
   const gateways=all.filter(d=>modelKey(d)===CONTROLLER&&d.role==='gateway');
   const aircraft=all.filter(d=>modelKey(d)===AIRCRAFT&&d.role==='subdevice');
@@ -103,7 +122,9 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
   const shapeKeys=channel=>[...new Set(shapeList.filter(s=>s?.channel===channel)
     .flatMap(s=>Array.isArray(s.dataKeys)?s.dataKeys:[])
     .filter(k=>typeof k==='string'&&allowedShapeKeys.has(k)))].sort().slice(0,60);
+  const pairing=pairingSummary(pairings,now);
   const transport={
+    topologyAckConnected:health?.topologyReplyConnected===true,
     mqttConnected:health?.mqtt===true,
     subscribed:health?.subscribed===true,
     topologyAckEnabled:health?.topologyReplyEnabled===true,
@@ -122,7 +143,14 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
     {step:'MQTT verbunden und abonniert',
       status:observedStatus(transport.mqttConnected&&transport.subscribed,transport.mqttConnected)},
     {step:'Topologie-Antwort (update_topo/status_reply) eingeschaltet',
-      status:transport.topologyAckEnabled?'BESTÄTIGT':'NICHT NACHGEWIESEN'},
+      status:transport.topologyAckEnabled&&transport.topologyAckConnected?
+        'BESTÄTIGT':transport.topologyAckEnabled?'NICHT AKTUELL':'NICHT NACHGEWIESEN'},
+    {step:'RC Plus 2: SkyHub-Geräte-Token registriert',
+      status:!pairing.available?'NICHT PRÜFBAR':
+        pairing.rcPlus2Paired>0?'BESTÄTIGT':'NICHT NACHGEWIESEN'},
+    {step:'RC Plus 2: Geräte-Token in letzten 30 Min verwendet',
+      status:!pairing.available?'NICHT PRÜFBAR':
+        pairing.rcPlus2RecentlyUsed>0?'BESTÄTIGT':'NICHT AKTUELL'},
     {step:'RC Plus 2 (2:174:0) als Gateway erkannt',
       status:observedStatus(controller.topologyOnline,controller.seen)},
     {step:'Matrice 4T (0:99:1) als Subdevice erkannt',
@@ -148,15 +176,19 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
         observedStatus(drone.stateObserved&&drone.stateAgeSeconds<15,
           drone.stateObserved)}
   ];
-  const passed=transport.mqttConnected&&transport.subscribed&&
-    transport.topologyAckEnabled&&unambiguous&&
+  const transportPassed=transport.mqttConnected&&transport.subscribed&&
+    transport.topologyAckEnabled&&transport.topologyAckConnected&&unambiguous&&
     controller.topologyOnline&&drone.topologyOnline&&
     controller.osdFresh&&drone.osdFresh&&drone.aircraftConnected&&
     controller.fieldInterface&&drone.fieldInterface&&
     controller.fields.documented===54&&drone.fields.documented===199;
+  const pairingConfirmed=pairing.available&&pairing.rcPlus2Paired>0&&
+    pairing.rcPlus2RecentlyUsed>0;
+  const passed=transportPassed&&pairingConfirmed;
   return {
     target:'DJI RC Plus 2 Enterprise + Matrice 4T',
-    mode:'read-only',passed:Boolean(passed),
+    mode:'read-only',passed:Boolean(passed),transportPassed:Boolean(transportPassed),
+    pairingConfirmed:Boolean(pairingConfirmed),pairing,
     candidateCount:{controllers:gateways.length,aircraft:aircraft.length,
       linkedPairs:pairs.length},
     transport,controller,aircraft:drone,stages,
@@ -167,7 +199,8 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now()){
       'RC Plus 2: offiziell dokumentiertes Web-Feldprofil mit 54 statischen Pfaden.',
       'M4T: 199 vorläufige generische Feldpfade plus neun dynamische Gimbal-Feldtypen; keine vollständige gerätespezifische DJI-1.18-Freigabe.',
       'Nicht beobachtete Felder sind kein Beweis fehlender Hardware-Unterstützung.',
-      'Die Pilot-2-Gerätekopplung ist separat zu bestätigen; aus Telemetrie allein ist kein Benutzerkonto nachweisbar.',
+      'Ein registrierter und kürzlich verwendeter Token belegt keine eindeutige physische RC-Identität: DJI Pilot 2 WebView-Modell stammt aus dem User-Agent.',
+      'Nur separat gekoppeltes SkyHub-Geräte-Token ist prüfbar; DJI-Benutzerkonten können nicht aus diesem Audit abgeleitet werden.',
       'Kein Flug, Pairing, MQTT-Publish, Neustart oder Container-Deployment durch diese Prüfung.'
     ]
   };
@@ -176,11 +209,17 @@ function formatReport(r){
   const lines=[
     '=== RC Plus 2 Enterprise + Matrice 4T – Cloud API 1.18 Hardware-Smoketest (nur Lesen) ===',
     'MQTT: '+r.transport.mqttConnected+' | Abonniert: '+r.transport.subscribed+
-      ' | Topologie-ACK aktiv: '+r.transport.topologyAckEnabled,
+      ' | Topologie-ACK aktiv: '+r.transport.topologyAckEnabled+
+      ' | ACK-Publisher verbunden: '+r.transport.topologyAckConnected,
     'Topologie-ACK gesendet: '+(r.transport.topologyAckSent??'n/v')+
       ' | Fehler: '+(r.transport.topologyAckErrors??'n/v'),
     'OSD-Pakete backendweit: '+(r.transport.osdPackets??'n/v')+
       ' | akzeptiert: '+(r.transport.osdAccepted??'n/v'),
+    'SkyHub-Geräte-Tokens: '+(!r.pairing.available?'NICHT PRÜFBAR':
+      'RC Plus 2 gekoppelt '+r.pairing.rcPlus2Paired+
+      ' | zuletzt 30 Min verwendet '+r.pairing.rcPlus2RecentlyUsed+
+      ' | RC Pro vorhanden '+r.pairing.rcProPaired+
+      ' | ausstehende RC Plus 2 '+r.pairing.rcPlus2Pending),
     'Kandidaten: RC '+r.candidateCount.controllers+
       ', Aircraft '+r.candidateCount.aircraft+
       ', verknüpfte Paare '+r.candidateCount.linkedPairs,
@@ -220,7 +259,11 @@ function formatReport(r){
     (r.transport.osdShapeFields.join(', ')||'keine'));
   lines.push('Dokumentierte State-Rootfelder backendweit: '+
     (r.transport.stateShapeFields.join(', ')||'keine'));
-  lines.push('Smoketest: '+(r.passed?'BESTANDEN':'UNVOLLSTÄNDIG'));
+  lines.push('Transport-/Feldparser-Smoke: '+
+    (r.transportPassed?'BESTANDEN':'UNVOLLSTÄNDIG'));
+  lines.push('Pilot-2-Geräte-Token: '+
+    (r.pairingConfirmed?'BESTÄTIGT':r.pairing.available?'NICHT BESTÄTIGT':'NICHT PRÜFBAR'));
+  lines.push('Gesamtabnahme: '+(r.passed?'BESTANDEN':'UNVOLLSTÄNDIG'));
   for(const note of r.notes)lines.push('Hinweis: '+note);
   lines.push('Keine Seriennummern, Codes, Tokens, Koordinaten oder Messwerte ausgegeben.');
   return lines.join('\n');
