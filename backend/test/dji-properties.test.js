@@ -28,7 +28,7 @@ const topo = (time) => parseMessage('sys/product/RC/status',Buffer.from(JSON.str
 test('pinned property tables enumerate all nested fields and preserve provenance',()=>{
   assert.equal(source.profiles.mavic3.fields.length,144);
   assert.equal(source.profiles.aircraftCommon.fields.length,162);
-  assert.equal(source.profiles.matrice4T.fields.length,168);
+  assert.equal(source.profiles.matrice4T.fields.length,179);
   assert.equal(source.profiles.rcPro.fields.length,48);
   assert.equal(source.profiles.rcPlus2.fields.length,54);
   for (const profile of Object.values(source.profiles)) {
@@ -289,4 +289,78 @@ test('Matrice 4T provisional aircraft schema exposes six sourced read-only candi
   // Unknown enum codes and DJI 65535 sentinels are rejected, not treated
   // as valid RC-loss actions.
   assert.equal(invalid.rc_lost_action,undefined);
+});
+
+test('M4T generic aircraft 2024 reference preserves bounded RID and commander states',()=>{
+  const model=models[3][0];
+  const osd=sanitizeDeviceProperties(sanitizeKnownProperties({
+    rid_state:true, latitude:-33.1,longitude:-150.2,
+    device_secret:'HIDDEN'
+  },'osd'),'osd',model);
+  assert.equal(osd.rid_state,true);
+  assert.equal(osd.latitude,-33.1);
+  assert.equal(osd.longitude,-150.2);
+  const state=sanitizeDeviceProperties(sanitizeKnownProperties({
+    payloads:[{payload_index:'89-0-0',firmware_version:'03.01.200',
+      sn:'PAYLOAD_SERIAL',control_source:'SECRET_OPERATOR'}],
+    wpmz_version:'1.0.2', current_rth_mode:1,
+    commander_mode_lost_action:0,current_commander_flight_mode:1,
+    commander_flight_height:25.5,home_latitude:-33.2,home_longitude:-150.1,
+    device_secret:'HIDDEN'
+  },'state'),'state',model);
+  assert.equal(state.payloads[0].payload_index,'89-0-0');
+  assert.equal(state.payloads[0].firmware_version,'03.01.200');
+  assert.equal(state.payloads[0].sn,undefined);
+  assert.equal(state.payloads[0].control_source,undefined);
+  assert.equal(state.wpmz_version,'1.0.2');
+  assert.equal(state.current_rth_mode,1);
+  assert.equal(state.commander_flight_height,25.5);
+  assert.equal(state.home_latitude,-33.2);
+  assert.equal(state.home_longitude,-150.1);
+  assert.doesNotMatch(JSON.stringify(state),/PAYLOAD_SERIAL|SECRET_OPERATOR|HIDDEN/);
+  assert.equal(sanitizeDeviceProperties(sanitizeKnownProperties({
+    rid_state:3, current_rth_mode:99,commander_flight_height:5000
+  },'osd'),'osd',model).rid_state,undefined);
+});
+test('dynamic keyed DJI gimbal OSD accepts validated numerical values only for provisional M4T',()=>{
+  const values={
+    '89-0-0':{gimbal_pitch:-28.4,gimbal_yaw:17.8,gimbal_roll:2.2,
+      measure_target_longitude:-150.12,measure_target_latitude:-34.12,
+      measure_target_altitude:165.2,measure_target_distance:88.9,
+      measure_target_error_state:0, zoom_factor:9.2,
+      sn:'VERY_SECRET_SN',unrecognized:'TOP_SECRET'},
+    'malicious_key':{gimbal_pitch:77},'1-2-3':{password:'TOP_SECRET'},
+    '9999-1-2':{gimbal_pitch:3}
+  };
+  const known=sanitizeKnownProperties(values,'osd');
+  const t=sanitizeDeviceProperties(known,'osd',models[3][0]);
+  assert.equal(t.payload_gimbals.length,1);
+  const g=t.payload_gimbals[0];
+  assert.equal(g.payload_index,'89-0-0');
+  assert.equal(g.gimbal_pitch,-28.4);
+  assert.equal(g.measure_target_latitude,-34.12);
+  assert.equal(g.measure_target_longitude,-150.12);
+  assert.equal(g.measure_target_error_state,0);
+  assert.doesNotMatch(JSON.stringify(known),/VERY_SECRET_SN|TOP_SECRET|malicious_key/);
+  for(const other of [models[0][0],models[2][0],models[4][0],models[5][0]]){
+    assert.equal(sanitizeDeviceProperties(known,'osd',other).payload_gimbals,undefined);
+  }
+});
+test('dynamic gimbal rejects sentinels, incomplete target coordinates and unsafe caller-provided objects',()=>{
+  const model=models[3][0];
+  const clean=sanitizeDeviceProperties(sanitizeKnownProperties({
+    '89-0-0':{gimbal_pitch:65535,measure_target_latitude:-35,measure_target_error_state:99,
+      zoom_factor:7.0}
+  },'osd'),'osd',model).payload_gimbals[0];
+  assert.equal(clean.gimbal_pitch,undefined);
+  assert.equal(clean.measure_target_latitude,undefined);
+  assert.equal(clean.measure_target_error_state,undefined);
+  assert.equal(clean.zoom_factor,7);
+  const forged=sanitizeDeviceProperties({
+    payload_gimbals:[{payload_index:'89-0-0',gimbal_pitch:2,sn:'SECRET',token:'HIDDEN'}]
+  },'osd',model).payload_gimbals;
+  assert.equal(forged[0].gimbal_pitch,2);
+  assert.doesNotMatch(JSON.stringify(forged),/SECRET|HIDDEN/);
+  const invalid=sanitizeDeviceProperties({payload_gimbals:[{payload_index:'__proto__',password:'HIDDEN'}]},'osd',model);
+  assert.equal(invalid.payload_gimbals,undefined);
 });
