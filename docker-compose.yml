@@ -70,6 +70,8 @@ services:
       SKYHUB_LAN_VIEW_CIDR: ${SKYHUB_LAN_VIEW_CIDR:-}
       # New position history is OFF by default; live OSD remains ON.
       SKYHUB_TRACK_RECORDING_ENABLED: ${SKYHUB_TRACK_RECORDING_ENABLED:-false}
+      # Offline KMZ validation only: no mission dispatch, default OFF.
+      SKYHUB_WPML_INSPECT_ENABLED: ${SKYHUB_WPML_INSPECT_ENABLED:-false}
       # Retention applies only while recording is enabled.
       SKYHUB_TRACK_RETENTION_DAYS: ${SKYHUB_TRACK_RETENTION_DAYS:-30}
       REDIS_URL: redis://redis:6379
