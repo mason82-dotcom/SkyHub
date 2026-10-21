@@ -102,3 +102,31 @@ test('redacted and unsupported array fields are excluded from missing-field coun
     rc.redactedDocumented.length+rc.unsupportedDocumented.length,54);
   assert.ok(rc.redactedDocumented.includes('state:cloud_control_auth'));
 });
+
+test('Matrice 4T provisional aircraft schema exposes six sourced read-only candidates',()=>{
+  const profile=source.profiles.matrice4T;
+  assert.match(profile.extensionSource,/pilot-to-cloud\/mqtt\/aircraft\/properties\.html/);
+  assert.equal(profile.extensionSourceEdition,'2024-06-28');
+  const paths=profile.fields.map(item=>item.path);
+  for(const path of ['distance_limit_status','distance_limit_status.state',
+    'distance_limit_status.distance_limit','distance_limit_status.is_near_distance_limit',
+    'rth_altitude','rc_lost_action']) assert.ok(paths.includes(path),path);
+  const model=models[3][0];
+  const osd=sanitizeDeviceProperties(sanitizeKnownProperties({
+    distance_limit_status:{state:1,distance_limit:8000,is_near_distance_limit:0},
+    rth_altitude:120,rc_lost_action:2,device_secret:'PRIVATE'
+  },'osd'),'osd',model);
+  assert.equal(osd.distance_limit_status.distance_limit,8000);
+  assert.equal(osd.rth_altitude,120);
+  assert.equal(osd.rc_lost_action,2);
+  assert.doesNotMatch(JSON.stringify(osd),/PRIVATE/);
+  const invalid=sanitizeDeviceProperties(sanitizeKnownProperties({
+    distance_limit_status:{state:1,distance_limit:9000},
+    rth_altitude:501,rc_lost_action:65535
+  },'osd'),'osd',model);
+  assert.equal(invalid.distance_limit_status.distance_limit,undefined);
+  assert.equal(invalid.rth_altitude,undefined);
+  // Unknown enum values remain numeric under the forward-compatible parser,
+  // but do not authorize any control path.
+  assert.equal(invalid.rc_lost_action,65535);
+});
