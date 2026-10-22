@@ -54,7 +54,8 @@ async function runXmpProbe(keys,prefix,composeDir,captureMode=false){
   let data;
   try{data=JSON.parse(p.stdout);}
   catch(_){throw Error('Malformed XMP reader response');}
-  return captureMode?validateCaptureAggregate(data.report,keys.length):\n    validateXmpAggregateReport(data.report,keys.length);
+  return captureMode?validateCaptureAggregate(data.report,keys.length):
+    validateXmpAggregateReport(data.report,keys.length);
 }
 async function main(args){
   if(args.length===1&&args[0]==='--help'){
@@ -77,7 +78,8 @@ async function main(args){
   const report=await runXmpProbe(keys,prefix,dir,capture);
   console.log(JSON.stringify({...report,
     discoveryScope:'first-100-entries-only',
-    examinedScope:capture?'capture-uuid-candidates-all-direct-TIFFs-in-one-prefix':\n      all?'all-direct-TIFFs-in-one-prefix':
+    examinedScope:capture?'capture-uuid-candidates-all-direct-TIFFs-in-one-prefix':
+      all?'all-direct-TIFFs-in-one-prefix':
       'unknown-direct-TIFFs-in-one-prefix',
     maxRequestedBytesPerObject:33808,
     maxS3GetsPerObject:3
