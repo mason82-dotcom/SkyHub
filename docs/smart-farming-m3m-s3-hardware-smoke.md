@@ -431,3 +431,68 @@ Bandnamen untersuchen; niemals DJI-Seriennummern, GPS, UUID,
 Aufnahmedatum, Roh-Metadaten oder Bildpixel ausgeben.
 Die opt-in-Implementierung und die echte Pi-Abnahme sind getrennte
 Schritte.
+
+
+## Geplanter nächster Read-only-Metadatengate: DJI-XMP-Schema (opt-in)
+
+DJI dokumentiert für Mavic-3M-Multispektral-TIFFs u. a. die XMP-
+Felder \`ImageSource\`, \`BandName\`, \`SensorIndex\`, \`SensorGain\`,
+\`BlackCurrent\`, \`Irradiance\`, \`SensorGainAdjustment\` und
+\`VignettingData\`. Die reine Existenz dieser Felder beweist
+**weder** eine DJI-Herkunft **noch** eine korrekte Kalibrierung.
+
+Quellen:
+- DJI Mavic 3M Image Processing Guide (August 2023),
+  https://dl.djicdn.com/downloads/DJI_Mavic_3_Enterprise/20230829/Mavic_3M_Image_Processing_Guide_EN.pdf
+- DJI Enterprise Mavic 3M specifications,
+  https://enterprise.dji.com/mavic-3-m/specs
+- DJI Mavic 3M user manual (Metadatenfeld-Definitionen),
+  https://www.dji.com/downloads/products/mavic-3-m
+
+Neu sind \`backend/m3m-xmp-markers.js\` (reiner Allowlist-Parser) und
+\`scripts/pi-m3m-xmp-markers-check.js\` (separater *freiwilliger*
+Header/IFD/XMP-Metadaten-Test). **Echte Pi-Abnahme noch offen.**
+
+### Exakt begrenzter Zugriff
+
+- dieselben höchstens 12 nicht erkannten direkten TIFFs im einzigen,
+  anhand der ersten 100 Bucket-Einträge ausgewählten Prefix;
+- pro Objekt maximal drei streng auf HTTP 206 und Content-Range
+  geprüfte S3-GETs: **16 + 1024 + maximal 32768 Bytes**;
+- XMP-Payload nur bei vorhandenem Tag 700, erlaubtem Datentyp
+  (BYTE/ASCII/UNDEFINED), zulässigem Offset und begrenzter Länge;
+- Roh-XMP wird **im laufenden Backend-Container kurzzeitig in RAM
+  gelesen**. Es kann GPS, Zeitstempel, UUIDs, Seriennummern und
+  weitere personenbezogene Informationen enthalten: diese werden
+  **nicht** ausgegeben, geloggt oder als Datei gespeichert;
+- nur fest erlaubte XMP-\`drone-dji\`-Feldnamen werden als
+  **Anwesenheitszähler** aggregiert; ausschließlich \`BandName\` und
+  \`ImageSource\` dürfen die *festen* Band-Hinweise G/R/RE/NIR
+  auslösen. Bei widersprüchlichen oder wiederholten Angaben
+  folgt \`inconsistent\` bzw. \`unknown\`;
+- keine Geräte-, Sensor-, Pixel-, Reflektanz- oder
+  Vegetationsindex-Freigabe durch Feldnamen und Bandhinweise.
+  \`m3mSourceVerified\`, \`reflectanceReady\`,
+  \`ndviReady\` und \`ndreReady\` bleiben false.
+
+### Getrennter Raspberry-Pi-Test nach grüner CI
+
+    cd ~/Projekte/SkyHub-Next || exit 1
+    git status --short --branch
+    git pull --ff-only origin feature/m3m-minio-integration-20261021
+    node --test \
+      backend/test/m3m-xmp-markers.test.js \
+      backend/test/pi-m3m-xmp-markers.test.js
+    node scripts/pi-m3m-xmp-markers-check.js --help
+
+    # NUR MIT BEWUSSTER FREIGABE für temporäres Lesen von XMP
+    # (maximal 32 KiB XMP-Metadaten pro TIFF, nur private RAM-Verarbeitung)
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-xmp-markers-check.js --auto-first-page
+
+Der neue Aufruf ist **nicht** Teil des zuvor ausgeführten
+erfolgreichen 7/7-IFD-Tests. Trotz gleicher S3-Reader-Rolle geht er
+einen Schritt weiter, weil erstmals begrenzte XMP-Inhalte in RAM
+gelesen werden. Falls der Nutzer das nicht möchte, bleibt dieser
+optionale Schritt deaktiviert. Keine Objektänderungen,
+Container-Neustarts oder credential changes.
