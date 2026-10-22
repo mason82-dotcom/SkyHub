@@ -51,6 +51,44 @@ aus: Wind, kumulierte Flugwerte, SDR-/4G-Verbindungszustände und
 Ungültige Signalqualitäts-Sentinels (z. B. 65535) werden verworfen.
 RTK bleibt optional; die fortlaufende Positionsaufzeichnung bleibt aus.
 
+## Abgleich mit dem Pilot Feature Set (22.10.2026)
+
+Quellen: `feature-set/pilot-feature-set/pilot-access-to-cloud` und
+`pilot-map-elements` sowie die JSBridge-Referenz
+(`api-reference/pilot-to-cloud/jsbridge`) von
+`developer.dji.com/doc/cloud-api-tutorial/en/`.
+
+Übereinstimmung der Pilot-Login-Seite (`frontend/public/pilot-login.js`) mit
+der Referenz:
+
+- Lizenzprüfung vor allen weiteren Aufrufen: `platformIsVerified`,
+  `platformVerifyLicense(appId, appKey, license)`.
+- Workspace: `platformSetWorkspaceId(uuid)` (UUID-Format wird serverseitig
+  erzwungen) und `platformSetInformation(platformName, workspaceName, desc)`.
+- Cloud-Modul: `platformLoadComponent('thing', {host, username, password,
+  connectCallback})` mit `tcp://`-Adresse, Status über `thingGetConnectState`,
+  Wiederverbindung über `thingConnect(user, pass, callback)`.
+- Antwortformat der JSBridge (JSON-String mit `code`, `message`, `data`) wird
+  mit `code === 0` ausgewertet.
+- Ablauf „kein Token → H5-Login, gültiger Token → Hauptseite, ungültiger
+  Token → neuer Ablauf“: entspricht dem Kopplungstoken (gültig → Bootstrap,
+  ungültig oder widerrufen → neue Kopplung).
+
+Bewusste Abweichungen und Lücken:
+
+- Das `api`-Modul (`X-Auth-Token`), das `ws`-Modul und das Karten-Modul werden
+  nicht geladen. Sie sind Voraussetzung für Karten-Elemente, Wayline-,
+  Medien- und TSA-Funktionen. Der lesende Karten-Endpunkt ist standardmäßig
+  deaktiviert (`SKYHUB_DJI_MAP_ELEMENTS_ENABLED=false`); die DJI-Referenz
+  empfiehlt, das Karten-Modul in der Login-Phase zu laden. Dieser Schritt fehlt
+  absichtlich, bis Schreib-, WebSocket- und Wayline-Pfade validiert sind.
+- Livestream-, Medien-, Wayline-, DRC- und Log-Funktionen sind nicht
+  umgesetzt.
+- MQTT läuft im LAN unverschlüsselt (`tcp://`, Port 1884). DJI weist darauf
+  hin, dass Pilot 2 für TLS-Verbindungen Zertifikate bestimmter Aussteller
+  (z. B. GoDaddy) erwartet; TLS ist deshalb als eigene Firmware-Validierung
+  offen (siehe `pilot-config.js`).
+
 ## Ausdrückliche Einschränkungen
 
 - Mavic 3M: Das Fluggerät `0/77/2` ist seit dem 20.10.2026 per Hardware bestätigt (Topologie über die RC Pro Enterprise) und eingetragen. Die im AeroNexus-Patch genannte **Kamera**-ID 68 bleibt unbestätigt und ist weiterhin nicht zugeordnet.
