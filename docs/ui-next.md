@@ -33,9 +33,38 @@ Die Operations-Ansicht nutzt dieselbe API wie das bestehende Dashboard (nur lese
 Anmeldung wie im bestehenden Dashboard: im Heimnetz ohne Token (falls freigegeben), sonst Zugriffstoken.
 Das Token bleibt im Speicher der Seite, wird nicht gespeichert und nicht in URLs geschrieben.
 
+## MinIO-Objektübersicht: echte Daten, keine Metadaten-Extraktion
+
+Ab Branch `feature/next-readonly-media-explorer-20261022` bietet `/next/` oberhalb der
+**unveränderten synthetischen Medienbeispiele** eine separate, geschützte MinIO-Objektübersicht.
+Sie nutzt ausschließlich vorhandene Backend-Routen:
+
+- `GET /api/media/status`: Status des lesenden Medien-Backends.
+- `GET /api/media/buckets`: vorhandene Buckets aus der festgelegten Allowlist.
+- `GET /api/media/objects?bucket=…&prefix=…&limit=50`: Objektschlüssel, Byte-Größe und S3-Änderungszeit; nur eine Seite pro Klick, maximal 50 Einträge pro Seite und maximal 20 Seiten pro gestarteter Pagination. Kein automatischer Vollscan.
+
+**Authentifizierung:** Das Media-Modul benötigt den `SKYHUB_VIEW_TOKEN` als Bearer-Token;
+tokenfreier LAN-Gerätezugriff reicht nicht. Die UI fragt das Token deshalb separat ab,
+hält es ausschließlich im JavaScript-Sitzungsspeicher und leert das Passwort-Eingabefeld.
+Es wird weder in eine URL noch in Browser-Speicher geschrieben. Ein HTTP 401 verwirft das Token.
+Falls `SKYHUB_MEDIA_ENABLED` nicht aktiviert ist (HTTP 404), wird dies angezeigt;
+die UI aktiviert den Dienst **nicht** selbst.
+
+**Datengrenzen:** Ein S3-Eintrag ist keine verifizierte DJI-Aufnahme. Es werden weder
+Bildinhalte, Vorschaubilder, Hashes, EXIF/XMP, Sensoridentitäten, Radiometrie noch
+Capture-Gruppen behauptet. S3-Objektschlüssel können private Namen und Pfade enthalten;
+die Darstellung ist nur für autorisierte Betrachter gedacht.
+Der Browser schreibt fremde Strings nur mit `textContent`, verwirft fehlerhafte
+Pagination-Antworten und bricht alte Requests bei Bucket-/Prefix-Wechsel ab.
+Kein POST, PUT, DELETE, Download, MinIO-Neustart oder Deployment.
+
+**Abnahme:** `backend/test/ui-next-media.test.js` deckt Bucket-Allowlist, fehlerhafte
+API-Antworten, XSS-Textgrenze, Cursorregeln und nur lesende Fetch-Aufrufe ab.
+Ein echter Pi-Browser-Test der neuen Ansicht bleibt separat erforderlich.
+
 ## Weiterhin Prototyp (Beispieldaten)
 
-Mission Studio (lokale Formprüfung, **kein** KMZ-Export), Medien (Beispielassets, **keine** Originalprüfung),
+Mission Studio (lokale Formprüfung, **kein** KMZ-Export), Medien-Demoassets (**keine** Originalprüfung),
 Survey, Thermal und Farming. Die betroffenen Schaltflächen sind deaktiviert und erklären, dass der Dienst im
 SkyHub-Backend fehlt.
 
