@@ -317,6 +317,18 @@ function update(){
         (important.length>1?' · '+(important.length-1)+' weitere':'');
       card.append(preview);
     }
+    // AirSense (ADS-B) summary: counts and distance only, never identity or position of other aircraft.
+    const air=d.airsense;
+    if(air&&air.fresh===true&&Number.isInteger(air.count)&&air.count>0&&Number.isInteger(air.maxWarningLevel)){
+      const note=document.createElement('p');
+      note.className=air.maxWarningLevel>=3?'warning-preview':'muted';
+      note.dataset.airsense='true';
+      const distance=Number.isFinite(air.nearestDistanceM)?
+        ' · nächstes '+(air.nearestDistanceM>=1000?(air.nearestDistanceM/1000).toFixed(1).replace('.',',')+' km':air.nearestDistanceM+' m'):'';
+      note.textContent='AirSense: '+air.count+(air.count===1?' Luftfahrzeug':' Luftfahrzeuge')+' in der Nähe · Stufe '+
+        air.maxWarningLevel+distance+(air.maxWarningLevel>=3?' · Ausweichen empfohlen':'');
+      card.append(note);
+    }
     const details=document.createElement('details');details.dataset.deviceSn=d.sn;details.open=expanded.has(d.sn);
     const summary=document.createElement('summary');summary.dataset.detailsSn=d.sn;
     summary.textContent='Messwerte und Gerätedetails';details.append(summary);
@@ -527,7 +539,8 @@ function normalizeDeviceEvent(event){
   return {sn:event.sn,channel:event.channel,method,at:event.at};
 }
 function eventDescription(event){
-  if(event.channel==='events'&&event.method==='hms')return 'HMS-Meldung';
+  if(event.channel==='events'&&event.method==='hms')return 'HMS-Meldungen geändert';
+  if(event.channel==='events'&&event.method==='airsense_warning')return 'AirSense-Warnstufe geändert';
   if(event.channel==='status'&&event.method==='update_topo')return 'Topologie gemeldet';
   if(event.channel==='services_reply')return 'Dienstantwort empfangen';
   return event.channel==='status'?'Statusmeldung':'Geräteereignis';

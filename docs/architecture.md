@@ -30,7 +30,7 @@ DJI Cloud API Dokumentation:
 
 - GET /api/health – Brokerstatus ohne Token
 - GET /api/devices – authentifiziert; aktuelle Geräte und Telemetrie
-- GET /api/events – authentifiziert; letzte empfangene Status-/Event-Typen
+- GET /api/events – authentifiziert; die letzten Ereignisse (höchstens 100). Periodische Wiederholungen von `hms` und `airsense_warning` sind keine Ereignisse, sondern Zustand: ein Ereignis entsteht nur, wenn sich die Menge der HMS-Meldungen ändert oder die AirSense-Warnstufe wechselt
 - GET /api/drone/:sn/telemetry – authentifiziert; eine Gerätekennung
 - Socket.IO: snapshot, device_update, device_event – authentifiziert mit auth.token
 
