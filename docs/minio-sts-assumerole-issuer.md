@@ -53,7 +53,7 @@ Die Funktion verwendet ausschließlich neu erzeugte Testobjektschlüssel und pr�
 
 ## Automatisierte reale Abnahme in GitHub Actions
 
-Der CI-Job `isolated-minio-sts` startet mit `scripts/ci-minio-sts-live.sh` eine **temporäre TLS-MinIO-Instanz** in einem separaten Docker-Netz. Die eigens für den Workflow erzeugten Testidentitäten (`ci_sts_root` und der nicht administrative `skyhub_sts_ci_upload`) besitzen keine produktiven Schlüssel. Der Test erstellt den Wegwerf-Bucket `dji-cloud`, bindet die Elternpolicy `scripts/ci-minio-sts-parent-policy.json` an den Testbenutzer und verwendet danach den **echten** signierten `AssumeRole`-Aufruf mit der noch engeren Workspace-Session-Policy.
+Der CI-Job `isolated-minio-sts` startet mit `scripts/ci-minio-sts-live.sh` eine **temporäre TLS-S3-Instanz auf Basis von PGSTY SILO (MinIO-kompatibler Fork, Release 2026-10-18)** in einem separaten Docker-Netz. Die eigens für den Workflow erzeugten Testidentitäten (`ci_sts_root` und der nicht administrative `skyhub_sts_ci_upload`) besitzen keine produktiven Schlüssel. Der Test erstellt den Wegwerf-Bucket `dji-cloud`, bindet die Elternpolicy `scripts/ci-minio-sts-parent-policy.json` an den Testbenutzer und verwendet danach den **echten** signierten `AssumeRole`-Aufruf mit der noch engeren Workspace-Session-Policy.
 
 Das Skript `scripts/ci-minio-sts-live.js` prüft mit den echten STS-Credentials die fünf Operationen aus dem Abschnitt oben gegen MinIO. Anschließend werden Container, Netzwerk und temporäres Zertifikat automatisch entfernt. Keine Portfreigabe außer `127.0.0.1:19010` auf dem GitHub-CI-Runner.
 
@@ -68,3 +68,5 @@ Das Skript `scripts/ci-minio-sts-live.js` prüft mit den echten STS-Credentials 
 - Keine Änderung an EMQX, Pilot-Webview, Caddy, Pi-Docker-Volumes, produktiven Daten oder externen Geheimnissen.
 
 Folgeschritt: isolierte echte MinIO-STS-Session mit Negativtests in CI; danach Upload-Registrierung und Pilot-2-`api`/`media`-Module schrittweise unter einem deaktivierten Feature-Flag entwickeln.
+
+**Image-Verfügbarkeit (22.10.2026):** Das bisherige Compose-Image `minio/minio:RELEASE.2023-09-04T19-57-37Z` ist von Docker Hub derzeit nicht anonym abrufbar; der erste Testlauf scheiterte deshalb bereits beim Pull, vor einem STS-Aufruf. Der CI-Workflow nutzt ausschließlich für den Wegwerftest das verfügbare `pgsty/silo` und `pgsty/mc` (beide `RELEASE.2026-10-18T00-00-00Z`). Ein erfolgreicher SILO-Test ist **kein** Versionsnachweis für die bestehende Pi-MinIO-Installation. Es wurde weder die produktive Compose-Datei noch ein MinIO-Datenvolume umgestellt.
