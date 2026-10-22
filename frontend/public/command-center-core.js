@@ -63,10 +63,10 @@
         throw new Error('Ungültige MinIO-Listenantwort');
       }
       const name=object.key.slice(object.key.lastIndexOf('/')+1).toLowerCase();
-      const type=/\\.(?:jpe?g)$/.test(name)?'JPEG':
-        /\\.(?:tiff?)$/.test(name)?'TIFF':
-        /\\.dng$/.test(name)?'DNG':
-        /\\.png$/.test(name)?'PNG':'Datei';
+      const type=/\.(?:jpe?g)$/.test(name)?'JPEG':
+        /\.(?:tiff?)$/.test(name)?'TIFF':
+        /\.dng$/.test(name)?'DNG':
+        /\.png$/.test(name)?'PNG':'Datei';
       return {key:object.key,size:object.size,
         lastModified:object.lastModified||null,type};
     });
