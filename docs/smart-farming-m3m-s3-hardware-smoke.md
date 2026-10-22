@@ -548,3 +548,37 @@ Alle Freigabeflags
 `bandCoregistrationVerified`, `reflectanceReady`,
 `ndviReady` und `ndreReady` bleiben **false**.
 
+
+
+## Folgeschritt: bekannte und umbenannte TIFFs gemeinsam prüfen
+
+Da sechs `DJI_`-untypisch benannte TIFFs die XMP-Hinweise
+**R=3** und **NIR=3** enthalten und die frühere
+Dateinameninventur außerdem bereits **ein R- und ein NIR-TIFF**
+als kanonischen Namen erkennen konnte, ist ein gemeinsamer
+XMP-Vergleich sinnvoll. Er soll verhindern, dass bandbezogene
+Aussagen allein aus der Schreibweise von Objektschlüsseln
+abgeleitet werden.
+
+Neuer separater Modus:
+
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-xmp-markers-check.js --all-tiffs-first-page
+
+Unterschied zu `--auto-first-page`: Auch TIFF-Namen, die der
+bisherige M3M-Namensparser schon erkennt, werden in dieselbe
+strikt aggregierte XMP-Diagnose einbezogen. Der Prüfumfang bleibt
+maximal **12 direkte TIFFs aus genau einem** automatisch gefundenen
+S3-Unterordner; keine Bucket-weite Stichprobe und keine Prüfung
+anderer Prefixe. Je Objekt maximal drei streng geprüfte Bytebereichs-
+GETs, insgesamt 33.808 angeforderte Bytes. Die Auswertung erfolgt
+isoliert im bereits laufenden Backend; an das Pi-Programm werden
+ausschließlich die nach fester Allowlist validierten Summen
+übermittelt. **Kein Backend-Deploy oder S3-Schreibzugriff.**
+
+Der gemeinsame Live-Test wurde **noch nicht durchgeführt**.
+Insbesondere kann auch ein R=4/NIR=4-Ergebnis nicht vier
+R/NIR-Aufnahmepaare belegen; dafür wäre eine weitere, separat
+geschützte Zuordnung über übereinstimmende Aufnahme-IDs und
+validierte Bildmetadaten erforderlich. Green- und Red-Edge-Bänder
+aus anderen S3-Prefixen bleiben unabhängig davon möglich.
