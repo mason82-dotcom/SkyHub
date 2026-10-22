@@ -949,7 +949,7 @@
         },
         {
           "path": "total_flight_time",
-          "type": "int",
+          "type": "float",
           "access": "r",
           "push": 0,
           "unit": "Seconds / s"
@@ -2193,7 +2193,7 @@
         },
         {
           "path": "total_flight_time",
-          "type": "int",
+          "type": "float",
           "access": "r",
           "push": 0,
           "unit": "Seconds / s"
@@ -2840,6 +2840,54 @@
           "min": -180,
           "max": 180,
           "step": 0.01
+        },
+        {
+          "path": "cloud_control_auth",
+          "type": "array",
+          "access": "r",
+          "push": 1,
+          "privacy": "redacted"
+        },
+        {
+          "path": "drc_state",
+          "type": "enum_int",
+          "access": "r",
+          "push": 0,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "path": "wireless_link.4g_freq_band",
+          "type": "float"
+        },
+        {
+          "path": "wireless_link.4g_gnd_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
+        },
+        {
+          "path": "wireless_link.4g_link_state",
+          "type": "enum_int",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "wireless_link.4g_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
+        },
+        {
+          "path": "wireless_link.4g_uav_quality",
+          "type": "int",
+          "min": 0,
+          "max": 5
         }
       ]
     },
@@ -3213,7 +3261,8 @@
             15,
             16,
             17,
-            18
+            18,
+            19
           ]
         },
         {
@@ -4010,7 +4059,8 @@
             2,
             3,
             4,
-            5
+            5,
+            10
           ]
         },
         {
@@ -4753,6 +4803,36 @@
           "path": "psdk_widget_values.values.value",
           "type": "int",
           "reference": "pilot-to-cloud/aircraft/properties:2024-06-28"
+        },
+        {
+          "path": "commander_flight_mode",
+          "type": "enum_int",
+          "access": "rw",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "rth_mode",
+          "type": "enum_int",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        {
+          "path": "offline_map_enable",
+          "type": "bool",
+          "access": "r",
+          "push": 1,
+          "enum": [
+            0,
+            1
+          ]
         }
       ],
       "dynamicPayload": {

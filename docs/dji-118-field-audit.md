@@ -24,8 +24,8 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3E | `0/77/0` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3T | `0/77/1` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
-| Matrice 4T | `0/99/1` | `matrice4T`, 199 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Verfügbarkeit weiter nicht vollständig verifiziert |
-| RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
+| Matrice 4T | `0/99/1` | `matrice4T`, 202 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen + 3 Pfade der offiziellen M4-Serien-Seite; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Verfügbarkeit weiter nicht vollständig verifiziert |
+| RC Pro Enterprise | `2/144/0` | `rcPro`, 55 Pfade | offizielle RC-Pro-Feldtabelle; am 22.10.2026 um sieben Pfade der aktuellen Webseite ergänzt |
 | RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Abnahme mit Livestream und SIM ausstehend |
 
 Die Felderzahlen enthalten verschachtelte `struct`- und `array`-Pfade,
@@ -215,13 +215,73 @@ dem ersten Lauf `measure_target_longitude`, `measure_target_latitude`,
 Die RC Plus 2 meldet keine Satelliten- oder RTK-Felder; sie gehören zum
 Fluggerät.
 
-Grenzen: `rtkFixState` und `positionQuality` sind hier nur als beobachtete
-Zahlenwerte erfasst. Ihre Bedeutung wurde nicht gegen die DJI-Definition
-abgeglichen; daraus folgt kein Nachweis einer gültigen RTK-Festlösung oder
-einer bestimmten Genauigkeit. Mavic 3M und RC Pro Enterprise sendeten zu diesem
+Einordnung: `rtkFixState` 2 entspricht laut DJI-Webreferenz
+(`position_state.is_fixed`) „Fixing successful“; `positionQuality` 5 ist dort
+„Gear 5“ (Satellitenstufe), nicht „RTK fixed“ (das ist Wert 10, siehe Abschnitt
+„Abgleich mit der DJI-Webreferenz“). Ein Zählwert belegt weder Dauer noch
+Positionsgenauigkeit. Mavic 3M und RC Pro Enterprise sendeten zu diesem
 Zeitpunkt nicht und bleiben bei der Nullposition. Ein Snapshot belegt weder
 Dauerhaftigkeit noch Positionsgenauigkeit. Offen bleibt die Prüfung mit
 Livestream und SIM/eSIM.
+
+## Abgleich mit der DJI-Webreferenz (22.10.2026)
+
+Quelle: alle 116 englischen `api-reference`-Unterseiten von
+`developer.dji.com/doc/cloud-api-tutorial/en/`. Die Seite ist eine
+VuePress-App; die Seiteninhalte liegen als JavaScript-Chunks vor, deren
+Routentabelle in `app.js` steht. Aus den Property-Tabellen wurden Pfad, Typ,
+Constraint, `accessMode` und `pushMode` ausgelesen und mit den Katalogprofilen
+verglichen. Die Webseite nennt keine Cloud-API-Version; sie wurde deshalb
+nicht als „1.18“ belegt, sondern als aktueller Seitenstand behandelt.
+
+| Katalogprofil | Webseite | Katalog | Seite | Ergebnis |
+|---|---|---|---|---|
+| `mavic3` | `m3-series` | 144 | 143 | 1 Pfad nur im Katalog (`cameras.payload_index`) |
+| `aircraftCommon` | `others/aircraft` | 162 | 160 | 2 Pfade nur im Katalog (`*.payload_index`) |
+| `matrice4T` | `m4-series` | 202 | 104 | alle 98 Seitenpfade im Katalog; 104 Katalogpfade stammen weiter aus der generischen Aircraft-Tabelle |
+| `rcPro` | `rc-pro` | 55 | 55 | deckungsgleich nach Ergänzung |
+| `rcPlus2` | `dji-rc-plus-2` | 54 | 54 | deckungsgleich |
+
+**Korrigiert (Katalog und Tests angepasst):**
+
+- `rcPro`: sieben Pfade ergänzt, die die RC-Pro-Seite führt und die mit der
+  RC-Plus-2-Definition identisch sind: `drc_state`, `cloud_control_auth`
+  (redigiert) und fünf `wireless_link.4g_*`-Felder.
+- `matrice4T`: `position_state.quality` kennt auf der M4-Seite zusätzlich 10
+  („RTK fixed“), `mode_code` zusätzlich 19 („Dock site evaluation in progress“).
+  Ohne diese Werte hätte der Parser einen echten RTK-Fix dieser Felder
+  verworfen. Neu aufgenommen: `commander_flight_mode`, `rth_mode`,
+  `offline_map_enable`.
+- `mavic3`, `aircraftCommon`: `total_flight_time` steht dort als `float`
+  (Katalog: `int`). Der Parser verwirft `int`-Felder mit Nachkommastellen.
+  Die M4-Seite nennt `int`; dieser Typ bleibt bei `matrice4T`.
+- Modellbezogene Live-Feldübersicht (`/api/diagnostics/mqtt-model-shapes`) um
+  RC Plus 2 (`2/174/0`) und Matrice 4T (`0/99/1`) erweitert; der
+  OSD-Wiederholungsschutz bei `mode_code` 14 gilt jetzt für beide
+  Fluggeräte-Modelle.
+
+**Bewusst nicht geändert (Abweichung bleibt dokumentiert):**
+
+- `live_status.video_quality` (`rcPro`, `rcPlus2`): Katalog 0–4, Webseite 0–3.
+  Ein Verengen würde Werte verwerfen, die eine Firmware senden könnte.
+- `obstacle_avoidance`: Katalog `rw`, Webseite `r`; bei rein lesender
+  Verarbeitung folgenlos.
+- `firmware_version` (M4-Seite): `pushMode` 0, Katalog 1.
+- `payloads` und `wpmz_version` stehen nur in den Dock-to-Cloud-Seiten (M30,
+  Dock 1), nicht in den Pilot-to-Cloud-Seiten für M3/M4. Der Backend-Code
+  akzeptiert sie für die Mavic 3M ausdrücklich als „generische Kandidaten“.
+  Dass die M3M sie im State sendet, ist beobachtet, aber für diesen Pfad nicht
+  offiziell dokumentiert.
+- Auf der M4-Seite steht der dynamische Gimbal-Schlüssel als
+  `type_subtype_gimbalindex`; er wird wie bisher über die dynamische
+  Gimbal-Behandlung verarbeitet.
+- Leere `min`/`max`-Constraints in den Tabellen wurden als „keine Angabe“
+  gewertet.
+
+Der Abgleich prüft Struktur und Constraints der Dokumentation, nicht, ob eine
+Firmware tatsächlich so sendet. Für die Matrice 4T bleibt das Profil
+**vorläufig**, solange 104 Pfade nur aus der generischen Aircraft-Tabelle
+stammen.
 
 ## Verifikation auf dem Pi (ohne Neustart)
 
