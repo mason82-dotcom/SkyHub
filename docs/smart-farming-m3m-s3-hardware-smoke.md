@@ -386,3 +386,48 @@ Freigabe-Flags bleiben auf false.
 Es gibt keine S3-PUT/DELETE-, Docker-Neustart-, Datenbank- oder
 DJI-Steueroperation. Bei einer Reader-GET-Sperre darf keine
 Root-Berechtigung als vermeintliche Fehlerbehebung weitergegeben werden.
+
+
+## Pi-Abnahme der Classic-TIFF-IFDs – 22.10.2026
+
+Der Nutzer hat mit `node --test backend/test/m3m-tiff-ifd.test.js`
+**7/7 bestandene Tests (0 Fehler)** gemeldet und unmittelbar danach
+`scripts/pi-m3m-tiff-ifd-check.js --auto-first-page` gegen den
+bereits laufenden Backend-/MinIO-Reader erfolgreich ausgeführt.
+
+Die **sechs** unbekannten TIFF-Objekte im automatisch erkannten
+S3-Unterordner wurden in **maximal zwei HTTP-206-S3-Bytebereichen pro
+Objekt** untersucht (erste 16 Byte, danach maximal 1024 Byte
+ab erstem Classic-TIFF-IFD). Die aggregierte echte Pi-Ausgabe:
+
+| Nur Struktur / feste Kategorie | Anzahl |
+|---|---:|
+| IFD erfolgreich ausgewertet | 6 |
+| IFD nicht auswertbar / S3-Range-Fehler | 0 |
+| Bildfläche 5–25 MP | 6 |
+| Samples per Pixel = 1 | 6 |
+| Bits per Sample = 16 | 6 |
+| TIFF Compression = uncompressed | 6 |
+| EXIF-IFD-Pointer-Tag vorhanden | 6 |
+| TIFF-XMP-Tag 700 vorhanden | 6 |
+| Von diesem Parser abgefragte GeoTIFF-Tags vorhanden | 0 |
+
+Diese Kombination ist mit einigen Arten von Multispektral-Rasterdaten
+**vereinbar**, kein Identitäts- oder Inhaltsnachweis. **5–25 MP ist nur
+eine Größenklasse**, nicht die bestätigte DJI-Sensorauflösung.
+Die Aussage „kein GeoTag“ gilt **ausschließlich** für die begrenzte
+IFD-Tag-Allowlist im ersten IFD. Sie sagt nicht, dass GPS/Georeferenzierung
+in anderen IFDs, EXIF, XMP oder externen Referenzen fehlen.
+
+`m3mSourceVerified`, `imagePayloadVerified`,
+`radiometricCalibrationVerified`,
+`bandCoregistrationVerified`, `reflectanceReady`,
+`ndviReady` und `ndreReady` sind und bleiben **false**.
+
+**Nächster Freigabeschritt:** Ausschließlich die Anwesenheit von
+DJI-spezifischen XMP-Metadatenschlüsseln und ggf. strikt auf
+G/R/RE/NIR begrenzte, ausdrücklich als *unverifiziert* gekennzeichnete
+Bandnamen untersuchen; niemals DJI-Seriennummern, GPS, UUID,
+Aufnahmedatum, Roh-Metadaten oder Bildpixel ausgeben.
+Die opt-in-Implementierung und die echte Pi-Abnahme sind getrennte
+Schritte.
