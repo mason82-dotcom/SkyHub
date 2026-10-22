@@ -43,19 +43,24 @@ test('DR API requires configured report directory', () => {
 });
 
 test('DR API is not in token-free LAN allowlist', () => {
-  const start = server.indexOf(
+  const httpAuth = fs.readFileSync(
+    path.join(__dirname, '..', 'http-auth.js'),
+    'utf8'
+  );
+
+  const start = httpAuth.indexOf(
     'const lanReadPaths=new Set('
   );
 
-  const end = server.indexOf(
-    'function lanView(',
+  const end = httpAuth.indexOf(
+    'function createHttpAuth(',
     start
   );
 
   assert.ok(start >= 0);
   assert.ok(end > start);
 
-  const allowlist = server.slice(start, end);
+  const allowlist = httpAuth.slice(start, end);
 
   assert.equal(
     allowlist.includes('/dr/minio'),

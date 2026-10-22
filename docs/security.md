@@ -13,7 +13,7 @@ Diese Regeln gelten für den aktiven Root-Stack. Die historische Konfiguration u
 - Keine standardmäßig veröffentlichten Postgres-, Redis- oder MinIO-Ports.
 - Kein DISABLE_AUTH; keine im Code hinterlegten Datenbank-, MQTT- oder MinIO-Kennwörter.
 - MQTT-Subscriber bleibt read-only. Eine optionale, standardmäßig deaktivierte Topologie-Bestätigung nutzt einen separaten ACL-eingeschränkten Publisher.
-- Keine DJI-Flug- oder Missionssteuerung. POST /api/mission/create antwortet absichtlich mit HTTP 501.
+- Keine DJI-Flug- oder Missionssteuerung. Es existiert kein Missions-Endpunkt (POST /api/mission/create liefert 404).
 - Kein Vortäuschen von Telemetrie: unbekannte Werte null, aktualisierte Werte nur aus echten osd-Meldungen, Frischegrenze 15 Sekunden.
 
 ## Caddy HTTPS-Vertrauen auf dem Raspberry Pi (20.10.2026)
