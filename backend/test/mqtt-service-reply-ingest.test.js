@@ -3,7 +3,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {EventEmitter}=require('node:events');
-const mqtt=require('mqtt');
 const {createMqttMetrics}=require('../mqtt-metrics');
 const {createMqttIngest}=require('../mqtt-ingest');
 
@@ -23,11 +22,11 @@ function isolated(t){
   client.end=()=>{};
   client.subscribe=(_topics,_options,done)=>done(null,_topics.map(topic=>({topic,qos:0})));
   let connections=0;
-  t.mock.method(mqtt,'connect',()=>{
+  const mqttConnect=()=>{
     connections++;
     if(connections>1)throw new Error('Unexpected second MQTT publisher');
     return client;
-  });
+  };
   const mqttStats=createMqttMetrics();
   const registry={
     ingest(){deviceWrites++;return {updates:[],event:null,point:null};},
@@ -38,7 +37,7 @@ function isolated(t){
     registry,io:{emit(){uiEmits++;}},redis:{set(){redisWrites++;return Promise.resolve();}},
     topologyStore:{save(){throw new Error('unexpected topology persistence');}},
     trackRecorder:{record(){throw new Error('unexpected track write');}},
-    trackRecordingEnabled:false,pool:null,mqttStats,
+    trackRecordingEnabled:false,pool:null,mqttStats,mqttConnect,
     mqttShapes:{record(){shapeWrites++;}},
     mqttModelShapes:{record(){shapeWrites++;}}
   });
