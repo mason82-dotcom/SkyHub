@@ -582,3 +582,50 @@ R/NIR-Aufnahmepaare belegen; dafür wäre eine weitere, separat
 geschützte Zuordnung über übereinstimmende Aufnahme-IDs und
 validierte Bildmetadaten erforderlich. Green- und Red-Edge-Bänder
 aus anderen S3-Prefixen bleiben unabhängig davon möglich.
+
+
+## Acht-TIFF-Gesamtabnahme aus echtem MinIO (22.10.2026)
+
+Der Nutzer hat **20 von 20 lokalen Node-Tests** bestanden
+und unmittelbar danach die neue Option `--all-tiffs-first-page`
+gegen das bestehende Raspberry-Pi-Backend ausgeführt.
+
+Der automatisch aus den ersten 100 Bucket-Schlüsseln erkannte
+Prefix wurde vollständig paginiert. **Acht direkte TIFFs** in
+diesem Prefix wurden in begrenzten HTTP-206-Range-Requests gelesen;
+bei **8/8** XMP-Reports war `status.ok=8` und alle
+Fehlerzähler waren null.
+
+| XMP-Bandhinweis | Anzahl TIFFs |
+|---|---:|
+| G | 0 |
+| R | **4** |
+| RE | 0 |
+| NIR | **4** |
+| unknown / inconsistent | 0 |
+
+Alle acht besitzen die geprüften XMP-Feldmarker
+`BandName`, `ImageSource`, `SensorIndex`,
+`BandFreq`, `SensorGain`, `SensorGainAdjustment`,
+`Irradiance`, `VignettingData` und `DewarpData`.
+Die zuvor getrennt gemessenen sechs unbekannt benannten
+TIFFs trugen 3 R- und 3 NIR-Hinweise; somit ergänzen die
+beiden kanonisch benannten TIFFs in der Gesamtmessung
+je einen R- und NIR-Hinweis. Diese Differenz ist **nur**
+ein Vergleich der beiden aggregierten Messungen.
+
+**Nicht nachgewiesen:** G-/RE-Dateien in diesem Prefix,
+vier zusammengehörige R/NIR-Captures, M3M-Kameramodell,
+M3M-DN-zu-Reflektanz-Kalibrierung, Bandregistrierung,
+vollständige Bildpayload oder NDVI/NDRE-Bereitschaft.
+Andere Prefixe des Buckets wurden weiterhin nicht
+vollständig untersucht.
+
+M3M-Multispektral-TIFFs können echte Pixelwerte und
+Kalibrierinformationen enthalten. Laut DJI-Mavic-3M-FAQ
+sind die gespeicherten Messwerte **DN**, nicht
+fertige Reflektanzwerte; die vollständige Verarbeitung
+benötigt u. a. Kalibrierung und Bandregistrierung.
+Eine aus Metadaten abgelesene Bandbezeichnung ist
+daher keine NDVI-Freigabe.
+
