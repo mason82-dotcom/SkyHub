@@ -81,13 +81,25 @@ test('real PostgreSQL migration, durable grant, verified media, uniqueness and r
       assert.equal(rows.rows[0].size_bytes,'2755');
       assert.equal(rows.rows[0].object_key,KEY);
 
-      // Database-enforced composite workspace FK prevents cross-scope inserts.
-      await db.query('SAVEPOINT before_fk');
+      // SQL CHECK rejects a key outside the stated grant scope before FK.
+      await db.query('SAVEPOINT before_path_check');
       await assert.rejects(db.query(
         'INSERT INTO dji_pilot_media_verified '+
         '(workspace_id,object_key,grant_prefix,file_name,size_bytes,etag,object_last_modified) '+
         'VALUES ($1,$2,$3,$4,$5,$6,$7)',[
           OTHER,OTHER+'/media/'+'a'.repeat(32)+'/x',
+          PFX,'bad.jpg',1,'etag',new Date(NOW)
+        ]),{code:'23514'});
+      await db.query('ROLLBACK TO SAVEPOINT before_path_check');
+
+      // Even when key and grant prefix agree, the composite workspace FK
+      // refuses to attach another workspace's object to our registered grant.
+      await db.query('SAVEPOINT before_fk');
+      await assert.rejects(db.query(
+        'INSERT INTO dji_pilot_media_verified '+
+        '(workspace_id,object_key,grant_prefix,file_name,size_bytes,etag,object_last_modified) '+
+        'VALUES ($1,$2,$3,$4,$5,$6,$7)',[
+          OTHER,PFX+'/foreign-test.jpg',
           PFX,'bad.jpg',1,'etag',new Date(NOW)
         ]),{code:'23503'});
       await db.query('ROLLBACK TO SAVEPOINT before_fk');
