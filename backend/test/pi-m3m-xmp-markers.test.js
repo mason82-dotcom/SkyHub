@@ -113,6 +113,7 @@ test('XMP probe only has GET and fixed counters, no writes or raw metadata outpu
   const help=spawnSync(process.execPath,[cli,'--help'],{encoding:'utf8',timeout:5000});
   assert.equal(help.status,0,help.stderr);
   assert.match(help.stdout,/--auto-first-page/);
+  assert.match(help.stdout,/--all-tiffs-first-page/);
   const fail=spawnSync(process.execPath,[cli,'--prefix','PRIVATE'],{
     encoding:'utf8',timeout:5000
   });
