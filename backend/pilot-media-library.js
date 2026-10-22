@@ -18,7 +18,10 @@ const SIX_TIME="to_char(verified_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:
 const BAD='Invalid media library data';
 function plain(v){return v!==null&&typeof v==='object'&&!Array.isArray(v);}
 function date(v){
-  const n=v instanceof Date?v.getTime():typeof v==='string'?Date.parse(v):NaN;
+  // HEAD evidence uses epoch milliseconds; pg returns Date and JSON may use ISO.
+  const n=v instanceof Date?v.getTime():
+    typeof v==='string'?Date.parse(v):
+      Number.isSafeInteger(v)&&v>=0?v:NaN;
   if(!Number.isFinite(n))throw new TypeError(BAD);
   return new Date(n).toISOString();
 }
