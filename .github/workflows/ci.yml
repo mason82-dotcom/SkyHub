@@ -120,3 +120,19 @@ jobs:
         env:
           SKYHUB_CI_RESTORE_TEST: isolated
         run: bash scripts/ci-postgis-restore.sh
+
+
+  isolated-minio-sts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked backend test dependencies
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Test signed STS and S3 IAM denials on disposable TLS MinIO
+        env:
+          SKYHUB_STS_CI_ISOLATED: "true"
+        run: bash scripts/ci-minio-sts-live.sh
