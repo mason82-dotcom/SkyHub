@@ -30,7 +30,7 @@
     return {value:(Math.round(value*100)/100).toLocaleString('de-DE')+unit,state};
   }
   function hmsAlerts(d,now=Date.now()){
-    return isFresh(d?.lastHmsAt,now,HMS_MAX_AGE)&&Array.isArray(d?.hms)?d.hms:[];
+    return d?.aircraftConnected!==false&&isFresh(d?.lastHmsAt,now,HMS_MAX_AGE)&&Array.isArray(d?.hms)?d.hms:[];
   }
   function summarize(devices,now=Date.now()){
     const list=Array.isArray(devices)?devices.filter(d=>d&&typeof d==='object'):[];
