@@ -24,6 +24,8 @@ const {createMinioDrRouter}=require('./minio-dr-api');
 const {createHttpAuth}=require('./http-auth');
 const {registerPilotRoutes,registerPilotAdminRoutes}=require('./pilot-routes');
 const {createMqttIngest}=require('./mqtt-ingest');
+const {createPilotAuth}=require('./pilot-auth');
+const {createTsaHub,createTopologyListHandler}=require('./tsa-hub');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -52,7 +54,12 @@ const app=express(),server=http.createServer(app);
 if(['127.0.0.1','::1'].includes(process.env.SKYHUB_BIND_ADDRESS||'127.0.0.1')){
   app.set('trust proxy',['loopback','linklocal','uniquelocal']);
 }
-const io=new Server(server,{maxHttpBufferSize:131072});
+// With the situation-awareness WebSocket enabled this process answers unknown upgrades itself.
+const tsaWanted=pilot.tsa.enabled;
+if(pilot.tsa.issue)console.error('[tsa] disabled:',pilot.tsa.issue);
+if(tsaWanted&&!pilot.ready)console.error('[tsa] disabled: Pilot 2 configuration is incomplete');
+const tsaActive=tsaWanted&&pilot.ready;
+const io=new Server(server,{maxHttpBufferSize:131072,...(tsaActive?{destroyUpgrade:false}:{})});
 const registry=createRegistry();
 const mqttStats=createMqttMetrics();
 const mqttShapes=createShapeCatalog();
@@ -110,16 +117,31 @@ initializeTracks();
 setInterval(initializeTracks,60000).unref();
 setInterval(pruneTracks,3600000).unref();
 
+const pilotAuth=createPilotAuth({pilot,pairing,redis});
+// DJI Pilot 2 situation awareness: fleet positions and presence pushed to paired RCs (read-only).
+const tsaHub=tsaActive?createTsaHub({registry,authorize:pilotAuth.principal,workspaceId:pilot.workspaceId}):null;
+
 let ingest;
 try{
   ingest=createMqttIngest({broker,env:process.env,registry,io,redis,topologyStore,trackRecorder,
-    trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes});
+    trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,
+    onTopologyChanged:()=>tsaHub&&tsaHub.topologyChanged()});
 }catch(err){
   console.error('[topology ack]',err.message);
   process.exit(1);
 }
 const {state:mqttState,ack}=ingest;
-registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack});
+registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack,pilotAuth});
+if(tsaHub){
+  app.get('/manage/api/v1/workspaces/:workspaceId/devices/topologies',createTopologyListHandler({
+    registry,workspaceId:pilot.workspaceId,authorize:pilotAuth.principal
+  }));
+  server.on('upgrade',(req,socket,head)=>{
+    if(tsaHub.matches(req))return tsaHub.handleUpgrade(req,socket,head);
+    // Socket.IO keeps its own path; every other upgrade is refused (engine.io no longer does it).
+    if(!String(req.url||'').startsWith('/socket.io/'))socket.destroy();
+  });
+}
 
 app.get('/api/health',(req,res)=>res.json({
   status:mqttState.connected&&mqttState.subscribed?'online':'degraded',mqtt:mqttState.connected,
@@ -129,7 +151,8 @@ app.get('/api/health',(req,res)=>res.json({
   topologyReplyErrors:ack.failed,topologyReplySkipped:ack.skipped,
   topologyReplyLastAt:ack.lastAt,topologyRestoredDevices:topologyRestored,
   lanViewEnabled:lanAccess.enabled,...trackRecorder.snapshot(),
-  trackRetentionDays,...mqttStats.snapshot()
+  trackRetentionDays,...mqttStats.snapshot(),
+  ...(tsaHub?{tsa:tsaHub.stats()}:{})
 }));
 app.use('/api',auth);
 
@@ -193,6 +216,7 @@ const listenAddress=process.env.NODE_ENV==='test'?'127.0.0.1':'0.0.0.0';
 server.listen(port,listenAddress,()=>console.log('[skyhub] Port '+server.address().port+' / read-only'));
 function stop(){
   ingest.stop();
+  if(tsaHub)tsaHub.close();
   io.close();server.close();
   redis.disconnect();if(pool)pool.end().catch(()=>{});
 }

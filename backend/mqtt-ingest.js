@@ -12,7 +12,7 @@ const SUBSCRIPTIONS=[
 
 // Read-only DJI MQTT ingest plus the optional, ACL-restricted status_reply publisher.
 function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecorder,
-  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes}){
+  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,onTopologyChanged=null}){
   const ackEnabled=env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
   const ackUser=env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'';
   const ackPassword=env.SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD||'';
@@ -78,6 +78,7 @@ function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecor
       }
       if(result.event)io.emit('device_event',result.event);
       if(result.topologyChanged){
+        if(onTopologyChanged)onTopologyChanged();
         topologyStore.save(registry.topologyRecords(result.updates.map(item=>item.sn)))
           .catch(err=>console.error('[redis topology]',err.message));
       }

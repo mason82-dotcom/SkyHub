@@ -1,13 +1,8 @@
 'use strict';
 
 const {mapAccess}=require('./map-element-permissions');
+const {fail}=require('./dji-http');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-// DJI's HTTPS convention: every response is {code, message, data}; Pilot 2 shows
-// "(resp.code)" for 5xx. `error` is kept for existing callers. The code mirrors the HTTP status.
-function fail(res,status,message){
-  return res.status(status).json({code:status,message,data:{},error:message});
-}
 
 function createMapElementHandler({store,workspaceId,authorize}){
   if(typeof authorize!=='function')throw new TypeError('Authorization function required');

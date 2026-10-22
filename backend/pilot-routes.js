@@ -1,18 +1,12 @@
 'use strict';
 const path=require('path');
-const crypto=require('crypto');
 const {serial}=require('./dji');
 const {createMapElementStore}=require('./map-element-store');
 const {createMapElementHandler}=require('./map-element-api');
-const {mapPrincipal}=require('./map-element-permissions');
-
-function tokenMatches(token,expected){
-  const a=Buffer.from(token),b=Buffer.from(expected);
-  return a.length===b.length && crypto.timingSafeEqual(a,b);
-}
+const {createPilotAuth}=require('./pilot-auth');
 
 // Pilot 2 onboarding endpoints. Public part: mounted before the view-token guard.
-function registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack}){
+function registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack,pilotAuth=createPilotAuth({pilot,pairing,redis})}){
   // Existing DJI Pilot 2 URL /pilot-login now resolves when v3 takes over port 4000.
   // Login/bootstrap remains opt-in; secret provisioning is forbidden over plaintext HTTP.
   app.get('/pilot-login',(req,res)=>{
@@ -29,30 +23,15 @@ function registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack}){
     if(!req.secure){res.status(403).json({error:'HTTPS required'});return false;}
     return true;
   }
-  // Accepts the shared operator access token or a paired device token.
   async function pilotAuthorized(req){
     const hdr=req.headers.authorization||'';
-    const token=hdr.startsWith('Bearer ')?hdr.slice(7):'';
-    if(tokenMatches(token,pilot.accessToken))return true;
-    if(redis.status!=='ready')return false;
-    return Boolean(await pairing.verify(token));
-  }
-  // Map scope is distinct from bootstrap/session access. A previously paired RC
-  // without stored workspace binding can still bootstrap, but cannot read any
-  // map groups until it is paired again for this workspace.
-  async function mapElementPrincipal(token){
-    if(typeof token!=='string'||!token)return null;
-    if(tokenMatches(token,pilot.accessToken))return mapPrincipal('pilot',pilot.workspaceId);
-    if(redis.status!=='ready')return null;
-    const device=await pairing.verify(token);
-    return device&&device.workspaceId===pilot.workspaceId?
-      mapPrincipal('pilot',device.workspaceId):null;
+    return pilotAuth.authorizedToken(hdr.startsWith('Bearer ')?hdr.slice(7):'');
   }
   if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'&&pilot.ready){
     app.get('/map/api/v1/workspaces/:workspaceId/element-groups',createMapElementHandler({
       store:pool?createMapElementStore(pool):null,
       workspaceId:pilot.workspaceId,
-      authorize:mapElementPrincipal
+      authorize:pilotAuth.principal
     }));
   }else if(process.env.SKYHUB_DJI_MAP_ELEMENTS_ENABLED==='true'){
     console.error('[map elements] disabled: Pilot 2 configuration is incomplete');

@@ -46,9 +46,22 @@ function pilotConfiguration(env) {
       if(b.secure)throw Error('TLS transport requires separate DJI Pilot 2 firmware validation');
     }catch(e){missing.push('SKYHUB_PILOT_MQTT_URL: '+e.message);}
   }
+  // Situation awareness (TSA) is opt-in and needs the public HTTPS origin the RC can reach:
+  // DJI's api and ws modules take a host, and Pilot 2 appends the token itself.
+  const tsa={enabled:false,issue:null,apiHost:null,wsHost:null};
+  if(env.SKYHUB_DJI_TSA_ENABLED==='true'){
+    try{
+      const url=new URL(env.SKYHUB_PILOT_PUBLIC_URL||'');
+      if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.pathname!=='/')
+        throw new Error('invalid');
+      tsa.enabled=true;
+      tsa.apiHost=url.origin;
+      tsa.wsHost='wss://'+url.host+'/ws/tsa';
+    }catch(_err){tsa.issue='SKYHUB_PILOT_PUBLIC_URL must be a plain https origin such as https://host';}
+  }
   const ready=missing.length===0;
   return {
-    ready,missing,
+    ready,missing,tsa,
     // Called only after successful HTTPS + bearer token verification.
     bootstrap(){
       if(!ready)throw new Error('Pilot 2 onboarding is not configured');
@@ -58,7 +71,8 @@ function pilotConfiguration(env) {
         workspaceId,
         platformName:'SkyHub Next',
         workspaceName:'SkyHub',
-        description:'DJI Enterprise Command Center'
+        description:'DJI Enterprise Command Center',
+        ...(tsa.enabled?{tsa:{apiHost:tsa.apiHost,wsHost:tsa.wsHost}}:{})
       };
     },
     accessToken,workspaceId
