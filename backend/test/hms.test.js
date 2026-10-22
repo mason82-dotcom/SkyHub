@@ -109,7 +109,8 @@ test('no shipped HMS text shows a raw placeholder after substitution',()=>{
       const domain=key.startsWith('dock_')?'3':'0';
       const out=describeHms({code:key.slice(key.indexOf('0x'),key.indexOf('0x')+10),sensorIndex:0,componentIndex:0},
         {domain,modeCode:key.endsWith('_in_the_sky')?3:0});
-      if(out&&out[lang])assert.doesNotMatch(out[lang],/%/,key+' '+lang);
+      // A literal percent sign ("unter 20 %") is fine; template tokens are not.
+      if(out&&out[lang])assert.doesNotMatch(out[lang],/%(?:\d+\$)?(?:\.\d+)?[sdf]|%[a-z]+_index|%alarmid|%index/,key+' '+lang);
     }
   }
 });

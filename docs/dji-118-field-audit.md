@@ -364,13 +364,21 @@ Platzhalter ohne veröffentlichte Regel (`%1$s`, `%d`, `%1$.1f`, `%lidar_index` 
 nicht mehr roh im Text, sondern als `?`. Vorher standen 93 Texte (davon 37 Dock-Texte) mit solchen Platzhaltern
 unverändert im Dashboard, z. B. „Dock %1$s cover motor stalled“.
 
-**Offen, Entscheidung nötig:** Die offizielle `hms.json` (DJI-CDN, im Dock-Feature-Set verlinkt)
-enthält 3.952 Einträge, die eingebettete Kopie nur 2.288. 1.681 Schlüssel fehlen, darunter
-vermutlich Meldungen neuerer Geräte, 310 englische Texte weichen ab, und die neue Datei nutzt
-mehr benannte Platzhalter (`%dock_cover_index`, `%lidar_index`, `%lte_index`, `%gimbal_index`).
-`scripts/build-hms-texts.js` kann sie direkt einlesen. Die eingebettete Kopie stammt aus dem
-MIT-lizenzierten Cloud-API-Demo-Repository; für die CDN-Datei ist keine Lizenz angegeben.
-Deshalb wurde sie **nicht** übernommen.
+**Offizielle `hms.json` übernommen (22.10.2026, Entscheidung des Projektinhabers):** Die Datei aus
+dem DJI-CDN, die das Dock-Feature-Set verlinkt, enthält 3.952 Einträge. Nach den Filtern von
+`scripts/build-hms-texts.js` (nur `fpv_tip_`/`dock_tip_`, Klartext, höchstens 400 Zeichen,
+Deutsch und Englisch) bleiben 3.003 Texte (vorher 2.288): 715 neue Schlüssel, keiner entfallen,
+2.355 mit deutschem Text (vorher 1.714), 381 `_in_the_sky`-Varianten. Der Alarm `0x16070042` der
+Matrice 4T („Datenfehler RTK-Basisstation. Prüfen, ob ein Netzwerk-RTK- oder D-RTK-Dienst verbunden ist“) hat damit einen Text. DJI nennt für die Datei
+keine Lizenz; Herkunft und Rückfalloption stehen in `backend/data/HMS-LICENSE.txt`.
+
+Bekannte Qualitätsmängel im Herstellertext, bewusst nicht korrigiert: 11 Texte enthalten
+`%index` doppelt (z. B. „Kommunikationsfehler: Motor %index %index“) und würden dann den
+Index zweimal zeigen; 949 Einträge der Datei fehlen im Ergebnis (816 ohne brauchbaren deutschen oder englischen Text, 56 mit nicht unterstützten
+Schlüsselvarianten wie `_index_1` oder `_pm440`, 77 nach der Normalisierung doppelte Schlüssel); für `%lidar_index`,
+`%lte_index` und `%gimbal_index` veröffentlicht DJI keine Ersetzungsregel, sie erscheinen als `?`.
+Der Herstellertext wird nicht überarbeitet, damit er bei einer neuen Dateiversion
+unverändert austauschbar bleibt.
 
 **Nicht umgesetzt** (bewusst, überwiegend steuernde oder schreibende Funktionen): Dock-Zugang
 über die Begleit-App und Organisationsbindung (HTTPS), DRC, FTS, Fernsteuerung/Debug,
