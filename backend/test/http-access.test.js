@@ -32,6 +32,7 @@ Object.assign(process.env,{
   SKYHUB_PILOT_MQTT_PASSWORD:'test-pilot-password',
   SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000',
   SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true',
+  SKYHUB_WPML_INSPECT_ENABLED:'true',
   SKYHUB_MINIO_DR_ENABLED:'true',
   SKYHUB_MINIO_DR_REPORT_DIR:drFixture.status
 });
@@ -194,4 +195,27 @@ test('DJI field definitions are served for catalogued models and reject everythi
   for(const bad of ['','abc','0:77','4:1:0','0:1000:0','0:77:2;x','0:77:2\\d'])
     assert.equal((await get(bad)).status,400,bad);
   assert.equal((await request('/api/diagnostics/dji-fields?model=0:77:2')).status,401);
+});
+
+test('WPML endpoint is opt-in, fully token protected, and does not execute a mission',async()=>{
+  const endpoint=base+'/api/wpml/inspect';
+  const data=Buffer.from('not a KMZ');
+  const send=({token,lan,type='application/vnd.google-earth.kmz',method='POST'}={})=>{
+    const headers={'Content-Type':type};
+    if(token)headers.Authorization='Bearer '+token;
+    if(lan)headers['X-Forwarded-For']=lan;
+    return fetch(endpoint,{method,headers,...(method==='POST'?{body:data}:{})});
+  };
+  assert.equal((await send()).status,401);
+  assert.equal((await send({token:'invalid'})).status,401);
+  assert.equal((await send({lan:'192.168.178.70'})).status,401);
+  const res=await send({token:VIEW_TOKEN});
+  assert.equal(res.status,422);
+  const body=await res.json();
+  assert.equal(body.flightReady,false);
+  assert.equal(body.error,'INVALID_KMZ');
+  assert.equal((await send({token:VIEW_TOKEN,type:'text/plain'})).status,415);
+  assert.equal((await send({token:VIEW_TOKEN,method:'GET'})).status,404);
+  assert.equal((await request('/api/mission/create',{method:'POST',token:VIEW_TOKEN})).status,404);
+  assert.equal((await request('/api/wpml/upload',{method:'POST',token:VIEW_TOKEN})).status,404);
 });

@@ -73,6 +73,8 @@ services:
       SKYHUB_PILOT_WORKSPACE_ID: ${SKYHUB_PILOT_WORKSPACE_ID:-}
       # TSA remains opt-in behind a verified HTTPS proxy.
       SKYHUB_DJI_TSA_ENABLED: ${SKYHUB_DJI_TSA_ENABLED:-false}
+      # Optional authenticated, offline-only WPML/KMZ validation.
+      SKYHUB_WPML_INSPECT_ENABLED: ${SKYHUB_WPML_INSPECT_ENABLED:-false}
       SKYHUB_PILOT_PUBLIC_URL: ${SKYHUB_PILOT_PUBLIC_URL:-}
       SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS: ${SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS:-127.0.0.1,::1}
       # Optional DJI protocol reply; requires dedicated MQTT publish-only ACL.

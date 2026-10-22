@@ -20,6 +20,7 @@ const {createTrackStore,retentionDays}=require('./track-store');
 const {createTrackRecorder}=require('./track-recorder');
 const {createS3Storage}=require('./s3-storage');
 const {createMediaRouter}=require('./media-api');
+const {createWpmlInspectRouter}=require('./wpml-api');
 const {createMinioDrRouter}=require('./minio-dr-api');
 const {createHttpAuth}=require('./http-auth');
 const {registerPilotRoutes,registerPilotAdminRoutes}=require('./pilot-routes');
@@ -176,6 +177,11 @@ if(process.env.SKYHUB_MINIO_DR_ENABLED==='true'){
 if(process.env.SKYHUB_MEDIA_ENABLED==='true'){
   const mediaStorage=createS3Storage(process.env);
   app.use('/api/media',createMediaRouter(mediaStorage));
+}
+// Opt-in offline KMZ inspection only. The view-token gate above is mandatory.
+// This creates no file, mission, job, DJI action or persistent record.
+if(process.env.SKYHUB_WPML_INSPECT_ENABLED==='true'){
+  app.use('/api/wpml',createWpmlInspectRouter());
 }
 
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
