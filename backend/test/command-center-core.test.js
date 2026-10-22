@@ -73,3 +73,9 @@ test('browser listing does not infer photogrammetry or calibration readiness',()
   assert.equal(Object.hasOwn(page,'ndviReady'),false);
   assert.equal(Object.hasOwn(page,'reflectanceReady'),false);
 });
+
+test('disconnected aircraft cannot show an active HMS warning',()=>{
+  const d={aircraftConnected:false,hms:[{level:2,code:'test'}],lastHmsAt:now-100};
+  assert.deepEqual(c.hmsAlerts(d,now),[]);
+  assert.equal(c.summarize([d],now).warnings,0);
+});
