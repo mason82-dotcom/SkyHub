@@ -82,8 +82,9 @@ Bewusste Abweichungen und Lücken:
   deaktiviert (`SKYHUB_DJI_MAP_ELEMENTS_ENABLED=false`); die DJI-Referenz
   empfiehlt, das Karten-Modul in der Login-Phase zu laden. Dieser Schritt fehlt
   absichtlich, bis Schreib-, WebSocket- und Wayline-Pfade validiert sind.
-- Livestream-, Medien-, Wayline-, DRC- und Log-Funktionen sind nicht
-  umgesetzt.
+- Livestream-, Wayline-, DRC- und Log-Funktionen sind nicht umgesetzt. Für die
+  Medienverwaltung existiert nur ein isolierter Vertragsbaustein ohne Route
+  und ohne Zugangsdaten-Ausgabe: [Medien-Upload-Vertrag](dji-media-upload-contract.md).
 - MQTT läuft im LAN unverschlüsselt (`tcp://`, Port 1884). DJI weist darauf
   hin, dass Pilot 2 für TLS-Verbindungen Zertifikate bestimmter Aussteller
   (z. B. GoDaddy) erwartet; TLS ist deshalb als eigene Firmware-Validierung
