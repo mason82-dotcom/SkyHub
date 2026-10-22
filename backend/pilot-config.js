@@ -1,5 +1,13 @@
 'use strict';
 const {validateBrokerConfig}=require('./mqtt-config');
+const {isIP}=require('node:net');
+
+function tsaTrustedProxyIps(value){
+  const peers=String(value??'127.0.0.1,::1').split(',').map(ip=>ip.trim());
+  if(peers.length<1||peers.length>8||peers.some(ip=>!isIP(ip)||ip==='0.0.0.0'||ip==='::'))
+    throw new Error('TSA requires up to eight exact trusted proxy IPs');
+  return [...new Set(peers)];
+}
 
 // Pilot MQTT credentials MUST be distinct from read-only SkyHub subscriber credentials.
 // The Pilot page remains a safe diagnostics page until all settings are provisioned.
@@ -48,16 +56,18 @@ function pilotConfiguration(env) {
   }
   // Situation awareness (TSA) is opt-in and needs the public HTTPS origin the RC can reach:
   // DJI's api and ws modules take a host, and Pilot 2 appends the token itself.
-  const tsa={enabled:false,issue:null,apiHost:null,wsHost:null};
+  const tsa={enabled:false,issue:null,apiHost:null,wsHost:null,trustedProxyIps:[]};
   if(env.SKYHUB_DJI_TSA_ENABLED==='true'){
     try{
       const url=new URL(env.SKYHUB_PILOT_PUBLIC_URL||'');
       if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.pathname!=='/')
         throw new Error('invalid');
-      tsa.enabled=true;
+      const peers=tsaTrustedProxyIps(env.SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS);
       tsa.apiHost=url.origin;
       tsa.wsHost='wss://'+url.host+'/ws/tsa';
-    }catch(_err){tsa.issue='SKYHUB_PILOT_PUBLIC_URL must be a plain https origin such as https://host';}
+      tsa.trustedProxyIps=peers;
+      tsa.enabled=true;
+    }catch(_err){tsa.issue='TSA requires a plain HTTPS origin and valid exact trusted proxy IPs';}
   }
   const ready=missing.length===0;
   return {
