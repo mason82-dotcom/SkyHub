@@ -28,6 +28,7 @@ const {createMapElementHandler}=require('./map-element-api');
 const {mapPrincipal}=require('./map-element-permissions');
 const {createS3Storage}=require('./s3-storage');
 const {createMediaRouter}=require('./media-api');
+const {createMinioDrRouter}=require('./minio-dr-api');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
 if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
@@ -365,6 +366,22 @@ app.get('/api/health',(req,res)=>res.json({
   trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
+
+// MinIO disaster-recovery reports: read-only and disabled by default.
+if(process.env.SKYHUB_MINIO_DR_ENABLED==='true'){
+  const drDirectory=process.env.SKYHUB_MINIO_DR_REPORT_DIR;
+  if(!drDirectory || !path.isAbsolute(drDirectory)){
+    throw new Error('Absolute MinIO DR report directory required');
+  }
+  const compositeEnabled =
+    process.env.SKYHUB_MINIO_DR_COMPOSITE_ENABLED === 'true';
+  app.use('/api/dr/minio',createMinioDrRouter({
+    directory:drDirectory,
+    ...(compositeEnabled
+      ? {compositeRoot:path.dirname(drDirectory)}
+      : {})
+  }));
+}
 if(process.env.SKYHUB_MEDIA_ENABLED==='true'){
   const mediaStorage=createS3Storage(process.env);
   app.use('/api/media',createMediaRouter(mediaStorage));

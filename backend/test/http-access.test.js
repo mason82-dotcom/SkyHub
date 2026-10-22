@@ -26,7 +26,11 @@ Object.assign(process.env,{
   SKYHUB_PILOT_MQTT_USER:'test-pilot-user',
   SKYHUB_PILOT_MQTT_PASSWORD:'test-pilot-password',
   SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000',
-  SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true'
+  SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true',
+  SKYHUB_MINIO_DR_ENABLED:'true',
+  SKYHUB_MINIO_DR_REPORT_DIR:require('node:path').resolve(
+    __dirname, '../../dr-status'
+  )
 });
 delete process.env.DATABASE_URL;
 const {server,stop}=require('../server');
@@ -119,4 +123,56 @@ test('Socket.IO admits only the view token or a configured LAN viewer',async()=>
   assert.equal(await socketOutcome({lan:'203.0.113.9'}),'Unauthorized');
   assert.equal(await socketOutcome({lan:'192.168.178.70'}),'connected');
   assert.equal(await socketOutcome({token:VIEW_TOKEN}),'connected');
+});
+
+test('MinIO DR requires the actual SkyHub view token', async () => {
+  const endpoint = '/api/dr/minio/status';
+
+  assert.equal(
+    (await request(endpoint)).status,
+    401
+  );
+
+  assert.equal(
+    (await request(endpoint, {
+      token: 'invalid-token'
+    })).status,
+    401
+  );
+
+  assert.equal(
+    (await request(endpoint, {
+      lan: '192.168.178.70'
+    })).status,
+    401
+  );
+
+  const response = await request(endpoint, {
+    token: VIEW_TOKEN
+  });
+
+  assert.equal(response.status, 200);
+
+  const result = await response.json();
+
+  assert.equal(result.status, 'incomplete');
+  assert.equal(result.readOnly, true);
+  assert.equal(result.latest.metrics.verifiedFiles, 54887);
+  assert.equal(result.latest.checks.iamReadOnly, 'unknown');
+
+  const reports = await request(
+    '/api/dr/minio/reports',
+    {token: VIEW_TOKEN}
+  );
+
+  assert.equal(reports.status, 200);
+  assert.equal((await reports.json()).count, 1);
+
+  assert.equal(
+    (await request(endpoint, {
+      method: 'POST',
+      token: VIEW_TOKEN
+    })).status,
+    404
+  );
 });
