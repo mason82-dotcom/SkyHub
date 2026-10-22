@@ -496,3 +496,55 @@ einen Schritt weiter, weil erstmals begrenzte XMP-Inhalte in RAM
 gelesen werden. Falls der Nutzer das nicht möchte, bleibt dieser
 optionale Schritt deaktiviert. Keine Objektänderungen,
 Container-Neustarts oder credential changes.
+
+
+## Echte Pi-Abnahme: DJI-XMP-Feldnamen und Bandhinweise (22.10.2026)
+
+Der Nutzer hat den neu abgesicherten, ausschließlich aggregiert
+ausgebenden XMP-Prüfer gegen **sechs unbekannte TIFFs** im bisher
+automatisch gewählten S3-Unterordner ausgeführt. Alle sechs
+XMP-Pakete wurden mit gültigem Byte-Range-Zugriff analysiert:
+`status.ok=6`, alle anderen Fehlerzustände `0`.
+
+**Anonyme Bandhinweise aus den sechs XMP-Paketen:**
+
+| Nur XMP-Hinweis | Anzahl |
+|---|---:|
+| Green (G) | 0 |
+| Red (R) | **3** |
+| Red Edge (RE) | 0 |
+| NIR | **3** |
+| Unknown / inconsistent | 0 |
+
+**Vorhandene DJI-XMP-Feldnamen bei je sechs von sechs Dateien:**
+`ImageSource`, `BandName`, `SensorIndex`, `BandFreq`,
+`SensorGain`, `SensorGainAdjustment`, `Irradiance`,
+`VignettingData` und `DewarpData`.
+
+**Nicht unter den exakten geprüften Markern gefunden:**
+`CentralWavelength`, `BlackCurrent`,
+`IrradianceExposureTime`, `IrradianceGain`,
+`VignettingPolynomial`. Dies beweist **nicht** das Fehlen
+radiometrischer Informationen unter anderen Feldnamen,
+in anderen Metadatenstrukturen oder Bilddateien.
+
+Die sechs früher als "other" kategorisierten TIFF-Dateinamen
+tragen somit DJI-artige Bandhinweise in ihren XMP-Paketen,
+obwohl sie weder mit `DJI_` beginnen noch den unterstützten
+M3M-Dateinamensmustern entsprechen. **Dateinamen sind für diesen
+Datenbestand kein hinreichender Klassifikator.**
+
+Der Pi-Test bestätigt weder das Kameramodell noch die Echtheit
+des XMP, den Bezug zu einer konkreten Aufnahmegruppe,
+Bandregistrierung, Bildpixel-Integrität oder Kalibrierung.
+Insbesondere sind die **3 R- und 3 NIR-Hinweise keine
+drei vollständigen R/NIR-Bildpaare**. Ein Vergleich der
+zwei zusätzlich kanonisch benannten TIFFs im selben Prefix
+mit ihren XMP-Angaben wurde noch nicht durchgeführt.
+Andere Bucket-Prefixe wurden nicht vollständig geprüft.
+
+Alle Freigabeflags
+`m3mSourceVerified`, `radiometricCalibrationVerified`,
+`bandCoregistrationVerified`, `reflectanceReady`,
+`ndviReady` und `ndreReady` bleiben **false**.
+
