@@ -13,7 +13,8 @@ const SUBSCRIPTIONS=[
 
 // Read-only DJI MQTT ingest plus the optional, ACL-restricted status_reply publisher.
 function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecorder,
-  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,onTopologyChanged=null}){
+  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,onTopologyChanged=null,
+  mqttConnect=mqtt.connect}){
   const ackEnabled=env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
   const ackUser=env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'';
   const ackPassword=env.SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD||'';
@@ -118,9 +119,9 @@ function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecor
   const options={...base,clientId:'skyhub_next_readonly_'+process.pid};
   if(env.MQTT_USER)options.username=env.MQTT_USER;
   if(env.MQTT_PASSWORD)options.password=env.MQTT_PASSWORD;
-  const client=mqtt.connect(broker.url,options);
+  const client=mqttConnect(broker.url,options);
   if(ack.enabled){
-    ack.client=mqtt.connect(broker.url,{...base,clientId:'skyhub_next_topology_ack_'+process.pid,
+    ack.client=mqttConnect(broker.url,{...base,clientId:'skyhub_next_topology_ack_'+process.pid,
       username:ackUser,password:ackPassword});
     ack.client.on('connect',()=>{ack.connected=true;});
     ack.client.on('close',()=>{ack.connected=false;});
