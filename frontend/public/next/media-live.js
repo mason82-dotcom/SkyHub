@@ -36,6 +36,11 @@ function finish(id){
   if(id!==generation)return;
   busy=false;active=null;controls();
 }
+function cancelPending(){
+  generation++;
+  if(active)active.abort();
+  active=null;busy=false;
+}
 async function get(name,params,signal){
   const q=new URLSearchParams(params||{});
   const path='/api/media/'+name+(q.size?'?'+q.toString():'');
@@ -140,8 +145,8 @@ function start(){
   el('storage-token').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();connect();}});
   el('storage-load').addEventListener('click',()=>load(false));
   el('storage-next').addEventListener('click',()=>load(true));
-  el('storage-bucket').addEventListener('change',()=>{reset();controls();});
-  el('storage-prefix').addEventListener('input',()=>{reset();controls();});
+  el('storage-bucket').addEventListener('change',()=>{cancelPending();reset();controls();});
+  el('storage-prefix').addEventListener('input',()=>{cancelPending();reset();controls();});
   controls();
 }
 window.addEventListener('DOMContentLoaded',start);
