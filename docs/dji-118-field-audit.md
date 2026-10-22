@@ -197,6 +197,32 @@ Grenzen: Bei keinem Gerät war ein GNSS-Fix verfügbar; `latitude` und
 Fehlende Felder belegen keine fehlende Geräteunterstützung. Ein einzelner
 Snapshot belegt weder Feldwerte noch deren Plausibilität.
 
+### Nachtrag 22.10.2026: GPS- und RTK-Fix
+
+Zweiter Lauf von `node scripts/pi-telemetry-fields-check.js` mit GPS- und
+RTK-Fix an den Geräten (nur Feldnamen und Zählwerte, keine Koordinaten oder
+Kennungen):
+
+| Gerät | Typische Felder | Aktuell gemeldete Felder | Position |
+|---|---|---|---|
+| RC Plus 2 Enterprise | 5/5 inkl. `latitude`, `longitude` | 16 | frisch, zeitverifiziert |
+| Matrice 4T | 16/16 | 94 | frisch, zeitverifiziert |
+
+Matrice 4T: Alle 9 dynamischen Gimbal-Feldtypen waren aktuell, neu gegenüber
+dem ersten Lauf `measure_target_longitude`, `measure_target_latitude`,
+`measure_target_altitude` und `measure_target_distance`. Beobachtete Zählwerte:
+17 GPS-Satelliten, 17 RTK-Satelliten, `rtkFixState` 2, `positionQuality` 5.
+Die RC Plus 2 meldet keine Satelliten- oder RTK-Felder; sie gehören zum
+Fluggerät.
+
+Grenzen: `rtkFixState` und `positionQuality` sind hier nur als beobachtete
+Zahlenwerte erfasst. Ihre Bedeutung wurde nicht gegen die DJI-Definition
+abgeglichen; daraus folgt kein Nachweis einer gültigen RTK-Festlösung oder
+einer bestimmten Genauigkeit. Mavic 3M und RC Pro Enterprise sendeten zu diesem
+Zeitpunkt nicht und bleiben bei der Nullposition. Ein Snapshot belegt weder
+Dauerhaftigkeit noch Positionsgenauigkeit. Offen bleibt die Prüfung mit
+Livestream und SIM/eSIM.
+
 ## Verifikation auf dem Pi (ohne Neustart)
 
 ```bash
