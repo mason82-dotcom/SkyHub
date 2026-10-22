@@ -17,8 +17,8 @@ function captureUuidFromXmp(bytes){
     return null;
   // Also count malformed or oversized duplicate attributes/elements:
   // even if a second value fails our strict extractor it must block pairing.
-  const markers=(text.match(/(?:\\s)drone-dji:Capture(?:UUID|Uuid)\\s*=/g)||[]).length+
-    (text.match(/<drone-dji:Capture(?:UUID|Uuid)\\s*>/g)||[]).length;
+  const markers=(text.match(/(?:\s)drone-dji:Capture(?:UUID|Uuid)\s*=/g)||[]).length+
+    (text.match(/<drone-dji:Capture(?:UUID|Uuid)\s*>/g)||[]).length;
   if(markers!==1)return null;
   const found=[];
   // Accept the two observed spelling variants conservatively.
