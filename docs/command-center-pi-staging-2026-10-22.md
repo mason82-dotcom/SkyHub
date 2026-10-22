@@ -91,7 +91,9 @@ auf demselben Gerät eingerichtet sein.
   Route; die Socket-Authentifizierung und Datenberechtigung verbleiben
   vollständig beim bestehenden Backend.
 - Kein Remote-Zugriff: TCP-Listener ausschließlich `127.0.0.1`.
-  Keine zusätzlichen DJI-Cloud-/MQTT-Sitzungen.
+  Host-Header und Browser-Origin müssen zusätzlich exakt zur lokalen
+  HTTP-Adresse mit Staging-Port passen (Schutz vor DNS-Rebinding und
+  fremden Websites). Keine zusätzlichen DJI-Cloud-/MQTT-Sitzungen.
 - Keine DJI-Service-, Pilot-2-Admin-, Media-Upload-, STS-,
   Objekt-DELETE- oder sonstigen Backend-Schreibendpunkte.
 
