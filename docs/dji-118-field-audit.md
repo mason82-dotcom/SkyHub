@@ -283,6 +283,38 @@ Firmware tatsächlich so sendet. Für die Matrice 4T bleibt das Profil
 **vorläufig**, solange 104 Pfade nur aus der generischen Aircraft-Tabelle
 stammen.
 
+### Live-Beobachtung Matrice 4T nach dem Katalogabgleich (22.10.2026)
+
+Quelle: `/api/diagnostics/mqtt-model-shapes` (nur Feldnamen) und das
+Geräteabbild des Backends, jeweils ohne Kennungen oder Koordinaten. Das Backend
+lief bereits mit dem angepassten Katalog.
+
+- OSD (42 Nachrichten): 32 Wurzelfelder. State (26 Nachrichten): 12
+  Wurzelfelder, darunter `payloads`, `wpmz_version`, `control_source`,
+  `cameras`, `mode_code_reason` und `offline_map_enable`. Nicht gesendet
+  wurden in diesem Zeitraum 24 OSD- und 44 State-Wurzelfelder des Katalogs.
+- `offline_map_enable` ist am Gerät bestätigt (neu aus der M4-Serien-Seite).
+- `rth_mode` und `commander_flight_mode` (Namen der M4-Serien-Seite) wurden
+  nicht gesendet. Das Gerät sendet stattdessen `current_rth_mode` und
+  `current_commander_flight_mode` (Namen der generischen Aircraft-Tabelle,
+  bereits im Katalog). Die beiden M4-Namen bleiben laut Dokumentation im
+  Katalog, sind am Gerät aber **nicht bestätigt**.
+- `payloads` und `wpmz_version` sendet die M4T wie die Mavic 3M, obwohl beide
+  Felder nur in den Dock-to-Cloud-Seiten dokumentiert sind.
+- Position: Ohne RTK-Lösung `rtkFixState` 0, `positionQuality` 5 (19 GPS-,
+  20 RTK-Satelliten). Mit RTK-Fix `rtkFixState` 2 („Fixing successful“),
+  `positionQuality` weiterhin 5 (20 GPS-, 20 RTK-Satelliten). Der von der
+  M4-Seite dokumentierte Wert 10 („RTK fixed“) trat in dieser Beobachtung
+  **nicht** auf; ob die M4T ihn je meldet, ist offen. Der aufgenommene Wert 10
+  im Katalog bleibt eine Dokumentationsvorgabe, keine Gerätebeobachtung.
+- 69 bzw. mehr Nachrichten wurden vom Backend als Duplikate verworfen
+  (`mqttDroppedByReason.duplicate`), solange RC und Flugzeug gemeinsam sendeten;
+  das ist der Wiederholungsschutz, kein Datenverlust.
+
+Grenzen: Ein Zeitfenster von wenigen Minuten belegt nicht, dass nicht
+gesendete Felder nie gesendet werden. Die Beobachtung stammt von einer
+Firmware-Version, die hier nicht erfasst ist.
+
 ## Verifikation auf dem Pi (ohne Neustart)
 
 ```bash
