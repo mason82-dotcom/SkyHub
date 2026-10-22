@@ -4,7 +4,9 @@
 const {validatePrefix}=require('./m3m-s3-inventory');
 const {identify}=require('./m3m-media-inventory');
 const MAX_PAGES=101,PAGE_SIZE=200,MAX_DIRECT=20000,MAX_TIFF=12;
-async function collectUnknownTiffs(storage,prefix){
+async function collectTiffs(storage,prefix,includeKnown){
+  if(typeof includeKnown!=='boolean')
+    throw new TypeError('Invalid TIFF selection mode');
   validatePrefix(prefix);
   let cursor,seen=new Set(),pages=0,direct=0;
   const keys=[];
@@ -25,7 +27,7 @@ async function collectUnknownTiffs(storage,prefix){
       if(!relative||relative.includes('/'))continue;
       direct++;
       if(direct>MAX_DIRECT)throw new RangeError('Too many direct objects');
-      if(/\.tiff?$/i.test(relative)&&!identify(relative)){
+      if(/\.tiff?$/i.test(relative)&&(includeKnown||!identify(relative))){
         if(keys.length>=MAX_TIFF)throw new RangeError('TIFF probe cap exceeded');
         if(keys.includes(key))throw new Error('Duplicate TIFF object key');
         keys.push(key);
@@ -40,4 +42,10 @@ async function collectUnknownTiffs(storage,prefix){
   }
   throw new RangeError('TIFF page cap exceeded');
 }
-module.exports={collectUnknownTiffs,MAX_TIFF};
+async function collectUnknownTiffs(storage,prefix){
+  return collectTiffs(storage,prefix,false);
+}
+async function collectAllTiffs(storage,prefix){
+  return collectTiffs(storage,prefix,true);
+}
+module.exports={collectUnknownTiffs,collectAllTiffs,MAX_TIFF};
