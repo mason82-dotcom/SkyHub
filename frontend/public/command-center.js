@@ -129,6 +129,15 @@
  async function connect(provided,auto=false){
    if(!auto&&!provided){setMessage('connection','Zugriffstoken fehlt');return;}
    const id=++attempt;
+   // Invalidate an earlier user's visible data and in-flight media requests immediately.
+   token=null;
+   resetMedia();
+   buckets=[];
+   el('bucket').disabled=true;
+   el('load-buckets').disabled=true;
+   el('load-objects').disabled=true;
+   el('load-m3m').disabled=true;
+   records.clear();selected=null;render();
    setMessage('connection','Verbinde …');
    if(socket){socket.disconnect();socket=null;}
    try{
@@ -192,6 +201,7 @@
    el('media-page').textContent='Seite —';
    el('media-prev').disabled=true;
    el('media-next').disabled=true;
+   setMessage('media-message','Auswahl geändert · Objektliste erneut laden');
  }
  async function loadBuckets(){
    resetMedia();
