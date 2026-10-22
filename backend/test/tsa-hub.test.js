@@ -247,8 +247,8 @@ test('the topology list needs HTTPS, a valid token and the right workspace',asyn
   for(const [r,status] of [
     [req({headers:{'x-auth-token':GOOD,'x-forwarded-proto':'http'}}),403],
     [req({socket:{remoteAddress:'192.168.178.5'}}),403],
-    [req({headers:{'x-forwarded-proto':'https'}}),401],[req({headers:{'x-auth-token':'nope'}}),401],
-    [req({headers:{'x-auth-token':'other'}}),404],[req({params:{workspaceId:OTHER_WS}}),404]]){
+    [req({headers:{'x-forwarded-proto':'https'}}),401],[req({headers:{'x-auth-token':'nope','x-forwarded-proto':'https'}}),401],
+    [req({headers:{'x-auth-token':'other','x-forwarded-proto':'https'}}),404],[req({params:{workspaceId:OTHER_WS}}),404]]){
     const out=res();await handler(r,out);
     assert.equal(out.statusCode,status);
     assert.equal(out.body.code,status);
