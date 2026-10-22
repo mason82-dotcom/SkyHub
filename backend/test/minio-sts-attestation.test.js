@@ -47,6 +47,19 @@ test('network errors and 404s are inconclusive, not proof of denied authorizatio
     confirmIsolated:true,randomBytes:nonce}),/inconclusive: GetObject/);
 });
 
+test('expired credentials reporting HTTP 403 are not mistaken for IAM denial',async()=>{
+  let count=0;
+  const client={send:async()=>{
+    count++;
+    if(count===1)return {};
+    throw Object.assign(new Error('expired'),{
+      name:'ExpiredToken',$metadata:{httpStatusCode:403}
+    });
+  }};
+  await assert.rejects(()=>attestPutOnlySession({s3:client,workspace:WORKSPACE,
+    prefix:PREFIX,confirmIsolated:true,randomBytes:nonce}),/inconclusive: GetObject/);
+});
+
 test('attestation cannot access any bucket unless explicitly disposable',async()=>{
   const client={send:async()=>{throw Error('must not contact storage');}};
   for(const cfg of [
