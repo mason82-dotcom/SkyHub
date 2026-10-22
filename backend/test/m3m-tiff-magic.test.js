@@ -5,7 +5,7 @@ const {spawnSync}=require('node:child_process');
 const {Script}=require('node:vm');
 const path=require('node:path');
 const {classifyMagic,summarizeMagic}=require('../m3m-tiff-magic');
-const {collectUnknownTiffs}=require('../m3m-s3-tiff-candidates');
+const {collectUnknownTiffs,collectAllTiffs}=require('../m3m-s3-tiff-candidates');
 const {CHILD}=require('../../scripts/pi-m3m-tiff-magic-check');
 const PREFIX='hidden/MISSION_SECRET/';
 const files=[
@@ -116,4 +116,34 @@ test('embedded container-only reader compiles and requests GET byte range, never
   assert.match(CHILD,/ContentRange/);
   assert.doesNotMatch(CHILD,
     /PutObjectCommand|DeleteObjectCommand|CopyObjectCommand|process\.stderr\.write|console\.log/);
+});
+
+
+test('all-TIFF mode includes canonical DJI TIFFs without relaxing the 12-object cap',async()=>{
+  const all=[...files,'ANOTHER_EXTRA.TIF','NESTED/SKIP.TIF'];
+  const storage={objects:async(bucket,args)=>{
+    assert.equal(bucket,'dji-cloud');
+    assert.equal(args.prefix,PREFIX);
+    assert.equal(args.limit,200);
+    return page(all);
+  }};
+  const observed=await collectAllTiffs(storage,PREFIX);
+  assert.deepEqual(observed,[
+    PREFIX+files[0],PREFIX+files[1],PREFIX+files[2],
+    PREFIX+'ANOTHER_EXTRA.TIF'
+  ]);
+  const unknown=await collectUnknownTiffs(storage,PREFIX);
+  assert.equal(unknown.includes(PREFIX+files[2]),false);
+  const oversized={objects:async()=>page(
+    Array.from({length:13},(_,i)=>'PHOTO_'+i+'.TIF'))};
+  await assert.rejects(collectAllTiffs(oversized,PREFIX),RangeError);
+});
+
+test('all-TIFF mode refuses truncated cyclic pagination',async()=>{
+  let num=0;
+  const storage={objects:async()=>page(
+    ['SAMPLE_'+(++num)+'.TIF'],true,'REPEATED')};
+  await assert.rejects(collectAllTiffs(storage,PREFIX),
+    /Invalid TIFF pagination/);
+  assert.equal(num,2);
 });
