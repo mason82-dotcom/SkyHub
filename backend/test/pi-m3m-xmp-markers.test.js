@@ -13,6 +13,7 @@ function buildFakeTiff(){
     '<rdf:Description drone-dji:BandName="RedEdge" '+
     'drone-dji:ImageSource="MS_RE_CAMERA" '+
     'drone-dji:Irradiance="SECRET_IRRADIANCE_500" '+
+    'drone-dji:CaptureUUID="3377fb05b357448fb877023daebbaed3" '+
     'drone-dji:DroneSerialNumber="PRIVATE_SERIAL_12345" '+
     'drone-dji:GpsLatitude="PRIVATE_GPS" />'+
     '</rdf:RDF></x:xmpmeta>');
@@ -28,7 +29,7 @@ function buildFakeTiff(){
   return {img,xmpLength:xmp.length,offset};
 }
 
-async function executeEmbeddedReader({honorRanges=true}={}){
+async function executeEmbeddedReader({honorRanges=true,captureMode=false}={}){
   const {img,xmpLength,offset}=buildFakeTiff();
   const ranges=[];
   class GetObjectCommand{constructor(input){this.input=input;}}
@@ -64,7 +65,7 @@ async function executeEmbeddedReader({honorRanges=true}={}){
   const sandbox={
     require(name){
       if(name==='node:fs')return {readFileSync:()=>JSON.stringify({
-        keys:['private/SECRET_IMAGE.TIF'],prefix:'private/'
+        keys:['private/SECRET_IMAGE.TIF'],prefix:'private/',captureMode
       })};
       if(name==='@aws-sdk/client-s3')return {S3Client,GetObjectCommand};
       throw Error('Unexpected module');
@@ -136,4 +137,26 @@ test('no individual XMP results cross the process boundary',async()=>{
   ].sort());
   assert.doesNotMatch(output,
     /private|SECRET_IMAGE|PRIVATE_GPS|RedEdge|MS_RE_CAMERA|SERIAL_12345/);
+});
+
+
+test('capture UUID aggregation happens in backend and UUID never leaves Docker IPC',async()=>{
+  const result=await executeEmbeddedReader({captureMode:true});
+  assert.equal(result.exitCode,0);
+  assert.equal(result.ranges.length,3);
+  const out=JSON.parse(result.output);
+  assert.deepEqual(Object.keys(out),['report']);
+  const report=out.report;
+  assert.equal(report.schema,'skyhub-m3m-capture-uuid-hints-v1');
+  assert.equal(report.examined,1);
+  assert.equal(report.withCaptureUuid,1);
+  assert.equal(report.withoutCaptureUuid,0);
+  assert.equal(report.uniqueCaptureUuidGroups,1);
+  assert.equal(report.bandHints.RE,1);
+  assert.equal(report.redNirCandidateGroups,0);
+  assert.equal(report.fullFourBandHintGroups,0);
+  assert.doesNotMatch(result.output,
+    /3377fb05|SECRET|PRIVATE|MS_RE_CAMERA|GpsLatitude|GPS|drone-dji/);
+  assert.equal(report.ndviReady,false);
+  assert.equal(report.ndreReady,false);
 });
