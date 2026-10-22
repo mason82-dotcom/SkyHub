@@ -299,11 +299,12 @@ lief bereits mit dem angepassten Katalog.
   `cameras`, `mode_code_reason` und `offline_map_enable`. Nicht gesendet
   wurden in diesem Zeitraum 24 OSD- und 44 State-Wurzelfelder des Katalogs.
 - `offline_map_enable` ist am Gerät bestätigt (neu aus der M4-Serien-Seite).
-- `rth_mode` und `commander_flight_mode` (Namen der M4-Serien-Seite) wurden
-  nicht gesendet. Das Gerät sendet stattdessen `current_rth_mode` und
-  `current_commander_flight_mode` (Namen der generischen Aircraft-Tabelle,
-  bereits im Katalog). Die beiden M4-Namen bleiben laut Dokumentation im
-  Katalog, sind am Gerät aber **nicht bestätigt**.
+- `rth_mode` und `commander_flight_mode` (Namen der M4-Serien-Seite): In der ersten
+  Beobachtung wurden sie nicht gesendet, das Gerät sendete stattdessen `current_rth_mode`
+  und `current_commander_flight_mode` (Namen der generischen Aircraft-Tabelle). In einer
+  späteren Beobachtung am selben Tag kamen **`rth_mode` und `commander_flight_mode` im State**
+  an, die `current_*`-Namen dagegen nicht. Beide Namenspaare sind im Katalog; welcher Name
+  gesendet wird, hing hier vom Zeitpunkt ab. Die Ursache wurde nicht geklärt.
 - `payloads` und `wpmz_version` sendet die M4T wie die Mavic 3M, obwohl beide
   Felder nur in den Dock-to-Cloud-Seiten dokumentiert sind.
 - Position: Ohne RTK-Lösung `rtkFixState` 0, `positionQuality` 5 (19 GPS-,
@@ -375,6 +376,26 @@ Deshalb wurde sie **nicht** übernommen.
 über die Begleit-App und Organisationsbindung (HTTPS), DRC, FTS, Fernsteuerung/Debug,
 Firmware-Upgrade, Livestream, Medien, Wayline, benutzerdefinierte Flugzonen, Multi-Dock,
 KI-Zielerkennung und Remote-Log.
+
+### Zweite Beobachtung mit allen vier Geräten (22.10.2026)
+
+Alle vier Geräte (RC Pro, RC Plus 2, Mavic 3M, Matrice 4T) sendeten frisches OSD; die Flugzeuge
+hatten in Innenräumen keinen GNSS-Fix (`position_state.is_fixed` 0, `quality` nicht gesetzt),
+ein RTK-Test war daher nicht möglich. Nur die RC Pro meldete eine gültige Position.
+
+- **RC Pro:** Die fünf mit dem Katalogabgleich ergänzten Felder `wireless_link.4g_link_state`,
+  `4g_quality`, `4g_uav_quality`, `4g_gnd_quality` und `4g_freq_band` kommen im OSD an; die Zahl
+  beobachteter dokumentierter Pfade stieg von 15 auf 22. Vor der Ergänzung hätte der Parser diese
+  Werte verworfen. `drc_state` und `cloud_control_auth` sendete die RC Pro nicht (die RC Plus 2
+  sendet `drc_state`).
+- **Matrice 4T:** 110 dokumentierte Pfade beobachtet, davon 91 innerhalb von 15 s; zusätzlich zu
+  `offline_map_enable` nun auch `rth_mode` und `commander_flight_mode` (siehe oben).
+- **Mavic 3M:** 75 Pfade beobachtet, 63 aktuell.
+- **HMS ohne Text:** Die M4T meldete den Alarmcode `0x16070042`. Für ihn enthält die
+  eingebettete Textkopie keinen Eintrag, die offizielle `hms.json` dagegen schon („RTK base
+  station data error …“). Das ist ein belegter Fall der oben beschriebenen 1.681 fehlenden
+  Schlüssel. Der zweite Code `0x1B0A0001` hat in der Kopie den älteren Text „GPS signal weak“,
+  die offizielle Datei nennt „GNSS signal weak“.
 
 ## Verifikation auf dem Pi (ohne Neustart)
 
