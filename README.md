@@ -4,6 +4,32 @@
 
 SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker gehören noch nicht zum Funktionsumfang. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
 
+## Bereits bestätigte DJI-Hardwareabnahmen
+
+Die Hardwarekommunikation ist **nicht generell ungeprüft**. Bereits durchgeführt
+und im Repository dokumentiert sind:
+
+- **RC Pro Enterprise + Mavic 3M (21.10.2026):** Pilot-2-Kopplung,
+  MQTT-Transport, Gateway-/Aircraft-Topologie, frisches OSD und
+  modellbezogene State-/Property-Diagnosen; siehe
+  [Hardwareabnahme](docs/hardware-rc-pro-m3m.md) und
+  [DJI-Feldabgleich](docs/dji-118-field-audit.md).
+- **RC Plus 2 Enterprise + Matrice 4T (22.10.2026):** reale Pilot-2-Kopplung,
+  Live-OSD, modellbezogene Feldabnahme und ein zweiter Lauf mit frischer,
+  zeitverifizierter GPS-/RTK-Position; siehe
+  [DJI-Feldabgleich](docs/dji-118-field-audit.md).
+- **MinIO-/M3M-Medienpipeline:** reale read-only Pi-S3-Inventur von 424
+  Objekten und begrenzte TIFF-Prüfungen, ohne Freigabe radiometrischer
+  Vegetationsindizes; siehe
+  [S3-Hardware-Smoke](docs/smart-farming-m3m-s3-hardware-smoke.md).
+
+**Nur die mit diesem Patch neu eingeführte TSA-Funktionsstrecke**
+(Pilot-2-JSBridge → HTTPS-Topologie-GET / WSS `/ws/tsa` →
+Lagebilddarstellung, inklusive Reverse-Proxy-IP und Log-Redaktion)
+besitzt in den hier versionierten Nachweisen noch keine eigenständige
+End-to-End-Hardwareabnahme. Bestehende MQTT-/OSD-Hardwaretests sind
+dafür nicht zu wiederholen, solange keine Regression festgestellt wird.
+
 ## Pilot 2 TSA (isolierter Entwicklungsstand)
 
 TSA ist standardmäßig deaktiviert. Um es gezielt zu testen, müssen
