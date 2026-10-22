@@ -29,7 +29,7 @@ docker run -d --name "$SERVER" --network "$NETWORK" \
   -v "$TEMP/certs:/certs:ro" \
   -e MINIO_ROOT_USER=ci_sts_root \
   -e MINIO_ROOT_PASSWORD=ci_sts_root_only_not_production_2026 \
-  minio/minio:RELEASE.2023-09-04T19-57-37Z \
+  pgsty/silo:RELEASE.2026-10-18T00-00-00Z \
   server --certs-dir /certs /data >/dev/null
 
 healthy=false
@@ -50,7 +50,7 @@ mc(){
   docker run --rm --network "$NETWORK" \
     -e "MC_HOST_ci=https://ci_sts_root:ci_sts_root_only_not_production_2026@$SERVER:9000" \
     -v "$PWD/scripts/ci-minio-sts-parent-policy.json:/policy.json:ro" \
-    minio/mc:latest --insecure "$@"
+    pgsty/mc:RELEASE.2026-10-18T00-00-00Z --insecure "$@"
 }
 mc mb ci/dji-cloud >/dev/null
 mc admin user add ci skyhub_sts_ci_upload ci_sts_upload_only_not_production_2026 >/dev/null
