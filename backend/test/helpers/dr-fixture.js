@@ -81,4 +81,64 @@ function createDrFixture() {
   };
 }
 
-module.exports = {createDrFixture, HISTORIC, IAM};
+// Synthetic text logs in the shape scripts/minio-dr-import.js parses.
+function createImportEvidence() {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'skyhub-dr-import-fixture-')
+  );
+
+  const restore = [
+    '=== SkyHub MinIO Disaster Recovery (synthetic test fixture) ===',
+    'Start: 2026-10-22T03:23:08+02:00',
+    '',
+    '=== Backup ===',
+    'Archivprüfung: PASS',
+    'Restore-Extraktion: PASS',
+    'Wiederhergestellte Einträge: 54887',
+    '',
+    '=== Testcontainer-Netzwerk ===',
+    'Docker-Isolation: PASS',
+    '',
+    '=== S3-Funktionstest ===',
+    'MinIO-Start: PASS',
+    'Buckets: 5/5 PASS',
+    'Objekt-Lesetests: 4/4 PASS',
+    'S3-Lesefehler: 0',
+    '',
+    '=== Integritätsvergleich ===',
+    'Manifest-Einträge: 54887',
+    'Exit-Code: 0',
+    'Ergebnis: RESTORE_INTEGRITY_PASS',
+    'Ende: 2026-10-22T03:25:17+02:00',
+    ''
+  ].join('\n');
+
+  const integrity = [
+    'START 2026-10-22T03:23:08+02:00',
+    'PASS: complete file set, SHA256, sizes, owners, modes and xattrs match.',
+    'Entries: 54887',
+    'END 2026-10-22T03:25:17+02:00',
+    'EXIT_CODE=0',
+    'RESTORE_INTEGRITY_PASS',
+    ''
+  ].join('\n');
+
+  const files = {
+    'minio-restore-20261022.txt': restore,
+    'minio-integrity-20261022.log': integrity,
+    'minio-integrity-20261022.exit': '0\n'
+  };
+
+  for (const [name, content] of Object.entries(files)) {
+    fs.writeFileSync(path.join(directory, name), content, {mode: 0o600});
+  }
+
+  return {
+    directory,
+    cleanup() {
+      fs.rmSync(directory, {recursive: true, force: true});
+    }
+  };
+}
+
+module.exports = {createDrFixture, createImportEvidence, HISTORIC, IAM};

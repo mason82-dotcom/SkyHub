@@ -10,9 +10,12 @@ const {
   importReport
 } = require('../../scripts/minio-dr-import');
 
-const SOURCE = path.resolve(
-  __dirname, '../../dr-reports'
-);
+const {createImportEvidence} = require('./helpers/dr-fixture');
+
+// Synthetic logs; the real dr-reports/ directory is git-ignored.
+const fixture = createImportEvidence();
+const SOURCE = fixture.directory;
+test.after(() => fixture.cleanup());
 
 const FILES = [
   'minio-restore-20261022.txt',
@@ -57,7 +60,7 @@ function replaceEvidence(directory, filename, before, after) {
   );
 }
 
-test('real DR evidence remains incomplete without IAM', () => {
+test('DR evidence remains incomplete without IAM', () => {
   const result = importReport(SOURCE);
 
   assert.equal(result.status, 'incomplete');
