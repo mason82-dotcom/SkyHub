@@ -90,8 +90,13 @@ function classifyDJIXmp(bytes){
   const fromName=bandFromName(extractEnumValue(text,'BandName'));
   const fromSource=bandFromSource(extractEnumValue(text,'ImageSource'));
   const inconsistent=fromName&&fromSource&&fromName!==fromSource;
+  // If a field is present but duplicated, malformed or outside our enum,
+  // a value from the *other* field must not silently infer a band.
+  const unresolved=(presence.BandName&&!fromName)||
+    (presence.ImageSource&&!fromSource);
   return {status:'ok',
-    bandHint:inconsistent?'inconsistent':(fromName||fromSource||'unknown'),
+    bandHint:inconsistent?'inconsistent':
+      unresolved?'unknown':(fromName||fromSource||'unknown'),
     djiFieldPresence:presence};
 }
 function summarizeXmp(records){
@@ -118,6 +123,52 @@ function summarizeXmp(records){
     caveat:'XMP marker names and whitelisted band hints do not prove DJI camera origin, calibration, image integrity or vegetative index readiness.'
   };
 }
+
+function validateXmpAggregateReport(report,expected){
+  // A subprocess can return only these enumerated aggregate fields. Reject
+  // untrusted extra keys before printing anything outside the container.
+  const baseline=summarizeXmp([]);
+  const numeric=(n)=>Number.isSafeInteger(n)&&n>=0&&n<=expected;
+  const exactKeys=(value,keys)=>value&&typeof value==='object'&&
+    !Array.isArray(value)&&
+    Object.keys(value).length===keys.length&&
+    keys.every(key=>Object.hasOwn(value,key));
+  if(!Number.isInteger(expected)||expected<0||expected>12||
+     !exactKeys(report,Object.keys(baseline))||
+     report.schema!==baseline.schema||
+     report.classification!==baseline.classification||
+     report.caveat!==baseline.caveat||
+     report.examined!==expected)
+    throw new RangeError('Unsafe XMP aggregate report');
+  for(const flag of ['imagePayloadVerified','m3mSourceVerified',
+    'radiometricCalibrationVerified','bandCoregistrationVerified',
+    'reflectanceReady','ndviReady','ndreReady']){
+    if(report[flag]!==false)
+      throw new RangeError('Unsafe XMP aggregate flags');
+  }
+  const domains=[
+    ['status',STATUSES],
+    ['bandHints',BAND_HINTS],
+    ['fieldPresenceCount',MARKERS]
+  ];
+  for(const [name,keys] of domains){
+    if(!exactKeys(report[name],keys)||keys.some(key=>!numeric(report[name][key])))
+      throw new RangeError('Unsafe XMP aggregate counter');
+  }
+  const sum=(obj)=>Object.values(obj).reduce((n,v)=>n+v,0);
+  if(sum(report.status)!==expected||sum(report.bandHints)!==expected||
+     Object.values(report.fieldPresenceCount).some(x=>x>report.status.ok))
+    throw new RangeError('Inconsistent XMP aggregate totals');
+  // Re-emit only the validated schema; never propagate unverified fields.
+  return {
+    ...baseline,examined:expected,
+    status:Object.fromEntries(STATUSES.map(k=>[k,report.status[k]])),
+    bandHints:Object.fromEntries(BAND_HINTS.map(k=>[k,report.bandHints[k]])),
+    fieldPresenceCount:Object.fromEntries(
+      MARKERS.map(k=>[k,report.fieldPresenceCount[k]]))
+  };
+}
+
 module.exports={MARKERS,BANDS,STATUSES,EMPTY,recordStatus,
   locateXmpFromIfd,extractEnumValue,bandFromName,bandFromSource,
-  classifyDJIXmp,summarizeXmp};
+  classifyDJIXmp,summarizeXmp,validateXmpAggregateReport};
