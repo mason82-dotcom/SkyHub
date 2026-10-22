@@ -51,6 +51,14 @@ Die Funktion verwendet ausschließlich neu erzeugte Testobjektschlüssel und pr�
 
 **Jeder** unerwartete Erfolg führt zum Testfehler. HTTP 404, Verbindungsfehler oder allgemeine Exceptions zählen nicht als Berechtigungsverweigerung. Da ein reiner Upload-Benutzer den hochgeladenen Testgegenstand nicht löschen kann, muss das Wegwerf-Testbucket nach der Abnahme durch den isolierten Testadministrator bereinigt werden. **Niemals** gegen produktive Missionsdaten oder das produktive MinIO-Bucket ausführen.
 
+## Automatisierte reale Abnahme in GitHub Actions
+
+Der CI-Job `isolated-minio-sts` startet mit `scripts/ci-minio-sts-live.sh` eine **temporäre TLS-MinIO-Instanz** in einem separaten Docker-Netz. Die eigens für den Workflow erzeugten Testidentitäten (`ci_sts_root` und der nicht administrative `skyhub_sts_ci_upload`) besitzen keine produktiven Schlüssel. Der Test erstellt den Wegwerf-Bucket `dji-cloud`, bindet die Elternpolicy `scripts/ci-minio-sts-parent-policy.json` an den Testbenutzer und verwendet danach den **echten** signierten `AssumeRole`-Aufruf mit der noch engeren Workspace-Session-Policy.
+
+Das Skript `scripts/ci-minio-sts-live.js` prüft mit den echten STS-Credentials die fünf Operationen aus dem Abschnitt oben gegen MinIO. Anschließend werden Container, Netzwerk und temporäres Zertifikat automatisch entfernt. Keine Portfreigabe außer `127.0.0.1:19010` auf dem GitHub-CI-Runner.
+
+**Das Vorhandensein des CI-Jobs ist noch kein Erfolgsnachweis:** Nur ein grüner `isolated-minio-sts`-Job beweist die End-to-End-Funktion gegen die dort gewählte MinIO-Version. Eine erfolgreiche CI-Abnahme ersetzt außerdem nicht den separaten Versions-/TLS-/Policy-Abgleich auf dem Raspberry Pi.
+
 ## Status und Abnahmekriterien
 
 - `node --test backend/test/minio-sts-issuer.test.js backend/test/minio-sts-attestation.test.js`: synthetische Unit-/Adaptertests im CI.
