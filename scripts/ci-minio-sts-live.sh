@@ -50,6 +50,7 @@ mc(){
   docker run --rm --network "$NETWORK" \
     -e "MC_HOST_ci=https://ci_sts_root:ci_sts_root_only_not_production_2026@$SERVER:9000" \
     -v "$PWD/scripts/ci-minio-sts-parent-policy.json:/policy.json:ro" \
+    -v "$PWD/scripts/ci-minio-m3m-read-policy.json:/read-policy.json:ro" \
     pgsty/mc:RELEASE.2026-10-18T00-00-00Z --insecure "$@"
 }
 mc mb ci/dji-cloud >/dev/null
@@ -60,3 +61,10 @@ mc admin policy attach ci ci-sts-put-only --user skyhub_sts_ci_upload >/dev/null
 export NODE_EXTRA_CA_CERTS="$TEMP/certs/public.crt"
 export SKYHUB_STS_CI_UPLOAD_SECRET=ci_sts_upload_only_not_production_2026
 node scripts/ci-minio-sts-live.js
+
+# Separate GET-only M3M test identity; no S3 root keys reach the probe.
+mc admin user add ci skyhub_m3m_ci_reader ci_m3m_read_only_not_production_2026 >/dev/null
+mc admin policy create ci ci-m3m-read-only /read-policy.json >/dev/null
+mc admin policy attach ci ci-m3m-read-only --user skyhub_m3m_ci_reader >/dev/null
+export SKYHUB_M3M_CI_READ_SECRET=ci_m3m_read_only_not_production_2026
+node scripts/ci-minio-m3m-range-live.js
