@@ -307,7 +307,7 @@ lief bereits mit dem angepassten Katalog.
   M4-Seite dokumentierte Wert 10 („RTK fixed“) trat in dieser Beobachtung
   **nicht** auf; ob die M4T ihn je meldet, ist offen. Der aufgenommene Wert 10
   im Katalog bleibt eine Dokumentationsvorgabe, keine Gerätebeobachtung.
-- 69 bzw. mehr Nachrichten wurden vom Backend als Duplikate verworfen
+- Zum Messzeitpunkt waren 69 Nachrichten vom Backend als Duplikate verworfen
   (`mqttDroppedByReason.duplicate`), solange RC und Flugzeug gemeinsam sendeten;
   das ist der Wiederholungsschutz, kein Datenverlust.
 
