@@ -24,9 +24,9 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Mavic 3E | `0/77/0` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3T | `0/77/1` | `mavic3`, 144 Pfade | offizielle Mavic-3-Familientabelle |
 | Mavic 3M | `0/77/2` | `mavic3`, 144 Pfade | **vorläufiges** Familienprofil; ID am 20.10.2026 am echten Gerät beobachtet, nicht in der DJI-Cloud-Produktliste |
-| Matrice 4T | `0/99/1` | `matrice4T`, 199 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen; M4T-Verfügbarkeit nicht verifiziert |
+| Matrice 4T | `0/99/1` | `matrice4T`, 199 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Verfügbarkeit weiter nicht vollständig verifiziert |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 48 Pfade | offizielle RC-Pro-Feldtabelle |
-| RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; Hardwareprüfung ausstehend |
+| RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Abnahme mit Livestream und SIM ausstehend |
 
 Die Felderzahlen enthalten verschachtelte `struct`- und `array`-Pfade,
 also keine Garantie für ebenso viele gleichzeitig sendende Messwerte.
@@ -168,6 +168,34 @@ Postgres/Redis/Compose, Caddy und Pilot-2-Pairing bleiben unangetastet.
 DJI SmartFarm-Multispektralprodukte wie NDVI/NDRE sind **Medienprodukte**,
 keine automatisch verfügbaren MQTT-OSD-Eigenschaften, und werden nicht
 als ausgedachte Telemetriefelder eingeführt.
+
+## Hardwarebeobachtung vom 22.10.2026 (RC Plus 2 Enterprise, Matrice 4T)
+
+Quelle: `node scripts/pi-telemetry-fields-check.js` auf dem Pi, rein lesend.
+Ausgewertet wurden nur Feldnamen; keine Kennungen, Koordinaten oder Rohwerte.
+Die RC Plus 2 war am selben Tag über die Pilot-2-Kopplung angebunden worden.
+
+| Gerät | OSD frisch | Aktuell gemeldete Felder | Beobachtet / auswertbar |
+|---|---|---|---|
+| RC Plus 2 Enterprise (`2/174/0`) | ja | 14 | 21 / 47 |
+| Matrice 4T (`0/99/1`) | ja | 91 | 91 / 178 |
+
+RC Plus 2: Beobachtet sind `capacity_percent`, `height`, `wireless_link`
+mit SDR- und 4G-Unterfeldern, `drc_state`, `state:live_capacity` und
+`state:firmware_version`. Das stützt das Profil `rcPlus2`. Nicht beobachtet
+sind `live_status`, `dongle_infos` und die Kameraliste in `live_capacity`;
+diese Felder hängen vermutlich an einem laufenden Livestream bzw. einer
+SIM/eSIM, was in diesem Test nicht gegeben war und hier nicht belegt ist.
+
+Matrice 4T: 91 dokumentierte Felder und 5 von 9 dynamischen Gimbal-Feldtypen
+(`gimbal_pitch`, `gimbal_roll`, `gimbal_yaw`, `measure_target_error_state`,
+`zoom_factor`) waren aktuell. Das Profil bleibt vorläufig, weil 87
+auswertbare Felder (u. a. `dongle_infos`, IR-Messbereich) nicht beobachtet wurden.
+
+Grenzen: Bei keinem Gerät war ein GNSS-Fix verfügbar; `latitude` und
+`longitude` fehlen, die Nullposition wird bewusst nicht als Position genutzt.
+Fehlende Felder belegen keine fehlende Geräteunterstützung. Ein einzelner
+Snapshot belegt weder Feldwerte noch deren Plausibilität.
 
 ## Verifikation auf dem Pi (ohne Neustart)
 
