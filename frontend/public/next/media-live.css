@@ -1,0 +1,15 @@
+/* Live S3 explorer is deliberately visually separate from synthetic sample assets below. */
+#storage-inspector{margin-bottom:14px;padding:16px;display:grid;gap:10px}
+#storage-inspector .storage-help{margin:0;font-size:12px;line-height:1.55;opacity:.83}
+#storage-inspector .storage-controls{display:flex;flex-wrap:wrap;gap:9px;align-items:end}
+#storage-inspector .storage-controls label{display:grid;gap:5px;font-size:11px;min-width:150px}
+#storage-inspector .storage-controls input,
+#storage-inspector .storage-controls select{border:1px solid #355064;background:#0a1b29;color:#e4eef5;border-radius:7px;padding:9px;min-height:34px;max-width:100%}
+#storage-inspector .storage-controls .storage-prefix{flex:1;min-width:190px}
+#storage-inspector .storage-message{font-size:12px;min-height:18px;margin:0}
+#storage-inspector .storage-objects{list-style:none;display:grid;gap:7px;margin:0;padding:0;max-height:280px;overflow:auto}
+#storage-inspector .storage-object{display:grid;gap:3px;padding:9px;border:1px solid #2c4054;border-radius:6px;min-width:0}
+#storage-inspector .storage-object-name{overflow-wrap:anywhere;font-size:12px;font-weight:600}
+#storage-inspector .storage-object-meta{opacity:.75;font-size:11px}
+#storage-inspector .storage-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px}
+#storage-inspector button:disabled{opacity:.45;cursor:not-allowed}
