@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>SkyHub Next · Command Center</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{color-scheme:dark;--bg:#0b1320;--panel:#172536;--line:#304459;--text:#e3edf5;--muted:#a9bece;--accent:#34d399;--warning:#ffc47b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px system-ui,sans-serif;color:var(--text)}
+[hidden]{display:none!important}button,input,select{font:inherit;color:var(--text);border-radius:8px;border:1px solid #4a6278;background:#172b42;padding:9px}
+button{cursor:pointer;font-weight:650}button:hover:not(:disabled){background:#23425b}button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}a{color:#9de7fc}small,.muted{color:var(--muted)}
+header{border-bottom:1px solid var(--line);background:#101c2c;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 20px;flex-wrap:wrap}
+header strong{font-size:20px}header strong span{color:var(--accent)}.auth{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.auth input{max-width:220px}
+.shell{min-height:calc(100vh - 72px);display:grid;grid-template-columns:215px minmax(0,1fr)}
+aside{border-right:1px solid var(--line);background:#111e2e;padding:22px 12px}
+nav{display:grid;gap:10px}nav button,nav a{display:block;width:100%;text-align:left;padding:12px;border:1px solid transparent;border-radius:9px;background:none;color:#c3d5e2;text-decoration:none;font-weight:600}
+nav button[aria-current="page"]{background:#164438;border-color:#27705b;color:#9df6cd}
+nav a{border-color:var(--line)}nav a:hover{background:#243b52}
+main{padding:20px;min-width:0;max-width:1600px;width:100%;margin:auto}
+h1{font-size:21px;margin:2px 0 6px}h2{font-size:16px;margin:0 0 13px}h3{font-size:14px;margin:0 0 7px}
+p{line-height:1.5}.notice{color:#ffd5a4;border:1px solid #785b38;border-radius:10px;padding:12px;margin:15px 0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;min-width:0}
+.card label,.stat-label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+.stat-value{font:700 28px ui-monospace,monospace;color:#a2edd0}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr);gap:14px;margin-top:14px}
+#map{height:350px;border-radius:9px;background:#0b1929}.map-note{margin:10px 0 0;color:var(--muted);font-size:12px}
+.device-list{display:grid;gap:7px;max-height:340px;overflow:auto}
+.device-item{width:100%;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.device-item.selected{border-color:var(--accent)}.device-item small{display:block;margin-top:5px}
+dl{display:grid;grid-template-columns:1fr auto;gap:10px;margin:0}dt{color:var(--muted)}dd{margin:0;font:600 13px ui-monospace,monospace}
+.metrics{margin-top:12px}.metric-state{color:var(--warning);font:11px system-ui,sans-serif;display:block;text-align:right}
+#hms-list,#objects{list-style:none;padding:0;margin:0;display:grid;gap:8px;max-height:340px;overflow:auto}
+#hms-list li,#objects li{border:1px solid var(--line);border-radius:9px;padding:10px;background:#102035;overflow-wrap:anywhere}
+.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:10px 0 14px}.toolbar label{display:grid;gap:6px;min-width:150px;margin:0}.toolbar input{width:min(390px,80vw)}
+#media-message,#connection,#health-status,#m3m-message{overflow-wrap:anywhere}
+.modules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.modules h2{margin-bottom:10px}
+details{margin-top:15px}.smaller{font-size:12px;color:var(--muted)}.status-pill{display:inline-block;border:1px solid var(--line);border-radius:16px;padding:5px 10px;font-size:12px;color:var(--muted)}
+@media(max-width:900px){.layout,.modules{grid-template-columns:1fr}.shell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);padding:9px}nav{display:flex;flex-wrap:wrap}nav button,nav a{width:auto;padding:9px}main{padding:12px}#map{height:290px}}
+@media(max-width:440px){.stats{grid-template-columns:1fr 1fr}.stat-value{font-size:23px}}
+</style>
+</head>
+<body>
+<header>
+ <div><strong>SkyHub <span>Next</span> · Command Center</strong><div class="smaller">DJI Cloud API 1.18 · ausschließlich lesende Ansicht</div></div>
+ <div class="auth"><input id="token" type="password" autocomplete="off" placeholder="Zugriffstoken" aria-label="SkyHub Zugriffstoken"><button id="connect" type="button">Verbinden</button><span id="connection" role="status">Nicht verbunden</span></div>
+</header>
+<div class="shell">
+<aside><nav aria-label="Command Center Navigation">
+<button type="button" data-view="dashboard" aria-current="page">Dashboard</button>
+<button type="button" data-view="media">Medien / MinIO</button>
+<button type="button" data-view="analysis">Analyse-Module</button>
+<a href="/wpml-editor.html">WPML-Missionseditor ↗</a>
+<a href="/wpml-survey-preview.html">Vermessungsvorschau ↗</a>
+<a href="/">Bestehendes Live-Dashboard ↗</a>
+</nav></aside>
+<main>
+<section id="dashboard">
+ <h1>Flottenübersicht</h1><p class="muted">Echte DJI-Registry-Daten. Keine simulierte Telemetrie, keine Flugsteuerung.</p>
+ <div class="stats">
+  <div class="card"><span class="stat-label">Registrierte Geräte</span><strong class="stat-value" id="count">—</strong></div>
+  <div class="card"><span class="stat-label">OSD jünger als 15 s</span><strong class="stat-value" id="live">—</strong></div>
+  <div class="card"><span class="stat-label">Aktuelle HMS Stufe 2</span><strong class="stat-value" id="warnings">—</strong></div>
+ </div>
+ <div class="layout">
+  <div class="card"><h2>Gerätekarte</h2><div id="map" aria-label="Karte mit bekannten Gerätedaten"></div><p id="map-note" class="map-note" role="status">Keine geprüfte Geräteposition geladen. Kartenkacheln kommen von OpenStreetMap.</p></div>
+  <div class="card"><h2>Geräte</h2><div id="devices" class="device-list"><p class="muted">Bitte verbinden.</p></div></div>
+  <div class="card"><h2>Ausgewähltes Fluggerät</h2><p id="selected-label" class="muted">Keines ausgewählt.</p>
+   <dl id="telemetry" class="metrics"></dl>
+   <p class="smaller">Messwerte werden mit feldbezogener Aktualität gekennzeichnet. Kein FPV-Stream verfügbar.</p>
+  </div>
+  <div class="card"><h2>HMS und Datenpfad</h2><p id="health-status" role="status">Gesundheitsstatus unbekannt</p><button id="check-health" type="button">Erneut prüfen</button>
+   <h3 style="margin-top:20px">Aktuelle HMS-Meldungen</h3><ul id="hms-list"><li>Keine aktuellen Meldungen geladen.</li></ul>
+  </div>
+ </div>
+</section>
+<section id="media" hidden>
+ <h1>MinIO-Medieninventar</h1><p class="muted">Nur lesende Bucket- und Objektlisten. Keine Uploads, Freigabe-URLs, Objektinhalte oder Zugangsdaten.</p>
+ <p class="notice">Dieses Modul benötigt SKYHUB_MEDIA_ENABLED=true und die bestehende geschützte SkyHub-S3-Konfiguration. Bei deaktiviertem Backend bleibt es gesperrt.</p>
+ <div class="card">
+  <div class="toolbar">
+   <button type="button" id="load-buckets" disabled>Buckets abrufen</button>
+   <label>Bucket<select id="bucket" disabled><option value="">—</option></select></label>
+   <label>Präfix (optional)<input id="prefix" maxlength="512" placeholder="z. B. missions/"></label>
+   <button type="button" id="load-objects" disabled>Objekte lesen</button>
+  </div>
+  <p id="media-message" role="status">Nicht verbunden.</p>
+  <ul id="objects"></ul>
+ </div>
+</section>
+<section id="analysis" hidden>
+ <h1>Analyse-Module</h1><p class="muted">Aktueller Entwicklungsstatus ohne simulierte Ergebnisse.</p>
+ <div class="modules">
+  <div class="card"><h2>M3M Smart Farming</h2><span class="status-pill">Inventar / Metadaten · lesend</span>
+   <p>Die bestehende M3M-Inventur kann Aufnahmegruppen zählen und XMP-Marker inspizieren. Kalibrierte Reflektanz, NDVI/NDRE, VRA-Karten und ISO-XML sind nicht freigegeben.</p>
+   <button type="button" id="load-m3m" disabled>M3M-Inventur für Präfix lesen</button><p id="m3m-message" class="smaller" role="status">Zuerst im Medienbereich einen Präfix eingeben.</p>
+  </div>
+  <div class="card"><h2>M3T / M4T Thermal</h2><span class="status-pill">Keine radiometrische Freigabe</span><p>Kein behaupteter Hotspot-Befund und keine zufälligen Temperaturen. Thermische Berechnung benötigt echte kalibrierte DJI-R-JPEG-Daten.</p></div>
+  <div class="card"><h2>M3E / M4E Surveying</h2><span class="status-pill">Keine aktive Photogrammetrie</span><p>WebODM, Punktwolken und Cloud Optimized GeoTIFF werden hier nicht vorgetäuscht. Die vorhandene WPML-Vermessungsvorschau bleibt separat erreichbar.</p><a href="/wpml-survey-preview.html">Vermessungsvorschau öffnen</a></div>
+ </div>
+</section>
+</main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/command-center-core.js"></script>
+<script src="/command-center.js"></script>
+</body>
+</html>
