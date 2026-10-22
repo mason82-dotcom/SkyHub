@@ -13,7 +13,7 @@ const {
 }=require('../backend/m3m-xmp-markers');
 const {createApiStorage,discoverFirstPagePrefix,piInvoker}
   =require('./pi-m3m-s3-inventory-check');
-const {collectUnknownTiffs,MAX_TIFF}
+const {collectUnknownTiffs,collectAllTiffs,MAX_TIFF}
   =require('../backend/m3m-s3-tiff-candidates');
 
 const CHILD=[
@@ -52,20 +52,24 @@ async function runXmpProbe(keys,prefix,composeDir){
 async function main(args){
   if(args.length===1&&args[0]==='--help'){
     console.log('Usage: node scripts/pi-m3m-xmp-markers-check.js --auto-first-page');
+    console.log('   or: node scripts/pi-m3m-xmp-markers-check.js --all-tiffs-first-page');
     console.log('Read-only opt-in: <=12 TIFFs, <=3 ranged GETs, <=33,808 requested bytes/object.');
     console.log('Private XMP may be read in backend memory; only fixed field-presence counters and band hints printed.');
     return;
   }
-  if(args.length!==1||args[0]!=='--auto-first-page')
+  const all=args.length===1&&args[0]==='--all-tiffs-first-page';
+  if(args.length!==1||(!all&&args[0]!=='--auto-first-page'))
     throw Error('Unsupported XMP probe argument');
   const dir=path.resolve(process.env.SKYHUB_COMPOSE_DIR||path.join(__dirname,'..'));
   const storage=createApiStorage(piInvoker(dir));
   const prefix=await discoverFirstPagePrefix(storage);
-  const keys=await collectUnknownTiffs(storage,prefix);
+  const keys=all?await collectAllTiffs(storage,prefix):
+    await collectUnknownTiffs(storage,prefix);
   const report=await runXmpProbe(keys,prefix,dir);
   console.log(JSON.stringify({...report,
     discoveryScope:'first-100-entries-only',
-    examinedScope:'unknown-direct-TIFFs-in-one-prefix',
+    examinedScope:all?'all-direct-TIFFs-in-one-prefix':
+      'unknown-direct-TIFFs-in-one-prefix',
     maxRequestedBytesPerObject:33808,
     maxS3GetsPerObject:3
   },null,2));
