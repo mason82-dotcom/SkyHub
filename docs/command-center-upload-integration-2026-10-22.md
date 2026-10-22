@@ -65,3 +65,30 @@ node --test test/command-center-core.test.js test/command-center-page.test.js
 Mit dem neuen Branch ausschließlich den Quellcode prüfen;
 ein Pi-Deployment oder echter FPV-/DJI-Upload ist **nicht** damit bestätigt.
 Externe OSM-/Leaflet-Kartenressourcen benötigen Netzverbindung.
+
+## Folgeschritt: Browser-Stabilität und MinIO-Seitennavigation
+
+Branch `feature/command-center-media-hardening-20261022`:
+
+- Die bisherige Anzeige war auf maximal 100 Objekte beschränkt.
+  Jetzt folgt der Browser dem vom Backend ausgegebenen, **opaken**
+  `nextCursor` (nur GET, jeweils höchstens 100 Objekte).
+  Vorherige/Nächste-Seite und die Seitennummer sind sichtbar.
+- Die Seitenantwort muss Bucket und Präfix exakt bestätigen.
+  Objektanzahl, Objektgröße, Key-Präfix und Fortsetzungsmarker
+  werden explizit geprüft. Falsche Antworten unterbrechen
+  die Anzeige; es werden keine S3-Schreibrechte angefordert.
+- Ändert sich ein Bucket oder Präfix während eines noch
+  ausstehenden Abrufs, wird dessen alte Antwort ignoriert.
+  Cursor werden nicht persistiert und nicht in Logs geschrieben.
+- Mehrere schnelle Socket.IO-Updates führen höchstens zu
+  einer angesetzten UI-Aktualisierung in 200 ms. Fokus auf
+  der gewählten Geräteliste sowie ihre Scrollposition bleiben erhalten.
+- Neue Node.js-Tests simulieren Browser-DOM, authentifizierten
+  HTTP-GET, mehrseitige Ergebnisse, verspätete Antworten,
+  ungültige Cursor und viele Socket.IO-Events. Kein Pilot 2,
+  MinIO, MQTT oder Drohnenhardware wird für diese Tests benötigt.
+
+**Betriebsgrenze:** Dieses Review ersetzt keinen visuellen
+Browser-Smoke-Test und keinen Raspberry-Pi-Rollout. Die bereits
+vorhandenen API- und Gerätefunktionen wurden nicht geändert.
