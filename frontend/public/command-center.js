@@ -195,15 +195,19 @@
  }
  async function loadM3m(){
    const prefix=prefixValue();
-   if(!prefix){setMessage('m3m-message','Einen konkreten M3M-Präfix im Medienbereich angeben.');return;}
+   if(prefix.length<2||!prefix.endsWith('/')){setMessage('m3m-message','Einen konkreten M3M-Präfix mit abschließendem / eingeben.');return;}
    setMessage('m3m-message','M3M-Inventur wird geprüft …');
    try{
      const report=await readApi('/api/media/m3m/inventory?prefix='+encodeURIComponent(prefix));
      // The backend only releases aggregate inventory. Never display arbitrary raw JSON.
-     const examined=Number.isInteger(report.examined)?report.examined:null;
-     setMessage('m3m-message','Inventarantwort empfangen'+
-       (examined!==null?' · geprüfte Einträge: '+examined:'')+
-       '. Keine Aussage zu kalibrierter Reflektanz, NDVI oder NDRE.');
+     if(report.schema!=='skyhub-m3m-media-inventory-v1')throw new Error('Unbekanntes Inventarschema');
+     const count=key=>Number.isInteger(report[key])&&report[key]>=0?report[key]:'—';
+     setMessage('m3m-message','Dateinamen geprüft: '+count('totalEntries')+
+       ' · Spektralsätze: '+count('spectralSets')+
+       ' · Fünf-Kanal-Gruppen: '+count('fiveChannelSets')+
+       ' · unvollständig: '+count('partialSets')+
+       ' · doppelt: '+count('duplicateSets')+
+       '. Nur Dateinamenshinweise! Reflektanz, NDVI und NDRE nicht freigegeben.');
    }catch(err){setMessage('m3m-message',err.message);}
  }
  document.querySelectorAll('nav button[data-view]').forEach(button=>
