@@ -629,3 +629,71 @@ benötigt u. a. Kalibrierung und Bandregistrierung.
 Eine aus Metadaten abgelesene Bandbezeichnung ist
 daher keine NDVI-Freigabe.
 
+
+
+## Sichere Capture-Zuordnung: DJI-XMP-CaptureUUID als Gleichheitsmerkmal
+
+Die offizielle DJI-Anleitung **Mavic 3M Image Processing Guide v1.0,
+Seite 4 (2023)** dokumentiert **Capture UUID (UUID v4)** als
+"Unique label for one capture". Gleiche Capture UUID über
+verschiedene Spektralkanäle ist deshalb ein relevanter
+**Aufnahmegruppen-Hinweis**, deutlich besser als ein bloßer
+Ordner- oder TIFF-Dateiname. Die Verlässlichkeit der XMP-
+Metadatenherkunft wird damit aber noch nicht verifiziert.
+
+Quelle: https://dl.djicdn.com/downloads/DJI_Mavic_3_Enterprise/20230829/Mavic_3M_Image_Processing_Guide_EN.pdf
+
+Der bereits erfolgreiche Pi-XMP-Volltest ergab **acht TIFFs
+mit R=4 und NIR=4**, jedoch keine Information darüber, welche
+TIFFs tatsächlich zur selben Aufnahme gehören.
+
+Daher wurde ein **separater, optionaler** Test vorbereitet:
+
+    cd ~/Projekte/SkyHub-Next || exit 1
+    node --test \
+      backend/test/m3m-xmp-capture-groups.test.js \
+      backend/test/pi-m3m-xmp-markers.test.js
+    node scripts/pi-m3m-xmp-markers-check.js --help
+
+    # Nur mit Zustimmung zur begrenzten XMP-Leseoperation
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-xmp-markers-check.js \
+      --capture-groups-first-page
+
+Dieser Prüfer verwendet denselben bereits laufenden Container,
+dieselben bisherigen S3-Reader-Berechtigungen und pro direkter
+TIFF-Datei höchstens **drei bestätigte Bytebereichs-Leseoperationen
+mit zusammen 33.808 Bytes**. Die Grenzen sind **12 Dateien** und
+der eine über die ersten 100 Bucket-Einträge erkannte Prefix.
+
+Neue **in-Backend-only**-Logik:
+- \`CaptureUUID\` und \`CaptureUuid\` nur als genau einmal vorhandene,
+  strikt formatierte **UUID v4** akzeptieren. Uneindeutige
+  oder anders formatierte Werte werden verworfen.
+- Intern ausschließlich exakte UUID-Gleichheit der
+  Bandhinweise G/R/RE/NIR berücksichtigen. Bandduplikate,
+  unbekannte oder widersprüchliche Bandhinweise verhindern
+  eine positive Capture-Gruppen-Klassifikation.
+- Der Bericht enthält ausschließlich **Zähler**:
+  \`uniqueCaptureUuidGroups\`,
+  \`redNirCandidateGroups\`, \`fullFourBandHintGroups\`,
+  \`groupsWithDuplicateBands\`,
+  \`groupsWithUnresolvedBands\`,
+  \`incompleteBandHintGroups\`,
+  \`withCaptureUuid\` und \`withoutCaptureUuid\`.
+- UUIDs, Aufnahmedaten, Namen, Kameraseriennummern, Bilder,
+  GPS-Daten und individuelle Gruppenzuordnungen werden
+  **niemals über die Containergrenze übertragen**.
+  Der Elternprozess kontrolliert Report-Format,
+  Summen und weiterhin ausgeschaltete Freigabeflags.
+
+**Interpretationsgrenze:** Ein \`redNirCandidateGroups > 0\`
+bestätigt lediglich zwei Bandhinweise mit gleicher **privat
+verarbeiteter DJI-artiger Capture UUID**. Noch keine
+Bandregistrierung, Pixelintegrität, radiometrische
+Kalibrierung, präzise Georeferenzierung oder NDVI-Freigabe.
+Ohne G und RE gibt es auch keinen vollständigen Vierband-Satz.
+
+**Die reale Pi-Abnahme dieser zusätzlichen UUID-Gruppierung steht
+noch aus.** Der vorausgegangene Acht-TIFF-Test wird nicht als
+Gruppen- oder NDVI-Abnahme interpretiert.
