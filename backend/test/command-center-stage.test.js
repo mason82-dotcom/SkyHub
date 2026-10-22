@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const http=require('node:http');
 const {once}=require('node:events');
 const {WebSocket,WebSocketServer}=require('ws');
-const {createStageServer,classify,parseUrl,options,preflight,STATIC}=
+const {createStageServer,classify,parseUrl,expectedLocalRequest,options,preflight,STATIC}=
   require('../../scripts/command-center-stage');
 
 async function listen(server){
@@ -51,6 +51,16 @@ test('gateway routing is strictly allowlisted and blocks DJI/S3 writes and pilot
   assert.equal(classify('POST','/socket.io/?EIO=4&transport=websocket'),null);
   assert.equal(classify('GET','/socket.io/?EIO=4&EIO=4&transport=polling'),null);
   assert.equal(parseUrl('/api/devices?abc=%0A').pathname,'/api/devices');
+});
+
+test('staging origin and Host must match exact local loopback port',()=>{
+  const good={headers:{host:'127.0.0.1:4015',origin:'http://localhost:4015'}};
+  assert.equal(expectedLocalRequest(good,4015),true);
+  assert.equal(expectedLocalRequest({headers:{host:'localhost:4015'}},4015),true);
+  assert.equal(expectedLocalRequest({headers:{host:'example.org:4015'}},4015),false);
+  assert.equal(expectedLocalRequest({headers:{host:'127.0.0.1:4015',origin:'https://bad.site'}},4015),false);
+  assert.equal(expectedLocalRequest({headers:{host:'127.0.0.1:4015',origin:'null'}},4015),false);
+  assert.equal(expectedLocalRequest({headers:{host:'127.0.0.1:4015','sec-fetch-site':'cross-site'}},4015),false);
 });
 
 test('port guard never takes existing Pi service ports',()=>{
@@ -103,6 +113,10 @@ test('staging serves allowlisted HTML, forwards authorized GET and blocks all DJ
     assert.match(script.headers['content-type'],/javascript/);
     const forbidden=await request(port,'/api/pilot-admin');
     assert.equal(forbidden.status,403);
+    const rebound=await request(port,'/api/devices',{headers:{Host:'evil.example:'+port}});
+    assert.equal(rebound.status,403);
+    const crossOrigin=await request(port,'/api/devices',{headers:{Origin:'https://evil.example'}});
+    assert.equal(crossOrigin.status,403);
     const pilot=await request(port,'/pilot-login.html');
     assert.equal(pilot.status,403);
     const post=await request(port,'/api/media/objects',{method:'POST',body:'{}'});
