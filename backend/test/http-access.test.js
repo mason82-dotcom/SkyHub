@@ -179,3 +179,19 @@ test('MinIO DR requires the actual SkyHub view token', async () => {
     404
   );
 });
+
+test('DJI field definitions are served for catalogued models and reject everything else',async()=>{
+  const get=model=>request('/api/diagnostics/dji-fields?model='+encodeURIComponent(model),{token:VIEW_TOKEN});
+  for(const [model,profile] of [['0:77:2','mavic3m'],['2:174:0','rcPlus2'],['3:2:0','dock2'],['0:100:1','matrice4D']]){
+    const response=await get(model);
+    assert.equal(response.status,200,model);
+    const body=await response.json();
+    assert.equal(body.profile,profile);
+    assert.ok(body.fields.length>0);
+  }
+  assert.equal((await get('0:67:0')).status,404);
+  assert.equal((await get('3:9:0')).status,404);
+  for(const bad of ['','abc','0:77','4:1:0','0:1000:0','0:77:2;x','0:77:2\\d'])
+    assert.equal((await get(bad)).status,400,bad);
+  assert.equal((await request('/api/diagnostics/dji-fields?model=0:77:2')).status,401);
+});

@@ -167,7 +167,7 @@ app.get('/api/diagnostics/mqtt-model-shapes',(req,res)=>res.json(mqttModelShapes
 // Example: /api/diagnostics/dji-fields?model=0:77:2
 app.get('/api/diagnostics/dji-fields',(req,res)=>{
   const key=req.query.model;
-  if (typeof key!=='string' || !/^[02]:\\d{1,3}:\\d{1,3}$/.test(key))
+  if (typeof key!=='string' || !/^[0-3]:\d{1,3}:\d{1,3}$/.test(key))
     return res.status(400).json({error:'Expected domain:type:sub_type'});
   const [domain,type,subType]=key.split(':');
   const schema=fieldDefinitions({domain,type:Number(type),subType:Number(subType)});
