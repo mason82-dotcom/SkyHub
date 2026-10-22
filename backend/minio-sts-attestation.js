@@ -19,10 +19,10 @@ async function requireDenied(s3,command,name){
   try{
     await s3.send(command);
   }catch(err){
+    // A generic HTTP 403 (e.g. ExpiredToken or InvalidAccessKeyId) is
+    // NOT evidence that the IAM session policy prevented the operation.
     if(err && (err.name==='AccessDenied'||err.name==='Forbidden') &&
-      (!err.$metadata?.httpStatusCode||err.$metadata.httpStatusCode===403))
-      return true;
-    if(err?.$metadata?.httpStatusCode===403)return true;
+      err.$metadata?.httpStatusCode===403)return true;
     throw new Error('STS permission probe inconclusive: '+name);
   }
   throw new Error('STS permission over-granted: '+name);
