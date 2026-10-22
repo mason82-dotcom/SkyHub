@@ -21,14 +21,16 @@
 
 - `backend/dji-service-reply-contract.js`: prüft nur `thing/product/{gateway_sn}/services_reply`; verwirft Retained-Pakete, ungültige IDs/Gateway-Zuordnungen, zu große JSON-Nachrichten und veraltete/zu zukünftige Zeitstempel.
 - Liefert nur erlaubte Felder (Gateway, `tid`, `bid`, optionale Methode, Zeitstempel, Status, Result-Code, terminal). Keine Payload-/Secret-Persistenz.
-- `correlateServiceReply` erfordert eine exakt passende ausstehende Anforderung einschließlich Gateway, `tid`, `bid`, optionaler Methode und Ablaufzeit; Zwischenstatus ist noch kein Erfolg.
-- Es gibt **keine** MQTT-Subscriptions, Publisher, Flug- oder MinIO-Schreiboperationen und **keinen** Import in `backend/server.js`. Ein bestandener Unit-Test ist kein Cloud-API-1.18-Hardware-Nachweis.
+- `correlateServiceReply` erfordert eine exakt passende ausstehende Anforderung einschließlich Gateway, `tid`, `bid`, optionaler Methode und Ablaufzeit; Zwischenstatus ist noch kein Erfolg. **Aktuell existiert keine Pending-Command-Registry: Es findet keinerlei echte Korrelation statt.**
+- `backend/mqtt-ingest.js` übergibt `services_reply`-Pakete vor jedem Registry-/Event-/Shape-Pfad an den Validator. Er verändert keine DJI-Subscriptions. Ungültige Antworten werden verworfen; gültige Antworten erhöhen ausschließlich die allgemeinen MQTT-Zähler und `mqttServiceReplyValidated` im bestehenden `/api/health`-JSON. Ungültige Antworten erhöhen `mqttServiceReplyRejected`.
+- Neu: `backend/test/mqtt-service-reply-ingest.test.js` prüft den ingest mit simuliertem MQTT-Client ohne Broker und weist nach, dass selbst gültige Antworten keine Geräte, WebSocket-Events, Redis- oder Trackdaten verändern.
+- **Keine** neuen MQTT-Subscriptions, Publisher, Flug- oder MinIO-Schreiboperationen; `backend/server.js` und `docker-compose.yml` bleiben unverändert. Der bereits bestehende `services_reply`-Subscriber bleibt erhalten. Unit-Tests sind kein Cloud-API-1.18-Hardware-Nachweis.
 
 Test lokal im SkyHub-Repository: `node --test backend/test/dji-service-reply-contract.test.js`. Der vorhandene Test-Runner nimmt die neue Datei künftig durch `node --test backend/test/*.test.js` auf.
 
 ## Reihenfolge für Folgeschritte
 
-1. `services_reply` im existierenden MQTT-Eingang nur lesend an den validierten Contract koppeln; ohne pending Command dürfen Replies keinerlei Aktion auslösen. Diagnose nur als aggregierte Zähler ohne IDs und Rohdaten.
+1. **Umgesetzt (Code + lokale simulierte MQTT-Tests):** `services_reply` vom Registry-Pfad isoliert und an den Validator gekoppelt; die Diagnose enthält ausschließlich aggregierte Zähler. Prüfung der Live-Gerätekompatibilität steht aus.
 2. Einen separaten, explizit deaktivierten `requests`-Eingang entwerfen. `storage_config_get` mit MinIO-STS als isolierten Handler implementieren und mit Least-Privilege-/Fremdworkspace-Tests absichern; keine Ausgabe produktiver Zugangsdaten in Tests oder Logs.
 3. Pilot-2-`api`/`media`-Module und HTTPS-Endpunkte gegen die gerätespezifische offizielle Cloud-API-1.18-Dokumentation abgleichen.
 4. Erst danach Wayline-State-Machine und Dienste zu Missionsaufträgen; keine simulierte Flugbereitschaft und kein Start realer Flüge ohne getrennte Hardwarefreigabe.
