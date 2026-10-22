@@ -42,6 +42,32 @@ werden.
 
 Der zweite Befehl berechnet KEINEN Flugweg und überschreibt keine Datei.
 
+## Integrationsstatus: opt-in WPML-Prüf-API (22.10.2026)
+
+Der neue, auf der sicheren SkyHub-Integration basierende Folgebranch
+enthält den realen Mount `POST /api/wpml/inspect` **hinter**
+der bestehenden Authentifizierung `/api`.
+Die Route ist mit `SKYHUB_WPML_INSPECT_ENABLED=false` standardmäßig aus.
+Ein JSON-Body, eine unzulässige Content-Type-Angabe, ein defektes ZIP
+oder ein zu großes Archiv wird abgewiesen.
+Die Antwort liefert nur aggregierte Felder und durchgehend
+`flightReady:false`; detaillierte XML-Fehlerpfade und GPS-Werte
+werden nicht ausgeliefert. Es entsteht **kein** Flugauftrag.
+
+Beispiel für einen ausschließlich lokalen, autorisierten Test
+(nur nach expliziter Aktivierung):
+
+```bash
+curl --fail-with-body \
+  -H "Authorization: Bearer <lokaler-view-token>" \
+  -H "Content-Type: application/vnd.google-earth.kmz" \
+  --data-binary @mission.kmz \
+  http://127.0.0.1:4001/api/wpml/inspect
+```
+
+Keinen realen Token oder eine private KMZ-Datei ins Git-Repository
+oder in diese Chat-Unterhaltung kopieren.
+
 ## DJI Fluggerät-/Payload-Matrix
 
 | Modell | droneEnumValue | droneSubEnumValue | payloadEnumValue |
