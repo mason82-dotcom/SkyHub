@@ -119,7 +119,8 @@ setInterval(pruneTracks,3600000).unref();
 
 const pilotAuth=createPilotAuth({pilot,pairing,redis});
 // DJI Pilot 2 situation awareness: fleet positions and presence pushed to paired RCs (read-only).
-const tsaHub=tsaActive?createTsaHub({registry,authorize:pilotAuth.principal,workspaceId:pilot.workspaceId}):null;
+const tsaHub=tsaActive?createTsaHub({registry,authorize:pilotAuth.principal,
+  workspaceId:pilot.workspaceId,trustedProxyIps:pilot.tsa.trustedProxyIps}):null;
 
 let ingest;
 try{
@@ -134,7 +135,8 @@ const {state:mqttState,ack}=ingest;
 registerPilotRoutes(app,{pilot,pairing,redis,registry,pool,ack,pilotAuth});
 if(tsaHub){
   app.get('/manage/api/v1/workspaces/:workspaceId/devices/topologies',createTopologyListHandler({
-    registry,workspaceId:pilot.workspaceId,authorize:pilotAuth.principal
+    registry,workspaceId:pilot.workspaceId,authorize:pilotAuth.principal,
+    trustedProxyIps:pilot.tsa.trustedProxyIps
   }));
   server.on('upgrade',(req,socket,head)=>{
     if(tsaHub.matches(req))return tsaHub.handleUpgrade(req,socket,head);
