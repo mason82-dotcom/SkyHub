@@ -119,4 +119,5 @@ function summarizeXmp(records){
   };
 }
 module.exports={MARKERS,BANDS,STATUSES,EMPTY,recordStatus,
-  locateXmpFromIfd,classifyDJIXmp,summarizeXmp};
+  locateXmpFromIfd,extractEnumValue,bandFromName,bandFromSource,
+  classifyDJIXmp,summarizeXmp};
