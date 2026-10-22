@@ -1,7 +1,8 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {locateXmpFromIfd,classifyDJIXmp,summarizeXmp,recordStatus}
+const {locateXmpFromIfd,classifyDJIXmp,summarizeXmp,recordStatus,
+  validateXmpAggregateReport}
   =require('../m3m-xmp-markers');
 const ns='http://www.dji.com/drone-dji/1.0/';
 const wrap=(body)=>Buffer.from('<?xpacket begin=""?><x:xmpmeta>'+
@@ -92,4 +93,39 @@ test('XMP summary only allows fixed statuses and boolean allowlist fields',()=>{
   assert.equal(result.bandHints.unknown,3);
   assert.throws(()=>summarizeXmp([{...records[0],bandHint:'SECRET'}]),RangeError);
   assert.throws(()=>summarizeXmp(Array(13).fill(records[0])),RangeError);
+});
+
+
+test('XMP band hints fail closed if one of two band fields is duplicated or invalid',()=>{
+  const ambiguous=wrap(
+    '<rdf:Description drone-dji:ImageSource="MS_G_CAMERA" />'+
+    '<rdf:Description drone-dji:BandName="Green" />'+
+    '<rdf:Description drone-dji:BandName="Red" />');
+  assert.equal(classifyDJIXmp(ambiguous).bandHint,'unknown');
+  const invalid=wrap(
+    '<rdf:Description drone-dji:ImageSource="MS_RE_CAMERA" '+
+    'drone-dji:BandName="SECRET_OBJECT_SN" />');
+  assert.equal(classifyDJIXmp(invalid).bandHint,'unknown');
+  const one=wrap('<rdf:Description drone-dji:BandName="Red" />');
+  assert.equal(classifyDJIXmp(one).bandHint,'R');
+});
+
+test('aggregate validator refuses unknown keys, fabricated counts, private strings and true readiness',()=>{
+  const good=summarizeXmp([
+    classifyDJIXmp(wrap('<rdf:Description drone-dji:BandName="Green" />')),
+    recordStatus('xmpTagMissing')
+  ]);
+  const verified=validateXmpAggregateReport(good,2);
+  assert.deepEqual(verified,good);
+  assert.equal(verified.status.ok,1);
+  for(const bad of [
+    {...good,privateObjectKey:'SECRET_FILENAME'},
+    {...good,examined:3},
+    {...good,bandHints:{...good.bandHints,SECRET:1}},
+    {...good,bandHints:{...good.bandHints,G:2}},
+    {...good,fieldPresenceCount:{...good.fieldPresenceCount,BandName:2}},
+    {...good,reflectanceReady:true},
+    {...good,caveat:'SECRET_META_VALUE'},
+    {...good,status:{...good.status,ok:3}}
+  ])assert.throws(()=>validateXmpAggregateReport(bad,2),RangeError);
 });
