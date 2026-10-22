@@ -78,7 +78,7 @@ test('model keys and documented Cloud API 1.18 profiles remain distinct',()=>{
   assert.equal(rcFields.fields.length,54);
   assert.equal(rcFields.confidence,'official-device-web');
   assert.equal(airFields.profile,'matrice4T');
-  assert.equal(airFields.fields.length,199);
+  assert.equal(airFields.fields.length,202);
   assert.match(airFields.confidence,/unverified/);
   assert.equal(airFields.dynamicPayload.fields.length,9);
 });
@@ -89,7 +89,7 @@ test('genuine linked RC Plus 2 and Matrice 4T pass transport smoke test',()=>{
   assert.equal(report.controller.osdFresh,true);
   assert.equal(report.aircraft.osdFresh,true);
   assert.equal(report.controller.fields.documented,54);
-  assert.equal(report.aircraft.fields.documented,199);
+  assert.equal(report.aircraft.fields.documented,202);
   assert.equal(report.aircraft.dynamicFields.documented,9);
   assert.ok(report.controller.fields.freshNames.includes('osd:capacity_percent'));
   assert.ok(report.aircraft.dynamicFields.observedNames.includes('gimbal_pitch'));
