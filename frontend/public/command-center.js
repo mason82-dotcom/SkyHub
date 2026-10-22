@@ -4,6 +4,8 @@
  const el=id=>document.getElementById(id);
  const records=new Map();
  let selected=null,token=null,socket=null,attempt=0,buckets=[];
+ let mediaRequestId=0,mediaPageIndex=0,mediaCursors=[null];
+ let mediaContext={bucket:'',prefix:''},renderScheduled=false;
  const keys=[['altitude','Höhe (DJI-Meldung)',' m'],['horizontalSpeed','Horizontalgeschwindigkeit',' m/s'],
    ['battery','Akku',' %'],['gpsSatellites','GNSS-Satelliten',''],
    ['rtkFixState','RTK-Code',''],['attitudePitch','Nickwinkel',' °'],
@@ -83,11 +85,15 @@
    el('count').textContent=stats.devices;
    el('live').textContent=stats.live;
    el('warnings').textContent=stats.warnings;
-   const root=el('devices');root.replaceChildren();
+   const root=el('devices');
+   const focusedSn=document.activeElement?.dataset?.deviceSn;
+   const scrollTop=root.scrollTop;
+   root.replaceChildren();
    if(!all.length)root.append(elem('p','Keine registrierten Geräte.','muted'));
    for(const d of all.sort((a,b)=>(b.lastTelemetryAt||0)-(a.lastTelemetryAt||0))){
      const button=elem('button',undefined,'device-item'+(selected===d.sn?' selected':''));
      button.type='button';
+     button.dataset.deviceSn=d.sn;
      button.setAttribute('aria-pressed',selected===d.sn?'true':'false');
      const main=elem('span');
      main.append(elem('strong',d.modelName||d.role||'Unbekanntes Gerät'));
@@ -99,8 +105,18 @@
      });
      root.append(button);
    }
+   root.scrollTop=scrollTop;
+   if(focusedSn){
+     const current=[...root.children].find(node=>node.dataset?.deviceSn===focusedSn);
+     if(current&&typeof current.focus==='function')current.focus({preventScroll:true});
+   }
    if(selected&&!records.has(selected))selected=null;
    renderMap();renderDetails();
+ }
+ function scheduleRender(){
+   if(renderScheduled)return;
+   renderScheduled=true;
+   setTimeout(()=>{renderScheduled=false;render();},200);
  }
  function applySnapshot(list){
    if(!Array.isArray(list))return;
@@ -124,6 +140,10 @@
      const list=await response.json();
      if(id!==attempt)return;
      token=provided;
+     resetMedia();
+     buckets=[];
+     el('bucket').replaceChildren(elem('option','—'));
+     el('bucket').disabled=true;
      applySnapshot(list);
      el('load-buckets').disabled=false;
      el('load-m3m').disabled=false;
@@ -137,7 +157,7 @@
        active.on('snapshot',value=>{if(socket===active)applySnapshot(value);});
        active.on('device_update',d=>{
          if(socket!==active||!d||typeof d.sn!=='string'||d.sn.length>100)return;
-         records.set(d.sn,d);render();
+         records.set(d.sn,d);scheduleRender();
        });
      }else setMessage('connection','WebSocket-Bibliothek fehlt · Momentaufnahme');
      if(auto){el('token').hidden=true;el('connect').hidden=true;}
@@ -145,7 +165,9 @@
    }catch(err){
      if(id!==attempt)return;
      token=null;records.clear();selected=null;render();
-     el('load-buckets').disabled=true;el('load-objects').disabled=true;
+     resetMedia();buckets=[];
+       el('bucket').disabled=true;
+       el('load-buckets').disabled=true;el('load-objects').disabled=true;
      el('load-m3m').disabled=true;
      setMessage('connection',auto?'Token für Zugriff außerhalb Heimnetz erforderlich':err.message);
    }
