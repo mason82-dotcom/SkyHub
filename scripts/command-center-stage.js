@@ -67,6 +67,19 @@ function classify(method,raw){
   if(method==='POST'&&isSocketTransport(p,'polling'))return {kind:'socket-poll'};
   return null;
 }
+// Browser origin/host lock prevents hostile websites or DNS rebinding from
+// reaching a token-free loopback/LAN view through the SSH-forwarded port.
+function expectedLocalRequest(req,listenPort){
+  if(!validPort(listenPort))return false;
+  const allowed=['127.0.0.1:'+listenPort,'localhost:'+listenPort];
+  if(!allowed.includes(req.headers.host))return false;
+  const origin=req.headers.origin;
+  if(origin!==undefined&&(
+    typeof origin!=='string'||!allowed.some(host=>origin==='http://'+host)
+  ))return false;
+  if(req.headers['sec-fetch-site']==='cross-site')return false;
+  return true;
+}
 function commonHeaders(res){
   res.setHeader('Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -183,12 +196,16 @@ function forwardUpgrade(req,clientSocket,head,upstreamPort){
 function createStageServer({upstreamPort=DEFAULT_UPSTREAM,publicRoot=PUBLIC_ROOT}={}){
   if(!validPort(upstreamPort))throw new Error('Invalid upstream port');
   const server=http.createServer((req,res)=>{
+    if(!expectedLocalRequest(req,server.address()?.port))return rejection(res,403);
     const route=classify(req.method,req.url);
     if(!route)return rejection(res,403);
     if(route.kind==='static')return serveFile(req,res,publicRoot,route.filename);
     forwardHttp(req,res,upstreamPort,route.kind);
   });
-  server.on('upgrade',(req,socket,head)=>forwardUpgrade(req,socket,head,upstreamPort));
+  server.on('upgrade',(req,socket,head)=>{
+    if(!expectedLocalRequest(req,server.address()?.port))return denyUpgrade(socket);
+    forwardUpgrade(req,socket,head,upstreamPort);
+  });
   return server;
 }
 async function preflight({upstreamPort=DEFAULT_UPSTREAM,publicRoot=PUBLIC_ROOT}={}){
@@ -254,4 +271,4 @@ async function main(){
   }catch(err){console.error('STAGING REFUSED: '+err.message);process.exitCode=1;}
 }
 if(require.main===module)main();
-module.exports={createStageServer,classify,parseUrl,isSocketTransport,options,preflight,STATIC};
+module.exports={createStageServer,classify,parseUrl,isSocketTransport,expectedLocalRequest,options,preflight,STATIC};
