@@ -195,3 +195,22 @@ test('DJI field definitions are served for catalogued models and reject everythi
     assert.equal((await get(bad)).status,400,bad);
   assert.equal((await request('/api/diagnostics/dji-fields?model=0:77:2')).status,401);
 });
+
+test('the NEXT dashboard is served with a strict CSP; the existing dashboard is unchanged',async()=>{
+  const next=await fetch(base+'/next/');
+  assert.equal(next.status,200);
+  const csp=next.headers.get('content-security-policy');
+  assert.match(csp,/script-src 'self';/);
+  assert.match(csp,/connect-src 'self'/);
+  assert.match(csp,/https:\/\/\*\.tile\.openstreetmap\.org/);
+  assert.doesNotMatch(csp,/unsafe-eval|script-src[^;]*unsafe-inline/);
+  assert.match(await next.text(),/SkyHub NEXT/);
+  for(const asset of ['/next/live.js','/next/live-model.js','/next/vendor/leaflet/leaflet.js']){
+    const res=await fetch(base+asset);
+    assert.equal(res.status,200,asset);
+    assert.match(res.headers.get('content-type'),/javascript/,asset);
+  }
+  const old=await fetch(base+'/');
+  assert.equal(old.status,200);
+  assert.equal(old.headers.get('content-security-policy'),null);
+});

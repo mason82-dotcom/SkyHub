@@ -209,6 +209,11 @@ app.get('/api/drone/:sn/telemetry',(req,res)=>{
   if(!d)return res.status(404).json({error:'Device not observed'});
   res.json(d);
 });
+// SkyHub NEXT dashboard (/next): same-origin scripts only; map tiles only from the three providers it offers.
+const NEXT_CSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com; "+
+  "connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+app.use('/next',(req,res,next)=>{res.set('Content-Security-Policy',NEXT_CSP);next();});
 app.use(express.static(path.resolve(__dirname,'../frontend/public'),{index:'index.html'}));
 app.use((req,res)=>res.status(404).json({error:'Not found'}));
 const port=Number(process.env.PORT||4000);

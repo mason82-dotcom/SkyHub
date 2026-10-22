@@ -2,3 +2,21 @@
 .fallback-svg{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1}.map-canvas[data-map-theme="dark"] .fallback-svg{filter:brightness(.7) saturate(.6) hue-rotate(24deg)}.map-canvas[data-map-theme="osm"] .fallback-svg{filter:brightness(1.08) saturate(.8)}.map-canvas[data-map-theme="sat"] .fallback-svg{filter:contrast(1.1) saturate(1.25)}
 .asset-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}.asset-photo+.asset-kind{z-index:2}.metadata-table .meta-row b{white-space:normal;word-break:break-word}
 .asset-art.tiff{background:repeating-linear-gradient(45deg,#273f47 0 24px,#315969 25px 40px)}
+
+/* ---- SkyHub live integration ---- */
+.auth-form{display:flex;gap:6px;align-items:center}
+.auth-form[hidden]{display:none}
+.auth-form input{width:210px;padding:6px 9px;border-radius:5px;border:1px solid #2b4257;background:#0b1825;color:var(--txt);font-size:11px}
+.auth-form .button{padding:6px 11px}
+.pill.status-live{color:#8fe8b2;background:#143326;border:1px solid #2b6b4b}
+.pill.outline-live{color:#8fe8c8;background:#0f2a29;border:1px solid #23605a}
+.fleet-card .online{color:#7fe3a8;font-size:9px;font-weight:700}
+.fleet-card .fleet-alert{margin-top:6px;font-size:9.5px;line-height:1.35}
+.fleet-card .fleet-alert.warn{color:#efc871}
+.fleet-card .fleet-alert.bad{color:#ff8b94}
+.fleet-card .fleet-alert.info{color:#9cc4e8}
+.fleet-note,.inspector-note{padding-top:12px}
+.telemetry-row b small.field-age{display:block;font-weight:500;font-size:8.5px;margin-top:2px}
+.field-age.current{color:#79d9a2}
+.field-age.stale,.field-age.unavailable{color:#efc871}
+.field-age.unverified,.field-age.unknown,.field-age.missing{color:#8ca7b8}
