@@ -86,10 +86,11 @@ test('embedded XMP probe only requests 16, 1024 and one declared XMP range',asyn
   assert.equal(result.ranges[2],
     'bytes='+result.offset+'-'+(result.offset+result.xmpLength-1));
   const parsed=JSON.parse(result.output);
-  assert.equal(parsed.records.length,1);
-  assert.equal(parsed.records[0].status,'ok');
-  assert.equal(parsed.records[0].bandHint,'RE');
-  assert.equal(parsed.records[0].djiFieldPresence.Irradiance,true);
+  assert.equal(parsed.report.examined,1);
+  assert.equal(parsed.report.status.ok,1);
+  assert.equal(parsed.report.bandHints.RE,1);
+  assert.equal(parsed.report.fieldPresenceCount.Irradiance,1);
+  assert.equal(parsed.records,undefined);
   assert.doesNotMatch(result.output,
     /PRIVATE|SECRET|GPS|SERIAL|IRRADIANCE_500|MS_RE_CAMERA|RedEdge/);
 });
@@ -98,7 +99,8 @@ test('XMP embedded reader does not accept ignored byte range',async()=>{
   const result=await executeEmbeddedReader({honorRanges:false});
   assert.equal(result.exitCode,0);
   assert.deepEqual(result.ranges,['bytes=0-15']);
-  assert.equal(JSON.parse(result.output).records[0].status,'rangeNotHonored');
+  assert.equal(JSON.parse(result.output).report.status.rangeNotHonored,1);
+  assert.equal(JSON.parse(result.output).report.bandHints.unknown,1);
 });
 
 test('XMP probe only has GET and fixed counters, no writes or raw metadata output',()=>{
@@ -116,4 +118,21 @@ test('XMP probe only has GET and fixed counters, no writes or raw metadata outpu
   });
   assert.equal(fail.status,2);
   assert.doesNotMatch(fail.stderr,/PRIVATE/);
+});
+
+
+test('no individual XMP results cross the process boundary',async()=>{
+  const {output,exitCode}=await executeEmbeddedReader();
+  assert.equal(exitCode,0);
+  const root=JSON.parse(output);
+  assert.deepEqual(Object.keys(root),['report']);
+  assert.deepEqual(Object.keys(root.report).sort(),[
+    'bandCoregistrationVerified','bandHints','caveat','classification',
+    'examined','fieldPresenceCount','imagePayloadVerified',
+    'm3mSourceVerified','ndreReady','ndviReady',
+    'radiometricCalibrationVerified','reflectanceReady','schema',
+    'status'
+  ].sort());
+  assert.doesNotMatch(output,
+    /private|SECRET_IMAGE|PRIVATE_GPS|RedEdge|MS_RE_CAMERA|SERIAL_12345/);
 });
