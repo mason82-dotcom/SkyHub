@@ -61,6 +61,37 @@ Quellen: [RC/M3M Hardware](hardware-rc-pro-m3m.md),
 - Nicht übernommen sind alte Hardware-Konsolidierungs-Integrationstests,
   sofern sie die ältere Parser-/Katalogschnittstelle voraussetzen.
 
+## WPML-Folgeentwicklung: opt-in Inspektions-API
+
+Auf dem separaten Folgebranch `feature/wpml-offline-inspect-api-20261022`
+wird die bereits importierte KMZ-Validierung als eingeschränkter
+Server-Endpunkt angeboten: `POST /api/wpml/inspect`.
+
+- Der Endpunkt ist nur aktiv, wenn `SKYHUB_WPML_INSPECT_ENABLED=true`.
+  Die Compose-/Beispielkonfiguration setzt explizit `false`.
+- Der reguläre SkyHub-View-Token wird **vor** dem WPML-Parser überprüft.
+  Das LAN-Read-only-Privileg gilt nicht für diesen POST.
+- Unterstützt sind nur `application/vnd.google-earth.kmz`, `application/zip`
+  und `application/octet-stream`. Das ZIP darf maximal 12 MiB groß sein.
+  XML/ZIP-Extraktion wird auf maximal 32 MiB begrenzt; externe Entitäten,
+  ZIP-Pfade außerhalb von `wpmz/` und ungültige CRCs werden abgelehnt.
+- Keine Dateien, Koordinaten, Wegpunkte, Pfade, XML-Texte, Fehlermeldungen
+  aus dem Parser oder Binärdaten werden in der HTTP-Antwort ausgegeben.
+  Das Ergebnis enthält lediglich Schema, `valid`, `flightReady=false`,
+  `validationScope=offline-partial` sowie bounded Zähler.
+- Bei formalem WPML-Erfolg HTTP 200; bei XML-/KMZ-Ungültigkeit 422,
+  bei falschem Dateityp 415, bei Größenüberschreitung 413.
+  Fehlerantworten sind generisch und enthalten keine Rohdaten.
+- **Keine** Missionsübertragung, kein DJI-Kommando, kein MinIO-Write,
+  keine Datenbankpersistenz. Die Browser-WPML-Seiten erstellen ihre
+  Entwürfe weiterhin lokal; sie laden ohne ausdrückliches Handeln
+  keine Daten zum Backend hoch.
+- Neue HTTP-/Sicherheitstests laufen in der isolierten GitHub-CI,
+  ohne Pilot 2, laufende Pi-Dienste oder echte DJI-Flugdaten.
+
+Dies ist ein optionales lokales Dateivalidierungsangebot, keine
+Flugfreigabe und kein Anlass für ein Pi-Deployment.
+
 ## Abnahmeschranken
 
 1. GitHub-CI: Node.js-Tests, isolierte PostGIS-/Restore-Tests,
