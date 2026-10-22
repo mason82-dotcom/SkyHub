@@ -15,8 +15,13 @@ function captureUuidFromXmp(bytes){
   if(!/<(?:\w+:)?(?:xmpmeta|RDF)\b/.test(text)||
      !/xmlns:drone-dji\s*=\s*["\x27]http:\/\/www\.dji\.com\/drone-dji\/1\.0\/["\x27]/.test(text))
     return null;
+  // Also count malformed or oversized duplicate attributes/elements:
+  // even if a second value fails our strict extractor it must block pairing.
+  const markers=(text.match(/(?:\\s)drone-dji:Capture(?:UUID|Uuid)\\s*=/g)||[]).length+
+    (text.match(/<drone-dji:Capture(?:UUID|Uuid)\\s*>/g)||[]).length;
+  if(markers!==1)return null;
   const found=[];
-  // DJI exporters have used both CaptureUUID and CaptureUuid spellings.
+  // Accept the two observed spelling variants conservatively.
   // Accept only a single unambiguous field, in RDF attribute or element form.
   for(const name of ['CaptureUUID','CaptureUuid']){
     const attr=new RegExp('(?:\\s)drone-dji:'+name+
@@ -32,6 +37,8 @@ function captureUuidFromXmp(bytes){
     }
   }
   if(found.length!==1)return null;
+  if(!/^(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$/.test(found[0]))
+    return null;
   const normalized=found[0].toLowerCase().replace(/-/g,'');
   // UUIDv4 and RFC-4122 variant as documented by DJI. Arbitrary device IDs,
   // timestamps, serials and capture names are not accepted.
