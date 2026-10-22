@@ -1,6 +1,7 @@
 'use strict';
 const mqtt=require('mqtt');
-const {parseMessage}=require('./dji');
+const {parseMessage,parseTopic}=require('./dji');
+const {parseServiceReply}=require('./dji-service-reply-contract');
 const {classifyMessage}=require('./message-guard');
 const {createStatusReply}=require('./topology-ack');
 const {deviceCachePayload}=require('./device-cache');
@@ -46,6 +47,22 @@ function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecor
   function onMessage(topic,payload,packet){
     // Passive transport diagnostics, without recording device IDs or payloads.
     mqttStats.observed(topic);
+    // Service replies are NOT device events or OSD telemetry. Validate them
+    // independently; never create registry devices, store payloads, or emit to UI.
+    // No outbound command manager exists here, so even a valid reply is uncorrelated.
+    if(parseTopic(topic)?.channel==='services_reply'){
+      const at=Date.now();
+      try{
+        const reply=parseServiceReply(topic,payload,{retained:packet?.retain===true,now:at});
+        mqttStats.accepted({channel:'services_reply',timestamp:reply.timestamp},null,at);
+        mqttStats.serviceReplyValidated();
+      }catch(_err){
+        // Error details and reply payloads may contain secrets; log neither.
+        mqttStats.serviceReplyRejected();
+        mqttStats.rejected(packet?.retain===true?'retained':'malformed');
+      }
+      return;
+    }
     // A retained MQTT delivery is not evidence of a currently connected DJI device.
     if(packet?.retain===true){mqttStats.rejected('retained');return;}
     try {
