@@ -9,7 +9,11 @@ const express = require('express');
 
 const {createMinioDrRouter} = require('../minio-dr-api');
 
-const ROOT = path.resolve(__dirname, '../..');
+const {createDrFixture} = require('./helpers/dr-fixture');
+
+const fixture = createDrFixture();
+const ROOT = fixture.root;
+test.after(() => fixture.cleanup());
 
 async function serve(options, callback) {
   const app = express();

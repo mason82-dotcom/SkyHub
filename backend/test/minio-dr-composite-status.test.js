@@ -9,9 +9,13 @@ const path = require('node:path');
 const {getCompositeStatus} = require(
   '../minio-dr-composite-status'
 );
+const {createDrFixture} = require('./helpers/dr-fixture');
+
+const fixture = createDrFixture();
+test.after(() => fixture.cleanup());
 
 test('composite status exposes verified evidence', () => {
-  const status = getCompositeStatus();
+  const status = getCompositeStatus(fixture.root);
 
   assert.equal(
     status.schema,
@@ -33,7 +37,7 @@ test('composite status exposes verified evidence', () => {
 });
 
 test('composite status does not expose raw evidence', () => {
-  const status = getCompositeStatus();
+  const status = getCompositeStatus(fixture.root);
   const body = JSON.stringify(status);
 
   for (const forbidden of [

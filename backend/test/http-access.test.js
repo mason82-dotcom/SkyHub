@@ -3,6 +3,11 @@ const {before,after,test}=require('node:test');
 const assert=require('node:assert/strict');
 const {once}=require('node:events');
 const {io}=require('socket.io-client');
+const {createDrFixture}=require('./helpers/dr-fixture');
+
+// Synthetic DR evidence; the real, git-ignored dr-status/ is never required.
+const drFixture=createDrFixture();
+process.once('exit',()=>drFixture.cleanup());
 
 // This process starts the real app on an ephemeral port. External services point
 // to the local closed port 1, so the test cannot contact the Pi broker or Redis.
@@ -28,9 +33,7 @@ Object.assign(process.env,{
   SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000',
   SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true',
   SKYHUB_MINIO_DR_ENABLED:'true',
-  SKYHUB_MINIO_DR_REPORT_DIR:require('node:path').resolve(
-    __dirname, '../../dr-status'
-  )
+  SKYHUB_MINIO_DR_REPORT_DIR:drFixture.status
 });
 delete process.env.DATABASE_URL;
 const {server,stop}=require('../server');

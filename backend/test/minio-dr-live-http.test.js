@@ -10,11 +10,13 @@ const {
   createMinioDrRouter
 } = require('../minio-dr-api');
 
-const directory = path.resolve(
-  __dirname, '../../dr-status'
-);
+const {createDrFixture} = require('./helpers/dr-fixture');
 
-test('real DR report is protected and readable via HTTP', async () => {
+const fixture = createDrFixture();
+const directory = fixture.status;
+test.after(() => fixture.cleanup());
+
+test('DR report is protected and readable via HTTP', async () => {
   const token = crypto.randomBytes(32).toString('hex');
 
   const app = express();

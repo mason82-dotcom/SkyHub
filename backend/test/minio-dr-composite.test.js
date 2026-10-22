@@ -7,38 +7,21 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {buildComposite} = require('../../scripts/minio-dr-composite');
+const {createDrFixture, HISTORIC, IAM} = require('./helpers/dr-fixture');
 
 const ROOT = path.resolve(__dirname, '../..');
-const HISTORIC = 'minio-dr-20261022T032308.json';
-const IAM = 'sdk-iam-20261022T044017-d23f34fb.json';
 
 function withEvidence(callback) {
-  const directory = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'skyhub-composite-test-')
-  );
+  const fixture = createDrFixture();
 
   try {
-    const status = path.join(directory, 'dr-status');
-    const iamDirectory = path.join(status, 'iam');
-
-    fs.mkdirSync(iamDirectory, {recursive: true});
-
-    const historic = path.join(status, HISTORIC);
-    const iam = path.join(iamDirectory, IAM);
-
-    fs.copyFileSync(
-      path.join(ROOT, 'dr-status', HISTORIC),
-      historic
-    );
-
-    fs.copyFileSync(
-      path.join(ROOT, 'dr-status', 'iam', IAM),
-      iam
-    );
-
-    return callback({directory, historic, iam});
+    return callback({
+      directory: fixture.root,
+      historic: fixture.historic,
+      iam: fixture.iam
+    });
   } finally {
-    fs.rmSync(directory, {recursive: true, force: true});
+    fixture.cleanup();
   }
 }
 

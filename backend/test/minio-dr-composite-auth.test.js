@@ -7,7 +7,11 @@ const express = require('express');
 
 const {createMinioDrRouter} = require('../minio-dr-api');
 
-const ROOT = path.resolve(__dirname, '../..');
+const {createDrFixture} = require('./helpers/dr-fixture');
+
+const fixture = createDrFixture();
+const ROOT = fixture.root;
+test.after(() => fixture.cleanup());
 const TOKEN = 'isolated-composite-test-token';
 
 test('composite API enforces authentication', async () => {
