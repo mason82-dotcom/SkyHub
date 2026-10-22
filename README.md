@@ -4,6 +4,23 @@
 
 SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker gehören noch nicht zum Funktionsumfang. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
 
+## Pilot 2 TSA (isolierter Entwicklungsstand)
+
+TSA ist standardmäßig deaktiviert. Um es gezielt zu testen, müssen
+`SKYHUB_DJI_TSA_ENABLED=true`, ein reiner HTTPS-Origin in
+`SKYHUB_PILOT_PUBLIC_URL` und die **exakte Peer-IP des unmittelbaren
+TLS-Proxys aus Sicht des Backend-Containers** in
+`SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS` konfiguriert werden. Docker-Bridge-
+Adressen sind installationsabhängig und dürfen nicht geraten werden.
+
+TSA prüft bei HTTPS-Topologie und WSS-Verbindungen nur die explizit
+zugelassenen Proxy-Peers; ein privates Subnetz allein genügt nicht.
+Vorhandene, bereits verarbeitete und weiterhin frische Positionen werden
+neu verbundenen TSA-Clients einzeln nachgereicht. Query-Token müssen aus
+sämtlichen HTTP-/Proxy-Zugriffslogs herausgefiltert werden. Die RC-Hardware-
+und Reverse-Proxy-Abnahme ist noch offen. Weder Pi-Dienste noch
+DJI-Flugsteuerung werden durch diesen Entwicklungspatch aktiviert.
+
 ## Projektstruktur
 
 | Pfad | Zweck |
