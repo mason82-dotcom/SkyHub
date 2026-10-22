@@ -4,6 +4,8 @@
  const el=id=>document.getElementById(id);
  const records=new Map();
  let selected=null,token=null,socket=null,attempt=0,buckets=[];
+ let mediaRequestId=0,mediaPageIndex=0,mediaCursors=[null];
+ let mediaContext={bucket:'',prefix:''},renderScheduled=false;
  const keys=[['altitude','Höhe (DJI-Meldung)',' m'],['horizontalSpeed','Horizontalgeschwindigkeit',' m/s'],
    ['battery','Akku',' %'],['gpsSatellites','GNSS-Satelliten',''],
    ['rtkFixState','RTK-Code',''],['attitudePitch','Nickwinkel',' °'],
@@ -83,11 +85,15 @@
    el('count').textContent=stats.devices;
    el('live').textContent=stats.live;
    el('warnings').textContent=stats.warnings;
-   const root=el('devices');root.replaceChildren();
+   const root=el('devices');
+   const focusedSn=document.activeElement?.dataset?.deviceSn;
+   const scrollTop=root.scrollTop;
+   root.replaceChildren();
    if(!all.length)root.append(elem('p','Keine registrierten Geräte.','muted'));
    for(const d of all.sort((a,b)=>(b.lastTelemetryAt||0)-(a.lastTelemetryAt||0))){
      const button=elem('button',undefined,'device-item'+(selected===d.sn?' selected':''));
      button.type='button';
+     button.dataset.deviceSn=d.sn;
      button.setAttribute('aria-pressed',selected===d.sn?'true':'false');
      const main=elem('span');
      main.append(elem('strong',d.modelName||d.role||'Unbekanntes Gerät'));
@@ -99,8 +105,18 @@
      });
      root.append(button);
    }
+   root.scrollTop=scrollTop;
+   if(focusedSn){
+     const current=[...root.children].find(node=>node.dataset?.deviceSn===focusedSn);
+     if(current&&typeof current.focus==='function')current.focus({preventScroll:true});
+   }
    if(selected&&!records.has(selected))selected=null;
    renderMap();renderDetails();
+ }
+ function scheduleRender(){
+   if(renderScheduled)return;
+   renderScheduled=true;
+   setTimeout(()=>{renderScheduled=false;render();},200);
  }
  function applySnapshot(list){
    if(!Array.isArray(list))return;
@@ -113,6 +129,15 @@
  async function connect(provided,auto=false){
    if(!auto&&!provided){setMessage('connection','Zugriffstoken fehlt');return;}
    const id=++attempt;
+   // Invalidate an earlier user's visible data and in-flight media requests immediately.
+   token=null;
+   resetMedia();
+   buckets=[];
+   el('bucket').disabled=true;
+   el('load-buckets').disabled=true;
+   el('load-objects').disabled=true;
+   el('load-m3m').disabled=true;
+   records.clear();selected=null;render();
    setMessage('connection','Verbinde …');
    if(socket){socket.disconnect();socket=null;}
    try{
@@ -124,6 +149,10 @@
      const list=await response.json();
      if(id!==attempt)return;
      token=provided;
+     resetMedia();
+     buckets=[];
+     el('bucket').replaceChildren(elem('option','—'));
+     el('bucket').disabled=true;
      applySnapshot(list);
      el('load-buckets').disabled=false;
      el('load-m3m').disabled=false;
@@ -137,7 +166,7 @@
        active.on('snapshot',value=>{if(socket===active)applySnapshot(value);});
        active.on('device_update',d=>{
          if(socket!==active||!d||typeof d.sn!=='string'||d.sn.length>100)return;
-         records.set(d.sn,d);render();
+         records.set(d.sn,d);scheduleRender();
        });
      }else setMessage('connection','WebSocket-Bibliothek fehlt · Momentaufnahme');
      if(auto){el('token').hidden=true;el('connect').hidden=true;}
@@ -145,7 +174,9 @@
    }catch(err){
      if(id!==attempt)return;
      token=null;records.clear();selected=null;render();
-     el('load-buckets').disabled=true;el('load-objects').disabled=true;
+     resetMedia();buckets=[];
+       el('bucket').disabled=true;
+       el('load-buckets').disabled=true;el('load-objects').disabled=true;
      el('load-m3m').disabled=true;
      setMessage('connection',auto?'Token für Zugriff außerhalb Heimnetz erforderlich':err.message);
    }
@@ -161,12 +192,28 @@
        ' · Redis: '+(h.redis?'bereit':'nicht bereit'));
    }catch(_err){setMessage('health-status','Backend-Status nicht abrufbar');}
  }
+ function resetMedia(){
+   mediaRequestId++;
+   mediaPageIndex=0;
+   mediaCursors=[null];
+   mediaContext={bucket:'',prefix:''};
+   el('objects').replaceChildren();
+   el('media-page').textContent='Seite —';
+   el('media-prev').disabled=true;
+   el('media-next').disabled=true;
+   setMessage('media-message','Auswahl geändert · Objektliste erneut laden');
+ }
  async function loadBuckets(){
+   resetMedia();
+   const requestId=mediaRequestId;
    setMessage('media-message','Bucket-Verfügbarkeit wird gelesen …');
    el('load-objects').disabled=true;
    try{
      const result=await readApi('/api/media/buckets');
-     buckets=Array.isArray(result.buckets)?result.buckets.filter(b=>typeof b==='string'):[];
+     if(requestId!==mediaRequestId)return;
+     buckets=Array.isArray(result.buckets)?
+       [...new Set(result.buckets.filter(b=>typeof b==='string'&&
+         /^[a-z0-9][a-z0-9.-]{1,62}$/.test(b)))]:[];
      el('bucket').replaceChildren(elem('option','—'));
      for(const name of buckets){
        const op=elem('option',name);op.value=name;el('bucket').append(op);
@@ -174,24 +221,59 @@
      el('bucket').disabled=!buckets.length;
      el('load-objects').disabled=!buckets.length;
      setMessage('media-message',buckets.length?buckets.length+' verfügbare Buckets':'Keine Buckets verfügbar');
-   }catch(err){setMessage('media-message',err.message);}
+   }catch(err){
+     if(requestId===mediaRequestId)setMessage('media-message',err.message);
+   }
  }
  function prefixValue(){return el('prefix').value.trim();}
- async function loadObjects(){
+ async function loadObjects(targetPage=0){
    const bucket=el('bucket').value,prefix=prefixValue();
    if(!buckets.includes(bucket)){setMessage('media-message','Bucket auswählen');return;}
    if(prefix.length>512){setMessage('media-message','Präfix zu lang');return;}
+   if(mediaContext.bucket!==bucket||mediaContext.prefix!==prefix){
+     resetMedia();
+     mediaContext={bucket,prefix};
+     targetPage=0;
+   }
+   if(!Number.isInteger(targetPage)||targetPage<0||targetPage>=mediaCursors.length)return;
+   const cursor=mediaCursors[targetPage];
+   if(targetPage!==0&&(typeof cursor!=='string'||!cursor))return;
+   const id=++mediaRequestId;
+   el('media-prev').disabled=true;
+   el('media-next').disabled=true;
    setMessage('media-message','Objekte werden gelesen …');
    el('objects').replaceChildren();
    try{
-     const result=await readApi('/api/media/objects?bucket='+encodeURIComponent(bucket)+
-       '&prefix='+encodeURIComponent(prefix)+'&limit=100');
-     for(const file of Array.isArray(result.objects)?result.objects:[]){
-       el('objects').append(elem('li',String(file.key||'')+' · '+String(file.size??'—')+' Byte'));
+     const url='/api/media/objects?bucket='+encodeURIComponent(bucket)+
+       '&prefix='+encodeURIComponent(prefix)+'&limit=100'+
+       (cursor?'&cursor='+encodeURIComponent(cursor):'');
+     const data=await readApi(url);
+     if(id!==mediaRequestId)return;
+     const page=core.parseMediaPage(data,{bucket,prefix,limit:100});
+     const prior=mediaCursors.slice(0,targetPage+1);
+     if(page.truncated&&prior.includes(page.nextCursor))throw new Error('Ungültiger MinIO-Seitenmarker');
+     mediaCursors=prior;
+     if(page.truncated)mediaCursors.push(page.nextCursor);
+     mediaPageIndex=targetPage;
+     for(const file of page.objects){
+       const li=elem('li');
+       li.append(elem('strong',file.key));
+       li.append(elem('small',' · '+file.type+' · '+
+         file.size.toLocaleString('de-DE')+' Byte'+
+         (file.lastModified?' · '+file.lastModified.slice(0,19).replace('T',' '):''),'smaller'));
+       el('objects').append(li);
      }
-     setMessage('media-message',(result.objects?.length||0)+' Objekte geladen'+
-       (result.truncated?' · weitere vorhanden (maximal 100 pro Abruf)':''));
-   }catch(err){setMessage('media-message',err.message);}
+     el('media-page').textContent='Seite '+(targetPage+1);
+     el('media-prev').disabled=targetPage===0;
+     el('media-next').disabled=!page.truncated;
+     setMessage('media-message',page.objects.length+' Objekte auf Seite '+(targetPage+1)+
+       (page.truncated?' · weitere vorhanden':' · letzte Seite'));
+   }catch(err){
+     if(id!==mediaRequestId)return;
+     setMessage('media-message',err.message);
+     el('media-page').textContent='Seite —';
+     el('objects').replaceChildren();
+   }
  }
  async function loadM3m(){
    const prefix=prefixValue();
@@ -222,8 +304,11 @@
  el('token').addEventListener('keydown',event=>{if(event.key==='Enter')connect(el('token').value.trim());});
  el('check-health').addEventListener('click',checkHealth);
  el('load-buckets').addEventListener('click',loadBuckets);
- el('bucket').addEventListener('change',()=>{el('objects').replaceChildren();});
- el('load-objects').addEventListener('click',loadObjects);
+ el('bucket').addEventListener('change',resetMedia);
+ el('prefix').addEventListener('input',resetMedia);
+ el('load-objects').addEventListener('click',()=>loadObjects(0));
+ el('media-prev').addEventListener('click',()=>loadObjects(mediaPageIndex-1));
+ el('media-next').addEventListener('click',()=>loadObjects(mediaPageIndex+1));
  el('load-m3m').addEventListener('click',loadM3m);
  setInterval(()=>{if(records.size)render();},5000);
  checkHealth();
