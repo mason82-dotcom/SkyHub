@@ -169,6 +169,6 @@ function validateXmpAggregateReport(report,expected){
   };
 }
 
-module.exports={MARKERS,BANDS,STATUSES,EMPTY,recordStatus,
+module.exports={MARKERS,BANDS,BAND_HINTS,STATUSES,EMPTY,recordStatus,
   locateXmpFromIfd,extractEnumValue,bandFromName,bandFromSource,
   classifyDJIXmp,summarizeXmp,validateXmpAggregateReport};
