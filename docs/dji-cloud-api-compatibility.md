@@ -92,6 +92,41 @@ Bewusste Abweichungen und Lücken:
   (z. B. GoDaddy) erwartet; TLS ist deshalb als eigene Firmware-Validierung
   offen (siehe `pilot-config.js`).
 
+## Abgleich mit den Basiskonzepten und der Produktliste (22.10.2026)
+
+Quellen: `overview/basic-concept/` (`proper-noun`, `mqtt`, `thing-model`, `https`, `websocket`,
+`jsbridge`) und `overview/product-support` von `developer.dji.com/doc/cloud-api-tutorial/en/`.
+Nicht verglichen wurden `product-introduction` und `product-architecture`. Die Webseite nennt
+keine Cloud-API-Version.
+
+| Thema | DJI-Definition | SkyHub |
+|---|---|---|
+| Protokoll | MQTT 5.0 | `protocolVersion: 5` |
+| Themenpräfixe | `sys/` (Gerätelebenszyklus), `thing/` (Property, Service, Event) | abonniert: `sys/product/+/status`, `thing/product/+/osd`, `state`, `events`, `services_reply`; veröffentlicht nur `status_reply` über einen eigenen Benutzer |
+| Nachrichtenhülle | `tid`, `bid`, `method`, `data`, `timestamp` (13-stellig, ms) | `timestamp` muss eine Ganzzahl zwischen 1e12 und 1e15 sein, sonst wird die Nachricht verworfen; `method` wird übernommen; `tid` und `bid` nur für die `status_reply`-Antwort |
+| Push-Modi | 0: 0,5 Hz (`osd`); 1: bei Änderung (`state`); 2: Änderung wird **nicht** gemeldet, der Server muss abfragen | Der Parser übernimmt ein Feld nur auf seinem Kanal (0 → OSD, 1 → State). Im Katalog hat kein Wurzelfeld `pushMode` 2 |
+| Property setzen, Services | über `property/set` und `services` | nicht umgesetzt (lesend) |
+| Geräte-/Gateway-Begriffe | Gateway-Gerät, Komponente, Gerätetopologie | Rollen `gateway`/`subdevice`, Topologie aus `update_topo` |
+| Gerätestatus | online, getrennt (Verbindung ohne Meldung verloren), offline (ausdrücklich gemeldet) | `topologyOnline` (`true`/`false`/`null`: `false` nur bei ausdrücklicher Entfernung aus der Topologie), `aircraftConnected` (Modus 14) und `fresh` (OSD jünger als 15 s). Eine zusammengefasste Statusgröße wurde bewusst **nicht** ergänzt: Die Abbildung auf DJIs drei Zustände wäre eine Ableitung, die DJI nicht veröffentlicht, und es gäbe keinen Verbraucher dafür |
+| HTTPS-Format | `{scheme}://{endpoint}/{module}/api/{version}/{resource}`, `https` Pflicht, Kopf `X-Auth-Token` | Karten-Endpunkt `/map/api/v1/…` mit HTTPS-Pflicht und `X-Auth-Token`; `X-Device-ID`, `X-Firmware-Version` und `X-Request-ID` werden nicht gelesen (optional) |
+| HTTPS-Antwort | immer `{code, message, data}`; Pilot 2 zeigt bei 5xx „(resp.code)“ | **Korrigiert:** Fehlerantworten des Karten-Endpunkts haben jetzt `{code, message, data}` (`code` = HTTP-Status, `error` bleibt für bestehende Aufrufer). Vorher nur `{error}` |
+| HTTP-Status in Pilot 2 | 400 Parameterfehler, 401 Anmeldung ungültig (Abmeldung von der Cloud), 403 keine Berechtigung, 404 Ressource fehlt | deckt sich mit den gelieferten Statuscodes |
+| WebSocket | Pilot 2 verbindet sich mit der vom Server gelieferten URL; Push `{biz_code, version, timestamp, data}` (z. B. `device_topo_update`) | nicht umgesetzt; die Login-Seite lädt das `ws`-Modul nicht (siehe Pilot Feature Set oben) |
+| JSBridge | siehe Abschnitt Pilot Feature Set | unverändert |
+
+**Produktliste (`product-support`):** Die Aufzählung der Flugzeuge, Fernsteuerungen und Docks
+(domain/type/sub_type) stimmte bis auf eine Lücke mit `backend/catalog.js` überein. Ergänzt wurden:
+
+- `8/135/0` DJI O4 Ground Station (Netzwerk-Basisstation für Dock 3), Kategorie `base-station`.
+- Kamera- und Nutzlasttypen (Domain 1): Zenmuse Z30, XT2, XTS, H20, H20T, H20N, H30, H30T,
+  Matrice 30/30T/3D/3TD/4D/4TD Camera, Mavic 3TA Camera, Aircraft FPV Camera, Vision Assist Camera
+  und DJI Dock Camera (18 neue Typen; vorher nur vier). In DJIs Schreibweise
+  `type-sub_type-gimbalindex` ist die dritte Zahl die Montageposition und kein Teil des Schlüssels.
+
+Bewusst unverändert: `0/77/2` (Mavic 3M, nur an Hardware beobachtet, nicht in DJIs Liste), die
+Kameraken­nung `1/68/0` (unbestätigt, nicht in DJIs Liste) und die Anzeigenamen (`Mavic 3E` statt
+„Mavic 3 Enterprise Series (M3E Camera)“, `DJI RC Plus 2 Enterprise` statt „DJI RC Plus 2“).
+
 ## Ausdrückliche Einschränkungen
 
 - Mavic 3M: Das Fluggerät `0/77/2` ist seit dem 20.10.2026 per Hardware bestätigt (Topologie über die RC Pro Enterprise) und eingetragen. Die im AeroNexus-Patch genannte **Kamera**-ID 68 bleibt unbestätigt und ist weiterhin nicht zugeordnet.
