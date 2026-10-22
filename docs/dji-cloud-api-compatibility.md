@@ -111,7 +111,7 @@ keine Cloud-API-Version.
 | HTTPS-Format | `{scheme}://{endpoint}/{module}/api/{version}/{resource}`, `https` Pflicht, Kopf `X-Auth-Token` | Karten-Endpunkt `/map/api/v1/…` mit HTTPS-Pflicht und `X-Auth-Token`; `X-Device-ID`, `X-Firmware-Version` und `X-Request-ID` werden nicht gelesen (optional) |
 | HTTPS-Antwort | immer `{code, message, data}`; Pilot 2 zeigt bei 5xx „(resp.code)“ | **Korrigiert:** Fehlerantworten des Karten-Endpunkts haben jetzt `{code, message, data}` (`code` = HTTP-Status, `error` bleibt für bestehende Aufrufer). Vorher nur `{error}` |
 | HTTP-Status in Pilot 2 | 400 Parameterfehler, 401 Anmeldung ungültig (Abmeldung von der Cloud), 403 keine Berechtigung, 404 Ressource fehlt | deckt sich mit den gelieferten Statuscodes |
-| WebSocket | Pilot 2 verbindet sich mit der vom Server gelieferten URL; Push `{biz_code, version, timestamp, data}` (z. B. `device_topo_update`) | nicht umgesetzt; die Login-Seite lädt das `ws`-Modul nicht (siehe Pilot Feature Set oben) |
+| WebSocket | Pilot 2 verbindet sich mit der vom Server gelieferten URL; Push `{biz_code, version, timestamp, data}` (z. B. `device_topo_update`) | Lagebild (TSA) umgesetzt, standardmäßig aus: [Situation Awareness](dji-pilot-situation-awareness.md). Kartenelemente über den WebSocket fehlen weiterhin |
 | JSBridge | siehe Abschnitt Pilot Feature Set | unverändert |
 
 **Produktliste (`product-support`):** Die Aufzählung der Flugzeuge, Fernsteuerungen und Docks
