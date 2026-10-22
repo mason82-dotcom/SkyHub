@@ -10,6 +10,7 @@ const SESSION='a'.repeat(32),PREFIX=WS+'/media/'+SESSION;
 const TIME='2026-10-22T15:00:00.000000Z';
 const SECRET=Buffer.alloc(32,17);
 const BASE={
+  workspace_id:WS,
   object_key:PREFIX+'/DJI_20261022150000_0001_MS_NIR.TIF',
   grant_prefix:PREFIX,file_name:'DJI_20261022150000_0001_MS_NIR.TIF',
   file_group_id:'mission-one',size_bytes:'1678900',etag:'"mock-etag"',
@@ -30,11 +31,11 @@ function makeDb(rows=[row(ID1),row(ID2,{verified_at:new Date('2026-10-22T15:00:5
       audits.push(args);return {rows:[]};
     }
     if(sql.startsWith('SELECT grant_prefix,file_name'))
-      return {rows:rows.filter(x=>x.file_group_id===args[1]&&x.workspace_id!==OTHER)
+      return {rows:rows.filter(x=>x.file_group_id===args[1]&&x.workspace_id===args[0])
         .map(x=>({grant_prefix:x.grant_prefix,file_name:x.file_name}))};
-    if(sql.includes('asset_id=$2::uuid'))return {rows:rows.filter(x=>x.asset_id===args[1])};
+    if(sql.includes('asset_id=$2::uuid'))return {rows:rows.filter(x=>x.asset_id===args[1]&&x.workspace_id===args[0])};
     if(sql.includes('ORDER BY verified_at DESC')){
-      const list=rows.filter(r=>r.workspace_id!==OTHER).sort((a,b)=>
+      const list=rows.filter(r=>r.workspace_id===args[0]).sort((a,b)=>
         b.cursor_time.localeCompare(a.cursor_time)||b.asset_id.localeCompare(a.asset_id));
       const filtered=args[2]===null?list:list.filter(r=>
         r.cursor_time<args[2]||r.cursor_time===args[2]&&r.asset_id<args[3]);
@@ -99,9 +100,9 @@ test('detail requires a fresh matching S3 HEAD of the exact verified object',asy
   assert.deepEqual(await lib.detail({workspace:WS,
     id:'33670000-0000-4000-8000-000000009999',headObject}),
     {status:'not-found'});
-  await assert.rejects(()=>lib.detail({workspace:OTHER,id:ID1,headObject:async()=>{
-    throw Error('should not be called for other workspace');
-  }}),/should not be called/);
+  const other=await lib.detail({workspace:OTHER,id:ID1,
+    headObject:async()=>{throw Error('should not reach S3');}});
+  assert.deepEqual(other,{status:'not-found'});
 });
 
 test('M3M capture filename inventory partitions by grant and never exposes names',async()=>{
