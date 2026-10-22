@@ -27,6 +27,11 @@ oder RC-Plus-2-Sonderfelder erfunden.
 | Matrice 4T | `0/99/1` | `matrice4T`, 202 statische + 9 dynamische Gimbal-Feldtypen | **vorläufig**: 162 archivierte Aircraft-Pfade + 37 dokumentierte generische Ergänzungen + 3 Pfade der offiziellen M4-Serien-Seite; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Verfügbarkeit weiter nicht vollständig verifiziert |
 | RC Pro Enterprise | `2/144/0` | `rcPro`, 55 Pfade | offizielle RC-Pro-Feldtabelle; am 22.10.2026 um sieben Pfade der aktuellen Webseite ergänzt |
 | RC Plus 2 Enterprise | `2/174/0` | `rcPlus2`, 54 Pfade | eigenes, gegen die DJI-Webdefinition vom 03.09.2025 abgeglichenes RC-Plus-2-Profil; am 22.10.2026 am echten Gerät beobachtet (siehe Hardwarebeobachtung), Abnahme mit Livestream und SIM ausstehend |
+| DJI Dock | `3/1/0` | `dock1`, 117 Pfade | offizielle Dock-to-Cloud-Webreferenz; nicht an Hardware beobachtet |
+| DJI Dock 2 | `3/2/0` | `dock2`, 144 Pfade | wie oben |
+| DJI Dock 3 | `3/3/0` | `dock3`, 152 Pfade | wie oben |
+| Matrice 3D / 3TD | `0/91/0`, `0/91/1` | `matrice3D`, 201 Pfade | Dock-Flugzeug laut Dock-to-Cloud-Webreferenz; nicht an Hardware beobachtet |
+| Matrice 4D / 4TD | `0/100/0`, `0/100/1` | `matrice4D`, 208 Pfade | wie oben |
 
 Die Felderzahlen enthalten verschachtelte `struct`- und `array`-Pfade,
 also keine Garantie für ebenso viele gleichzeitig sendende Messwerte.
@@ -314,6 +319,62 @@ lief bereits mit dem angepassten Katalog.
 Grenzen: Ein Zeitfenster von wenigen Minuten belegt nicht, dass nicht
 gesendete Felder nie gesendet werden. Die Beobachtung stammt von einer
 Firmware-Version, die hier nicht erfasst ist.
+
+## Abgleich mit dem Dock Feature Set (22.10.2026)
+
+Quellen: `feature-set/dock-feature-set/` (14 Seiten, u. a. `dock-access-to-cloud`,
+`dock-device-management`, `hms`) und die Dock-to-Cloud-API-Referenz
+(`api-reference/dock-to-cloud/mqtt/dock/dock1|dock2|dock3/properties`,
+`…/aircraft/m3d|m4d|m30-properties`) von `developer.dji.com/doc/cloud-api-tutorial/en/`.
+Es ist **keine Dock-Hardware** angeschlossen; alles Folgende sind Definitionen aus der
+Dokumentation, nicht am Gerät beobachtet.
+
+**Neu im Katalog** (mechanisch aus den Webtabellen übernommen; der Konverter wurde zuvor an den
+vorhandenen Profilen `rcPlus2`, `rcPro`, `mavic3` und `aircraftCommon` geprüft und gibt 140 von
+143 bzw. 157 von 160 Pfaden identisch wieder, die übrigen Abweichungen sind Seitenänderungen
+der DJI-Seite):
+
+- `dock1`, `dock2`, `dock3` für `3/1/0`, `3/2/0`, `3/3/0` sowie `matrice3D` (Matrice 3D und 3TD)
+  und `matrice4D` (Matrice 4D und 4TD). Die Hüllenzeile `data` der Seiten ist keine Property
+  und wurde entfernt.
+- **Matrice 30 / 30T (`0/67/*`) ist bewusst nicht zugeordnet:** Diese Flugzeuge fliegen auch
+  handgesteuert mit Pilot 2, ein Dock-Profil wäre dort falsch.
+- `wireless_link_topo.secret_code` ist als `redacted` markiert. Textfelder wie `imei`, `iccid`,
+  `sn`, `rtcm_info.*` werden wie bisher nie weitergegeben, weil nur freigegebene Textpfade
+  zulässig sind.
+
+**Absicherung:** `privacy: redacted` wirkt jetzt auch im Parser selbst (`cleanValue`). Bisher
+schützte nur der Typ (Text und Arrays ohne Elementschema wurden verworfen). Ein Test belegt, dass ein
+als redigiert markiertes Feld auch dann nicht durchkommt, wenn sein Typ harmlos wäre, und dass es
+ohne den Marker durchkäme.
+
+**HMS-Warntexte** (Dock-Seite `hms`): Der Schlüssel `dock_tip_<code>` wurde schon richtig gewählt.
+Neu sind die dokumentierten Ersetzungsregeln:
+
+| Platzhalter | Regel |
+|---|---|
+| `%alarmid` | Alarmcode (hex) |
+| `%component_index` | `component_index + 1` |
+| `%index` | `sensor_index + 1` (vorher fälschlich `component_index + 1`) |
+| `%battery_index`, `%dock_cover_index` | `sensor_index` 0 = links, sonst rechts |
+| `%charging_rod_index` | 0 vorne, 1 hinten, 2 links, 3 rechts |
+
+Platzhalter ohne veröffentlichte Regel (`%1$s`, `%d`, `%1$.1f`, `%lidar_index` …) erscheinen
+nicht mehr roh im Text, sondern als `?`. Vorher standen 93 Texte (davon 37 Dock-Texte) mit solchen Platzhaltern
+unverändert im Dashboard, z. B. „Dock %1$s cover motor stalled“.
+
+**Offen, Entscheidung nötig:** Die offizielle `hms.json` (DJI-CDN, im Dock-Feature-Set verlinkt)
+enthält 3.952 Einträge, die eingebettete Kopie nur 2.288. 1.681 Schlüssel fehlen, darunter
+vermutlich Meldungen neuerer Geräte, 310 englische Texte weichen ab, und die neue Datei nutzt
+mehr benannte Platzhalter (`%dock_cover_index`, `%lidar_index`, `%lte_index`, `%gimbal_index`).
+`scripts/build-hms-texts.js` kann sie direkt einlesen. Die eingebettete Kopie stammt aus dem
+MIT-lizenzierten Cloud-API-Demo-Repository; für die CDN-Datei ist keine Lizenz angegeben.
+Deshalb wurde sie **nicht** übernommen.
+
+**Nicht umgesetzt** (bewusst, überwiegend steuernde oder schreibende Funktionen): Dock-Zugang
+über die Begleit-App und Organisationsbindung (HTTPS), DRC, FTS, Fernsteuerung/Debug,
+Firmware-Upgrade, Livestream, Medien, Wayline, benutzerdefinierte Flugzonen, Multi-Dock,
+KI-Zielerkennung und Remote-Log.
 
 ## Verifikation auf dem Pi (ohne Neustart)
 
