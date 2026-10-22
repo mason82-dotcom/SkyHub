@@ -9,7 +9,7 @@
    ['rtkFixState','RTK-Code',''],['attitudePitch','Nickwinkel',' °'],
    ['attitudeRoll','Rollwinkel',' °'],['windSpeed','Wind',' m/s']];
  const map=window.L?L.map('map',{zoomControl:true}).setView([51.16,10.45],6):null;
- let markers=L?.layerGroup?.();
+ let markers=map?L.layerGroup():null;
  if(map){
    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
      {maxZoom:19,attribution:'© OpenStreetMap',referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
