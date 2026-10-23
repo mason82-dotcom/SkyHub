@@ -1,6 +1,7 @@
 'use strict';
-/* Independent, fail-closed JSON import of the small, lossless overlap between
- * motecshine/dji-waylines-sdk Waylines JSON and SkyHub's OFFLINE waypoint editor.
+/* Independent, fail-closed JSON import of the small supported field subset of
+ * motecshine/dji-waylines-sdk Waylines JSON into SkyHub's OFFLINE editor.
+ * Both generators differ in RC-loss behavior and are NOT semantically equivalent.
  * No third-party code included; no mission dispatch or hardware validation.
  */
 (function (root, factory) {
@@ -35,6 +36,34 @@
       fail(label + ': ungültiger Zahlenwert');
     return value;
   }
+  // Plan geometry for local review only: mean-Earth spherical approximation,
+  // never a flight duration, geofence, airspace or energy feasibility check.
+  function reviewPlan(plan) {
+    const earthRadiusMeters = 6371008.8;
+    const rad = degrees => degrees * Math.PI / 180;
+    let total = 0, longest = 0;
+    for (let i=1; i<plan.waypoints.length; i++) {
+      const a = plan.waypoints[i-1], b = plan.waypoints[i];
+      const dLat=rad(b.lat-a.lat), dLon=rad(b.lon-a.lon);
+      const x=Math.sin(dLat/2)**2 +
+        Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+      const leg=2*earthRadiusMeters*Math.asin(Math.sqrt(Math.min(1,Math.max(0,x))));
+      total+=leg;
+      longest=Math.max(longest,leg);
+    }
+    return Object.freeze({
+      waypointCount:plan.waypoints.length,
+      photoActionCount:plan.waypoints.filter(p=>p.photo).length,
+      horizontalRouteMeters:Math.round(total*10)/10,
+      longestLegMeters:Math.round(longest*10)/10,
+      nominalStraightCruiseSeconds:Math.ceil(total/plan.speed),
+      distanceMethod:'spherical-haversine-mean-earth',
+      estimateExcludes:'takeoff,climb,turns,wind,terrain,obstacles,airspace,battery',
+      sdkMissionSemanticallyEquivalent:false,
+      pilot2ImportVerified:false,
+      flightReady:false
+    });
+  }
   function convert(input) {
     object(input, 'Mission');
     allowed(input, TOP_KEYS, 'Mission');
@@ -48,7 +77,7 @@
     const payload = number(input.payload_model, 'payload_model (numerischer DJI-Enum)', 1, 65535);
     if (!Number.isInteger(drone) || !Number.isInteger(payload)) fail('Geräte-IDs müssen ganzzahlig sein');
     const model = PROFILES[drone + ':' + payload];
-    if (!model) fail('Gerät/Last-Kombination nicht für verlustfreien Import freigegeben');
+    if (!model) fail('Gerät/Last-Kombination nicht für Referenzimport freigegeben');
     if (has(input, 'payload_position_index') && input.payload_position_index !== 0)
       fail('nur Payload-Position 0');
     const speed = number(input.global_speed, 'global_speed', 1, 15);
@@ -111,9 +140,11 @@
           waypoints[i].lon === waypoints[i - 1].lon)
         fail('aufeinanderfolgende identische Wegpunkte');
     }
+    const plan={name: input.name.trim(), model, speed, transitionSpeed: speed,
+      takeoffHeight, finishAction, waypoints};
     return Object.freeze({
-      plan: {name: input.name.trim(), model, speed, transitionSpeed: speed,
-        takeoffHeight, finishAction, waypoints},
+      plan,
+      review: reviewPlan(plan),
       source: 'motecshine/dji-waylines-sdk Waylines JSON subset',
       flightReady: false,
       hardwareVerified: false,
