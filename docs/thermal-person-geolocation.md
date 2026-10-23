@@ -198,6 +198,10 @@ A new `backend/workers/thermal_dji_jpeg_markers_offline.py` adds a **bounded**, 
 
 `backend/workers/thermal_dji_video_timebase_offline.py` adds a bounded, read-only inspection of **MP4/MOV container atom headers and independently SHA-256-pinned SRT cue timecodes** behind the existing PR #50 sealed-capture/profile gate. It does not decode video frames, read GPS values from subtitles, compute DJI flight/telemetry timestamps or assert clock synchronization. Nominal movie duration and monotonic relative SRT timecodes remain **unverified source metadata**, not real UTC or frame-to-pose alignment. Full documentation: [MP4/MOV/SRT timebase probe](thermal-dji-video-timebase-offline.md). All geolocation/mission-readiness flags stay false.
 
+## Relative DTS/PTS sample-table inspection (isolated offline adapter)
+
+`backend/workers/thermal_dji_mp4_sample_timing_offline.py` augments the bounded MP4/MOV research gate with **video-track `mdhd`/`hdlr`/`stts`/`ctts`/`stsz`** validation and bounded relative decode/presentation aggregates. Signed `ctts` v1 offsets permit simulated B-frame reordering research. These are still *unverified container table claims*, **not** validated media-payload/frame indexes, true UTC source timestamps, telemetry synchronization or location evidence. Fragmented videos, edit lists and multiple video tracks are refused. Existing capture HMAC checks still apply and all location/flight/SAR readiness flags remain false. Details: [Relative MP4 video sample timing](thermal-mp4-relative-sample-timing.md).
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
