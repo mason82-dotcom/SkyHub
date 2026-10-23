@@ -109,3 +109,30 @@ https://www.ultralytics.com/license
 Keine Änderung an `docker-compose.yml`, `server.js`,
 MQTT-ACL, Datenbank, Pilot-2-Authentifizierung oder
 bestehenden Diensten ist Teil dieses Staging-Branches.
+
+
+## Python-zu-Node-Vertragsgrenze (ohne produktiven API-Endpunkt)
+
+`backend/vision-preview-contract.js` akzeptiert ausschließlich das
+exakte `skyhub-vision-yolo11-preview-v1`-Format, lehnt zusätzliche
+Felder, übergroße Antworten, ungültige Klassen/Pixel-Boxen und frei
+erfundene Freigabewerte ab. `scripts/vision-preview-validate.js` liest
+ausdrücklich weitergereichte JSON-Daten von stdin und gibt nur einen
+bereinigten Report beziehungsweise `status=unavailable` zurück.
+
+Beispiel für einen sicheren lokalen Test mit vorhandenen, isolierten
+Bild- und Modelldateien:
+
+```bash
+set -o pipefail
+python3 backend/workers/vision_yolo11_offline.py \
+  --image /absolut/preview.jpg \
+  --model /absolut/geprueftes-modell.onnx \
+  | node scripts/vision-preview-validate.js
+```
+
+Kein Resultat wird hierdurch automatisch veröffentlicht, gespeichert
+oder mit einer Flugmission verknüpft. Ein künftiger Medienverknüpfungsjob
+muss Asset-/Workspace-ID und geprüftes S3-HEAD **außerhalb dieses
+Modellformats** autorisieren, bevor Ergebnisse persistiert werden.
+Tests: `node --test backend/test/vision-preview-*.test.js`.
