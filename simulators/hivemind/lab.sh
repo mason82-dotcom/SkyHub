@@ -100,7 +100,7 @@ case "$1" in
     "${compose[@]}" config --quiet
     exec python3 "$HERE/smoke.py"
     ;;
-  ps) "${compose[@]}" ps ;;
+  ps) "${compose[@]}" ps --all ;;
   logs) "${compose[@]}" logs --tail=80 ;;
   down)
     "${compose[@]}" down
