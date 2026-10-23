@@ -20,6 +20,7 @@ SCHEMA = "skyhub-vision-yolo11-preview-v1"
 MAX_IMAGE_BYTES = 30 * 1024 * 1024
 MAX_MODEL_BYTES = 256 * 1024 * 1024
 MAX_PIXELS = 24_000_000
+MAX_DIMENSION = 8192
 MAX_DETECTIONS = 100
 LABEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
@@ -56,7 +57,8 @@ def inspect_rgb(path: Path) -> tuple[int, int]:
                 if picture.format not in {"JPEG", "PNG"} or picture.mode != "RGB":
                     raise InvalidInput("Unsupported image format")
                 width, height = picture.size
-                if width <= 0 or height <= 0 or width * height > MAX_PIXELS:
+                if (width <= 0 or height <= 0 or width > MAX_DIMENSION
+                        or height > MAX_DIMENSION or width * height > MAX_PIXELS):
                     raise InvalidInput("Image dimensions exceed limit")
                 # Force decoding; detecting only a plausible magic header is insufficient.
                 picture.load()
@@ -142,7 +144,8 @@ def analyze(image: str, model: str, *, confidence: float = 0.35,
         raise InvalidInput("PyTorch weights require explicit trusted-file opt-in")
     width, height = (image_probe or inspect_rgb)(image_path)
     if (not isinstance(width, int) or not isinstance(height, int)
-            or width <= 0 or height <= 0 or width * height > MAX_PIXELS):
+            or width <= 0 or height <= 0 or width > MAX_DIMENSION
+            or height > MAX_DIMENSION or width * height > MAX_PIXELS):
         raise InvalidInput("Invalid image dimensions")
     if model_factory is None:
         # Import only after input validation. Ultralytics is not bundled with SkyHub.
