@@ -1,8 +1,42 @@
 # SkyHub Next
 
+**GitHub-Repository:** https://github.com/mason82-dotcom/SkyHub-Next  
+**Hinweis:** Der frühere Repository-Slug `mason82-dotcom/SkyHub` leitet auf `SkyHub-Next` weiter. Das lokale Legacy-Verzeichnis `~/Projekte/SkyHub` ist weiterhin getrennt vom Entwicklungsverzeichnis `~/Projekte/SkyHub-Next` zu behandeln.
+
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
-SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker gehören noch nicht zum Funktionsumfang. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
+SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Im Main-Stand sind eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker nicht enthalten; entsprechende Implementierungen in Feature-PRs sind noch nicht freigegeben. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
+
+## Aktueller Projektstand (23.10.2026)
+
+**Integrationsnachtrag 23.10.2026:** Die drei read-only DJI-Lebenszyklus-PRs [#74](https://github.com/mason82-dotcom/SkyHub-Next/pull/74), [#78](https://github.com/mason82-dotcom/SkyHub-Next/pull/78) und [#83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) sind in dieser Reihenfolge nach `main` gemergt. Enthalten sind ausschließlich die **nicht am Server verdrahtete** Missionsbeobachtung, die strikte `services_reply`-Korrelation und das isolierte PostgreSQL-CAS-Journal einschließlich Offline-/CI-Tests. **Kein Missionsversand, keine produktive Journalmigration, keine Pi-Installation und keine Hardwarefreigabe.** Siehe [Beobachtungslebenszyklus](docs/dji-rpc-lifecycle-observation.md), [RPC-Vertrag](docs/dji-flighttask-rpc-integration.md) und [Persistenzgrenzen](docs/dji-flighttask-durable-journal.md).
+
+**Verbindliche Bestandsaufnahme:** [Projektstand, offene Entwicklungszweige und Integrationsgates](docs/projektstand-2026-10-23.md).
+Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub-Next/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub-Next/pull/66) (rein lesende Hardwarediagnostik) ist Commit
+[`64e427c3d9488da80a391cd43d0308771f480955`](https://github.com/mason82-dotcom/SkyHub-Next/commit/64e427c3d9488da80a391cd43d0308771f480955)
+(vom 23.10.2026). Der nachfolgende Stand unterscheidet ausdrücklich **Main**,
+**offene/gestapelte Pull Requests**, **in den Integrationsbranch gemergte PRs**,
+**CI-Nachweise** und **Hardwarebeobachtungen**.
+
+- **In Main:** DJI-MQTT-Leseeingang, Topologie/Registry, Pilot-2-HTTPS-Kopplung,
+  statisches Dashboard, Feldfrische, HMS/Tracks, optionale begrenzte Topologie-Antwort
+  und PostGIS-/Redis-Basis; außerdem die korrigierte DJI-Modell-Felddiagnose
+  sowie den **nicht im Server gemounteten, synthetischen Offline-DJI-1.18-Paritätsaudit**.
+  Zusätzlich **isolierte Offline-Hardwareprüfer** für RC Pro/M3M und RC Plus 2/M4T,
+  M3M-Feldlücken-Klassifikation und synthetische Regressionen; die reale
+  RC-Plus-2/M4T-Hardwareabnahme ist weiterhin ausstehend.
+  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub-Next/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Keine S3-/MinIO- oder DJI-Pilot-2-Medien-API.
+  Ebenfalls integriert: [#73](https://github.com/mason82-dotcom/SkyHub-Next/pull/73), ein **inaktiver, separat zu injizierender S3-ListObjectsV2-Vertrag** mit Prefix-/Cursor-/Mengengrenzen. **Noch kein S3-Client, Bucket-Zugriff oder Media-HTTP-Endpoint.**
+  Flugspuraufzeichnung bleibt standardmäßig aus.
+- **Noch nicht in Main:** das neue Command Center, MinIO-Medienleser, Pilot-2-Medien-HTTPS/STS,
+  sichere XMP-Proben, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,
+  YOLO11, Thermal-Geolokalisierung und HiveMind-Simulationslabor.
+  Teilkomponenten sind in offenen PRs beziehungsweise im separaten Integrationszweig.
+- **Abgrenzung:** Ein Merge in `develop/skyhub-integrated-readonly-20261022`
+  ist kein Merge nach `main`, und ein erfolgreicher CI-Lauf ist keine Pi-Installation
+  oder DJI-Hardwarefreigabe. Kein Missionsversand, kein allgemeiner Sensor-Messwertnachweis.
+- **Dokumentationsregel:** Historische Protokolle bleiben datiert; der verifizierte
+  Stichtagsstand steht im verlinkten Integrationsregister.
 
 ## Projektstruktur
 
@@ -18,6 +52,16 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 ## Dokumentation
 
+- [Dokumentationswegweiser](docs/index.md)
+- [Konfigurationsreferenz: Env, Compose, Flags und Startgrenzen](docs/config-reference.md)
+- [API-Referenz: HTTP, Socket.IO, MQTT und Zugriffsmatrix](docs/api-reference.md)
+- [Projektstand 23.10.2026: Main, PR-Ketten, Test-/Hardware-Evidenz](docs/projektstand-2026-10-23.md)
+- [Priorisierter Integrationsplan: PR-Basisgraph, Reihenfolge und Prüfbedingungen](docs/integration-priorities-2026-10-23.md)
+- [Gemeinsame Offline-Hardwarediagnostik: RC Pro/M3M, RC Plus 2/M4T](docs/hardware-diagnostics-consolidation.md)
+- [M3M-Kamerafeldlücken ohne Thermografie-Fehlschluss](docs/m3m-camera-gap-analysis.md)
+- [M3M-Medieninventur Phase 1: rein lokale Dateinamen- und Bandzähler](docs/m3m-offline-media-inventory.md)
+- [Experimenteller S3-Lesekontrakt: begrenzte ListObjectsV2-Pagination, noch kein Live-Client](docs/m3m-s3-read-contract.md)
+- [RC Plus 2/Matrice 4T: read-only Hardware-Prüfverfahren](docs/hardware-rc-plus2-m4t.md)
 - [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
@@ -27,6 +71,7 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [Detaillierter Cutover- und Rollback-Plan](docs/skyhub-legacy-takeover.md)
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
+- [Offline Cloud-API-1.18-Protokoll-Paritätsaudit (16 synthetische Fälle)](docs/dji-protocol-parity-audit.md)
 - [Archivhinweise](stacks/README.md)
 
 ## Positionsaufzeichnung (standardmäßig deaktiviert)
