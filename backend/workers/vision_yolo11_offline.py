@@ -53,7 +53,7 @@ def inspect_rgb(path: Path) -> tuple[int, int]:
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             Image.MAX_IMAGE_PIXELS = MAX_PIXELS
             with Image.open(path) as picture:
-                if picture.format not in {"JPEG", "PNG"}:
+                if picture.format not in {"JPEG", "PNG"} or picture.mode != "RGB":
                     raise InvalidInput("Unsupported image format")
                 width, height = picture.size
                 if width <= 0 or height <= 0 or width * height > MAX_PIXELS:
