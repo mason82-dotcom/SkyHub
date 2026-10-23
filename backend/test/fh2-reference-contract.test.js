@@ -54,6 +54,8 @@ test('virtual cockpit requires stricter distinct gates than read-only flight rec
   const map = ref.reviewGates('projectMap');
   assert.ok(cockpit.includes('separate-pilot-command-authorization'));
   assert.ok(cockpit.includes('hardware-and-firmware-e2e-validation'));
+  assert.ok(cockpit.includes('supported-device-model-confirmed-by-dji'));
+  assert.ok(flightPath.includes('supported-device-model-confirmed-by-dji'));
   assert.ok(cockpit.includes('organization-key-browser-exposure-blocked-or-explicitly-resolved'));
   assert.ok(!flightPath.includes('separate-pilot-command-authorization'));
   assert.ok(!flightPath.includes('separate-route-write-authorization'));
