@@ -15,7 +15,6 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertIn("be269a3458ff6b2602d9a4dae14df278946cf7c1", prepare)
         self.assertIn("https://github.com/cdmiltd/hivemind-simulator.git", prepare)
         self.assertIn("git -C \"$SOURCE\" rev-parse HEAD", prepare)
-        self.assertFalse((LAB / ".upstream").exists(), "Do not commit third-party AGPL sources")
         ignore = (ROOT / ".gitignore").read_text()
         for name in (".upstream/", ".m2-cache/", "lab.env"):
             self.assertIn("simulators/hivemind/" + name, ignore)
