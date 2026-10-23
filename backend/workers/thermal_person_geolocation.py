@@ -121,19 +121,7 @@ def _project_pixel(cx, cy, width, height, hfov, vfov, lat, lon, agl, yaw, down_p
     return round(target_lat, 6), round(target_lon, 6), round(distance, 2)
 
 
-def project(payload):
-    """Validate all inputs before producing local-only, unverified location estimates.
-
-    Verification booleans are ASSERTIONS made by a trusted calling workflow,
-    not independent evidence that this module can certify calibration or GPS.
-    """
-    _object(payload, ("schema", "timestampMs", "frame", "camera", "telemetry", "detections"))
-    if payload["schema"] != INPUT_SCHEMA:
-        raise InvalidInput("invalid_schema")
-    timestamp = _integer(payload["timestampMs"], 1_000_000_000_000, 9_999_999_999_999)
-    width, height, hfov, vfov = _camera(payload["frame"], payload["camera"])
-    lat, lon, agl, yaw, down_pitch = _telemetry(payload["telemetry"], timestamp)
-    detections = payload["detections"]
+def _validated_detections(detections, width, height):
     if not isinstance(detections, list) or len(detections) > MAX_DETECTIONS:
         raise InvalidInput("invalid_detections")
 
@@ -158,6 +146,23 @@ def project(payload):
         if x2 <= x1 or y2 <= y1:
             raise InvalidInput("invalid_bbox")
         parsed.append((track_id, item["className"], confidence, (x1+x2)/2, (y1+y2)/2))
+
+    return parsed
+
+
+def project(payload):
+    """Validate all inputs before producing local-only, unverified location estimates.
+
+    Verification booleans are ASSERTIONS made by a trusted calling workflow,
+    not independent evidence that this module can certify calibration or GPS.
+    """
+    _object(payload, ("schema", "timestampMs", "frame", "camera", "telemetry", "detections"))
+    if payload["schema"] != INPUT_SCHEMA:
+        raise InvalidInput("invalid_schema")
+    timestamp = _integer(payload["timestampMs"], 1_000_000_000_000, 9_999_999_999_999)
+    width, height, hfov, vfov = _camera(payload["frame"], payload["camera"])
+    lat, lon, agl, yaw, down_pitch = _telemetry(payload["telemetry"], timestamp)
+    parsed = _validated_detections(payload["detections"], width, height)
 
     estimates = []
     dropped_non_person = dropped_confidence = dropped_geometry = 0
