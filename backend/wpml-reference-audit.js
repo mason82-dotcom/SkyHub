@@ -112,7 +112,7 @@ function auditReferenceKmz(buffer){
       });
       const reported=Number(declaredDistance);
       if(pts.length>=2&&pts.every(Boolean)&&
-         /^\\d+(?:\\.\\d+)?$/.test(declaredDistance)&&Number.isFinite(reported)){
+         /^\d+(?:\.\d+)?$/.test(declaredDistance)&&Number.isFinite(reported)){
         const rad=x=>x*Math.PI/180;
         let calculated=0;
         for(let i=1;i<pts.length;i++){
