@@ -89,6 +89,50 @@ test('upstream alternate namespace is recorded but never assumed accepted by Sky
   assert.equal(report.namespaceCheck,'upstream-alternate-unverified');
   assert.deepEqual(report.findings,['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB']);
 });
+test('1.0.6 reference input remains blocked but reports source-aware risks without leaking data',()=>{
+  const broken=kmz((a,b)=>[a,b].map(xml=>
+    xml.replace('http://www.dji.com/wpmz/1.0.2','http://www.dji.com/wpmz/1.0.6')
+      .replace('<wpml:droneSubEnumValue>1</wpml:droneSubEnumValue>',
+        '<wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>')
+      .replace('<wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>',
+        '<wpml:exitOnRCLost>goContinue</wpml:exitOnRCLost>')));
+  const report=auditReferenceKmz(broken);
+  fixedFields(report);
+  assert.equal(report.offlineValid,null);
+  assert.equal(report.namespaceCheck,'upstream-alternate-unverified');
+  assert.equal(report.inspectionMode,'namespace-relabel-in-memory-only');
+  assert.equal(report.reviewStatus,'blocked');
+  assert.ok(report.findings.includes('WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB'));
+  assert.ok(report.findings.includes('AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT'));
+  assert.ok(report.findings.includes('RC_LOSS_POLICY_DIFFERS_FROM_SKYHUB_EDITOR'));
+  assert.ok(report.findings.includes('WPML_OFFLINE_VALIDATION_FAILED'));
+});
+test('SDK-style longitude-degree distance overestimate is flagged only as a review',()=>{
+  const base=plan();
+  base.waypoints=[{lat:49,lon:8,height:50},{lat:49,lon:8.04,height:50}];
+  const docs=planner.documents(base);
+  const mark=docs.waylinesXml.replace('</Folder>',
+    '<wpml:distance>4440</wpml:distance><wpml:duration>888</wpml:duration></Folder>');
+  const report=auditReferenceKmz(Buffer.from(planner.createKmz(docs.templateXml,mark)));
+  fixedFields(report);
+  assert.equal(report.offlineValid,true);
+  assert.equal(report.reviewStatus,'review-required');
+  assert.ok(report.findings.includes('WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED'));
+  assert.ok(report.findings.includes('WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION'));
+  const plausible=docs.waylinesXml.replace('</Folder>',
+    '<wpml:distance>2918</wpml:distance></Folder>');
+  const ok=auditReferenceKmz(Buffer.from(planner.createKmz(docs.templateXml,plausible)));
+  assert.ok(ok.findings.includes('WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED'));
+  assert.ok(!ok.findings.includes('WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION'));
+});
+test('mixed and unknown WPML namespaces are blocked before any shim conversion',()=>{
+  const mixed=auditReferenceKmz(kmz((a,b)=>[
+    a.replace('http://www.dji.com/wpmz/1.0.2','http://www.dji.com/wpmz/1.0.6'),b]));
+  assert.equal(mixed.reviewStatus,'blocked');
+  assert.equal(mixed.inspectionMode,'not-inspected');
+  assert.equal(mixed.offlineValid,null);
+  assert.deepEqual(mixed.findings,['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB']);
+});
 test('untrusted files fail closed; no filenames or mission metadata in errors',()=>{
   assert.throws(()=>auditReferenceKmz(Buffer.from('private coordinates 49.12345')),/audit rejected/);
   assert.throws(()=>auditReferenceKmz(null),/audit rejected/);
