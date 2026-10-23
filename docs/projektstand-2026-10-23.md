@@ -68,7 +68,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 | [#43](https://github.com/mason82-dotcom/SkyHub/pull/43) | Draft auf #40: Opt-in-**RGB**-YOLO11-Worker für lokale Bilder und kontrollierte Modelle; kein Livestream, keine DJI-Cloud-API-Integration |
 | [#45](https://github.com/mason82-dotcom/SkyHub/pull/45) → [#49](https://github.com/mason82-dotcom/SkyHub/pull/49) | Gestapelte Drafts auf #43: Offline-Thermal-Pixel→GPS-*Kandidaten* und lokale HMAC-Provenienz; ohne verifizierte Kamera-/Geländekalibrierung, Personenbestätigung oder SAR-Einsatzfreigabe |
 | [#50](https://github.com/mason82-dotcom/SkyHub/pull/50) → [#52](https://github.com/mason82-dotcom/SkyHub/pull/52) | Drafts auf #49: manuell gepinntes M3T/M4T-Kalibrierungsprofil und zweifach HMAC-gebundene Offline-Quellmedien; nur begrenzte **JPEG/XMP-Feldpräsenz**, keine Metadatenwerte, DJI-Sensorherkunft, Gimbal-/AGL-Verifikation oder GPS-Eignung |
-| [#46](https://github.com/mason82-dotcom/SkyHub/pull/46) | Draft direkt auf Main: getrenntes HiveMind-Simulationslabor; Upstream SDK 1.16.1.3, daher **kein** Beweis für DJI Cloud API 1.18 |
+| [#46](https://github.com/mason82-dotcom/SkyHub/pull/46) | Draft direkt auf Main: getrenntes HiveMind-Simulationslabor; **synthetische** Pilot- und Dock-MQTT-E2E-Läufe in isolierter GitHub-CI bestanden ([Runtime #39894401436](https://github.com/mason82-dotcom/SkyHub/actions/runs/39894401436)); Dock-RPCs nur per Lab-Mock. Upstream SDK 1.16.1.3, daher **kein** Beweis für DJI Cloud API 1.18 oder echte DJI-Hardware |
 | [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) | Draft direkt auf Main: rein synthetischer Offline-Protokoll-Paritätsaudit gegen gepinnte SDK-1.18-Referenz; kein realer Geräte-/Dock-Test |
 
 **Zusatz:** Die drei in Main gemergten Grundlagen [#15](https://github.com/mason82-dotcom/SkyHub/pull/15) (DJI-Feldkatalog), [#17](https://github.com/mason82-dotcom/SkyHub/pull/17) (RC Pro/M3M-Diagnose) und [#20](https://github.com/mason82-dotcom/SkyHub/pull/20) (modellbezogene M3M-OSD-Erweiterung) sind von den oben genannten offenen Ergänzungen zu unterscheiden.
@@ -109,6 +109,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 - [README](../README.md) – Startpunkt und Root-/Legacy-Grenze
 - [Architektur](architecture.md) und [Sicherheitsmodell](security.md) – **nur Main** als Runtime-Vertrag
+- [Konfigurationsreferenz](config-reference.md) und [API-Vertrag](api-reference.md) – Env-/Compose-Weitergabe, Endpunkt-/Token-/LAN-Grenzen
 - [Betrieb](ops.md), [Skriptwirkungen](scripts.md), [Legacy-Takeover](skyhub-legacy-takeover.md) – keine stillen Änderungen am Pi
 - [DJI-Feldprüfung](dji-118-field-audit.md), [Hardware RC Pro/M3M](hardware-rc-pro-m3m.md), [DJI-Kompatibilität](dji-cloud-api-compatibility.md)
 - [Historischer Entwicklungsplan vom 20.10.2026](entwicklungsplan-2026-10-20.md) – **historischer Ausgangspunkt**, keine Live-Roadmap für alle offenen PRs
