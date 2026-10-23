@@ -104,17 +104,31 @@ def assert_telemetry(health: dict, before: dict, devices: list,
     return isinstance(b, (float, int)) and not isinstance(b, bool) and 0 <= b <= 100
 
 
+def await_lab_ready() -> dict:
+    """Give Spring Boot and MQTT subscriptions time to start after Compose."""
+    end = time.monotonic() + 120
+    while time.monotonic() < end:
+        try:
+            health = request(SKYHUB, "/api/health")
+            if isinstance(health, dict):
+                # Wrong backend configuration is not a temporary startup error.
+                assert_lab(health)
+                sim_health = request(SIM, "/api/health")
+                if isinstance(sim_health, dict) and sim_health.get("status") == "UP":
+                    return health
+        except SmokeFailure as exc:
+            if "not subscribed" not in str(exc) and "unavailable" not in str(exc):
+                raise
+        time.sleep(2)
+    raise SmokeFailure("Expected isolated SkyHub and simulator APIs did not become ready")
+
+
 def run() -> None:
     token = local_token()
     # Reject unrelated services on the loopback ports BEFORE issuing mutations.
-    before = request(SKYHUB, "/api/health")
-    require(isinstance(before, dict), "Unexpected SkyHub health type")
-    assert_lab(before)
+    before = await_lab_ready()
     devices_before = request(SKYHUB, "/api/devices", token=token)
     require(isinstance(devices_before, list), "Invalid SkyHub devices API")
-    sim_health = request(SIM, "/api/health")
-    require(isinstance(sim_health, dict) and sim_health.get("status") == "UP",
-            "Expected pinned HiveMind simulator health endpoint")
     info = request(SIM, "/api/device-info")
     require(isinstance(info, dict) and "controllerModelKey" in info and "droneSn" in info,
             "Unexpected simulator identity API")
