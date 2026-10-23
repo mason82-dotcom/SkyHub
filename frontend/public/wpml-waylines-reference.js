@@ -36,6 +36,43 @@
       fail(label + ': ungültiger Zahlenwert');
     return value;
   }
+  // JSON.parse by itself silently accepts repeated object keys. For mission
+  // parameters this is ambiguous and must fail rather than prefer the last one.
+  function parseJson(raw) {
+    if (typeof raw !== 'string' || raw.length > 128*1024)
+      fail('JSON muss eine Textdatei bis 128 KiB sein');
+    let result;
+    try { result = JSON.parse(raw); }
+    catch { fail('ungültiges JSON'); }
+    const stack=[];
+    for (let i=0; i<raw.length; i++) {
+      const token=raw[i];
+      if (token==='{' || token==='[') {
+        if (stack.length>=32) fail('JSON-Verschachtelung zu tief');
+        stack.push(token==='{' ? new Set() : null);
+        continue;
+      }
+      if (token==='}' || token===']') {
+        stack.pop();
+        continue;
+      }
+      if (token!=='"') continue;
+      const start=i;
+      for (i++; i<raw.length; i++) {
+        if (raw[i]==='\\') { i++; continue; }
+        if (raw[i]==='"') break;
+      }
+      let next=i+1;
+      while (next<raw.length && /\s/.test(raw[next])) next++;
+      if (raw[next]!==':' || stack.length===0) continue;
+      const keys=stack[stack.length-1];
+      if (!(keys instanceof Set)) fail('ungültige JSON-Objektstruktur');
+      const key=JSON.parse(raw.slice(start,i+1));
+      if (keys.has(key)) fail('doppelter JSON-Schlüssel');
+      keys.add(key);
+    }
+    return result;
+  }
   // Plan geometry for local review only: mean-Earth spherical approximation,
   // never a flight duration, geofence, airspace or energy feasibility check.
   function reviewPlan(plan) {
@@ -151,5 +188,5 @@
       conversionScope: 'offline-strict-subset-not-semantic-equivalence'
     });
   }
-  return Object.freeze({convert, PROFILES});
+  return Object.freeze({convert, parseJson, PROFILES});
 });
