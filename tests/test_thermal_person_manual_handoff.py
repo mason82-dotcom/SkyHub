@@ -1,5 +1,6 @@
 """Manual handoff contract; entirely dependency-free and hardware/network isolated."""
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -214,6 +215,7 @@ class ManualHandoffTest(unittest.TestCase):
 
             report = detector.analyze(
                 str(image), str(model), trusted_model=True,
+                model_sha256=hashlib.sha256(model.read_bytes()).hexdigest(),
                 image_probe=lambda _: (640, 512),
                 model_factory=lambda *_args, **_kwargs: MockModel(),
             )
