@@ -70,6 +70,46 @@ test('public health does not reveal Pilot credentials',async()=>{
   assert.equal(body.includes(VIEW_TOKEN),false);
 });
 
+test('DJI model diagnostic returns all six whitelisted schema profiles',async()=>{
+  const {fieldDefinitions}=require('../dji-properties');
+  for(const model of ['2:144:0','2:174:0','0:77:0','0:77:1','0:77:2','0:99:1']){
+    const response=await request('/api/diagnostics/dji-fields?model='+model,{token:VIEW_TOKEN});
+    assert.equal(response.status,200,model);
+    const [domain,type,subType]=model.split(':');
+    assert.deepEqual(await response.json(),
+      fieldDefinitions({domain,type:Number(type),subType:Number(subType)}));
+  }
+});
+
+test('DJI model diagnostic rejects malformed and unknown model identifiers',async()=>{
+  const invalid=['','?model=','?model=0:77','?model=0:77:2:1',
+    '?model=1:89:0','?model=0:7777:2','?model=0:-77:2','?model=0:77:2.0',
+    '?model=0:%5Cd:%5Cd','?model=0:77:2&model=2:144:0','?model[type]=77',
+    '?model=0:077:02','?model=0:77:%0A2'];
+  for(const query of invalid){
+    const response=await request('/api/diagnostics/dji-fields'+query,{token:VIEW_TOKEN});
+    // Leading zeros are syntactically numeric, but should never change model identity.
+    if(query==='?model=0:077:02'){
+      assert.equal(response.status,200,query);
+      continue;
+    }
+    assert.equal(response.status,400,query);
+    assert.deepEqual(await response.json(),{error:'Expected domain:type:sub_type'});
+  }
+  const unknown=await request('/api/diagnostics/dji-fields?model=0:999:0',{token:VIEW_TOKEN});
+  assert.equal(unknown.status,404);
+  assert.deepEqual(await unknown.json(),{error:'Model not in schema catalogue'});
+});
+
+test('DJI model diagnostic requires viewer token even from permitted LAN',async()=>{
+  const endpoint='/api/diagnostics/dji-fields?model=0:77:2';
+  for(const options of [{},{lan:'192.168.178.70'},{token:PILOT_TOKEN}]){
+    const response=await request(endpoint,options);
+    assert.equal(response.status,401);
+    assert.deepEqual(await response.json(),{error:'Unauthorized'});
+  }
+});
+
 test('LAN view is read-only; pairing administration still needs the view token',async()=>{
   assert.equal((await request('/api/devices')).status,401);
   assert.equal((await request('/api/devices',{lan:'192.168.178.70'})).status,200);
