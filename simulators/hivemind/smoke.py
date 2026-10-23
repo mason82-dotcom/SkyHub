@@ -107,6 +107,7 @@ def assert_telemetry(health: dict, before: dict, devices: list,
 def await_lab_ready() -> dict:
     """Give Spring Boot and MQTT subscriptions time to start after Compose."""
     end = time.monotonic() + 120
+    last_reason = "startup pending"
     while time.monotonic() < end:
         try:
             health = request(SKYHUB, "/api/health")
@@ -117,10 +118,11 @@ def await_lab_ready() -> dict:
                 if isinstance(sim_health, dict) and sim_health.get("status") == "UP":
                     return health
         except SmokeFailure as exc:
-            if "not subscribed" not in str(exc) and "unavailable" not in str(exc):
+            last_reason = str(exc)
+            if "not subscribed" not in last_reason and "unavailable" not in last_reason:
                 raise
         time.sleep(2)
-    raise SmokeFailure("Expected isolated SkyHub and simulator APIs did not become ready")
+    raise SmokeFailure("Isolated lab did not become ready: " + last_reason)
 
 
 def run() -> None:
