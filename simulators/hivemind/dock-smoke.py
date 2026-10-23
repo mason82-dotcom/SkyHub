@@ -83,8 +83,13 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
     events = request(SKYHUB, "/api/events", token=token)
     require(isinstance(events, list) and
             any(isinstance(e, dict) and e.get("sn") == dock_sn and
-                e.get("method") == "flighttask_progress" for e in events),
-            "Mission progress event not observed by SkyHub")
+                e.get("method") == "flighttask_progress" and
+                isinstance(e.get("missionReport"), dict) and
+                e["missionReport"].get("reportedStatus") in
+                  ("in_progress", "paused", "canceled", "failed", "ok") and
+                isinstance(e["missionReport"].get("progressPercent"), int)
+                for e in events),
+            "Validated mission progress summary not observed by SkyHub")
     # Metadata-only: storage_config_get MUST deny STS and upload reports MUST
     # acknowledge with matching tid/bid. The monitor runs inside dock-mock,
     # never against a real bucket or production broker.
@@ -112,8 +117,12 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
     events_after = request(SKYHUB, "/api/events", token=token)
     require(isinstance(events_after, list) and
             any(isinstance(e, dict) and e.get("sn") == dock_sn and
-                e.get("method") == "file_upload_callback" for e in events_after),
-            "File upload metadata event not observed by SkyHub")
+                e.get("method") == "file_upload_callback" and
+                e.get("mediaReport") == {
+                    "kind": "file_metadata_report",
+                    "storageVerification": "not_checked"
+                } for e in events_after),
+            "Unverified media metadata summary not observed by SkyHub")
     print("PASS: no-STS media metadata, upload priority, callbacks and events_reply")
     print("PASS: synthetic Dock HMS, safe ground cancellation, airborne-stop refusal and progress")
 
