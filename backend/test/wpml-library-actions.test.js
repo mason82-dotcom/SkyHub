@@ -167,6 +167,8 @@ test('P0 revision comparisons only reveal aggregate changes and fixed public fie
   const newPlan=plan();
   newPlan.waypoints[1].lat=48.123456;
   newPlan.waypoints[2].height=60;
+  // Explicit provenance markers are required at every waypoint for local heights.
+  newPlan.waypoints.forEach((p,i)=>{p.ellipsoidHeight=170+i;});
   newPlan.speed=7;
   newPlan.actionGroups=[{index:0,actions:[{type:'takePhoto'}]}];
   const b=library.save(a.library,{routeId:a.routeId,name:'Sensitive field',
@@ -175,7 +177,7 @@ test('P0 revision comparisons only reveal aggregate changes and fixed public fie
   assert.equal(compare.leftRevision,1);
   assert.equal(compare.rightRevision,2);
   assert.equal(compare.positionChanges,1);
-  assert.equal(compare.heightChanges,1);
+  assert.equal(compare.heightChanges,3);
   assert.equal(compare.photoChanges,0);
   assert.equal(compare.actionGroupsChanged,true);
   assert.deepEqual(compare.flightProfileFieldsChanged,['speed']);
