@@ -21,11 +21,13 @@ the simulator console at **127.0.0.1:19090**. The Docker network is a dedicated,
 The lab has its own isolated database, device IDs and volumes.
 
 Start with the simulator's **Pilot-to-Cloud mode** (RC Plus / RC Plus 2 / RC Pro).
-It publishes `update_topo` and, once online, RC/aircraft OSD. SkyHub currently
-consumes the MQTT topology and telemetry but does not implement all the Dock
-registration RPCs (`config`, `airport_bind_status`, `airport_organization_get`,
-`airport_organization_bind`). Full Dock registration therefore **fails or times out**
-with this backend; this is a known integration gap, not evidence of simulator failure.
+It publishes `update_topo` and, once online, RC/aircraft OSD. SkyHub continues
+to consume MQTT topology/telemetry **read-only**. The optional `dock-rpc`
+profile provides a **separate synthetic MQTT reply service** for Dock onboarding
+(`config`, `airport_bind_status`, `airport_organization_get`,
+`airport_organization_bind` and `update_topo`). The mock is not part of
+the SkyHub backend, cannot authenticate real DJI equipment and is disabled
+under the default `up` command.
 Pilot mode in the pinned upstream simulator continues if `update_topo` acknowledgement
 times out; this is not a claim of real hardware pairing or DJI approval.
 Even a successful lab test does not validate actual RC Plus 2 / M4T / M3M hardware.
@@ -47,7 +49,9 @@ bash simulators/hivemind/lab.sh prepare    # fetch pinned upstream, build jar
 bash simulators/hivemind/lab.sh config     # Compose validation only
 bash simulators/hivemind/lab.sh up         # STARTS a separate lab stack
 bash simulators/hivemind/lab.sh ps
-bash simulators/hivemind/lab.sh smoke       # bounded REST→MQTT→SkyHub E2E validation
+bash simulators/hivemind/lab.sh smoke       # Pilot REST→MQTT→SkyHub E2E
+bash simulators/hivemind/lab.sh dock-up     # explicit Dock RPC mock profile
+bash simulators/hivemind/lab.sh dock-smoke  # full Dock registration + OSD
 ```
 
 The automated `smoke` command uses only the two loopback APIs and the private
@@ -60,6 +64,16 @@ synthetic controller/aircraft records appear. It finally requests simulated
 device shutdown. No DJI serial numbers, coordinates, passwords or tokens are
 printed. **Run `smoke` only when the test simulator is offline**; if it is
 already online the check fails rather than disrupting an existing session.
+For Dock testing, the opt-in mock only responds to the four ordered methods
+and the exact disposable organization `skyhub-lab-org` with binding code
+`skyhub-lab-code`; wrong or out-of-order requests receive **no reply**.
+The simulator `dock-smoke` uses the regular `/api/online` method without
+`skip_register`, waits for successful registration and verifies fresh
+topology and OSD reception in SkyHub before calling `/api/offline`.
+Run the Pilot smoke first; it is intentionally unaffected by this new
+Dock-only profile. For clean sequential tests, keep the lab simulator offline
+before each smoke command.
+
 The result is a software-level regression check, not a hardware acceptance
 test. The simulator may wait approximately 10 seconds for a missing
 `status_reply`; the Pilot-mode timeout is intentional in this phase.
@@ -90,7 +104,7 @@ For a quick **offline-only** verification of the orchestration and smoke-test
 contract, run `python3 -m unittest discover -s tests -p 'test_hivemind*.py'`.
 The regular SkyHub CI executes these offline tests without starting the simulator.
 The separate `.github/workflows/hivemind-lab-e2e.yml` job builds the pinned
-AGPL simulator and runs the actual synthetic MQTT acceptance test on a
+AGPL simulator and runs the Pilot **and Dock** synthetic MQTT acceptance tests on a
 GitHub-hosted runner. This heavyweight workflow does not execute on the Pi.
 
 To clean the lab data, examine project-specific volumes manually first.
@@ -107,7 +121,7 @@ changes to the existing EMQX ACL, Caddy, legacy Docker Compose or Pi `.env`.
 | Isolation | Lab project/network/volumes; no host MQTT port | Verify Compose output before running |
 | Pilot topology | SkyHub sees `sys/product/+/status` | No physical onboarding verification |
 | OSD/State | `lab.sh smoke` checks new OSD and normalized telemetry | Synthetic only; no genuine DJI 1.18 confirmation |
-| Dock registration | **Not implemented by SkyHub** | Requires explicit mock/adapter before E2E testing |
+| Dock registration | `dock-rpc` opt-in mock: four sequential requests + topology reply | Synthetic success only; SkyHub production RPCs still unimplemented |
 | Flight commands, DRC, stream, media | Reference only | SkyHub has no general active command execution path |
 | DJI Cloud API 1.18 / aircraft coverage | **Not proven** | Upstream bundles SDK 1.16.1.3; hardware tests remain necessary |
 
