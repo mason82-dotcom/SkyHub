@@ -158,6 +158,20 @@ flight, with matching `tid`/`bid`. The one-shot observer verifies
 `events_reply` and `uploaded: false`, and SkyHub receives the callback.
 No actual image upload, storage authorization or media analysis occurs.
 
+SkyHub Next now parses these received MQTT events through a strictly
+allowlisted, read-only adapter. The `/api/events` response and dashboard's
+**Geräteereignisse** panel can show:
+- `missionReport.reportedStatus`, `progressPercent`, `currentStep` and the
+  optional numeric `breakReason` for a validated `flighttask_progress`;
+- `mediaReport.kind` (`upload_priority_report` or
+  `file_metadata_report`) with `storageVerification: "not_checked"`.
+
+These are **device-reported protocol events**, not evidence of a real flight,
+completed media persistence, verified S3 object, or available multispectral
+pixels. Filenames, `object_key`, STS, flight IDs, position metadata and other
+raw nested media payloads are not forwarded to the UI. No permanent media
+inventory, raster pipeline, or binary-download endpoint is implemented here.
+
 Verified by [CI runtime acceptance #39914157508](https://github.com/mason82-dotcom/SkyHub/actions/runs/39914157508), including Pilot, Dock, HMS, mission negative tests, and the metadata-only media handshake. A successful software test is not a hardware certification.
 Do not configure a real `media-dir` or real STS credentials in this lab.
 
