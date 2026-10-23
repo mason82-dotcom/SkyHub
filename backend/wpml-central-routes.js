@@ -110,6 +110,13 @@ function createWpmlRouteStore(pool){
           '(workspace_id,route_id,revision,plan,plan_sha256,author_id) '+
           'VALUES ($1,$2,1,$3::jsonb,$4,$5)',
           [workspaceId,routeId,JSON.stringify(normalized),hash(normalized),actorId]);
+        // The audit entry MUST commit in the same transaction as the route
+        // and immutable revision. An audit failure rolls everything back.
+        await client.query(
+          'INSERT INTO skyhub_wpml_route_audit '+
+          '(workspace_id,route_id,revision,actor_id,event_type) '+
+          "VALUES ($1,$2,1,$3,'created')",
+          [workspaceId,routeId,actorId]);
         return Object.freeze({routeId,revision:1,flightReady:false,dispatchAllowed:false});
       });
     },
@@ -137,6 +144,11 @@ function createWpmlRouteStore(pool){
           '(workspace_id,route_id,revision,plan,plan_sha256,author_id) '+
           'VALUES ($1,$2,$3,$4::jsonb,$5,$6)',
           [workspaceId,routeId,revision,JSON.stringify(normalized),hash(normalized),actorId]);
+        await client.query(
+          'INSERT INTO skyhub_wpml_route_audit '+
+          '(workspace_id,route_id,revision,actor_id,event_type) '+
+          "VALUES ($1,$2,$3,$4,'revision_appended')",
+          [workspaceId,routeId,revision,actorId]);
         return Object.freeze({routeId,revision,flightReady:false,dispatchAllowed:false});
       });
     },
