@@ -29,8 +29,10 @@ Das Go-SDK ist eine **zusätzliche Vergleichsreferenz**, keine kanonische DJI-WP
 ## Implementiert
 
 - `frontend/public/wpml-waylines-reference.js`: unabhängiger, browser-/Node-kompatibler Adapter `convert(input)`. Unterstützt ausschließlich kleine, eindeutig übertragbare `Waylines`-JSON-Entwürfe. Unbekannte Felder, Aktionsparameter, heterogene Wegpunkthöhen, abweichende Geschwindigkeiten und unbekannte Drohnen-/Payload-Kombinationen werden **abgewiesen**.
-- `frontend/public/wpml-editor.html` / `wpml-editor.js`: Dateiimport ausschließlich im Browser (JSON, max. 128 KiB); kein Upload. Erst nach erfolgreicher Adapterprüfung und `SkyHubWpmlPlanner.normalize()` werden UI-Felder/Wegpunkte ersetzt. Das KMZ wird weiterhin durch den **existierenden** SkyHub-Kern generiert.
+- `frontend/public/wpml-editor.html` / `wpml-editor.js`: Dateiimport ausschließlich im Browser (JSON, max. 128 KiB); kein Upload. Nach Adapterprüfung und `SkyHubWpmlPlanner.normalize()` erscheint **zuerst eine Vorschau**. Der aktive Missionsentwurf wird **nur nach gesondertem Übernahme-Klick** geändert; bei bereits gesetzten Wegpunkten ist zusätzlich eine Bestätigung erforderlich. Abbrechen, ungültige Dateien und Ablehnung erhalten den alten Entwurf. Das KMZ wird weiterhin durch den **existierenden** SkyHub-Kern generiert.
+- Die Vorschau enthält Anzahl der Wegpunkte/Fotoaktionen, horizontale Segmentstrecke per sphärischer Haversine-Näherung und eine **rein nominelle** Zeit `Strecke / Sollgeschwindigkeit`. Sie ist weder tatsächliche Flugzeit noch Batteriekalkulation. Nicht berücksichtigt sind Steigflug, Kurven, Wind, Gelände, Hindernisse oder Luftraumbeschränkungen.
 - `backend/test/wpml-waylines-reference.test.js`: Profilzuordnung, Offline-KMZ und Validator, ungültige und verlustbehaftete Eingaben, Editor-Anbindung und Sicherung gegen eine Mission-API.
+- `backend/test/wpml-reference-editor-ui.test.js`: Headless-UI-Test für Staging/Vorschau, explizite Übernahme, Abbruch, Fehlerfälle und Bestätigung vor Überschreiben.
 
 Erlaubte Profilpaare (numerische DJI-Enum-IDs aus dem eingesehenen Upstream-Typkatalog und SkyHub-Profilmatrix):
 
@@ -64,7 +66,7 @@ Zulässiger JSON-Eingang: `name` (max. 70 Zeichen), `drone_model`, `payload_mode
 }
 ```
 
-Editor öffnen: `/wpml-editor.html`; lokale JSON-Datei auswählen; importierten **Entwurf** auf der Karte überprüfen und nur als Offline-KMZ ausgeben.
+Editor öffnen: `/wpml-editor.html`; lokale JSON-Datei auswählen, **Vorschau prüfen und ausdrücklich übernehmen**; anschließend den Entwurf auf der Karte überprüfen und nur als Offline-KMZ ausgeben.
 
 > **Kein Roundtrip-Versprechen:** Dieses JSON wird nicht durch die Go-Bibliothek ausgeführt. Der SkyHub-Export besitzt eigene Sicherheitsvorgaben, insbesondere zur RC-Verlustreaktion. Strukturell valide KMZ ist nicht automatisch auf DJI Pilot 2 importierbar, und selbst erfolgreicher Import ist keine Flugfreigabe.
 
@@ -73,7 +75,7 @@ Editor öffnen: `/wpml-editor.html`; lokale JSON-Datei auswählen; importierten 
 ```bash
 node --check frontend/public/wpml-waylines-reference.js
 node --check frontend/public/wpml-editor.js
-node --test backend/test/wpml-waylines-reference.test.js
+node --test backend/test/wpml-waylines-reference.test.js backend/test/wpml-reference-editor-ui.test.js
 node --test backend/test/wpml-editor.test.js backend/test/wpml-compare.test.js
 ```
 
