@@ -75,8 +75,8 @@ test('create validates canonical offline plans and produces no flight-ready arti
   const insert=db.sql.find(x=>x.text.includes('INSERT INTO skyhub_wpml_route_revisions'));
   assert.equal(insert.params[0],A);
   assert.equal(insert.params[2].includes('49.12345'),true);
-  assert.equal(insert.params[5],HUMAN);
-  assert.equal(Buffer.isBuffer(insert.params[4]),true);
+  assert.equal(insert.params[4],HUMAN);
+  assert.equal(Buffer.isBuffer(insert.params[3]),true);
   const db2=pool(),s2=createWpmlRouteService({pool:db2,authorize:async()=>actor});
   await assert.rejects(s2.createRoute({workspaceId:A,name:'Private survey route',
     plan:{...plan(),dispatchAllowed:true}}),{code:'invalid'});
