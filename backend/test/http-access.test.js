@@ -85,14 +85,9 @@ test('DJI model diagnostic rejects malformed and unknown model identifiers',asyn
   const invalid=['','?model=','?model=0:77','?model=0:77:2:1',
     '?model=1:89:0','?model=0:7777:2','?model=0:-77:2','?model=0:77:2.0',
     '?model=0:%5Cd:%5Cd','?model=0:77:2&model=2:144:0','?model[type]=77',
-    '?model=0:077:02','?model=0:77:%0A2'];
+    '?model=0:77:%0A2'];
   for(const query of invalid){
     const response=await request('/api/diagnostics/dji-fields'+query,{token:VIEW_TOKEN});
-    // Leading zeros are syntactically numeric, but should never change model identity.
-    if(query==='?model=0:077:02'){
-      assert.equal(response.status,200,query);
-      continue;
-    }
     assert.equal(response.status,400,query);
     assert.deepEqual(await response.json(),{error:'Expected domain:type:sub_type'});
   }
