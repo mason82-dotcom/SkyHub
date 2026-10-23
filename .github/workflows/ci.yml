@@ -40,6 +40,12 @@ jobs:
       - name: Backend unit tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
 
+      - name: Check lab-only DJI Dock mock contract without MQTT
+        run: |
+          node --check simulators/hivemind/dock-mock.js
+          node --test simulators/hivemind/dock-mock.test.js
+          python3 -m py_compile simulators/hivemind/dock-smoke.py
+
       - name: Validate staging helper and Python tests
         run: |
           python3 -m py_compile scripts/pi-prepare-staging-env.py
@@ -74,6 +80,7 @@ jobs:
             if(b.ports.length!==1 || Number(b.ports[0].published)!==14001 || b.ports[0].host_ip!=="127.0.0.1") throw Error("backend host port");
             if((m.ports||[]).length || s.ports.length!==1 || Number(s.ports[0].published)!==19090 || s.ports[0].host_ip!=="127.0.0.1") throw Error("simulator exposure");
             if(!Object.values(c.networks).some(n=>n.driver==="bridge" && n.name==="skyhub-hivemind-lab_default")) throw Error("dedicated lab bridge required");
+            if(c.services["dock-mock"]) throw Error("Dock RPC mock must not run in default lab profile");
           '
 
       - name: Validate explicit ARM64 PostGIS overlay
