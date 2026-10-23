@@ -184,6 +184,12 @@ The verification result uses `skyhub-thermal-integrity-geolocation-preview-v1`, 
 
 Tests: `python3 -m unittest discover -s tests -p 'test_thermal_person_provenance_offline.py'`. These use deterministic synthetic files and mock inference only.
 
+## Source-media custody and externally pinned M3T/M4T calibration (separate opt-in)
+
+A new **offline-only** two-envelope verifier, `backend/workers/thermal_capture_calibration_offline.py`, binds the private DJI-export *source file bytes*, a separately reviewed rendered 8-bit frame, the pre-existing detector/telemetry HMAC envelope, and a pinned, versioned calibration profile. It requires two different local HMAC keys and an **independently supplied profile SHA-256**. Only Mavic 3T / Matrice 4T profile labels are permitted; **no production-ready or default optical parameters are present**. It does not parse DJI metadata, verify sensor hardware signatures, or attest the truth of source-to-frame extraction assertions. Output keeps `djiSensorOriginVerified=false` and all geolocation/SAR/readiness flags false. No existing service/HTTP/Compose runtime is modified.
+
+Full implementation contract, synthetic example, sensitive-file rules and CLI: [Thermal camera capture and calibration](thermal-camera-capture-calibration.md).
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
