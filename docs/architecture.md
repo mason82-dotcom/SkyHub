@@ -31,6 +31,10 @@ DJI Cloud API Dokumentation:
 ## Live-API im Main-Stand (23.10.2026)
 
 - `GET /api/health` und `GET /api/pilot/status`: öffentliche, begrenzte Statusantworten.
+- **Bekannter Main-Defekt:** `GET /api/diagnostics/dji-fields?model=0:77:2`
+  kann auf dieser Revision mit HTTP 400 scheitern, weil das Regex in `backend/server.js`
+  Ziffern doppelt maskiert. [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26)
+  korrigiert dies **außerhalb von Main**.
 - `GET /api/devices`, `/api/topology`, `/api/events`,
   `/api/diagnostics/mqtt-shapes`, `/api/diagnostics/mqtt-model-shapes`,
   `/api/diagnostics/dji-fields?model=…`,
