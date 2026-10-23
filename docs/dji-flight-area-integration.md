@@ -88,9 +88,9 @@ Antwortlogik für `need_reply`; Feldtests an realer Hardware.
 
 ## Quellreferenzen
 
-- [Offizielles DJI-Java-SDK: AbstractFlightAreaService](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/master/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/api/AbstractFlightAreaService.java)
-- [FlightAreasSyncProgress](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/master/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreasSyncProgress.java)
-- [FlightAreasDroneLocation](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/master/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreasDroneLocation.java)
-- [FlightAreaSyncReasonEnum](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/master/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreaSyncReasonEnum.java)
+- [Offizielles DJI-Java-SDK: AbstractFlightAreaService](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/api/AbstractFlightAreaService.java)
+- [FlightAreasSyncProgress](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreasSyncProgress.java)
+- [FlightAreasDroneLocation](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreasDroneLocation.java)
+- [FlightAreaSyncReasonEnum](https://github.com/dji-sdk/DJI-Cloud-API-Demo/blob/main/cloud-sdk/src/main/java/com/dji/sdk/cloudapi/flightarea/FlightAreaSyncReasonEnum.java)
 - [Vergleichs-UI (kein direkter Laufzeitimport)](https://github.com/cowherds/DJI-Cloud-API-Web/tree/main/src/components/flight-area)
 - [SkyHub Integrationsstrategie](integration-priorities-2026-10-23.md)
