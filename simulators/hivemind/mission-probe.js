@@ -2,7 +2,9 @@
 // Lab-only, one-shot MQTT mission exercise. This file never runs as a service.
 // It is intentionally hardcoded to a synthetic device and private lab broker.
 const crypto = require('node:crypto');
-const GATEWAY = 'SKYHUB_LAB_DOCK_01';
+// Under node:test there is no argv[2]; the fixture is deliberately synthetic.
+const GATEWAY = process.argv[2] || '7UUXNABCDE1234';
+const EXPECTED_DOCK3_SN = /^7UUXN[A-Z0-9]{9}$/;
 const FLIGHT_ID = 'skyhub-lab-mission-01';
 const ALLOWED = Object.freeze(['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery']);
 const TIMEOUT_MS = 12000;
@@ -10,7 +12,7 @@ const safe = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const uuid = (x) => typeof x === 'string' && /^[a-f0-9-]{36}$/i.test(x);
 
 function requestEnvelope(method, data, tid, bid, now=Date.now()) {
-  if (!ALLOWED.includes(method) || !uuid(tid) || !uuid(bid) || !safe(data) ||
+  if (!EXPECTED_DOCK3_SN.test(GATEWAY) || !ALLOWED.includes(method) || !uuid(tid) || !uuid(bid) || !safe(data) ||
       (method==='flighttask_prepare'||method==='flighttask_execute') &&
         (data.flight_id!==FLIGHT_ID)) throw Error('lab mission contract violated');
   return {tid,bid,timestamp:now,gateway:GATEWAY,method,data};
@@ -33,7 +35,8 @@ function validProgress(msg, executeBid) {
     typeof out.status==='string';
 }
 async function run() {
-  if (process.argv.length!==2) throw Error('No runtime arguments accepted');
+  if (process.argv.length!==3 || !EXPECTED_DOCK3_SN.test(process.argv[2]))
+    throw Error('Only the pinned Dock3 test identity is accepted');
   const mqtt=require('mqtt');
   const client=mqtt.connect('mqtt://hivemind-broker:1884',{
     clientId:'skyhub_hivemind_mission_'+crypto.randomBytes(6).toString('hex'),
@@ -106,4 +109,4 @@ async function run() {
 if(require.main===module){
   run().catch(e=>{console.error('FAIL: '+e.message);process.exitCode=1;});
 }
-module.exports={GATEWAY,FLIGHT_ID,ALLOWED,requestEnvelope,replyMatches,validProgress};
+module.exports={GATEWAY,FLIGHT_ID,ALLOWED,EXPECTED_DOCK3_SN,requestEnvelope,replyMatches,validProgress};
