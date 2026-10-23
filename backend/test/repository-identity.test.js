@@ -22,7 +22,7 @@ test('obsolete full GitHub origin links are rejected, not historical bare reposi
     'https://api.github.com/repos/mason82-dotcom/SkyHub/actions/runs/42'
   ];
   for(const url of old)assert.equal(staleLinks(url).length,1,url);
-  assert.equal(staleLinks('mason82-dotcom/SkyHub'),[].length===0?0:1);
+  assert.deepEqual(staleLinks('mason82-dotcom/SkyHub'),[]);
 });
 test('checked-in project documentation never reintroduces the deprecated URL',()=>{
   const result=verify(path.resolve(__dirname,'../..'));
