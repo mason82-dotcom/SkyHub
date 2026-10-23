@@ -697,3 +697,54 @@ Ohne G und RE gibt es auch keinen vollständigen Vierband-Satz.
 **Die reale Pi-Abnahme dieser zusätzlichen UUID-Gruppierung steht
 noch aus.** Der vorausgegangene Acht-TIFF-Test wird nicht als
 Gruppen- oder NDVI-Abnahme interpretiert.
+
+
+## Sicherheitsnachprüfung vor realer Capture-UUID-Abnahme (23.10.2026)
+
+Die DJI-Mavic-3M-Anleitung dokumentiert `Capture UUID` als
+UUID-v4-Kennung einer Aufnahme (Mavic 3M Image Processing Guide,
+Seite 4). In der aktuellen Implementierung werden nur eindeutige,
+RFC-4122-kompatible UUID-v4-Werte aus dem bekannten
+`drone-dji`-XMP-Namespace für den **internen Vergleich**
+zugelassen. Die Kennungen bleiben ausschließlich im
+Backend-Container und erscheinen nicht in den Aggregaten.
+
+Der bisher reale Acht-TIFF-Test (`R=4`, `NIR=4`,
+`G=RE=0`) **hat die Aufnahmezuordnung noch nicht geprüft**.
+Der separate Test `--capture-groups-first-page` ist
+genau dafür vorgesehen und bleibt in seiner Aussage auf
+*XMP-basierte Kandidatengruppen* beschränkt.
+
+Zusätzlicher Konsistenzschutz im Berichtsempfänger:
+`redNirCandidateGroups` darf nicht größer als die einzelnen
+R- und NIR-Zähler sein, `fullFourBandHintGroups`
+nicht größer als G oder RE. Ferner kann die Zahl der
+intern akzeptierten Capture-UUIDs nicht größer als die Zahl
+erfolgreicher XMP-Auswertungen sein. Falsche Zähler werden
+vor einer Terminalausgabe zurückgewiesen.
+
+### Nächste reine Pi-Abnahme
+
+    cd ~/Projekte/SkyHub-Next || exit 1
+    test "$(git branch --show-current)" = \
+      "feature/m3m-minio-integration-20261021" || exit 1
+    test -z "$(git status --porcelain)" || exit 1
+    git pull --ff-only origin feature/m3m-minio-integration-20261021 || exit 1
+    node --test \
+      backend/test/m3m-xmp-capture-groups.test.js \
+      backend/test/pi-m3m-xmp-markers.test.js || exit 1
+
+    SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+      node scripts/pi-m3m-xmp-markers-check.js \
+      --capture-groups-first-page
+
+Das letzte Kommando liest, wie beim bisherigen XMP-Test,
+maximal 12 TIFFs aus einem eingeschränkten Prefix mit
+höchstens 3 Range-GETs pro Objekt und zusammen maximal
+33.808 angeforderten Bytes pro TIFF.
+Es folgt kein Produktionsdeployment, keine Modifikation
+der MinIO-Objekte und keine Drohnensteuerung.
+
+**Wichtig:** Auch ein positiver Kandidat bedeutet nicht,
+dass Bilder vollständig lesbar, geometrisch registriert,
+radiometrisch kalibriert oder für NDVI/NDRE einsatzbereit sind.
