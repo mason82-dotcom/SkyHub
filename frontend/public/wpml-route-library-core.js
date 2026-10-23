@@ -106,6 +106,28 @@
     return save(db,{name:options.name||origin.name+' Kopie',
       folder:options.folder||origin.folder,plan:origin.plan,savedAt:options.savedAt});
   }
+  function taskSnapshot(db,routeId,revision){
+    // Not a schedulable task, only a detached immutable reference copy.
+    const ref=find(db,routeId,revision);
+    const artifact=planner.build(ref.plan);
+    const freezeDeep=value=>{
+      if(value&&typeof value==='object'){
+        Object.values(value).forEach(freezeDeep);
+        Object.freeze(value);
+      }
+      return value;
+    };
+    return freezeDeep({
+      schema:'skyhub-offline-task-snapshot-v1',
+      sourceRouteId:ref.id,sourceRevision:ref.revision,
+      capturedAt:ref.savedAt,
+      plan:ref.plan,
+      waypointCount:artifact.summary.waypointCount,
+      actionCount:artifact.summary.orderedActionCount,
+      previewOnly:true,flightReady:false,hardwareVerified:false,
+      dispatchAllowed:false
+    });
+  }
   function load(raw){
     if(typeof raw!=='string'||raw.length>MAX_BYTES)invalid();
     let obj;
@@ -113,6 +135,6 @@
     return check(obj);
   }
   function serialize(db){return JSON.stringify(check(db));}
-  return Object.freeze({SCHEMA,blank,check,save,find,list,remove,copy,load,serialize,
+  return Object.freeze({SCHEMA,blank,check,save,find,list,remove,copy,taskSnapshot,load,serialize,
     MAX_ROUTES,MAX_REVISIONS});
 });
