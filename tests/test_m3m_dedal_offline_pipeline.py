@@ -56,6 +56,7 @@ class OfflinePipelineTests(unittest.TestCase):
     def test_entire_two_stage_pipeline_is_numerically_correct(self):
         report = self.execute()
         self.assertTrue(report['sourceSha256MatchesOperatorPin'])
+        self.assertTrue(report['independentRasterQaPassed'])
         self.assertFalse(report['calibrationVerified'] if 'calibrationVerified' in report else report['radiometricCalibrationVerified'])
         self.assertFalse(report['operationalUseAllowed'])
         self.assertFalse(report['dedalExecutedBySkyHub'])
@@ -162,6 +163,19 @@ class OfflinePipelineTests(unittest.TestCase):
             with self.assertRaises(worker.PipelineError):
                 self.execute()
         self.assertFalse(self.dest.exists())
+
+    def test_reject_failed_independent_bundle_qa_and_cleanup(self):
+        actual = worker._load_worker
+        def fail_qa(module_name):
+            obj = actual(module_name)
+            if module_name == 'm3m_raster_bundle_verify':
+                obj.verify_bundle = lambda bundle: {'pixelFormulaAndMaskChecksPassed': False}
+            return obj
+        with mock.patch.object(worker, '_load_worker', side_effect=fail_qa):
+            with self.assertRaises(worker.PipelineError):
+                self.execute()
+        self.assertFalse(self.dest.exists())
+        self.assertFalse(any(self.root.glob('.skyhub-m3m-pipeline-*')))
 
     def test_no_private_source_path_leaks_into_report(self):
         report = self.execute()
