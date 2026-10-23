@@ -159,3 +159,47 @@ test('route revision compare is redacted; restoring requires confirmation and ap
   assert.equal(app.writes(),1);
   assert.equal(app.current().routes[0].revisions.length,2);
 });
+
+test('backup preview remains uncommitted until explicit replacement confirmation',async()=>{
+  const app=harness();
+  const other=library.save(library.blank(),{
+    name:'Private second route',plan:{...plan(),name:'Private second route'},savedAt:100
+  });
+  const json=backup.exportBackup(other.library).content;
+  const input=app.get('backup-file');
+  input.files=[{size:new TextEncoder().encode(json).length,text:async()=>json}];
+  await input.listeners.change({currentTarget:input});
+  assert.equal(app.writes(),0);
+  assert.equal(app.get('backup-apply').disabled,false);
+  assert.match(app.get('backup-preview').textContent,/1 Routen, 1 Revisionen/);
+  assert.doesNotMatch(app.get('backup-preview').textContent,/Private second route|49\.12|8\.61/);
+  app.setConfirm(false);
+  app.get('backup-apply').click();
+  assert.equal(app.writes(),0);
+  app.setConfirm(true);
+  app.get('backup-apply').click();
+  assert.equal(app.writes(),1);
+  assert.equal(app.current().routes[0].name,'Private second route');
+  assert.equal(app.get('backup-apply').disabled,true);
+  assert.match(app.get('library-status').textContent,/ersetzt/);
+  assert.equal(app.current().routes[0].revisions[0].flightReady,false);
+});
+test('discarding a slow or corrupt backup never overwrites the current library',async()=>{
+  const app=harness();
+  let release;
+  const file=app.get('backup-file');
+  file.files=[{size:100,text:()=>new Promise(resolve=>{release=resolve;})}];
+  const running=file.listeners.change({currentTarget:file});
+  app.get('backup-discard').click();
+  release(backup.exportBackup(app.current()).content);
+  await running;
+  assert.equal(app.get('backup-apply').disabled,true);
+  assert.equal(app.writes(),0);
+  assert.match(app.get('backup-preview').textContent,/verworfen/);
+  file.files=[{size:40,text:async()=>'{invalid'}];
+  await file.listeners.change({currentTarget:file});
+  assert.equal(app.writes(),0);
+  assert.equal(app.get('backup-apply').disabled,true);
+  assert.match(app.get('backup-preview').textContent,/abgelehnt/);
+  assert.equal(app.current().routes[0].revisions.length,1);
+});
