@@ -25,7 +25,7 @@ Die Trennung ist im Code implementiert; produktive Proxy-/ACL- und Gerätefreiga
 | GET | `/api/events` | View oder LAN-GET-Ausnahme; normalisierte Geräteereignisse |
 | GET | `/api/diagnostics/mqtt-shapes` | View oder LAN-GET-Ausnahme; aggregierte Feld-/Topic-Formen |
 | GET | `/api/diagnostics/mqtt-model-shapes` | **View-Token erforderlich**, keine LAN-Ausnahme; modellbezogene Feldnamen |
-| GET | `/api/diagnostics/dji-fields?model=…` | **View-Token erforderlich**, keine LAN-Ausnahme; bekannte 1.18-Schemafelder; **Regex-Fehler mit [PR #61](https://github.com/mason82-dotcom/SkyHub/pull/61) behoben und HTTP-getestet**; sechs bekannte Modelle, unbekannte Schlüssel 404, ungültige Syntax 400 |
+| GET | `/api/diagnostics/dji-fields?model=…` | **View-Token erforderlich**, keine LAN-Ausnahme; bekannte 1.18-Schemafelder; **Regex-Fehler mit [PR #61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) behoben und HTTP-getestet**; sechs bekannte Modelle, unbekannte Schlüssel 404, ungültige Syntax 400 |
 | GET | `/api/drone/:sn/telemetry` | View oder LAN-GET-Ausnahme; konkreter zuletzt bekannter Geräte-Snapshot |
 | GET | `/api/drone/:sn/track?minutes=60` | View oder LAN-GET-Ausnahme; historische PostGIS-Punkte, `minutes` 1–1440, Default 60 |
 | POST | `/api/pilot/bootstrap` | Pilot-Konfiguration + HTTPS + Pilot-/Pairing-Bearer-Token, sonst 503/403/401 |

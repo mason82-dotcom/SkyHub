@@ -14,7 +14,7 @@
 
     # Nur bei einer echten Neuinstallation; vorhandenes Projekt NICHT überschreiben.
     if [ ! -e ~/Projekte/SkyHub-Next ]; then
-      git clone --branch main https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+      git clone --branch main https://github.com/mason82-dotcom/SkyHub-Next.git ~/Projekte/SkyHub-Next
     fi
     cd ~/Projekte/SkyHub-Next
     # Nur falls .env noch nicht existiert:
@@ -101,7 +101,7 @@ Remote-Tunnel vom PC:
 
 Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token verbleibt nur im Speicher des Browsers bis zum Neuladen.
 
-**DJI-Diagnosekorrektur (23.10.2026):** Der HTTP-400-Validierungsfehler für gültige Modellkennungen wurde in [PR #61](https://github.com/mason82-dotcom/SkyHub/pull/61) nach `main` übernommen und durch echte HTTP-Regressionstests abgesichert. Eine weiterhin mit altem Image laufende Pi-Installation kann den historischen Fehler bis zum ausdrücklich freigegebenen Backend-Update noch zeigen. **Keine automatische Aktualisierung oder Gerätefreigabe durch den GitHub-Merge.**
+**DJI-Diagnosekorrektur (23.10.2026):** Der HTTP-400-Validierungsfehler für gültige Modellkennungen wurde in [PR #61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) nach `main` übernommen und durch echte HTTP-Regressionstests abgesichert. Eine weiterhin mit altem Image laufende Pi-Installation kann den historischen Fehler bis zum ausdrücklich freigegebenen Backend-Update noch zeigen. **Keine automatische Aktualisierung oder Gerätefreigabe durch den GitHub-Merge.**
 
 ## Tests
 

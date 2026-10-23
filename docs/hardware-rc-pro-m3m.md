@@ -1,6 +1,6 @@
 # Hardwareabnahme: RC Pro Enterprise + Mavic 3M
 
-> **Einordnung vom 23.10.2026:** Dies ist ein datierter Hardware-Abnahmebericht. Die am **21.10.2026** beobachtete erfolgreiche typisierte Übernahme von **6/6 M3M-OSD-Erweiterungspfaden** aus [#21](https://github.com/mason82-dotcom/SkyHub/pull/21) ist seit [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) in der Main-Provenienz und Offline-Diagnostik erfasst. Diese Beobachtung verifiziert **weder** die konkreten Einstellungen, RTH-/RC-Loss-Wirkungen, andere Firmwarestände noch eine erneute Hardwareabnahme nach dem Merge. Der Raspberry Pi wurde durch #66 nicht aktualisiert. [Aktuelle Integrationsübersicht](projektstand-2026-10-23.md).
+> **Einordnung vom 23.10.2026:** Dies ist ein datierter Hardware-Abnahmebericht. Die am **21.10.2026** beobachtete erfolgreiche typisierte Übernahme von **6/6 M3M-OSD-Erweiterungspfaden** aus [#21](https://github.com/mason82-dotcom/SkyHub-Next/pull/21) ist seit [#66](https://github.com/mason82-dotcom/SkyHub-Next/pull/66) in der Main-Provenienz und Offline-Diagnostik erfasst. Diese Beobachtung verifiziert **weder** die konkreten Einstellungen, RTH-/RC-Loss-Wirkungen, andere Firmwarestände noch eine erneute Hardwareabnahme nach dem Merge. Der Raspberry Pi wurde durch #66 nicht aktualisiert. [Aktuelle Integrationsübersicht](projektstand-2026-10-23.md).
 
 **Stand:** 21.10.2026. Dies ist eine **Leseprüfung**, kein Flugtest und kein Deployment.
 
