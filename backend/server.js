@@ -21,6 +21,7 @@ const {createTrackRecorder}=require('./track-recorder');
 const {createS3Storage}=require('./s3-storage');
 const {createMediaRouter}=require('./media-api');
 const {createMinioDrRouter}=require('./minio-dr-api');
+const {createSmartFarmingCatalogRouter}=require('./smart-farming-catalog');
 const {createHttpAuth}=require('./http-auth');
 const {registerPilotRoutes,registerPilotAdminRoutes}=require('./pilot-routes');
 const {createMqttIngest}=require('./mqtt-ingest');
@@ -157,6 +158,15 @@ app.get('/api/health',(req,res)=>res.json({
   ...(tsaHub?{tsa:tsaHub.stats()}:{})
 }));
 app.use('/api',auth);
+
+// Experimental M3M aggregate catalog. Explicit flag, pinned manifest and Bearer
+// authentication; no tiles, prescription export, mission path or free-form URLs.
+if(process.env.SKYHUB_M3M_CATALOG_ENABLED==='true'){
+  app.use('/api/smart-farming/candidates',createSmartFarmingCatalogRouter({
+    express,auth,root:process.env.SKYHUB_M3M_CATALOG_ROOT,
+    manifestSha256:process.env.SKYHUB_M3M_CATALOG_SHA256
+  }));
+}
 
 // MinIO disaster-recovery reports: read-only and disabled by default.
 if(process.env.SKYHUB_MINIO_DR_ENABLED==='true'){
