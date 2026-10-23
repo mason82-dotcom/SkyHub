@@ -12,7 +12,6 @@ COPY --chown=1000:1000 target/dji-dock-simulator-1.4.10.jar /app/app.jar
 
 USER 1000:1000
 ENV SIMULATOR_CONFIG_DIR=/app/config \
-    SIMULATOR_MEDIA_MEDIADIR=/app/media \
     TZ=Europe/Berlin
 EXPOSE 9090
 ENTRYPOINT ["java","-Xms128m","-Xmx512m","-Djava.net.preferIPv4Stack=true","-jar","/app/app.jar"]
