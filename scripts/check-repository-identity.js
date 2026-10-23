@@ -22,7 +22,7 @@ function files(root){
     if(stat.isSymbolicLink())return;
     if(stat.isDirectory()){
       for(const f of fs.readdirSync(p))visit(path.join(p,f));
-    }else if(stat.isFile()&&/\\.(md|js|sh|yml|yaml|py)$/.test(p))
+    }else if(stat.isFile()&&/\.(md|js|sh|yml|yaml|py)$/.test(p))
       targets.push(p);
   }
   for(const chosen of choices)visit(path.join(root,chosen));
