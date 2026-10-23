@@ -276,5 +276,5 @@
       warning:'Coverage segments are independent. Direct transition gaps are NOT routes. No terrain, geofence, obstacles, camera compatibility or flight clearance.'
     };
   }
-  return Object.freeze({preview,validatePolygon});
+  return Object.freeze({preview,validatePolygon,validateGeometry});
 });
