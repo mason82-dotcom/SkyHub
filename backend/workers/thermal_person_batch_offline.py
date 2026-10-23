@@ -51,10 +51,9 @@ def analyze_batch(payload):
     for frame, stamp in zip(frames, frame_times):
         geo._object(frame, ("timestampMs", "frame", "camera", "detections"))
         geo._camera(frame["frame"], frame["camera"])
-        # Input with skipped frames must still use bounded detector arrays.
-        detections = frame["detections"]
-        if not isinstance(detections, list) or len(detections) > geo.MAX_DETECTIONS:
-            raise geo.InvalidInput("invalid_detections")
+        # Skipped frames must be fully validated as well.
+        geo._validated_detections(frame["detections"], frame["frame"]["width"],
+                                  frame["frame"]["height"])
 
     results = []
     missing_pose = 0
