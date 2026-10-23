@@ -9,6 +9,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 ## Aktueller Projektstand (23.10.2026)
 
+**CI-Abnahme für M3M:** Der eigenständige [Raster-/Katalog-Prüfworkflow](.github/workflows/m3m-offline-acceptance.yml) ist durch PR #101 im Hauptbranch registriert und muss vor Zusammenführung dieser Komponenten auf genau dem finalen PR-Commit sowohl die echten NumPy-/Rasterio-Testfälle als auch die HTTP-/Berechtigungstests erfolgreich ausführen.
+
 **Experimentelle M3M-Smart-Farming-Bausteine:** Offline-Worker für begrenzte TIFF-/DEDAL-/Rasterprüfungen, eine separate Oberfläche unter `/smart-farming.html` und ein **standardmäßig deaktivierter**, Bearer-geschützter Katalog mit gehashten Metadaten. Keine bestätigte radiometrische Kalibrierung, keine Kartentiles, Ausbringkarte, Agras-Ansteuerung oder DJI-Flugfreigabe. [Runbook und Abnahmegrenzen](docs/smart-farming-m3m-consolidation-review-2026-10-23.md). Kein Pi-Deployment durch Git-Merge.
 
 **Passiver Flight-Area-Laborbaustein:** Die isolierten Module `backend/dji-flight-area-events.js` und `backend/dji-flight-area-sync-monitor.js` validieren synthetische DJI-Ereignisse, Soll-Hashes und Revisionszustände. Kein Runtime-Import, keine MQTT-Antwort, keine Flight-Area-Updates, keine luftrechtliche oder fliegerische Freigabe. Details: [Offline-Event-Inspector](docs/dji-flight-area-integration.md) und [Revisionsmonitor](docs/dji-flight-area-sync-monitor.md).
