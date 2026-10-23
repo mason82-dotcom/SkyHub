@@ -1,6 +1,5 @@
 'use strict';
 // One-shot metadata-only DJI media acceptance. No STS, S3, uploads or shell access.
-const mqtt = require('mqtt');
 const crypto = require('node:crypto');
 
 const FLIGHT = 'skyhub-lab-media-01';
@@ -41,6 +40,7 @@ async function getJson(url, options) {
   return response.json();
 }
 async function run(){
+  const mqtt=require('mqtt');
   if(process.argv.length!==3 || !SN.test(process.argv[2]))throw Error('Invalid synthetic Dock3 SN');
   const sn=process.argv[2];
   const base='http://hivemind-simulator:9090/api/media';
@@ -59,7 +59,6 @@ async function run(){
   const replyTopic='thing/product/'+sn+'/events_reply';
   const reqTopic='thing/product/'+sn+'/requests';
   const reqReplyTopic='thing/product/'+sn+'/requests_reply';
-  let issued=false;
   try{
     await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(Error('MQTT subscription timeout')),8000);
@@ -96,7 +95,6 @@ async function run(){
     });
     if(accepted?.success!==true || accepted.flight_id!==FLIGHT ||
         accepted.file_count!==COUNT)throw Error('Metadata-only trigger refused');
-    issued=true;
     const deadline=Date.now()+23000;
     while(Date.now()<deadline){
       const full=[...events.values()].filter(e=>acks.has(e.tid));
