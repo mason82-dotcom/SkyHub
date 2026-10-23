@@ -36,7 +36,7 @@
           Number.isSafeInteger(layer.validPixels) && layer.validPixels > 0 &&
           Number.isFinite(layer.mean) && Number.isFinite(layer.min) &&
           Number.isFinite(layer.max) && layer.min >= -2 && layer.max <= 2 &&
-          layer.min <= layer.mean && layer.mean <= layer.max);
+          layer.min - 1e-6 <= layer.mean && layer.mean <= layer.max + 1e-6);
         return {index:name,label:LABELS[name],count:layer.validPixels,
           mean:layer.mean,min:layer.min,max:layer.max};
       })};
