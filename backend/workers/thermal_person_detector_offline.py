@@ -7,9 +7,13 @@ frames, geolocate anybody or certify actual person presence.
 """
 
 import argparse
+import hashlib
+import hmac
 import json
 import math
+import os
 from pathlib import Path
+import re
 import stat
 import warnings
 import sys
@@ -41,6 +45,37 @@ def local_file(raw, extensions, limit):
     return path
 
 
+def verify_model_digest(path, expected):
+    """Pin reviewed weight bytes before importing or executing model code.
+
+    A pinned digest is not a provenance/safety review; use private immutable
+    storage to avoid file replacement after this verification step.
+    """
+    if type(expected) is not str or re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+        raise InvalidInput("model_digest_required")
+    digest = hashlib.sha256()
+    try:
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        with os.fdopen(fd, "rb") as stream:
+            metadata = os.fstat(stream.fileno())
+            if not stat.S_ISREG(metadata.st_mode) or not 0 < metadata.st_size <= MAX_MODEL_BYTES:
+                raise InvalidInput("invalid_local_file")
+            remaining = MAX_MODEL_BYTES
+            while True:
+                block = stream.read(min(1024 * 1024, remaining + 1))
+                if not block:
+                    break
+                remaining -= len(block)
+                if remaining < 0:
+                    raise InvalidInput("invalid_local_file")
+                digest.update(block)
+    except OSError as error:
+        raise InvalidInput("invalid_local_file") from error
+    if not hmac.compare_digest(digest.hexdigest(), expected):
+        raise InvalidInput("model_digest_mismatch")
+
+
 def probe_8bit_image(path):
     # Pillow is optional and only imported after local image/model path checks.
     try:
@@ -51,7 +86,8 @@ def probe_8bit_image(path):
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(path) as picture:
-                if picture.format not in ("JPEG", "PNG") or picture.mode not in ("RGB", "L"):
+                if (picture.format not in ("JPEG", "PNG") or picture.mode not in ("RGB", "L") or
+                        getattr(picture, "n_frames", 1) != 1):
                     raise InvalidInput("unsupported_image")
                 width, height = picture.size
                 valid_dimensions(width, height)
@@ -138,7 +174,7 @@ def parse_prediction(result, width, height, confidence):
 
 
 def analyze(image, model, *, trusted_model=False, trusted_pt=False,
-            confidence=0.5, image_probe=None, model_factory=None):
+            model_sha256=None, confidence=0.5, image_probe=None, model_factory=None):
     conf = _number(confidence, 0.1, 0.99)
     if trusted_model is not True:
         raise InvalidInput("model_review_required")
@@ -146,6 +182,7 @@ def analyze(image, model, *, trusted_model=False, trusted_pt=False,
     model_path = local_file(model, {".onnx", ".pt"}, MAX_MODEL_BYTES)
     if model_path.suffix.lower() == ".pt" and trusted_pt is not True:
         raise InvalidInput("pt_deserialization_not_approved")
+    verify_model_digest(model_path, model_sha256)
     width, height = (image_probe or probe_8bit_image)(image_path)
     valid_dimensions(width, height)
     if model_factory is None:
@@ -182,6 +219,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Optional local 8-bit thermal-image detector")
     parser.add_argument("--image", required=True)
     parser.add_argument("--model", required=True)
+    parser.add_argument("--model-sha256", required=True,
+                        help="Lowercase SHA-256 of independently reviewed exact model bytes")
     parser.add_argument("--output", required=True, help="New absolute private JSON file")
     parser.add_argument("--confidence", type=float, default=0.5)
     parser.add_argument("--trust-local-model", action="store_true",
@@ -193,6 +232,7 @@ def main(argv=None):
         report = analyze(args.image, args.model,
                          trusted_model=args.trust_local_model,
                          trusted_pt=args.allow_trusted_pt,
+                         model_sha256=args.model_sha256,
                          confidence=args.confidence)
         from thermal_person_geolocation import _write_local_output
         _write_local_output(args.output, report)

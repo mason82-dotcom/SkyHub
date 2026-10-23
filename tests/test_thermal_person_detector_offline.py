@@ -1,5 +1,6 @@
 """Mock-only tests for opt-in 8-bit thermal detection; no YOLO install or camera."""
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -50,6 +51,7 @@ class ThermalDetectorTest(unittest.TestCase):
         mock = FakeModel(prediction or Prediction())
         report = detector.analyze(
             str(self.image), str(self.model), trusted_model=True,
+            model_sha256=hashlib.sha256(self.model.read_bytes()).hexdigest(),
             image_probe=lambda _: (640, 512),
             model_factory=lambda *_args, **_kwargs: mock, **options)
         return report, mock
@@ -89,6 +91,7 @@ class ThermalDetectorTest(unittest.TestCase):
     def test_requires_explicit_model_review(self):
         with self.assertRaises(detector.InvalidInput):
             detector.analyze(str(self.image), str(self.model),
+                             model_sha256=hashlib.sha256(self.model.read_bytes()).hexdigest(),
                              image_probe=lambda _: (640, 512),
                              model_factory=lambda *a, **k: None)
 
@@ -117,11 +120,29 @@ class ThermalDetectorTest(unittest.TestCase):
         with self.assertRaises(detector.InvalidInput):
             detector.local_file(str(self.image), {".png"}, 3)
 
+    def test_exact_model_hash_pin_precedes_model_loading(self):
+        original = hashlib.sha256(self.model.read_bytes()).hexdigest()
+        loaded = []
+        for digest in (None, "", "0" * 64, "A" * 64, original + "a"):
+            with self.subTest(digest=digest), self.assertRaises(detector.InvalidInput):
+                detector.analyze(
+                    str(self.image), str(self.model), trusted_model=True,
+                    model_sha256=digest, image_probe=lambda _: (640, 512),
+                    model_factory=lambda *_a, **_k: loaded.append(True))
+        self.model.write_bytes(b"replaced unreviewed model")
+        with self.assertRaisesRegex(detector.InvalidInput, "model_digest_mismatch"):
+            detector.analyze(
+                str(self.image), str(self.model), trusted_model=True,
+                model_sha256=original, image_probe=lambda _: (640, 512),
+                model_factory=lambda *_a, **_k: loaded.append(True))
+        self.assertEqual(loaded, [])
+
     def test_bad_image_shapes_rejected_before_model_initialization(self):
         started = []
         for shape in [(400000, 32), (32, 400000), (5000, 5000), (0, 10)]:
             with self.subTest(shape=shape), self.assertRaises(detector.InvalidInput):
                 detector.analyze(str(self.image), str(self.model), trusted_model=True,
+                    model_sha256=hashlib.sha256(self.model.read_bytes()).hexdigest(),
                     image_probe=lambda _, s=shape: s,
                     model_factory=lambda *_args, **_kwargs: started.append(1))
         self.assertEqual(started, [])
@@ -160,6 +181,7 @@ class ThermalDetectorTest(unittest.TestCase):
         with redirect_stdout(output):
             status = detector.main(["--image", str(self.image),
                                     "--model", str(self.model),
+                                    "--model-sha256", hashlib.sha256(self.model.read_bytes()).hexdigest(),
                                     "--output", str(dest)])
         self.assertEqual(status, 2)
         self.assertFalse(dest.exists())

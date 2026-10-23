@@ -99,7 +99,7 @@ python3 backend/workers/thermal_person_batch_offline.py --input /ABSOLUTE/PRIVAT
 
 `backend/workers/thermal_person_detector_offline.py` provides a **manual local-only YOLO inference stage** for 8-bit rendered JPEG/PNG thermal frames. This is not a raw radiometric decoder, DJI live image adapter, or a guarantee that the image was genuinely recorded by a thermal sensor. It requires separately reviewed local model weights, plus the optional Ultralytics/Pillow runtime installed outside the standard SkyHub backend. Neither dependencies nor weights are installed by Compose/CI.
 
-**Security:** `--trust-local-model` is required even for ONNX, and PyTorch `.pt` additionally requires `--allow-trusted-pt`; PT deserialization can execute code, so use only audited local model weights, never arbitrary downloads. No automatic weights or frame downloads. There is a 30 MiB image cap, 512 MiB model cap, 8192 px axis/12 Mpixel bound, 64 result cap, exact model-reported image size validation, and metadata-bearing EXIF/XMP input rejection. The worker fails closed and does not log paths or raw image content. Local output JSON must be a **new** absolute private path; it is created with `0600` and never overwritten.
+**Security:** `--trust-local-model` is required even for ONNX, and PyTorch `.pt` additionally requires `--allow-trusted-pt`; PT deserialization can execute code, so use only audited local model weights, never arbitrary downloads. No automatic weights or frame downloads. There is a 30 MiB image cap, 512 MiB model cap, 8192 px axis/12 Mpixel bound, 64 result cap, exact model-reported image size validation, and metadata-bearing EXIF/XMP input rejection. The worker fails closed and does not log paths or raw image content. A lowercase SHA-256 digest of the exact independently reviewed model bytes is **mandatory**; the worker verifies it before loading any model library. A hash proves file integrity against the supplied digest, **not** model safety, suitability or provenance. Store reviewed weights in a private read-only directory to prevent replacement between digest verification and inference. Animated or multi-frame images are rejected. Local output JSON must be a **new** absolute private path; it is created with `0600` and never overwritten.
 
 ```bash
 # Only after manually installing reviewed Pillow/Ultralytics runtime and obtaining
@@ -107,6 +107,7 @@ python3 backend/workers/thermal_person_batch_offline.py --input /ABSOLUTE/PRIVAT
 python3 backend/workers/thermal_person_detector_offline.py \
   --image /ABSOLUTE/PRIVATE/8bit-thermal-frame.png \
   --model /ABSOLUTE/REVIEWED/person-model.onnx \
+  --model-sha256 LOWERCASE_SHA256_OF_REVIEWED_MODEL_FILE \
   --output /ABSOLUTE/PRIVATE/new-detection-result.json \
   --trust-local-model
 # A reviewed .pt model needs --allow-trusted-pt too.
