@@ -1,5 +1,18 @@
 # SkyHub Next
 
+**Offizielles GitHub-Repository:** https://github.com/mason82-dotcom/SkyHub-Next
+(umbenannt von `mason82-dotcom/SkyHub` am 23.10.2026).
+Für lokale Klone: `git remote set-url origin https://github.com/mason82-dotcom/SkyHub-Next.git`.
+GitHub-URL-Weiterleitungen sind kein Ersatz für die Aktualisierung von Skripten, Dokumentation und Remotes.
+Das lokale Verzeichnis `~/Projekte/SkyHub-Next` muss nicht umbenannt werden.
+Ein Git-Remote-Wechsel ist **kein** Deployment.
+
+**Entwicklungszweig Smart Farming:** [Nur lesender, standardmäßig deaktivierter Kandidatenkatalog](docs/smart-farming-m3m-auth-readonly-catalog.md)
+und [experimentelle Smart-Farming-Seite](docs/smart-farming-m3m-ui.md). Die
+Offline-Worker und die Katalogschnittstelle liegen in gestapelten Draft-PRs;
+das produktive `main` und die Pi-Laufzeit enthalten sie nicht automatisch.
+
+
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
 SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker gehören noch nicht zum Funktionsumfang. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
