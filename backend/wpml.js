@@ -3,6 +3,7 @@
 // Reference: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/
 const KML='http://www.opengis.net/kml/2.2';
 const WPML='http://www.dji.com/wpmz/1.0.2';
+const WPML_REFERENCE_ONLY='http://www.dji.com/wpmz/1.0.6';
 const {assessAircraft}=require('./wpml-product-support');
 const {validateMappingPlacemark,validateCoordinateGeometry,validatePayloadParam}=require('./wpml-mapping');
 const WPML_CATALOG=require('./data/dji-wpml-fields.json');
@@ -41,7 +42,11 @@ function decodeEntities(input){
     return String.fromCodePoint(n);
   });
 }
-function parseXml(xml){
+function parseXml(xml, expectedWpmlNamespace=WPML){
+  // The alternate namespace is accepted ONLY when a caller explicitly opts
+  // into read-only analysis. No automatic conversion/export/flight approval.
+  if(expectedWpmlNamespace!==WPML&&expectedWpmlNamespace!==WPML_REFERENCE_ONLY)
+    xmlError('unsupported WPML namespace profile');
   if(typeof xml!=='string'||Buffer.byteLength(xml,'utf8')>2*1024*1024)xmlError('size limit');
   if(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(xml))xmlError('control character');
   let i=0,root=null,count=0;
@@ -104,6 +109,11 @@ function parseXml(xml){
       attributes[a[1]]=decodeEntities(a[2].slice(1,-1));
       offset+=a[0].length;
     }
+    // This parser matches literal element QNames, not expanded W3C namespace
+    // names. A nested rebinding would change their meaning. Refuse it.
+    if(stack.length>0&&(Object.hasOwn(attributes,'xmlns')||
+       Object.hasOwn(attributes,'xmlns:wpml')))
+      xmlError('nested namespace rebinding is not supported');
     if(++count>20000||stack.length>=48)xmlError('complexity limit');
     const node={name:match[1],attributes,children:[],text:''};
     if(stack.length)stack[stack.length-1].children.push(node);
@@ -114,7 +124,8 @@ function parseXml(xml){
   }
   if(stack.length||!root)xmlError('incomplete document');
   if(root.name!=='kml'||root.attributes.xmlns!==KML||
-     root.attributes['xmlns:wpml']!==WPML)xmlError('DJI KML/WPML namespace missing');
+     root.attributes['xmlns:wpml']!==expectedWpmlNamespace)
+    xmlError('DJI KML/WPML namespace missing');
   return root;
 }
 const kids=(node,name)=>node?node.children.filter(c=>c.name===name):[];
@@ -340,11 +351,11 @@ function fieldInventoryCoverage(documents){
     undocumentedFields:elements.filter(name=>!KNOWN_FIELDS.has(name))
   };
 }
-function validateDocuments(templateXml,waylinesXml){
+function validateDocuments(templateXml,waylinesXml,expectedWpmlNamespace=WPML){
   const errors=[],warnings=[],templates=[],waylines=[];
   let template,execution;
-  try{template=parseXml(templateXml);}catch(e){pathError(errors,'template.kml',e.message);}
-  try{execution=parseXml(waylinesXml);}catch(e){pathError(errors,'waylines.wpml',e.message);}
+  try{template=parseXml(templateXml,expectedWpmlNamespace);}catch(e){pathError(errors,'template.kml',e.message);}
+  try{execution=parseXml(waylinesXml,expectedWpmlNamespace);}catch(e){pathError(errors,'waylines.wpml',e.message);}
   if(!template||!execution)return {valid:false,flightReady:false,validationScope:'offline-partial',errors,warnings,templates,waylines};
   const fieldCoverage=fieldInventoryCoverage([template,execution]);
   if(fieldCoverage.undocumentedFields.length)
