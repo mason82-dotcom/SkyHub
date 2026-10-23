@@ -77,6 +77,38 @@ test('oversized inputs and malformed values fail safe',()=>{
   assert.throws(()=>inventoryMediaNames('SECRET_SERIAL'),RangeError);
   assert.equal(inventoryMediaNames([null,5,undefined]).invalid,3);
 });
+test('four spectral filenames alone do not imply a complete five-channel set',()=>{
+  const names=['G','R','RE','NIR'].map(b=>key+'_MS_'+b+'.TIF');
+  const report=inventoryMediaNames(names);
+  assert.equal(report.captureGroups,1);
+  assert.equal(report.spectralSets,1);
+  assert.equal(report.fiveChannelSets,0);
+  assert.equal(report.partialSets,1);
+  assert.equal(report.missingBands.RGB,1);
+  assert.equal(report.ndviReady,false);
+  assert.equal(report.reflectanceReady,false);
+});
+
+test('TIFF/JPEG upper- or lower-case variants are filename hints only',()=>{
+  const names=[key+'_D.jpeg',...['G','R','RE','NIR'].map(b=>key+'_MS_'+b+'.tiff')];
+  const report=inventoryMediaNames(names);
+  assert.equal(report.classified,5);
+  assert.equal(report.fiveChannelSets,1);
+  assert.equal(report.radiometricCalibrationVerified,false);
+  assert.equal(report.bandCoregistrationVerified,false);
+  assert.doesNotMatch(JSON.stringify(report),/20261021190530/);
+});
+
+test('more than 12000 distinct untrusted capture names fail closed',()=>{
+  const names=Array.from({length:12001},(_,i)=>
+    'DJI_20261021190530_'+String(i).padStart(4,'0')+'_MS_G.TIF');
+  // Four digit capture sequence allows only 10000 distinct IDs at one timestamp;
+  // a second timestamp provides enough distinct groups to hit the hard cap.
+  for(let i=10000;i<names.length;i++)
+    names[i]='DJI_20261021190531_'+String(i-10000).padStart(4,'0')+'_MS_G.TIF';
+  assert.throws(()=>inventoryMediaNames(names),/Too many capture groups/);
+});
+
 test('optional Pi CLI reads directory entries only, ignores symlinks, redacts path',()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m3m-secret-name-'));
   try{
