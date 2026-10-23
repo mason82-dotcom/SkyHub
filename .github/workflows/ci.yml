@@ -55,7 +55,10 @@ jobs:
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
       - name: Syntax-check optional HiveMind lab entrypoints
-        run: bash -n simulators/hivemind/lab.sh simulators/hivemind/prepare.sh
+        run: |
+          for script in simulators/hivemind/lab.sh simulators/hivemind/prepare.sh; do
+            bash -n "$script"
+          done
       - name: Validate HiveMind lab isolation without starting containers
         env:
           SKYHUB_HTTP_PORT: "14001"
