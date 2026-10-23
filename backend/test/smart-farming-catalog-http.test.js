@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const express=require('express');
-const {createHttpAuth}=require('../http-auth');
+// The main server owns its auth middleware; avoid importing a draft-only helper.
 const {createSmartFarmingCatalogRouter}=require('../smart-farming-catalog');
 const sha=value=>crypto.createHash('sha256').update(value).digest('hex');
 const secret='local-test-token-32-characters-01234';
@@ -36,7 +36,16 @@ function fixture(t){
 }
 async function serve(options,fn){
   const app=express();
-  const {auth}=createHttpAuth({secret,lanAccess:{allows:()=>true}});
+  // Reproduce the main-server Bearer check only for this isolated HTTP
+  // router test; the source wiring/lan allowlist is checked separately.
+  const auth=(req,res,next)=>{
+    const value=req.headers.authorization || '';
+    const supplied=value.startsWith('Bearer ')?value.slice(7):'';
+    const a=Buffer.from(supplied),b=Buffer.from(secret);
+    if(a.length!==b.length || !crypto.timingSafeEqual(a,b))
+      return res.status(401).json({error:'Unauthorized'});
+    next();
+  };
   app.use('/api',auth); // same protection order as real SkyHub server
   app.use('/api/smart-farming/candidates',createSmartFarmingCatalogRouter({express,auth,...options}));
   const srv=app.listen(0,'127.0.0.1');
@@ -80,4 +89,19 @@ test('changed registry yields generic 503 without private paths',async t=>{
     assert.equal(response.status,503);
     assert.equal(body.includes(cfg.root),false);
   });
+});
+
+test('main-server catalog mount is disabled by default and behind auth',()=>{
+  const src=fs.readFileSync(path.resolve(__dirname,'../server.js'),'utf8');
+  assert.match(src,/app\.use\('\/api',auth\);/);
+  assert.match(src,/SKYHUB_M3M_CATALOG_ENABLED\s*===\s*'true'/);
+  assert.match(src,/app\.use\('\/api\/smart-farming\/candidates'/);
+  const outer=src.indexOf("app.use('/api',auth);");
+  const inner=src.indexOf("app.use('/api/smart-farming/candidates'");
+  assert.ok(outer>=0 && inner>outer);
+  const prefix=src.slice(0,outer);
+  assert.doesNotMatch(prefix,/smart-farming\/candidates/);
+  const allowed=src.match(/const lanReadPaths=new Set\(\[([^\]]*)\]/);
+  assert.ok(allowed);
+  assert.doesNotMatch(allowed[1],/smart-farming|candidates/);
 });
