@@ -102,6 +102,12 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
      <p class="caption">Nur offline generierte WPML-Aktionsgruppe; nicht auf DJI Pilot 2, Mavic 3M oder anderen Geräten verifiziert. Einzelbilder je Wegpunkt werden in diesem Modus deaktiviert. Insbesondere Start-/Endauslösung und Stopps an Wegpunkten sind NICHT hardwaregetestet.</p>
    </div>
    <hr>
+   <section aria-label="Lokale Missionsprüfung">
+     <h2>Missionsprüfung · nur Entwurf</h2>
+     <p class="caption">Ausschließlich lokale, ungefähre 2D-Geometrie und Eingabeprüfung. Keine DJI-Geräteprüfung, Flugzeitschätzung, Terrain-, Luftraum- oder Kollisionsprüfung.</p>
+     <div id="mission-review" class="waypoint" role="status" aria-live="polite">Lokale Prüfung noch nicht verfügbar. Kein Flugbereitschaftsnachweis.</div>
+   </section>
+   <hr>
    <button type="submit" id="export">WPML-KMZ lokal exportieren</button>
    <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Wegpunkte, relative und WGS84-Ellipsoidhöhen sowie experimentelle, noch nicht in DJI Pilot 2 geprüfte Intervall-Fotoaktionen. Mapping2D/3D, Korridore, Terrain-Referenzen und Multispektralaktionen werden hier noch nicht zu Missionswegen berechnet.</p>
    <div id="message" role="status" aria-live="polite">Mindestens zwei unterschiedliche Wegpunkte setzen.</div>
@@ -113,6 +119,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
 <script src="/wpml-interval-actions.js"></script>
 <script src="/wpml-editor-core.js"></script>
 <script src="/wpml-waylines-reference.js"></script>
+<script src="/wpml-mission-review.js"></script>
 <script src="/wpml-editor.js"></script>
 </body>
 </html>
