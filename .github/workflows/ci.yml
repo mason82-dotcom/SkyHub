@@ -54,6 +54,25 @@ jobs:
 
       - name: Validate isolated Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
+      - name: Syntax-check optional HiveMind lab entrypoints
+        run: bash -n simulators/hivemind/lab.sh simulators/hivemind/prepare.sh
+      - name: Validate HiveMind lab isolation without starting containers
+        env:
+          SKYHUB_HTTP_PORT: "14001"
+          SKYHUB_BIND_ADDRESS: "127.0.0.1"
+        run: |
+          docker compose -p skyhub-hivemind-lab --env-file .env.example -f docker-compose.yml -f simulators/hivemind/compose.lab.yml config --format json > /tmp/skyhub-hivemind-lab.json
+          node -e '
+            const c=require("/tmp/skyhub-hivemind-lab.json");
+            const b=c.services.backend, m=c.services["hivemind-broker"], s=c.services["hivemind-simulator"];
+            if(c.name!=="skyhub-hivemind-lab") throw Error("wrong project");
+            if(b.environment.MQTT_BROKER_URL!=="mqtt://hivemind-broker:1884") throw Error("lab MQTT boundary");
+            if(b.environment.SKYHUB_PILOT_ENABLED!=="false" || b.environment.SKYHUB_TRACK_RECORDING_ENABLED!=="false") throw Error("unsafe flags");
+            if(b.ports.length!==1 || Number(b.ports[0].published)!==14001 || b.ports[0].host_ip!=="127.0.0.1") throw Error("backend host port");
+            if((m.ports||[]).length || s.ports.length!==1 || Number(s.ports[0].published)!==19090 || s.ports[0].host_ip!=="127.0.0.1") throw Error("simulator exposure");
+            if(!Object.values(c.networks).some(n=>n.internal===true)) throw Error("lab network must be internal");
+          '
+
       - name: Validate explicit ARM64 PostGIS overlay
         run: docker compose -f docker-compose.yml -f docker-compose.arm64.yml --env-file .env.example config --quiet
       - name: Assert Pi MQTT endpoint on port 1884
