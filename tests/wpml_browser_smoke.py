@@ -330,8 +330,17 @@ def main() -> None:
                         "buffer": json.dumps(fixture).encode("utf-8")
                     })
                     survey.locator("#import-geometry").click()
-                    check("lokal geladen" in survey.locator("#status").inner_text(),
-                          "Local excluded survey geometry was not imported")
+                    # File.text() + geometry validation are asynchronous browser steps.
+                    # Wait for completion instead of racing the click callback.
+                    survey.wait_for_function("""() => {
+                        const s = document.getElementById('status')?.textContent || '';
+                        return s.includes('lokal geladen') || s.includes('Survey preview invalid')
+                          || s.includes('Ungültige GeoJSON') || s.includes('GeoJSON größer');
+                    }""", timeout=5000)
+                    status_text = survey.locator("#status").inner_text()
+                    check("lokal geladen" in status_text,
+                          "Local excluded survey geometry was not imported: "
+                          + status_text[:240])
                     survey.locator("#preview").click()
                     check("ungeplante Übergangslücken" in survey.locator("#status").inner_text(),
                           "Gap warning is missing from survey UI")
