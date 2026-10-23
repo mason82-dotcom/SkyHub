@@ -71,7 +71,7 @@ jobs:
       - name: Smoke-test bundled runtime modules in the image
         run: |
           docker run --rm --network none --entrypoint node skyhub-next:test \
-            -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store","./map-element-permissions","./map-element-mutation"].forEach(require)'
+            -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store","./map-element-permissions","./map-element-mutation","./hardware-validation","./m3m-gap-classifier","./rc-plus2-m4t-hardware-validation"].forEach(require)'
 
   isolated-postgis-integration:
     runs-on: ubuntu-latest

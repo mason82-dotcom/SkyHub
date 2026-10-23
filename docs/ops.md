@@ -2,7 +2,7 @@
 
 **Wichtig:** Die folgenden Pi-Zustände und Portbelegungen wurden am 20.10.2026 dokumentiert; sie ersetzen keine erneute Prüfung am Zielsystem. Dieser Text unterscheidet zwischen lesenden Diagnosebefehlen und Befehlen, die Container/Dateien verändern. Ein Git-Checkout oder ein Merge nimmt **keinen** automatischen Cutover vor.
 
-**Repository-Stichtag:** [Projektstand 23.10.2026](projektstand-2026-10-23.md), Main-Commit `4d878314f8345f8cd370f0004916426523e577c0`. Die bis dahin hinzugekommenen Feature-PRs und in den Integrationsbranch übernommenen UI-PRs sind **kein** automatisches Upgrade dieser Root-Compose-Installation. Die folgenden historischen Hardwareangaben behalten ihr jeweiliges Datum.
+**Repository-Stichtag:** [Projektstand 23.10.2026](projektstand-2026-10-23.md), Main-Commit `496a1f84f22b15f85ad5442965b2cd218a93969a`. Die bis dahin hinzugekommenen Feature-PRs und in den Integrationsbranch übernommenen UI-PRs sind **kein** automatisches Upgrade dieser Root-Compose-Installation. Die folgenden historischen Hardwareangaben behalten ihr jeweiliges Datum.
 
 **Betriebsgrenzen:** Das Root-Compose ist `skyhub-next` mit Backend-Hostport `127.0.0.1:4001`; der vorhandene Broker ist auf Hostport `1884`. Der bisherige produktive Backend-Hostport `4000` darf nicht ungeprüft übernommen werden. Das Compose im Legacy-Snapshot darf nicht gestartet werden.
 
@@ -101,7 +101,7 @@ Remote-Tunnel vom PC:
 
 Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token verbleibt nur im Speicher des Browsers bis zum Neuladen.
 
-**Bekannter Main-Defekt (23.10.2026):** Die Diagnose `GET /api/diagnostics/dji-fields?model=0:77:2` kann mit HTTP 400 antworten, obwohl ein gültiges DJI-Modell angefragt wird. Hintergrund ist ein fehlerhaft maskiertes Regex in `backend/server.js`. [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26) enthält den noch nicht nach `main` übernommenen Fix. Dies ist **keine** Netzwerk-/DJI-Hardwarestörung.
+**DJI-Diagnosekorrektur (23.10.2026):** Der HTTP-400-Validierungsfehler für gültige Modellkennungen wurde in [PR #61](https://github.com/mason82-dotcom/SkyHub/pull/61) nach `main` übernommen und durch echte HTTP-Regressionstests abgesichert. Eine weiterhin mit altem Image laufende Pi-Installation kann den historischen Fehler bis zum ausdrücklich freigegebenen Backend-Update noch zeigen. **Keine automatische Aktualisierung oder Gerätefreigabe durch den GitHub-Merge.**
 
 ## Tests
 

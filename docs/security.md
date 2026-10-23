@@ -8,7 +8,7 @@ Diese Regeln gelten für den aktiven Root-Stack. Die historische Konfiguration u
 
 ## Status und Sicherheitsabgrenzung (23.10.2026)
 
-Bezieht sich auf `main`, Commit `4d878314f8345f8cd370f0004916426523e577c0`.
+Bezieht sich auf `main`, Commit `496a1f84f22b15f85ad5442965b2cd218a93969a`.
 Die experimentellen STS-/Medien-/XMP-/YOLO-/Thermal-/WPML-Module der
 [PR-Übersicht](projektstand-2026-10-23.md) sind **nicht** Teil der hier beschriebenen
 freigegebenen Runtime und erhalten durch ein grünes CI-Ergebnis keine automatische
@@ -82,3 +82,5 @@ brauchen das Token. Akzeptiert werden nur private Netze von /16 bis /32
 außerhalb der Docker-Bereiche (172.16.0.0/12). Leer lassen, um das Token immer
 zu verlangen. Die Kartenkacheln senden einen Referer
 (`strict-origin-when-cross-origin`), wie es die OSM-Nutzungsregeln verlangen.
+
+**DJI-1.18-Paritätsaudit:** Der nach `main` übernommene Offline-Checker besitzt weder MQTT-Verbindung noch HTTP-Route und erzeugt ausschließlich Ergebnisse über mitgelieferte synthetische Testfälle. [Verifikationsgrenzen](dji-protocol-parity-audit.md). Ein GitHub-Merge startet keinen Prozess auf dem Pi.

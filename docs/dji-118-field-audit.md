@@ -160,6 +160,20 @@ ihrer sicherheitsrelevanten Wirkung oder korrekten DJI-Firmwaresemantik.
 Auf dem Pi wird ausschließlich die vorhandene Diagnoseschnittstelle
 gelesen; das Prüfsystem publiziert keine MQTT-Nachricht, verändert
 keine Einstellung und löst keine Flug- oder Kameraaktion aus.
+## Datierte Feldannahme-Evidenz und neue Diagnoseklassen (23.10.2026)
+
+Die [M3M-Kamera-/State-Feldlückenanalyse](m3m-camera-gap-analysis.md) trennt
+Thermografie-Felder des gemeinsamen DJI-Mavic-3-Schemas von den tatsächlichen
+RGB-/G-/R-/RE-/NIR-M3M-Sensoren. Die **typisierte Übernahme** aller sechs
+M3M-Erweiterungspfade war ein datierter realer **Parserannahmebefund** vom
+21.10.2026, keine unabhängige Prüfung der tatsächlichen RTH-/RC-Loss-
+Einstellwerte oder ihrer sicherheitsrelevanten Wirkung.
+
+Die neue [RC-Plus-2/M4T-Prüfroutine](hardware-rc-plus2-m4t.md) wertet
+ein offizielles RC-Plus-2-Profil mit 54 Pfaden und ein vorläufiges
+M4T-Profil mit 199 statischen plus neun dynamischen Feldtypen offline aus.
+Eine reale RC-Plus-2/M4T-Hardwareabnahme steht aus.
+
 ## Absichtlich nicht umgesetzt
 
 Keine DJI-`property/set`-Aufrufe, Flight Control, Missionsstarts, Kameraaktionen

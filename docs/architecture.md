@@ -2,7 +2,7 @@
 
 **Geltungsbereich:** Aktiver Entwicklungsstand im Repository-Root (Version 0.1.0), nicht der archivierte Stack.
 
-**Standprüfung 23.10.2026:** Dieser Text beschreibt `main` auf Commit `4d878314f8345f8cd370f0004916426523e577c0`; [offene Feature- und Integrations-PRs](projektstand-2026-10-23.md) sind davon getrennt. Insbesondere gehören Command Center, MinIO-Medien-API, WPML-Inspektion und experimentelle Analyse-Worker nicht zur Main-Runtime.
+**Standprüfung 23.10.2026:** Dieser Text beschreibt `main` auf Commit `496a1f84f22b15f85ad5442965b2cd218a93969a`; [offene Feature- und Integrations-PRs](projektstand-2026-10-23.md) sind davon getrennt. Insbesondere gehören Command Center, MinIO-Medien-API, WPML-Inspektion und experimentelle Analyse-Worker nicht zur Main-Runtime.
 
 ## Komponenten
 
@@ -31,10 +31,7 @@ DJI Cloud API Dokumentation:
 ## Live-API im Main-Stand (23.10.2026)
 
 - `GET /api/health` und `GET /api/pilot/status`: öffentliche, begrenzte Statusantworten.
-- **Bekannter Main-Defekt:** `GET /api/diagnostics/dji-fields?model=0:77:2`
-  kann auf dieser Revision mit HTTP 400 scheitern, weil das Regex in `backend/server.js`
-  Ziffern doppelt maskiert. [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26)
-  korrigiert dies **außerhalb von Main**.
+- **Behoben mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61):** `GET /api/diagnostics/dji-fields?model=0:77:2` akzeptiert gültige numerische DJI-Modellkennungen; HTTP-Tests decken alle sechs Profile, unbekannte IDs, ungültige Syntax und LAN-/Token-Abweisungen ab. Der Fix ist im Main-Code, jedoch nicht allein durch Git auf dem Pi installiert.
 - `GET /api/devices`, `/api/topology`, `/api/events`,
   `/api/diagnostics/mqtt-shapes`, `/api/diagnostics/mqtt-model-shapes`,
   `/api/diagnostics/dji-fields?model=…`,

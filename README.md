@@ -7,15 +7,20 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 ## Aktueller Projektstand (23.10.2026)
 
 **Verbindliche Bestandsaufnahme:** [Projektstand, offene Entwicklungszweige und Integrationsgates](docs/projektstand-2026-10-23.md).
-Der hier dokumentierte Root-Code von `main` entspricht Commit
-[`4d878314f8345f8cd370f0004916426523e577c0`](https://github.com/mason82-dotcom/SkyHub/commit/4d878314f8345f8cd370f0004916426523e577c0)
-(vom 21.10.2026). Der nachfolgende Stand unterscheidet ausdrücklich **Main**,
+Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (rein lesende Hardwarediagnostik) ist Commit
+[`399e18900db11d976b61cc59a5cd8b081b6570e1`](https://github.com/mason82-dotcom/SkyHub/commit/399e18900db11d976b61cc59a5cd8b081b6570e1)
+(vom 23.10.2026). Der nachfolgende Stand unterscheidet ausdrücklich **Main**,
 **offene/gestapelte Pull Requests**, **in den Integrationsbranch gemergte PRs**,
 **CI-Nachweise** und **Hardwarebeobachtungen**.
 
 - **In Main:** DJI-MQTT-Leseeingang, Topologie/Registry, Pilot-2-HTTPS-Kopplung,
   statisches Dashboard, Feldfrische, HMS/Tracks, optionale begrenzte Topologie-Antwort
-  und PostGIS-/Redis-Basis. Flugspuraufzeichnung bleibt standardmäßig aus.
+  und PostGIS-/Redis-Basis; außerdem die korrigierte DJI-Modell-Felddiagnose
+  sowie den **nicht im Server gemounteten, synthetischen Offline-DJI-1.18-Paritätsaudit**.
+  Zusätzlich **isolierte Offline-Hardwareprüfer** für RC Pro/M3M und RC Plus 2/M4T,
+  M3M-Feldlücken-Klassifikation und synthetische Regressionen; die reale
+  RC-Plus-2/M4T-Hardwareabnahme ist weiterhin ausstehend.
+  Flugspuraufzeichnung bleibt standardmäßig aus.
 - **Noch nicht in Main:** das neue Command Center, MinIO-Medienleser, Pilot-2-Medien-HTTPS/STS,
   sichere XMP-Proben, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,
   YOLO11, Thermal-Geolokalisierung und HiveMind-Simulationslabor.
@@ -44,6 +49,10 @@ Der hier dokumentierte Root-Code von `main` entspricht Commit
 - [Konfigurationsreferenz: Env, Compose, Flags und Startgrenzen](docs/config-reference.md)
 - [API-Referenz: HTTP, Socket.IO, MQTT und Zugriffsmatrix](docs/api-reference.md)
 - [Projektstand 23.10.2026: Main, PR-Ketten, Test-/Hardware-Evidenz](docs/projektstand-2026-10-23.md)
+- [Priorisierter Integrationsplan: PR-Basisgraph, Reihenfolge und Prüfbedingungen](docs/integration-priorities-2026-10-23.md)
+- [Gemeinsame Offline-Hardwarediagnostik: RC Pro/M3M, RC Plus 2/M4T](docs/hardware-diagnostics-consolidation.md)
+- [M3M-Kamerafeldlücken ohne Thermografie-Fehlschluss](docs/m3m-camera-gap-analysis.md)
+- [RC Plus 2/Matrice 4T: read-only Hardware-Prüfverfahren](docs/hardware-rc-plus2-m4t.md)
 - [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
@@ -53,6 +62,7 @@ Der hier dokumentierte Root-Code von `main` entspricht Commit
 - [Detaillierter Cutover- und Rollback-Plan](docs/skyhub-legacy-takeover.md)
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
+- [Offline Cloud-API-1.18-Protokoll-Paritätsaudit (16 synthetische Fälle)](docs/dji-protocol-parity-audit.md)
 - [Archivhinweise](stacks/README.md)
 
 ## Positionsaufzeichnung (standardmäßig deaktiviert)

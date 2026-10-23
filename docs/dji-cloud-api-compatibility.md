@@ -6,7 +6,7 @@ Zielstand: DJI Cloud API 1.18 (vom Projekt vorgegeben). Protokolldetails gelten 
 
 ## Statuskorrektur (23.10.2026)
 
-**Quelle der Runtime-Aussage:** `main` @ `4d878314f8345f8cd370f0004916426523e577c0`.
+**Quelle der Runtime-Aussage:** `main` @ `399e18900db11d976b61cc59a5cd8b081b6570e1`. Die Datumsangaben früherer Hardwaretests bleiben historische Evidenz.
 Mit [#15](https://github.com/mason82-dotcom/SkyHub/pull/15),
 [#17](https://github.com/mason82-dotcom/SkyHub/pull/17) und
 [#20](https://github.com/mason82-dotcom/SkyHub/pull/20) wurden der
@@ -14,11 +14,9 @@ typisierte Feldkatalog, die RC-Pro/M3M-Diagnostik und die zusätzlichen
 M3M-OSD-Feldpfade in Main integriert. Vorläufige Katalogpfade sind keine
 durch Hardware bestätigten Messwerte. Einzelheiten: [Hardwarebericht](hardware-rc-pro-m3m.md).
 
-**Außerhalb von Main:** Die [RC-Plus-2/Matrice-4T-Abnahme #18](https://github.com/mason82-dotcom/SkyHub/pull/18),
-[WPML #16](https://github.com/mason82-dotcom/SkyHub/pull/16),
-[DJI-1.18-Paritätsaudit #47](https://github.com/mason82-dotcom/SkyHub/pull/47)
-und [HiveMind-Labor #46](https://github.com/mason82-dotcom/SkyHub/pull/46)
-sind getrennte offene Entwicklungen. Simulation mit SDK 1.16.1.3
+**In Main – rein lesende Diagnostik:** Mit [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) sind die M3M-Kamerafeld-/State-Lückenklassifikation und der RC-Plus-2/M4T-Offline-Prüfer mit synthetischer Integration verfügbar. 54 statische RC-Plus-2- und 199 vorläufige M4T-Feldpfade (neun dynamische Gimbal-Feldtypen) sind Katalogumfang, **kein realer M4T-Hardware-Nachweis**. Die echten Geräte müssen separat geprüft werden.
+
+**Weiterhin außerhalb von Main:** Die historischen Abnahmezweige [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), [#21](https://github.com/mason82-dotcom/SkyHub/pull/21), [#22](https://github.com/mason82-dotcom/SkyHub/pull/22) und [#27](https://github.com/mason82-dotcom/SkyHub/pull/27) bleiben als Quell-/Evidenzgeschichte offen, jedoch selektiv durch #66 ersetzt; [WPML #16](https://github.com/mason82-dotcom/SkyHub/pull/16) und [HiveMind-Labor #46](https://github.com/mason82-dotcom/SkyHub/pull/46) sind getrennte offene Feature-Entwicklungen. Der [DJI-1.18-Paritätsaudit #47](https://github.com/mason82-dotcom/SkyHub/pull/47) ist **nach Main gemergt**, prüft aber ausschließlich 16 synthetische Status-/Service-Reply-Fälle ohne Live-MQTT oder DJI-Hardware. Simulation mit SDK 1.16.1.3
 oder 16 synthetische Protokoll-Fixtures belegen keine Cloud-API-1.18-
 Hardwarekonformität. Ein erfolgreiches M3M-OSD-Ereignis belegt ebenso wenig
 Pilot-2-Medien-HTTPS, WPML-Missionsausführung oder Multispektral-Radiometrie.
