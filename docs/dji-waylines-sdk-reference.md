@@ -107,7 +107,7 @@ Erkannte Abweichungen, die **nur eine fachliche Warnung**, keine automatisierte 
 | `ELLIPSOID_EQUALS_OTHER_HEIGHT_REQUIRES_REVIEW` | Numerisch gleiche Höhen in zwei Referenzsystemen; das ist **nicht zwangsläufig falsch**, verlangt aber bei der SDK-Konvertierung einen Herkunftsnachweis |
 | `WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED` | `distance`/`duration` im KMZ; die Upstream-Schätzung rechnet mit ca. 111.000 m je Breiten- **und** Längengrad, was von der geografischen Breite und Route abhängige Fehler auslösen kann |
 
-Blockierende Befunde sind u. a. `AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT`, `AIRCRAFT_SUBTYPE_UNRECOGNIZED`, `WPML_OFFLINE_VALIDATION_FAILED` und `WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB`. Insbesondere verwendet der Upstream `NewDocument()` den Namespace `1.0.6`, während der aktuell gepinnte SkyHub-WPML-Parser nur `1.0.2` prüft. **Der Audit untersucht `1.0.6` ausschließlich über eine temporäre In-Memory-Namespace-Umetikettierung für einen zusätzlichen lesenden Strukturcheck. Das Original wird nicht verändert oder neu exportiert; der Prüfstatus bleibt immer `blocked` und `offlineValid:null`.** Dies bestätigt ausdrücklich **keine** DJI-Pilot-2-Kompatibilität. Unbekannte oder gemischte Namespaces werden ebenfalls blockiert.
+Blockierende Befunde sind u. a. `AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT`, `AIRCRAFT_SUBTYPE_UNRECOGNIZED`, `WPML_OFFLINE_VALIDATION_FAILED` und `WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB`. Insbesondere verwendet der Upstream `NewDocument()` den Namespace `1.0.6`, während der aktuell gepinnte SkyHub-WPML-Parser nur `1.0.2` prüft. **Der Audit untersucht `1.0.6` über eine **explizite, nur lesende Namespace-Auswahl im Parser**. Es findet **kein XML-String-Rewrite** und keine Versionstransformation statt. Das Original wird nicht verändert oder neu exportiert; der Prüfstatus bleibt immer `blocked` und `offlineValid:null`.** Dies bestätigt ausdrücklich **keine** DJI-Pilot-2-Kompatibilität. Unbekannte oder gemischte Namespaces werden ebenfalls blockiert.
 
 Geprüft werden beide XML-Dokumente innerhalb einer durch SkyHub größen- und CRC-begrenzten KMZ. Das Tool erzeugt **keine** Flugroute, sendet **keine** DJI-Kommandos und liest keine Kamera-/Ressourceninhalte. Auch ein unauffälliger Audit besitzt `flightReady:false`, `pilot2HardwareVerified:false` und `sdkOutputVerified:false`.
 
@@ -131,7 +131,7 @@ Die Statuscodes sind:
 
 **Evidenzgrenze:** Das CLI erzeugt ausschließlich synthetische SkyHub-KMZ mit gezielten XML-Mutationen. Weder Go-SDK-Code noch DJI Pilot 2 werden in diesem Test ausgeführt. Die beiden booleschen Felder `actualGoSdkExecutableRun:false` und `actualPilot2ImportTest:false` verhindern eine Verwechslung mit echten Fremdhersteller- oder Hardwaretests. Besonders die Mavic 3M ist kein freigegebenes Go-JSON-Importprofil, selbst wenn SkyHub einen eigenen Offline-WPML-Generator besitzt.
 
-Der zusätzlich lesende Prüfer kann nun auch `1.0.6`-KMZ nach den **inhaltlichen** Go-SDK-typischen Risikomustern untersuchen. Das erfolgt ausschließlich in-memory; die archivierte Version bleibt unverändert und ihr Abnahmestatus bleibt blockiert. Ein grober Haversine-Vergleich markiert starke Abweichungen zwischen der im XML notierten `distance` und der horizontalen Segmentstrecke als `WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION`. Es werden keine Strecken-, Koordinaten- oder sonstigen Rohwerte ausgegeben. Diese Distanzprüfung ist **keine** Flugzeit-, Gelände- oder Energieberechnung.
+Der zusätzlich lesende Prüfer kann nun auch `1.0.6`-KMZ nach den **inhaltlichen** Go-SDK-typischen Risikomustern untersuchen. Das erfolgt mit expliziter Namespace-Auswahl im Read-only-Parser, ohne die XML-Dokumente umzuschreiben. Die archivierte Version bleibt unverändert und ihr Abnahmestatus bleibt blockiert. Ein grober Haversine-Vergleich markiert starke Abweichungen zwischen der im XML notierten `distance` und der horizontalen Segmentstrecke als `WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION`. Es werden keine Strecken-, Koordinaten- oder sonstigen Rohwerte ausgegeben. Diese Distanzprüfung ist **keine** Flugzeit-, Gelände- oder Energieberechnung.
 
 ### Echte Referenzen einbringen – ausschließlich offline
 
@@ -178,3 +178,32 @@ Das Werkzeug prüft die einzelnen Dateien mit `auditReferenceKmz()` und vergleic
 Der strukturierte JSON-Bericht enthält nur vordefinierte Rollen, Kategorien, Befunde, boolesche Prüffelder und Aggregatzahlen. **Keine** GPS-Koordinaten, Missionsnamen, Dateinamen, Pfade, Roh-XML, KMZ-Bytes oder SHA-Fingerprints werden ausgegeben. Die Rollen `goSdk` und `pilot2` sind **unbestätigte Bedienerangaben**. Insbesondere müssen `actualGoSdkExecutableRun:false`, `actualPilot2ImportTest:false`, `pilot2HardwareVerified:false` und `flightReady:false` bleiben.
 
 Für eine spätere echte DJI-Hardwareabnahme ist eine getrennte, nachvollziehbar dokumentierte Prüfung von Fluggerät, Firmware, DJI Pilot 2, Kameraaktionen und Höhenbezügen erforderlich. Ein paarweiser XML-Vergleich – selbst bei Gleichheit – ist kein Nachweis für Hardwarekompatibilität oder sicheren Flug.
+
+## Detailuntersuchung: WPML-XML-Namespaces sind Kennungen, keine XSD-Dateien (Phase 7)
+
+**Untersuchungsstand 23.10.2026:** Der [W3C-XML-Namespace-Standard](https://www.w3.org/TR/xml-names/) definiert einen Namespace als URI-Kennung. Die URI muss **keine** XML-Schemadatei (.xsd) zurückliefern. Ein `xsi:schemaLocation` wäre eine *gesonderte* Schema-Referenz, die hier nicht automatisch abgerufen oder ausgeführt wird. Eine vermeintliche Versionsnummer im Namespace beweist allein **keine** Vorwärts-/Rückwärtskompatibilität.
+
+Belegte Quellen und ihre Reichweite:
+
+| Herkunft | Beobachtung | Evidenzgrenze |
+|---|---|---|
+| [DJI Cloud API, template.kml](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/template-kml.html) und [waylines.wpml](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/waylines-wpml.html) | DJI verwendet in den veröffentlichten Mustern `xmlns:wpml="http://www.dji.com/wpmz/1.0.2"` | Dokumentierte Beispiele und Feldtabellen, keine vorliegende `1.0.6`-XSD |
+| [motecshine/dji-waylines-sdk – serializer.go](https://github.com/motecshine/dji-waylines-sdk/blob/main/serializer.go) | `MarshalTemplate` und `MarshalWaylines` setzen bei leerer Namespace-Angabe `1.0.6` | Go-SDK-Implementierungsentscheidung, keine offizielle DJI-Kompatibilitätsbescheinigung |
+| SkyHub-Next `backend/wpml.js` / `wpml-editor-core.js` | `1.0.2` ist der Default des Validators und der **einzige** Wert des WPML-Exports | Andere Versionen bleiben von Flugfreigabe und regulärer Erstellung ausgeschlossen |
+
+In den überprüften Repository-Dateibäumen von `dji-sdk/Cloud-API-Doc` und `motecshine/dji-waylines-sdk` wurde **keine** `*.xsd`, `*.dtd` oder `*.rng`-Datei gefunden. Daraus folgt **nicht**, dass DJI intern überhaupt kein Schema verwendet. Die direkten Namespace-URLs sind keine verlässlichen Schema-Endpunkte.
+
+### Technisch relevante Korrektur
+
+Der Parser erkennt die beiden Kennungen nun **explizit und strikt getrennt**:
+
+- `parseXml(xml)` und `validateDocuments(template,waylines)` verwenden weiterhin ausschließlich `1.0.2`. Bestehende Generatoren und Validierung bleiben dadurch unverändert.
+- Nur die gezielte Audit-Funktion verwendet `parseXml(xml, "http://www.dji.com/wpmz/1.0.6")` und `validateDocuments(template,waylines,namespace)` für eine **partielle, rein lesende Inhaltsprüfung**. Dabei bleibt `offlineValid:null`, `reviewStatus:"blocked"`, `flightReady:false` und `pilot2HardwareVerified:false`.
+- Der bisherige textuelle Ersatz `1.0.6 → 1.0.2` wurde entfernt. Das schützt auch davor, dass ein zufällig in einem XML-Kommentar auftretender URI-String mit der echten Root-Deklaration verwechselt wird.
+- **Namespace-Shadowing** wird abgelehnt: ein verschachteltes `xmlns:wpml` oder `xmlns` könnte denselben sichtbaren Elementnamen auf eine andere XML-Sprache umdeuten. Der derzeitige Parser arbeitet mit wörtlichen QName-Namen, nicht vollständig mit expandierten Namespace-Namen. Diese ausdrücklich begrenzte Implementierung weist eine solche lokale Umschaltung deshalb ab, statt sie stillschweigend zu interpretieren.
+- Auch URI-Abweichungen wie `https` statt `http`, `wpml` statt `wpmz` oder `1.0.7` werden nicht automatisch gleichgesetzt. Gemäß W3C werden Namespace-URIs bei der Zuordnung grundsätzlich als Zeichenfolgen verglichen.
+- Keine DTD-Auflösung, kein externes Schema-Fetching, keine Ausgabe von GPS-Koordinaten oder Roh-XML und **keine** neue Flug-API.
+
+Tests: `node --test backend/test/wpml-namespace-compat.test.js backend/test/wpml-reference-audit.test.js`.
+
+**Offene Abnahme:** Ein echter Pilot-2-/FlightHub-2-KMZ-Export mit unverändertem Namespace, Fluggeräte-/Firmwareprofil und XML-Feldinventar ist erforderlich, um das tatsächlich verwendete Dialektprofil weiter einzugrenzen. Weder eine erfolgreiche partielle Validierung noch der Namespace allein genügen für einen Hardware-Nachweis.
