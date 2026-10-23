@@ -1,66 +1,71 @@
-# SkyHub-Next — isolierter PV-PostgreSQL-Konkurrenztest (23.10.2026)
+# SkyHub-Next – echte PV-Jobverwaltung auf PostgreSQL 16 testen
 
-**Status:** Entwicklungsbranch, kein Produktivmodul. Kein Merge und keine
-Veränderung der laufenden Pi-/Legacy-SkyHub-Dienste.
+Stand: 23.10.2026. **Experimenteller Entwicklungsbranch**, keine Aktivierung von Serverrouten,
+keine produktive SQL-Migration, keine Änderung am Pi oder an DJI Cloud API.
 
-## Zweck
+## Nachweis
 
-Die neue Datei `backend/test/pv-postgres-concurrency.integration.cjs` überprüft
-**echtes PostgreSQL 16** auf den zentralen SQL-Eigenschaften einer künftigen
-PV-Jobwarteschlange. Es handelt sich bewusst um einen eigenständigen
-**SQL-Vertragstest** und **nicht** um den bereits vollständig integrierten
-`pv_job_store.cjs` aus dem separaten Offline-Prototyp.
+GitHub Actions: https://github.com/mason82-dotcom/SkyHub/actions/runs/39929079986
 
-Geprüft werden:
+**15/15 echte PostgreSQL-16-Tests erfolgreich** (6 SQL-Vertragstests und
+9 neue Tests, die den tatsächlichen `createPvJobStore`-Code aus
+`backend/experimental/pv_job_store.cjs` über die PostgreSQL-Verbindung aufrufen).
 
-1. Zwei unabhängige PostgreSQL-Verbindungen und `FOR UPDATE SKIP LOCKED`.
-2. Parallele Beanspruchung desselben wartenden Jobs.
-3. Eindeutigkeit eines Idempotenzschlüssels und FK zu verifizierten Medien.
-4. Transaktions-Rollback bei fehlgeschlagenem Audit.
-5. Race zwischen Heartbeat und Jobabschluss.
-6. Ablauf der Lease, konkurrierende Recovery und Zurückweisung verspäteter Ergebnisse.
+Getestet wurden:
 
-## Sicherheit
+1. `FOR UPDATE SKIP LOCKED` bei parallelen Verbindungen und Worker-Claims.
+2. Identische Aufträge mit demselben Idempotenzschlüssel; Replay-Audit.
+3. Zurückweisung von Cross-Asset-Replays mit separatem Denial-Audit.
+4. Workspace- und Asset-Fremdschlüssel.
+5. Audit-Rollback – ein fehlgeschlagener Audit-Insert darf die Job-Transition
+   nicht committen.
+6. Heartbeat-/Finish-Race, Lease-Verlust und verspätete Claim-Tokens.
+7. Konkurrierende manuelle Recovery mit exakt einem Ablauf-Audit.
+8. Append-only-Schutz der Job- und Denial-Audits.
 
-- **Eigener GitHub-Runner**, PostgreSQL-16-Service im kurzlebigen CI-Job.
-- Loopback-Port `127.0.0.1:55439`; Test-DB `skyhub_pv_ci`.
-- Bootstrap über den ausschließlich im CI-Container vorhandenen Administrator.
-  Der Test selbst verwendet `pv_ci` ohne Superuser-/Createdb-/Createrole-Rechte.
-- Explizite `CI`, `GITHUB_ACTIONS` und `PV_CI_DISPOSABLE=yes` als Startbedingung.
-- Test-Schema mit zufälliger Kennung; bei normalem Ende `DROP SCHEMA ... CASCADE`.
-  Vorher werden DB-Identität, Rollenrechte und leeres Ausgangsschema geprüft.
-- Kein Zugriff auf DJI Cloud API, MinIO, MQTT, Pi, SSH oder Produktions-Geheimnisse.
-- Keine Produktionstabellen, keine Migration von SkyHub-Next.
-- `on.push` ist **auf diesen einzelnen Feature-Branch und relevante Dateien begrenzt**,
-  weil ein nur im Feature-Branch vorhandener `workflow_dispatch`-Workflow
-  nicht zuverlässig über die GitHub-Actions-Oberfläche gestartet werden kann.
-  GitHub-Token besitzt nur `contents: read`.
+## Implementierte Dateien
 
-## Abgrenzung zu den bereits erstellten Offline-Paketen
+- `backend/experimental/pv_job_store.cjs`: eigentliche zustandsbehaftete
+  Jobverwaltung mit `request`, `claimNext`, `heartbeat`, `finish`,
+  `expireStale` und `lookup`. Speicherung nur von IDs, Status und
+  SHA-256; keine Fotos, Temperaturpixel, Tokens oder S3-Objektpfade.
+- `backend/experimental/pv_jobs_isolated.sql`: manuell anzuwendendes
+  **experimentelles** Schema, in der CI nur innerhalb des Wegwerf-Schemas.
+  **Nicht** unter `backend/db/migrations` und **nicht** von SkyHub ausgeführt.
+- `backend/test/pv-postgres-concurrency.integration.cjs`: expliziter
+  Integrationstest (nicht im `backend/test/*.test.js`-Standardglob).
+- `.github/workflows/pv-postgres-concurrency.yml`: branchgebundener
+  PostgreSQL-16-CI-Job mit ausschließlich `contents:read`.
 
-Das bisherige Paket `skyhub-pv-postgres-ci-preview.zip` umfasst darüber hinaus
-Medien-Staging, Decoder-Kandidaten, Lease-Supervisor, einen eigenen `pv_job_store.cjs`
-und viele lokale Unit-Tests. Diese Module liegen **noch nicht** im aktiven
-SkyHub-Repository. Der neue Branch beweist daher zunächst nur die SQL-Semantik
-in einer isolierten CI-Datenbank, nicht die Funktionsfähigkeit der gesamten
-Python-/Node-/MinIO-/DJI-Pipeline.
+## CI-Isolation
 
-Ein grüner GitHub-Actions-Lauf ist notwendig, aber **nicht hinreichend** für
-die Freigabe des vollständigen Job-Runner-Pakets.
+Der CI-Job verwendet ausschließlich einen kurzlebigen `postgres:16-alpine`-
+Service auf Loopback `127.0.0.1:55439`, Datenbank `skyhub_pv_ci` und den
+nicht privilegierten Benutzer `pv_ci`. Das Skript verweigert den Start
+ohne explizite GitHub-Actions- und Disposable-Freigabe. Vor DDL erfolgen
+Rollen- und Datenbankidentitätsprüfungen und eine Prüfung auf bereits vorhandene
+Benutzerschemas und Relationen. Das zufällige Testschema wird nach dem Lauf
+wieder gelöscht. Der Workflow ist durch `on.push.paths` und den Branch-Namen
+auf diese Entwicklungsarbeit begrenzt.
 
-## Prüfen
+Datenbank-Vorsorgeprüfungen allein sind keine vollständige Sandbox; die
+entscheidende Isolation stammt aus dem separaten CI-Container, der keine
+produktiven SkyHub-Verbindungsdaten erhält.
 
-GitHub Actions → `PV disposable PostgreSQL 16 contract`. Nach jeder Änderung
-am Test oder Workflow auf `feature/pv-postgres-concurrency-ci-20261023` wird
-dieser begrenzte CI-Job ausgeführt, sofern GitHub Actions für das Repository
-aktiviert ist.
+## Noch NICHT freigegeben
 
-Erst nach einem tatsächlichen erfolgreichen PostgreSQL-Lauf:
-- den vollständigen, bisherigen `pv_job_store.cjs` in einen isolierten
-  Entwicklungszweig integrieren;
-- dieselben Parallelitätstests gegen **seine** Transaktionsmethoden ausführen;
-- Wechselwirkungen mit der verifizierten Pilot-2-Medienbibliothek testen;
-- anschließend echte R-JPEG-Testbilder gegen das DJI Thermal SDK validieren.
+Die erfolgreiche Datenbankprüfung validiert **nicht**:
 
-Die bestehenden allgemeinen SkyHub-CI-Jobs laufen separat weiter;
-dieser Test wird **nicht** über das allgemeine `backend/test/*.test.js`-Glob gestartet.
+- den gesamten `pv_job_runner.cjs`, Medien-Staging, Decoder-Prozess und
+  `pv_claim_supervisor.cjs` aus den früheren lokalen Paketen;
+- Pilot-2-/MinIO-End-to-End-Verarbeitung und die Datenbank-Migration gegen
+  das echte SkyHub-Schema;
+- die radiometrische Qualität von DJI M4T/M3T R-JPEG-Bildern;
+- automatische Flüge, Schadensdiagnosen oder produktive Freischaltung.
+
+Nächster Schritt: den Offline-Runner kontrolliert mit dieser geprüften
+Jobverwaltung kombinieren und seine Prozess-/Lease-Abbruchpfade unter
+isolierten Bedingungen testen. Vor Produktion sind weiterhin Review,
+Autorisierungsprüfung, Datenbank-Migrationsplanung und echte DJI-Medien nötig.
+
+**Draft-PR #81 bleibt bewusst ungemergt.**
