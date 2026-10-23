@@ -1,0 +1,32 @@
+name: SkyHub M3M raster offline PoC
+
+on:
+  push:
+    branches:
+      - "feature/m3m-reflectance-poc-*"
+  pull_request:
+    paths:
+      - "backend/workers/m3m_reflectance_indices.py"
+      - "backend/workers/m3m_requirements.txt"
+      - "tests/test_m3m_reflectance_indices.py"
+      - ".github/workflows/m3m-raster-offline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  m3m-raster-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install optional raster dependencies on isolated runner
+        run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
+      - name: Compile and validate offline M3M worker
+        run: |
+          python -m py_compile backend/workers/m3m_reflectance_indices.py
+          python -m unittest discover -s tests -p 'test_m3m_reflectance_indices.py' -v
+          python backend/workers/m3m_reflectance_indices.py --help
