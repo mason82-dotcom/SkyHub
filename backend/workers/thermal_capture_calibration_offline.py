@@ -121,7 +121,7 @@ def seal_capture(media, image, registry, profile_id, expected_profile_sha256,
     media_path = _source(media)
     image_path = detector.local_file(
         image, {".jpg", ".jpeg", ".png"}, detector.MAX_IMAGE_BYTES)
-    if media_path == image_path:
+    if media_path == image_path or media_path.samefile(image_path):
         raise geo.InvalidInput("source_and_frame_must_be_distinct")
     media_hash = provenance._digest_path(media_path, MAX_SOURCE_BYTES)
     image_hash = provenance._digest_path(image_path, detector.MAX_IMAGE_BYTES)
@@ -152,7 +152,7 @@ def verify_capture(envelope, media, image, registry, profile_id,
     media_path = _source(media)
     image_path = detector.local_file(
         image, {".jpg", ".jpeg", ".png"}, detector.MAX_IMAGE_BYTES)
-    if media_path == image_path:
+    if media_path == image_path or media_path.samefile(image_path):
         raise geo.InvalidInput("source_and_frame_must_be_distinct")
     if (not hmac.compare_digest(
             provenance._digest_path(media_path, MAX_SOURCE_BYTES),
