@@ -90,13 +90,45 @@ test('SDK safe-height default 20 is explicit, not a claim of hardware readiness'
   assert.equal(convert(s).plan.takeoffHeight,20);
   assert.equal(convert(s).flightReady,false);
 });
+test('review metrics are read-only geometry, not estimated mission approval',()=>{
+  const s=source();
+  s.waypoints=[{latitude:0,longitude:0,height:50,actions:[]},
+    {latitude:0,longitude:1,height:50,actions:[{type:'takePhoto',params:{}}]}];
+  const result=convert(s);
+  assert.equal(result.review.waypointCount,2);
+  assert.equal(result.review.photoActionCount,1);
+  assert.ok(Math.abs(result.review.horizontalRouteMeters-111195.1)<2);
+  assert.equal(result.review.longestLegMeters,result.review.horizontalRouteMeters);
+  assert.equal(result.review.nominalStraightCruiseSeconds,
+    Math.ceil(result.review.horizontalRouteMeters/5));
+  assert.equal(result.review.sdkMissionSemanticallyEquivalent,false);
+  assert.equal(result.review.pilot2ImportVerified,false);
+  assert.equal(result.review.flightReady,false);
+  assert.match(result.review.estimateExcludes,/terrain/);
+  assert.equal(result.plan.waypoints[0].lat,0);
+  assert.equal(result.plan.waypoints[1].lon,1);
+});
+test('review uses short antimeridian leg, not 359.8-degree map distance',()=>{
+  const s=source();
+  s.waypoints=[{latitude:0,longitude:179.9,height:50},
+    {latitude:0,longitude:-179.9,height:50}];
+  const result=convert(s).review;
+  assert.ok(result.horizontalRouteMeters>22000);
+  assert.ok(result.horizontalRouteMeters<23000);
+  assert.ok(Number.isFinite(result.nominalStraightCruiseSeconds));
+});
 test('editor connects local JSON file import without server or flight-command paths',()=>{
   const root=path.resolve(__dirname,'../../frontend/public');
   const html=fs.readFileSync(path.join(root,'wpml-editor.html'),'utf8');
   const editor=fs.readFileSync(path.join(root,'wpml-editor.js'),'utf8');
   assert.match(html,/wpml-waylines-reference\.js/);
   assert.match(html,/id="waylines-reference-file"/);
+  assert.match(html,/id="waylines-reference-apply"/);
+  assert.match(html,/id="waylines-reference-discard"/);
+  assert.match(html,/id="waylines-reference-preview"/);
   assert.match(editor,/reference\.convert\(payload\)/);
   assert.match(editor,/core\.normalize\(mapped\.plan\)/);
+  assert.match(editor,/pendingReference/);
+  assert.match(editor,/review\.horizontalRouteMeters/);
   assert.doesNotMatch(editor,/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|mqtt\.connect|\/api\/mission\/create/i);
 });
