@@ -3,7 +3,8 @@ name: SkyHub TAK UI browser acceptance
 on:
   push:
     branches:
-      - feature/skyhub-next-tak-second-tab-20261023
+      - main
+      - feature/tak-tab-mainbase-20261023
   pull_request:
     paths:
       - "frontend/public/**"
