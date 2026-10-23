@@ -19,7 +19,7 @@
 | --- | --- |
 | DJI MQTT, OSD, Pilot-2-Handshake | [MQTT/OSD](mqtt-osd-integration.md), [DJI Cloud API](dji-cloud-api-compatibility.md) |
 | DJI Cloud API 1.18 – rein synthetischer Offline-Abgleich | [Paritätsaudit #47](dji-protocol-parity-audit.md), [isolierter Diagnosefix #61](https://github.com/mason82-dotcom/SkyHub/pull/61) |
-| Geräte-/Feldabdeckung | [DJI 1.18-Feldkatalog](dji-118-field-audit.md), [RC Pro + M3M Hardwarebefund](hardware-rc-pro-m3m.md) |
+| Geräte-/Feldabdeckung | [DJI 1.18-Feldkatalog](dji-118-field-audit.md), [RC Pro + M3M Hardwarebefund](hardware-rc-pro-m3m.md), [M3M-Kamera-/State-Feldlücken](m3m-camera-gap-analysis.md), [RC Plus 2/M4T-Diagnose](hardware-rc-plus2-m4t.md), [gemeinsame Offline-Konsolidierung](hardware-diagnostics-consolidation.md) |
 | DJI-Kartenelemente (GET, interner Schreibentwurf) | [Feld-/Schnittstellenvertrag](dji-map-element-contract.md), [Berechtigungen](dji-map-access.md), [Mutationsvertrag – nicht live](dji-map-mutation-contract.md) |
 | Geodaten- und Datenbanktests | [Isolierte PostGIS-Validierung](postgis-isolated-validation.md), [DJI-Referenz-Roadmap](dji-reference-roadmap.md) |
 | Betriebssicherheit und Migration | [Skriptwirkung](scripts.md), [Legacy-Migration](legacy-migration.md), [Legacy-Dependency-Audit](legacy-dependency-audit.md), [Takeover/Rollback](skyhub-legacy-takeover.md) |
