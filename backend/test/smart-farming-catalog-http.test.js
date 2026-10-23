@@ -103,7 +103,7 @@ test('main-server catalog mount is disabled by default and behind auth',()=>{
   assert.doesNotMatch(prefix,/smart-farming\/candidates/);
   // Main auth allowlist lives in http-auth.js, not in server.js.
   const httpAuth=fs.readFileSync(path.resolve(__dirname,'../http-auth.js'),'utf8');
-  const allowed=httpAuth.match(/const lanReadPaths=new Set\\(\\[([^\\]]*)\\]/);
+  const allowed=httpAuth.match(/const lanReadPaths=new Set\(\[([^\]]*)\]/);
   assert.ok(allowed,'Explicit LAN-view route allowlist is mandatory');
   assert.doesNotMatch(allowed[1],/smart-farming|candidates/);
 });
