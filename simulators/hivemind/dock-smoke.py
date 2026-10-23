@@ -72,7 +72,12 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
             "no simulator flighttask_progress event",
             "connection closed",
         )
-        matched = next((item for item in known if item in completed.stderr), "unknown")
+        stages = ("init", "mqtt_connect", "prepare_before_cancel",
+                  "ground_undo", "await_cancel_event", "prepare_after_cancel",
+                  "execute", "await_progress", "airborne_stop", "pause", "recovery")
+        stage = next((item for item in stages
+                      if "FAIL_STAGE: " + item in completed.stderr), None)
+        matched = stage or next((item for item in known if item in completed.stderr), "unknown")
         raise SmokeFailure("Synthetic mission probe failed: " + matched)
 
     events = request(SKYHUB, "/api/events", token=token)
