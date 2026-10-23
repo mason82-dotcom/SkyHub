@@ -268,6 +268,10 @@ function createRegistry(limit = 200) {
     let event = null;
     if (['events','status','services_reply'].includes(message.channel)) {
       event = {sn:d.sn,channel:message.channel,method:message.method,at:now};
+      // Reported mission/media state is observational only. Never equate a
+      // file_upload_callback to a verified S3 object, or a mission event to a flight.
+      if (message.missionReport) event.missionReport = {...message.missionReport};
+      if (message.mediaReport) event.mediaReport = {...message.mediaReport};
       events.unshift(event);
       if (events.length > 100) events.pop();
     }
