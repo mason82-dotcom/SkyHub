@@ -1,6 +1,6 @@
 # HTTP-, Socket.IO- und MQTT-Schnittstellen – verifizierte Main-Basis
 
-**Stand 23.10.2026 –** `main` @ `4d878314f8345f8cd370f0004916426523e577c0`. Grundlage: `backend/server.js`, `backend/map-element-api.js`, `backend/lan-access.js`, `backend/pilot-config.js` und `docker-compose.yml`. Keine automatische Aussage über gestapelte Feature-PRs oder das aktuell laufende Pi-Image.
+**Stand 23.10.2026 –** `main` @ `496a1f84f22b15f85ad5442965b2cd218a93969a`. Grundlage: `backend/server.js`, `backend/map-element-api.js`, `backend/lan-access.js`, `backend/pilot-config.js` und `docker-compose.yml`. Keine automatische Aussage über gestapelte Feature-PRs oder das aktuell laufende Pi-Image.
 
 ## Authentifizierungsmodelle
 
@@ -25,7 +25,7 @@ Die Trennung ist im Code implementiert; produktive Proxy-/ACL- und Gerätefreiga
 | GET | `/api/events` | View oder LAN-GET-Ausnahme; normalisierte Geräteereignisse |
 | GET | `/api/diagnostics/mqtt-shapes` | View oder LAN-GET-Ausnahme; aggregierte Feld-/Topic-Formen |
 | GET | `/api/diagnostics/mqtt-model-shapes` | **View-Token erforderlich**, keine LAN-Ausnahme; modellbezogene Feldnamen |
-| GET | `/api/diagnostics/dji-fields?model=…` | **View-Token erforderlich**, keine LAN-Ausnahme; bekannte 1.18-Schemafelder; **bekannter HTTP-400-Regex-Fehler** für gültige IDs in Main, Fix in [#26](https://github.com/mason82-dotcom/SkyHub/pull/26) |
+| GET | `/api/diagnostics/dji-fields?model=…` | **View-Token erforderlich**, keine LAN-Ausnahme; bekannte 1.18-Schemafelder; **Regex-Fehler mit [PR #61](https://github.com/mason82-dotcom/SkyHub/pull/61) behoben und HTTP-getestet**; sechs bekannte Modelle, unbekannte Schlüssel 404, ungültige Syntax 400 |
 | GET | `/api/drone/:sn/telemetry` | View oder LAN-GET-Ausnahme; konkreter zuletzt bekannter Geräte-Snapshot |
 | GET | `/api/drone/:sn/track?minutes=60` | View oder LAN-GET-Ausnahme; historische PostGIS-Punkte, `minutes` 1–1440, Default 60 |
 | POST | `/api/pilot/bootstrap` | Pilot-Konfiguration + HTTPS + Pilot-/Pairing-Bearer-Token, sonst 503/403/401 |
