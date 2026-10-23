@@ -6,6 +6,7 @@ const SCHEMA='skyhub-vision-yolo11-preview-v1';
 const MAX_BYTES=65536;
 const MAX_DETECTIONS=100;
 const MAX_PIXELS=24000000;
+const MAX_DIMENSION=8192;
 const IDENT=/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
 
 class InvalidVisionReport extends TypeError {
@@ -47,7 +48,8 @@ function parseVisionPreviewReport(payload){
   exactly(payload.image,['width','height']);
   const {width,height}=payload.image;
   assert(Number.isSafeInteger(width)&&Number.isSafeInteger(height)&&
-    width>0&&height>0&&width*height<=MAX_PIXELS);
+    width>0&&height>0&&width<=MAX_DIMENSION&&height<=MAX_DIMENSION&&
+    width*height<=MAX_PIXELS);
   assert(Array.isArray(payload.detections)&&
     payload.detections.length<=MAX_DETECTIONS);
   assert(Number.isInteger(payload.detectionCount)&&
