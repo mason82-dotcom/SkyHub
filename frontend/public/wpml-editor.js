@@ -176,9 +176,9 @@
       let payload;
       try{payload=reference.parseJson(await file.text());}
       catch(error){
-        if(error instanceof Error && /doppelter JSON-Schlüssel/.test(error.message))
+        if(error && typeof error.message==='string' && /doppelter JSON-Schlüssel/.test(error.message))
           throw new TypeError('Ungültiges Waylines-JSON: doppelter JSON-Schlüssel.');
-        if(error instanceof Error && /JSON-Verschachtelung zu tief/.test(error.message))
+        if(error && typeof error.message==='string' && /JSON-Verschachtelung zu tief/.test(error.message))
           throw new TypeError('Ungültiges Waylines-JSON: Verschachtelung zu tief.');
         throw new TypeError('Ungültiges Waylines-JSON.');
       }
@@ -202,7 +202,7 @@
         'für Übernahme den gesonderten Button benutzen.');
     }catch(error){
       if(generation!==importGeneration)return;
-      const message=error instanceof Error?error.message:'Waylines-Import fehlgeschlagen.';
+      const message=error && typeof error.message==='string' ? error.message.slice(0,180) : 'Waylines-Import fehlgeschlagen.';
       resetReferencePreview(message,true);
       renderMessage(message,true);
     }finally{
