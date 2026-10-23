@@ -73,7 +73,7 @@ test('forged, malformed and oversized list responses are rejected',()=>{
   assert.equal(M.libraryList(list(Array.from({length:20},(_,i)=>{
     const a=item();a.id='33670000-0000-4000-8000-'+String(i+1).padStart(12,'0');return a;
   }),cursor),20).nextCursor,cursor);
-  assert.throws(()=>M.libraryList(list(),20-19+0,'ignored'));
+  assert.throws(()=>M.libraryList(list(),0));
   assert.throws(()=>M.libraryList(list([item(),item()]),20));
   assert.throws(()=>M.libraryList(list([item()],cursor),20));
   assert.throws(()=>M.libraryList(list([item()],'BAD_CURSOR')));
