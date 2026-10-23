@@ -153,6 +153,17 @@ def run_pipeline(*, orthophoto: Path, expected_sha256: str, output_dir: Path,
         }
         (stage / 'bundle-report.json').write_text(json.dumps(result, sort_keys=True, indent=2) + '\n',
                                                    encoding='utf-8')
+        # Independently decode and verify eight output rasters, their common
+        # grid/masks, index equations and every published count/statistic.
+        # Any verification failure cleans the temporary bundle before publish.
+        qa = _load_worker('m3m_raster_bundle_verify').verify_bundle(stage)
+        if (qa.get('pixelFormulaAndMaskChecksPassed') is not True
+            or qa.get('allGridMetadataMatched') is not True
+            or qa.get('operationalUseAllowed') is not False):
+            raise PipelineError('Independent raster QA failed')
+        result['independentRasterQaPassed'] = True
+        (stage / 'bundle-report.json').write_text(json.dumps(result, sort_keys=True, indent=2) + '\n',
+                                                   encoding='utf-8')
         if os.path.lexists(output_dir):
             raise PipelineError('Destination appeared during processing')
         os.rename(stage, output_dir)
