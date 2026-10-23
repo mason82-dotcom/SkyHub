@@ -10,8 +10,8 @@ import argparse
 import json
 import math
 from pathlib import Path
-import re
 import stat
+import warnings
 import sys
 
 SCHEMA = "skyhub-thermal-person-detection-preview-v1"
@@ -48,17 +48,19 @@ def probe_8bit_image(path):
     except ImportError as error:
         raise InvalidInput("image_dependency_unavailable") from error
     try:
-        with Image.open(path) as picture:
-            if picture.format not in ("JPEG", "PNG") or picture.mode not in ("RGB", "L"):
-                raise InvalidInput("unsupported_image")
-            width, height = picture.size
-            valid_dimensions(width, height)
-            # Embedded EXIF/XMP can carry GPS; never silently accept R-JPEG metadata.
-            if (picture.getexif() or any(x in picture.info for x in
-                    ("exif", "xmp", "XML:com.adobe.xmp", "Raw profile type exif"))):
-                raise InvalidInput("embedded_metadata_not_supported")
-            picture.load()
-            return width, height
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(path) as picture:
+                if picture.format not in ("JPEG", "PNG") or picture.mode not in ("RGB", "L"):
+                    raise InvalidInput("unsupported_image")
+                width, height = picture.size
+                valid_dimensions(width, height)
+                # Reject EXIF/XMP, including embedded coordinates or R-JPEG fields.
+                if (picture.getexif() or any(x in picture.info for x in
+                        ("exif", "xmp", "XML:com.adobe.xmp", "Raw profile type exif"))):
+                    raise InvalidInput("embedded_metadata_not_supported")
+                picture.load()
+                return width, height
     except (OSError, UnidentifiedImageError, Image.DecompressionBombError,
             Image.DecompressionBombWarning) as error:
         raise InvalidInput("unsupported_image") from error
