@@ -244,6 +244,70 @@ def main() -> None:
                     check(not unexpected_mobile, "Mobile nonlocal network access attempted")
                     check(not js_mobile, "Mobile JS errors: " + " | ".join(js_mobile[:2]))
                     mobile.close()
+
+                    # P0: real Chromium route-library backup/restore is local-only.
+                    route_ctx = browser.new_context(viewport={"width": 1280, "height": 860},
+                                                    accept_downloads=True)
+                    route_page = route_ctx.new_page()
+                    outbound, library_errors = [], []
+                    route_page.on("pageerror", lambda err: library_errors.append(str(err)))
+                    route_page.on("dialog", lambda dlg: dlg.accept())
+                    guard(route_page, base, real_map=False, unexpected=outbound)
+                    route_page.goto(base + "/wpml-route-library.html", wait_until="load")
+                    route_page.locator("#route-name").fill("Synthetic browser-only route")
+                    for idx, (lat, lon) in enumerate([("49.12345", "8.56789"),
+                                                       ("49.12445", "8.56889")]):
+                        route_page.locator("#add-point").click()
+                        item = route_page.locator("#waypoints > .item").nth(idx)
+                        item.locator('input[type="number"]').nth(0).fill(lat)
+                        item.locator('input[type="number"]').nth(1).fill(lon)
+                    route_page.locator("#group-index").select_option("0")
+                    route_page.locator("#add-group").click()
+                    route_page.locator("#save").click()
+                    check(route_page.locator("#routes > .item").count() == 1,
+                          "Expected saved local route before backup")
+                    with route_page.expect_download() as event:
+                        route_page.locator("#backup-export").click()
+                    backup_download = event.value
+                    check(backup_download.suggested_filename.endswith(".json"),
+                          "Browser route backup must use JSON extension")
+                    backup_bytes = Path(backup_download.path()).read_bytes()
+                    payload = json.loads(backup_bytes)
+                    check(payload["schema"] == "skyhub-local-waypoint-backup-v1",
+                          "Unexpected backup schema")
+                    check(payload["library"]["routes"][0]["revisions"][0]["flightReady"] is False,
+                          "Local backup cannot grant flight readiness")
+                    check(payload["library"]["routes"][0]["revisions"][0]["plan"]["waypoints"][0]["lat"]
+                          == 49.12345, "Local JSON backup must retain exact input waypoints")
+                    route_page.locator("#clear-storage").click()
+                    check(route_page.locator("#routes > .item").count() == 0,
+                          "Clear local browser library must leave empty route list")
+                    route_page.locator("#backup-file").set_input_files({
+                        "name": "synthetic-route-backup.json",
+                        "mimeType": "application/json",
+                        "buffer": backup_bytes
+                    })
+                    route_page.locator("#backup-apply:not([disabled])").wait_for()
+                    preview_text = route_page.locator("#backup-preview").inner_text()
+                    check("49.12345" not in preview_text and "8.56789" not in preview_text,
+                          "Backup preview cannot reveal mission coordinates")
+                    check("Synthetic browser-only route" not in preview_text,
+                          "Backup preview cannot reveal route names")
+                    check(route_page.locator("#routes > .item").count() == 0,
+                          "Unconfirmed backup must not alter existing route library")
+                    route_page.locator("#backup-apply").click()
+                    check(route_page.locator("#routes > .item").count() == 1,
+                          "Confirmed local backup must restore one route")
+                    route_page.screenshot(
+                        path=str(ARTIFACT_DIR / "local-route-backup-synthetic.png"),
+                        full_page=True
+                    )
+                    check(not outbound, "Backup workflow attempted off-origin or write request")
+                    check(not library_errors, "Library browser errors: " +
+                          " | ".join(library_errors[:2]))
+                    route_ctx.close()
+
+                    print("Chromium route library: local backup, redacted preview, confirmed restore PASS")
                     print("Chromium desktop (real Leaflet) and 390px mobile (offline fallback): PASS")
                     print("No DJI/MQTT/SkyHub write requests; KMZ verified locally; no flight approval.")
                 finally:
