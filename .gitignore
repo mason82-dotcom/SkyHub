@@ -18,3 +18,7 @@ frontend/public/*.before-*
 **/*.pfx
 
 **/.skyhub-env-backups/
+
+# Private locally supplied DJI Pilot 2 / Go-SDK KMZ reference fixtures
+# Never commit private mission GPS, hardware exports or local evidence manifests.
+/.local-wpml-evidence/
