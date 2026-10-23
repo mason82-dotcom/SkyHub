@@ -7,7 +7,7 @@ ENV_FILE="$HERE/lab.env"
 PROJECT="skyhub-hivemind-lab"
 
 usage() {
-  echo "Usage: bash simulators/hivemind/lab.sh init-env|prepare|config|up|ps|logs|down"
+  echo "Usage: bash simulators/hivemind/lab.sh init-env|prepare|config|up|smoke|ps|logs|down"
   echo "Only 'up' starts containers. 'down' preserves all named volumes."
 }
 if [[ $# -ne 1 ]]; then usage; exit 2; fi
@@ -44,7 +44,7 @@ EOF
   prepare)
     exec bash "$HERE/prepare.sh"
     ;;
-  config|up|ps|logs|down)
+  config|up|smoke|ps|logs|down)
     ;;
   *)
     usage
@@ -94,6 +94,11 @@ case "$1" in
     "${compose[@]}" config --quiet
     "${compose[@]}" up -d --build
     echo "Lab: simulator http://127.0.0.1:19090 and SkyHub http://127.0.0.1:14001"
+    ;;
+  smoke)
+    command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 2; }
+    "${compose[@]}" config --quiet
+    exec python3 "$HERE/smoke.py"
     ;;
   ps) "${compose[@]}" ps ;;
   logs) "${compose[@]}" logs --tail=80 ;;
