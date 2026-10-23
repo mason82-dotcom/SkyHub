@@ -123,6 +123,16 @@ Die Ergebnisse bleiben **offline, partiell semantisch validiert**. Auch eine
 Datei ohne gemeldete Fehler wird nicht automatisch zur Flugfreigabe; die
 DJI-Firmware kann zusätzliche Parameter und Produktschranken durchsetzen.
 
+## Zusätzliche rein lokale Missionsprüfung im Editor (separater Draft-PR)
+
+Die FlightHub-inspirierte Prüfübersicht für ungefähre 2D-Segmentlängen,
+Höhen-/Koordinateneingaben, Einzelbild- gegenüber Intervalltriggern und
+offene Prüfhinweise ist beschrieben in
+[Offline-Missionsprüfung (nur Entwurf)](dji-wpml-draft-review.md).
+Sie wird nur im gestapelten WPML-Entwicklungszweig implementiert; keine
+FlightHub-2-Runtime, kein Hardware-/Flugbereitschaftsnachweis, kein Dispatch.
+Der Hauptbranch erhält sie erst nach separatem PR-Merge.
+
 ## Lokaler grafischer Wegpunkteditor (nächster Ausbau)
 
 Die statische Seite `/wpml-editor.html` ist über einen Link im
