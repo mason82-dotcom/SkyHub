@@ -80,11 +80,13 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .events-note{margin:0;color:var(--muted);font-size:11px}
 .events-panel button{margin-top:8px;padding:4px 8px;font-size:11px;background:#203c50}
 @media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
+.module-nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.module-nav a{color:#b5edfb;font-size:12px;text-decoration:underline;text-underline-offset:3px}.module-nav a[aria-current=page]{color:#fff;font-weight:700}
 </style>
 </head>
 <body>
 <header>
   <h1>SKY<span>HUB</span> NEXT <small>· read-only</small></h1>
+  <nav class="module-nav" aria-label="SkyHub-Module"><a href="/" aria-current="page">Live-Dashboard</a><a href="/smart-farming.html">Smart Farming <small>· Experimentell</small></a></nav>
   <div class="auth">
     <input id="token" type="password" placeholder="SkyHub Zugriffstoken" aria-label="Zugriffstoken" autocomplete="off">
     <button id="connect" type="button" disabled>Verbinden</button>
