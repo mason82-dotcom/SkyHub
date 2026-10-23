@@ -1,6 +1,6 @@
 # Konfigurationsreferenz – SkyHub Next Main (23.10.2026)
 
-> **Quellstand:** `main` @ `4d878314f8345f8cd370f0004916426523e577c0`. Die Tabelle wurde gegen `.env.example`, `docker-compose.yml`, `backend/server.js`, `backend/pilot-config.js` und die zugehörigen Module geprüft. Angaben gelten **nicht automatisch** für offen gestapelte PRs oder individuell konfigurierte Pi-Overrides. [Projektstatus](projektstand-2026-10-23.md).
+> **Quellstand:** `main` @ `496a1f84f22b15f85ad5442965b2cd218a93969a`. Die Tabelle wurde gegen `.env.example`, `docker-compose.yml`, `backend/server.js`, `backend/pilot-config.js` und die zugehörigen Module geprüft. Angaben gelten **nicht automatisch** für offen gestapelte PRs oder individuell konfigurierte Pi-Overrides. [Projektstatus](projektstand-2026-10-23.md).
 
 ## Geltungsbereich und Priorität
 

@@ -1,6 +1,6 @@
 # Projektstand und Integrationsregister – 23.10.2026
 
-> **Stichtag:** 23.10.2026. **Verifizierte Repository-Basis:** [`main`, Commit `4d878314f8345f8cd370f0004916426523e577c0](https://github.com/mason82-dotcom/SkyHub/tree/4d878314f8345f8cd370f0004916426523e577c0), letzter Main-Commit vom **21.10.2026, 17:32:12 UTC**. Die Angaben zu Pull Requests beziehen sich auf den bei Erstellung über GitHub geprüften Stand; sie können später überholt sein. Dieser Bericht ist **keine Pi-Laufzeitabnahme**.
+> **Aktualisiert:** 23.10.2026. **Verifizierte Main-Basis:** [`496a1f84f22b15f85ad5442965b2cd218a93969a`](https://github.com/mason82-dotcom/SkyHub/commit/496a1f84f22b15f85ad5442965b2cd218a93969a), mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (DJI-HTTP-Modellvalidierung) und [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetischer Offline-Protokoll-Paritätsaudit). Diese GitHub-Basis ist **keine Pi-Laufzeitabnahme**; gestapelte offene Feature-Branches bleiben getrennt.
 
 ## Statusbegriffe (verbindlich)
 
@@ -63,24 +63,19 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 | PR | Stand / technische Aussage |
 | --- | --- |
-| [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), [#21](https://github.com/mason82-dotcom/SkyHub/pull/21), [#22](https://github.com/mason82-dotcom/SkyHub/pull/22), [#26](https://github.com/mason82-dotcom/SkyHub/pull/26), [#27](https://github.com/mason82-dotcom/SkyHub/pull/27) | Offene Gerätediagnose-/Hardware-Evidenzzweige: RC Plus 2/M4T, M3M-OSD/Capability-Gaps und Validierungsfixes. **Nicht pauschal Main-Funktionalität** |
+| [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), [#21](https://github.com/mason82-dotcom/SkyHub/pull/21), [#22](https://github.com/mason82-dotcom/SkyHub/pull/22), [#27](https://github.com/mason82-dotcom/SkyHub/pull/27) | Offene Gerätediagnose-/Hardware-Evidenzzweige: RC Plus 2/M4T, M3M-OSD/Capability-Gaps und Validierungsfixes. **Nicht pauschal Main-Funktionalität** |
 | [#16](https://github.com/mason82-dotcom/SkyHub/pull/16), [#44](https://github.com/mason82-dotcom/SkyHub/pull/44) | Gestapelte WPML-/KMZ-Offline-Tests und externe DJI-Referenzanalyse; kein produktives Wayline-Deployment |
 | [#43](https://github.com/mason82-dotcom/SkyHub/pull/43) | Draft auf #40: Opt-in-**RGB**-YOLO11-Worker für lokale Bilder und kontrollierte Modelle; kein Livestream, keine DJI-Cloud-API-Integration |
 | [#45](https://github.com/mason82-dotcom/SkyHub/pull/45) → [#49](https://github.com/mason82-dotcom/SkyHub/pull/49) | Gestapelte Drafts auf #43: Offline-Thermal-Pixel→GPS-*Kandidaten* und lokale HMAC-Provenienz; ohne verifizierte Kamera-/Geländekalibrierung, Personenbestätigung oder SAR-Einsatzfreigabe |
 | [#50](https://github.com/mason82-dotcom/SkyHub/pull/50) → [#52](https://github.com/mason82-dotcom/SkyHub/pull/52) | Drafts auf #49: manuell gepinntes M3T/M4T-Kalibrierungsprofil und zweifach HMAC-gebundene Offline-Quellmedien; nur begrenzte **JPEG/XMP-Feldpräsenz**, keine Metadatenwerte, DJI-Sensorherkunft, Gimbal-/AGL-Verifikation oder GPS-Eignung |
 | [#46](https://github.com/mason82-dotcom/SkyHub/pull/46) | Draft direkt auf Main: getrenntes HiveMind-Simulationslabor; **synthetische** Pilot- und Dock-MQTT-E2E-Läufe in isolierter GitHub-CI bestanden ([Runtime #39894401436](https://github.com/mason82-dotcom/SkyHub/actions/runs/39894401436)); Dock-RPCs nur per Lab-Mock. Upstream SDK 1.16.1.3, daher **kein** Beweis für DJI Cloud API 1.18 oder echte DJI-Hardware |
-| [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) | Draft direkt auf Main: rein synthetischer Offline-Protokoll-Paritätsaudit gegen gepinnte SDK-1.18-Referenz; kein realer Geräte-/Dock-Test |
+| [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) | **In Main gemergt**: 16 synthetische, offline geprüfte Cloud-API-1.18-Status-/Service-Reply-Fälle gegen gepinnte SDK-Referenz; kein echter Geräte-/Dock-/Pilot-2-End-to-End-Test, keine MQTT-Publishes |
 
 **Zusatz:** Die drei in Main gemergten Grundlagen [#15](https://github.com/mason82-dotcom/SkyHub/pull/15) (DJI-Feldkatalog), [#17](https://github.com/mason82-dotcom/SkyHub/pull/17) (RC Pro/M3M-Diagnose) und [#20](https://github.com/mason82-dotcom/SkyHub/pull/20) (modellbezogene M3M-OSD-Erweiterung) sind von den oben genannten offenen Ergänzungen zu unterscheiden.
 
-## 3. Bekannte Main-Lücken, die nicht als Feature zählen
+## 3. Behobene Main-Fehler und verbleibende Lücken
 
-- **DJI-Modell-Diagnose: Regression in Main.** In `backend/server.js` nutzt die Validierung von
-  `GET /api/diagnostics/dji-fields?model=0:77:2` ein Regex-Literal mit
-  **doppelt maskiertem `\\d`** und weist dadurch reguläre numerische
-  Modellschlüssel mit HTTP 400 zurück. Ein konkreter Fix samt Regressionstests
-  liegt in [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26), aber
-  **nicht in Main**. Vor Nutzung der Route muss der Fix integriert und geprüft werden.
+- **Behoben mit [PR #61](https://github.com/mason82-dotcom/SkyHub/pull/61):** Die Modell-Diagnose `GET /api/diagnostics/dji-fields?model=0:77:2` akzeptiert nach Korrektur des regulären Ausdrucks gültige numerische IDs. Reale HTTP-Regressionsprüfungen für sechs bekannte Modelle, unbekannte/ungültige Kennungen und View-Token-/LAN-Grenzen bestanden. **Noch nicht durch ein produktives Pi-Deployment bestätigt.**
 - **DJI-Kartengruppen-Flag:** `.env.example` nennt die Flag, Root-Compose reicht sie
   jedoch nicht durch; dies ist kein dokumentierter sofort aktivierbarer API-Schalter.
 - **Gesamtintegration:** Offene gestapelte Medien-/Analyse-PRs haben teilweise
