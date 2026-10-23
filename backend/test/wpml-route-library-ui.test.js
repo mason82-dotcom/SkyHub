@@ -135,3 +135,26 @@ test('recording groups prohibit reversal even when a user would approve',()=>{
   assert.equal(app.writes(),0);
   assert.match(app.get('status').textContent,/blockiert/);
 });
+
+test('route revision compare is redacted; restoring requires confirmation and appends history',()=>{
+  const app=harness();
+  app.selectedRoute();
+  app.get('compare-revision').click();
+  assert.match(app.get('revision-diff').textContent,/Positionsänderungen 0/);
+  assert.doesNotMatch(app.get('revision-diff').textContent,/49\.12|8\.61|Private waypoint/);
+  assert.equal(app.writes(),0);
+  app.setConfirm(false);
+  app.get('restore-revision').click();
+  assert.equal(app.writes(),0);
+  assert.equal(app.current().routes[0].revisions.length,1);
+  app.setConfirm(true);
+  app.get('restore-revision').click();
+  assert.equal(app.writes(),1);
+  assert.equal(app.current().routes[0].revisions.length,2);
+  assert.deepEqual(library.find(app.current(),1,1).plan,
+    library.find(app.current(),1,2).plan);
+  // Restoring a version does not grant permission to save the old draft.
+  app.get('save').click();
+  assert.equal(app.writes(),1);
+  assert.equal(app.current().routes[0].revisions.length,2);
+});
