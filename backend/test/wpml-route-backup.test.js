@@ -37,9 +37,9 @@ test('duplicate JSON fields cannot override mission identity or coordinates',()=
   const plain=backup.exportBackup(seeded()).content;
   const spoof=plain.replace('"schema":"skyhub-local-waypoint-backup-v1"',
     '"schema":"skyhub-local-waypoint-backup-v1","schema":"skyhub-local-waypoint-backup-v1"');
-  assert.throws(()=>backup.inspectBackup(spoof),/Sicherung/);
+  assert.throws(()=>backup.inspectBackup(spoof),/Routensicherung/);
   const coord=plain.replace('"lat":49.12345','"lat":49.12345,"lat":13.7777');
-  assert.throws(()=>backup.inspectBackup(coord),/Sicherung/);
+  assert.throws(()=>backup.inspectBackup(coord),/Routensicherung/);
 });
 test('invalid schema, unknown privileges and file overlimits fail before import',()=>{
   const original=backup.exportBackup(seeded()).content;
@@ -51,7 +51,7 @@ test('invalid schema, unknown privileges and file overlimits fail before import'
     original.replace('"flightReady":false','"flightReady":false,"dispatchAllowed":true'),
     original.replace('"speed":5','"speed":5,"missionDispatchEnabled":true'),
     ' '.repeat(backup.MAX_SIZE+1)+original
-  ])assert.throws(()=>backup.inspectBackup(invalid),/Sicherung/);
+  ])assert.throws(()=>backup.inspectBackup(invalid),/Routensicherung/);
   assert.throws(()=>library.load(JSON.stringify({...seeded(),dispatchAllowed:true})),
     /Routenbibliothek/);
   assert.throws(()=>backup.exportBackup({...seeded(),other:'private'}),
