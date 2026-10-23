@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const express=require('express');
-// The main server owns its auth middleware; avoid importing a draft-only helper.
+const {createHttpAuth}=require('../http-auth');
 const {createSmartFarmingCatalogRouter}=require('../smart-farming-catalog');
 const sha=value=>crypto.createHash('sha256').update(value).digest('hex');
 const secret='local-test-token-32-characters-01234';
@@ -36,17 +36,11 @@ function fixture(t){
 }
 async function serve(options,fn){
   const app=express();
-  // Reproduce the main-server Bearer check only for this isolated HTTP
-  // router test; the source wiring/lan allowlist is checked separately.
-  const auth=(req,res,next)=>{
-    const value=req.headers.authorization || '';
-    const supplied=value.startsWith('Bearer ')?value.slice(7):'';
-    const a=Buffer.from(supplied),b=Buffer.from(secret);
-    if(a.length!==b.length || !crypto.timingSafeEqual(a,b))
-      return res.status(401).json({error:'Unauthorized'});
-    next();
-  };
-  app.use('/api',auth); // same protection order as real SkyHub server
+  // Exercise the real main HTTP auth middleware with a deliberately permissive
+  // LAN view. The catalog still must NEVER bypass Bearer verification.
+  const {auth}=createHttpAuth({secret,lanAccess:{allows:()=>true}});
+  app.use('/api',auth);
+  app.get('/api/devices',(_req,res)=>res.json({readOnly:true}));
   app.use('/api/smart-farming/candidates',createSmartFarmingCatalogRouter({express,auth,...options}));
   const srv=app.listen(0,'127.0.0.1');
   try{
@@ -58,6 +52,7 @@ test('GET requires bearer token even when LAN view is permitted',async t=>{
   const cfg=fixture(t);
   await serve(cfg,async base=>{
     const url=base+'/api/smart-farming/candidates/';
+    assert.equal((await fetch(base+'/api/devices')).status,200); // LAN read bypass works on allowlist
     assert.equal((await fetch(url)).status,401);
     assert.equal((await fetch(url,{headers:{Authorization:'Bearer wrong'}})).status,401);
     const valid=await fetch(url,{headers:{Authorization:'Bearer '+secret}});
