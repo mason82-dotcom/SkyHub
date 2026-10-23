@@ -10,6 +10,9 @@ Zusätzlicher lokaler Prüfabschnitt in `/wpml-editor.html`:
 - Wegpunktanzahl, 2D-Luftliniensegmentstrecke nach Haversine und größte Segmentlänge (gerundet, keine Vermessungsdaten).
 - Reine nominale horizontale Strecke / Sollgeschwindigkeit (gerundete Untergrenzen-artige Kennzahl ohne Start, RTH, Wenden, Wind, Beschleunigung, Steig-/Sinkflüge, Batterie oder Flugsteuerungsprofil). **Keine Flugzeitprognose.**
 - Gedoppelte aufeinanderfolgende Punkte, ungültige GPS-/Geschwindigkeit-/Höhenwerte, fehlende explizite WGS84-Ellipsoidhöhen im Expertenmodus.
+- Missionsname, Sicherheitssteighöhe und Abschlussaktion werden gegen die Eingabegrenzen des lokalen WPML-Exporters geprüft.
+- Periodische Fotoaktionen erhalten separate Grenzen für Distanz- (1–1000 m) und Zeitintervalle (1–60 s). Optional angegebene minimale Kameraaufnahmeintervalle werden gegen die theoretische, bei konstanter Sollgeschwindigkeit berechnete Triggerfolge geprüft; ohne Angabe erfolgt eine deutliche Unbekannt-Kennzeichnung. **Diese Rechnung bestätigt keine reale DJI-Aufnahmefrequenz.**
+- Für Fotointervall und Kamera-Minimalintervall werden nur einfache Dezimalzahlen akzeptiert, passend zum bestehenden WPML-Serializer; ungültige JS-Zahlensyntax (z. B. Exponentialdarstellung) wird nicht versehentlich als flugfähig bewertet.
 - Manuelle Prüfhinweise für mehr als 2 km zwischen Wegpunkten (**kein DJI-Hardwarelimit**), Datumsgrenze und Breiten >=85°. Die Karte könnte über der Datumsgrenze eine unpassende Darstellungsgeometrie zeigen.
 - Getrennte Anzeige von individuellen Wegpunkt-Fotoaktionen und periodischen Triggern, **keine erfundene Zahl periodischer Fotos**.
 
@@ -26,6 +29,8 @@ node --test backend/test/wpml-mission-review.test.js
 node --test backend/test/wpml-reference-editor-ui.test.js
 ```
 
-Tests: fehlende Punkte, ungültige Zahlen/Koordinaten, doppelter Wegpunkt, WGS84-Höhen, langer Sprung, Antimeridian, keine erfundenen Fotoanzahlen, keine Payload-Weitergabe, keine HTTP-/DJI-Steuerung.
+Tests: fehlende Punkte, ungültige Zahlen/Koordinaten, doppelter Wegpunkt, WGS84-Höhen, nicht unterstützte Abschlussaktion, ungültige Sicherheitssteighöhe, Foto-Intervallgrenzen und Timing-Widersprüche, langer Sprung, Antimeridian, keine erfundenen Fotoanzahlen, keine Payload-Weitergabe, keine HTTP-/DJI-Steuerung.
 
 **Bewusst offen:** 3D-Terrain, AGL/Geoid, Kollisionsprüfung, behördliche Luftraumprüfung, Wayline-Mission-Simulation, reale Geräte-/Payload-Fähigkeiten, Pilot-2-Import und FlightHub 2 On-Premises. Nicht als Freigabe- oder Ready-Check verwenden. Kein Raspberry-Pi-Deployment.
+
+**Abgrenzung zur Exportvalidierung:** Diese Übersicht informiert frühzeitig über Eingabefehler, ist aber kein Ersatz für `SkyHubWpmlPlanner.build()`, den unabhängigen KMZ-/WPML-Validator oder DJI Pilot 2. Der Exportpfad bleibt unverändert; es werden keine DJI-Gerätekommandos ausgelöst.
