@@ -187,6 +187,50 @@ class ManualHandoffTest(unittest.TestCase):
                 "--allow-sensitive-location-output",
             ]), 2)
 
+    def test_real_detector_contract_passes_manual_handoff_with_mock_model(self):
+        # Cross-module contract test: detector.analyze -> reviewed_projection.
+        # No Ultralytics, camera, network, weights, or DJI hardware involved.
+        with tempfile.TemporaryDirectory() as name:
+            base = Path(name)
+            image = base / "synthetic.png"
+            model = base / "reviewed.onnx"
+            image.write_bytes(b"mock decoded image, checked by test probe")
+            model.write_bytes(b"mock reviewed ONNX, checked by test model")
+            detector = handoff.det
+
+            class MockPrediction:
+                orig_shape = (512, 640)
+                names = {0: "person"}
+                boxes = type("Boxes", (), {
+                    "xyxy": [[310, 246, 330, 266]],
+                    "conf": [0.95],
+                    "cls": [0],
+                })()
+
+            class MockModel:
+                def predict(self, **kwargs):
+                    self.called_with = kwargs
+                    return [MockPrediction()]
+
+            report = detector.analyze(
+                str(image), str(model), trusted_model=True,
+                image_probe=lambda _: (640, 512),
+                model_factory=lambda *_args, **_kwargs: MockModel(),
+            )
+            payload = input_payload()
+            payload["detectionReport"] = report
+            output = handoff.reviewed_projection(payload)
+            self.assertEqual(output["candidateCount"], 1)
+            self.assertEqual(output["estimates"][0]["trackId"], 98)
+            self.assertFalse(output["geolocationVerified"])
+
+    def test_incompatible_detector_dimensions_rejected_end_to_end(self):
+        payload = input_payload()
+        payload["detectionReport"]["image"]["width"] = 1024
+        with self.assertRaises(handoff.geo.InvalidInput):
+            handoff.reviewed_projection(payload)
+
+
 
 if __name__ == "__main__":
     unittest.main()
