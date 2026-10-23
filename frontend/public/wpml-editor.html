@@ -51,6 +51,11 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
   <h2>Mission konfigurieren</h2>
   <p class="caption">Die Verarbeitung erfolgt lokal im Browser. WPML/XML oder GPS-Koordinaten werden nicht an den SkyHub-Server gesendet. Kartenausschnitte werden gegebenenfalls von OpenStreetMap geladen.</p>
   <form id="mission-form" autocomplete="off">
+   <h2>Waylines-JSON importieren (Referenz-SDK)</h2>
+   <label for="waylines-reference-file">Lokale JSON-Datei</label>
+   <input id="waylines-reference-file" type="file" accept=".json,application/json">
+   <p class="caption">Referenz: motecshine/dji-waylines-sdk. Ausschließlich das eng begrenzte Waylines-JSON-Teilformat mit numerischen DJI-IDs, konstanten Wegpunkthöhen und optionalen Einzelbildaktionen. Nicht unterstützte Parameter werden abgewiesen, nicht stillschweigend ignoriert. Maximal 128 KiB; die Datei bleibt im Browser. Kein Flugauftrag.</p>
+   <hr>
    <label for="name">Missionsname</label><input id="name" maxlength="70" value="SkyHub Wegpunktmission" required>
    <label for="model">DJI-Fluggerät</label>
    <select id="model">
@@ -102,6 +107,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/wpml-interval-actions.js"></script>
 <script src="/wpml-editor-core.js"></script>
+<script src="/wpml-waylines-reference.js"></script>
 <script src="/wpml-editor.js"></script>
 </body>
 </html>
