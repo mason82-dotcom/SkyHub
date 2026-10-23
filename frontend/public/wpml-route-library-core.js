@@ -96,6 +96,46 @@
       revisionCount:r.revisions.length,latestRevision:r.revisions.length,
       latestSavedAt:r.revisions[r.revisions.length-1].savedAt,flightReady:false}));
   }
+  function compareRevisions(db,id,leftRevision,rightRevision){
+    const left=find(db,id,leftRevision),right=find(db,id,rightRevision);
+    const a=left.plan,b=right.plan;
+    const n=Math.max(a.waypoints.length,b.waypoints.length);
+    let positionChanges=0,heightChanges=0,photoChanges=0;
+    for(let i=0;i<n;i++){
+      const x=a.waypoints[i],y=b.waypoints[i];
+      if(!x||!y||x.lat!==y.lat||x.lon!==y.lon)positionChanges++;
+      if(!x||!y||x.height!==y.height||x.ellipsoidHeight!==y.ellipsoidHeight)
+        heightChanges++;
+      if(!x||!y||x.photo!==y.photo)photoChanges++;
+    }
+    const actionChanges=JSON.stringify(a.actionGroups||[])!==
+      JSON.stringify(b.actionGroups||[]);
+    const intervalChanges=JSON.stringify(a.intervalPhotos||null)!==
+      JSON.stringify(b.intervalPhotos||null);
+    const profileChanges=['model','speed','transitionSpeed','takeoffHeight',
+      'finishAction'].filter(k=>a[k]!==b[k]);
+    return Object.freeze({
+      schema:'skyhub-offline-revision-compare-v1',
+      leftRevision:left.revision,rightRevision:right.revision,
+      leftWaypointCount:a.waypoints.length,
+      rightWaypointCount:b.waypoints.length,
+      positionChanges,heightChanges,photoChanges,
+      actionGroupsChanged:actionChanges,intervalCaptureChanged:intervalChanges,
+      flightProfileFieldsChanged:Object.freeze(profileChanges),
+      nameChanged:a.name!==b.name,
+      requiresReview:true,flightReady:false,dispatchAllowed:false,
+      privacy:'aggregate counts and fixed field names only; no raw GPS or mission values'
+    });
+  }
+  function restoreRevision(db,routeId,revision,savedAt=Date.now()){
+    const state=check(db),original=find(state,routeId,revision);
+    const route=state.routes.find(r=>r.id===routeId);
+    if(route.revisions.length>=MAX_REVISIONS)invalid();
+    // Append an independent copy as a new revision; older revisions untouched.
+    return save(state,{
+      routeId,name:route.name,folder:route.folder,plan:original.plan,savedAt
+    });
+  }
   function remove(db,id){
     const state=check(db),at=state.routes.findIndex(r=>r.id===id);
     if(at<0)invalid();
@@ -135,6 +175,6 @@
     return check(obj);
   }
   function serialize(db){return JSON.stringify(check(db));}
-  return Object.freeze({SCHEMA,blank,check,save,find,list,remove,copy,taskSnapshot,load,serialize,
+  return Object.freeze({SCHEMA,blank,check,save,find,list,compareRevisions,restoreRevision,remove,copy,taskSnapshot,load,serialize,
     MAX_ROUTES,MAX_REVISIONS});
 });
