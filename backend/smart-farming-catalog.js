@@ -111,7 +111,7 @@ function readCandidate(registry, entry) {
       layer.validPixels > 0 &&
       Number.isFinite(layer.mean) && Number.isFinite(layer.min) &&
       Number.isFinite(layer.max) && layer.min >= -2 && layer.max <= 2 &&
-      layer.min <= layer.mean && layer.mean <= layer.max,
+      layer.min - 1e-6 <= layer.mean && layer.mean <= layer.max + 1e-6,
       'Invalid index summary');
     // Never forward unexpected source properties (paths, URLs, geolocation etc).
     return {index: layer.index, title: layer.title, validPixels: layer.validPixels,
