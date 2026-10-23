@@ -35,7 +35,7 @@ async function getJson(url, options) {
   // Only the simulator's private Compose DNS API may be used.
   if (!/^http:\/\/hivemind-simulator:9090\/api\/media(?:\/trigger|\/files)?$/.test(url))
     throw Error('Disallowed media API target');
-  const response=await fetch(url,{...options, signal:AbortSignal.timeout(6000)});
+  const response=await fetch(url,{...options, redirect:'error', signal:AbortSignal.timeout(6000)});
   if (!response.ok)throw Error('Lab simulator media API failed');
   return response.json();
 }
