@@ -1,6 +1,6 @@
 # DJI Cloud API 1.18 – Protocol Parity Audit (offline)
 
-Stand: 23.10.2026. **Entwicklungsbranch, keine Pi-Installation und keine Geräteabnahme.**
+Stand: 23.10.2026. **Ausschließlich synthetische Offline-Prüfung; keine Pi-Installation und keine Geräteabnahme.** Ein eventueller Merge nach `main` aktiviert weder den Prüfer automatisch im Server noch neue DJI-/MQTT-Funktionen.
 
 ## Aufgabe und Herkunft
 
@@ -92,6 +92,6 @@ an CI, backend/server.js, Docker Compose, MQTT, PostGIS, Redis, Caddy oder Pi n�
   Flug-/Missionskommandos oder autorisierenden Rollen.
 - Keine Rohdaten-Capture-Funktion und keine Geheimnisverarbeitung.
 - Nur dokumentierte, synthetische Testfälle, keine Live-MQTT-Payloads.
-- Kein Merge oder Deployment durch das Hinzufügen dieses Branches.
+- Das Bereitstellen dieses Prüfers oder ein GitHub-Merge ist **kein** Pi-Deployment und aktiviert keinen produktiven Prozess.
 - SkyHub-Next auf dem Raspberry Pi sowie EMQX, Caddy, Redis, PostGIS und MinIO
   bleiben unberührt.
