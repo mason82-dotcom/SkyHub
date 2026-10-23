@@ -107,10 +107,18 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 ## 6. Nachtrag zur Konsolidierung (23.10.2026)
 
-Seit dieser ersten Momentaufnahme sind drei weitere offene Drafts hinzugekommen:
+Seit dieser ersten Momentaufnahme sind weitere offene Drafts hinzugekommen:
 [#54](https://github.com/mason82-dotcom/SkyHub/pull/54) (offline MP4/MOV-/SRT-Zeitstrukturen),
 [#55](https://github.com/mason82-dotcom/SkyHub/pull/55) (extern vorbereitetes DEDAL/ODM-Orthomosaik-Handoff)
 und [#56](https://github.com/mason82-dotcom/SkyHub/pull/56) (relative MP4-Sample-DTS/PTS).
+Außerdem: [#57](https://github.com/mason82-dotcom/SkyHub/pull/57)
+(Motecshine-Waylines-Editorreferenz auf #16),
+[#58](https://github.com/mason82-dotcom/SkyHub/pull/58)
+(eigenständiger, nicht mit CoT-Backend verbundener TAK-Zweittab auf Main)
+und [#59](https://github.com/mason82-dotcom/SkyHub/pull/59)
+(auf #55 gestapelter DEDAL-Datei-/Kalibrierungs-Preflight ohne Ausführung).
+Alle bleiben reviewpflichtige, nicht freigegebene Entwicklungsarbeiten.
+
 **Keines** ist in Main oder auf dem Pi integriert; die Versuche beweisen keine
 reale DJI-Video-/UTC-Synchronisation, Reflexionskalibrierung oder operative
 Karten-/SAR-Bereitschaft.
