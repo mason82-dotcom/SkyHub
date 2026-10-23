@@ -395,6 +395,9 @@
     try{
       if(file.size>backup.MAX_SIZE||file.size<2)
         throw Error('file size');
+      // Allow cancellation while file.text() is still in progress.
+      $('backup-discard').disabled=false;
+      backupPreview.textContent='Lokale Datei wird ausschließlich hier geprüft. Import verwerfen ist jederzeit möglich.';
       const contents=await file.text();
       if(generation!==backupReadGeneration)return;
       const inspected=backup.inspectBackup(contents);
