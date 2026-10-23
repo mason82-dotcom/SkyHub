@@ -115,6 +115,30 @@ python3 -m unittest discover -s tests -p 'test_thermal_person_detector_offline.p
 
 Only the literal model label `person` is accepted. Reported `detectionIndex` is a **single-frame index, not a persistent trackId**. `coordinateSpace=decoded_image_unverified` deliberately prevents direct ingestion into the calibrated geolocation batch contract; before that is possible, a separately authenticated, reviewed adapter must establish corrected pixel geometry and stable track IDs. All readiness, presence, geolocation and radiometric verification flags remain false. Without a trained thermal person model, no real detection functionality can be validated.
 
+## Manual single-frame detector → geolocation handoff (optional, disabled by default)
+
+`backend/workers/thermal_person_manual_handoff.py` is a **local-only manual research adapter** that couples a previously obtained thermal detector preview with an explicitly approved camera/pose record. There is no automatic detector→GPS connection or live service.
+
+Input schema: `skyhub-thermal-person-manual-handoff-input-v1` with exact top-level keys `schema`, `detectionReport` and `review`.
+
+- `detectionReport` must be the exact redacted `skyhub-thermal-person-detection-preview-v1` contract (with `personPresenceVerified=false`, `trackingVerified=false`, `thermalRadiometryVerified=false`, `geolocationVerified=false`, `flightControlReady=false`, `searchAndRescueReady=false`). Unknown fields, malformed boxes, non-person labels, inconsistent dimensions/indexes/counts are rejected.
+- `review` must specify exact `timestampMs`, `frame`, `camera`, `telemetry`, `pixelTransform`, `sourceFrameReviewed`, `modelReviewed`, `opticalGeometryReviewed`, `detectionsReviewed`, and `trackAssignments`.
+- All four review flags must be true, `pixelTransform` exactly `identity-undistorted-full-frame`; externally established full-frame calibration must match the detector frame's width and height. This **does not perform undistortion**. Inputs that are cropped, resized, letterboxed, zoomed or not externally characterized must be refused; NEVER set approval flags to bypass this requirement.
+- `trackAssignments` must contain one exact ordered mapping of `detectionIndex` to externally assigned `trackId` for each detection, with no duplicates. This module does **not** derive track persistence, nor certify the track IDs across video frames.
+- Telemetry pose must meet the existing true-north yaw, verified AGL, zero-roll, source timestamp (≤250 ms skew), and camera-calibration constraints; otherwise **no** GPS candidate is emitted.
+- The module cannot independently prove that the source thermal image matches the detector preview or that human-review flags are truthful. Its output is always `skyhub-thermal-person-manual-handoff-preview-v1` with `geolocationVerified=false`, `accuracyMetersVerified=false`, `personPresenceVerified=false`, `trackingVerified=false`, `searchAndRescueReady=false`, and `flightControlReady=false`. No accuracy guarantees.
+- Optional CLI requires **both** `--accept-reviewed-handoff` and `--allow-sensitive-location-output`. Input must be an absolute private local JSON file; output is a new exclusive `0600` JSON file, never printed with location data.
+
+```bash
+python3 -m unittest discover -s tests -p 'test_thermal_person_manual_handoff.py'
+python3 backend/workers/thermal_person_manual_handoff.py \
+  --input /ABSOLUTE/PRIVATE/manual-review.json \
+  --output /ABSOLUTE/PRIVATE/new-unverified-locations.json \
+  --accept-reviewed-handoff --allow-sensitive-location-output
+```
+
+**Critical missing chain-of-custody requirement:** The redacted detector preview intentionally has no image hash, source ID, frame timestamp, or signed attestation. Therefore no software proof currently binds the approved review to the exact source frame. This adapter is limited to offline, manually supervised research and cannot be wired to automatic workflows or public maps without a trusted, privacy-reviewed frame-binding mechanism and hardware ground-truth validation.
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
