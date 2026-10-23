@@ -55,6 +55,17 @@ code{font-size:12px}a{color:#9de5fb}hr{border:0;border-top:1px solid #375b72;mar
 </div>
 <p id="library-status" role="status" class="caption"></p>
 <p id="revision-diff" role="status" class="caption">Noch kein Revisionsvergleich. Keine Koordinaten werden in dieser Zusammenfassung ausgegeben.</p>
+<hr>
+<h3>Lokale Sicherung und Wiederherstellung</h3>
+<p class="notice">Achtung: Sicherungsdateien enthalten sämtliche GPS-Koordinaten und Missionsdetails <strong>unverschlüsselt</strong>. Nur auf einem vertrauenswürdigen Gerät sichern und sicher aufbewahren. Es findet kein Server-Upload statt.</p>
+<button id="backup-export" type="button">Bibliothek als JSON sichern</button>
+<label for="backup-file">Gesicherte lokale JSON-Datei wählen (max. 512 KiB)</label>
+<input id="backup-file" type="file" accept=".json,application/json">
+<p id="backup-preview" role="status" class="caption">Keine Sicherung vorgemerkt. Ein Dateiimport ersetzt niemals automatisch Daten.</p>
+<div class="row">
+<button id="backup-apply" type="button" disabled>Geprüfte Sicherung übernehmen (ersetzt Bibliothek)</button>
+<button id="backup-discard" type="button" disabled>Import verwerfen</button>
+</div>
 </section>
 <section aria-label="Missionseditor">
 <h2>P1 · Wegpunkte und Action Groups</h2>
@@ -110,5 +121,7 @@ code{font-size:12px}a{color:#9de5fb}hr{border:0;border-top:1px solid #375b72;mar
 <script src="/wpml-action-draft.js"></script>
 <script src="/wpml-editor-core.js"></script>
 <script src="/wpml-route-library-core.js"></script>
+<script src="/wpml-waylines-reference.js"></script>
+<script src="/wpml-route-library-backup.js"></script>
 <script src="/wpml-route-library.js"></script>
 </body></html>
