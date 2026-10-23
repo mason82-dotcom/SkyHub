@@ -140,6 +140,50 @@ python3 backend/workers/thermal_person_manual_handoff.py \
 
 **Critical missing chain-of-custody requirement:** The redacted detector preview intentionally has no image hash, source ID, frame timestamp, or signed attestation. Therefore no software proof currently binds the approved review to the exact source frame. This adapter is limited to offline, manually supervised research and cannot be wired to automatic workflows or public maps without a trusted, privacy-reviewed frame-binding mechanism and hardware ground-truth validation.
 
+## Private frame-to-report integrity envelope (separate opt-in, NOT live)
+
+`backend/workers/thermal_person_provenance_offline.py` offers a new **explicit two-phase, local-only** research workflow: `seal` runs a reviewed model on a local rendered thermal frame, validates the existing `thermal_person_manual_handoff` contract, and writes an HMAC-SHA256-protected private envelope. `verify` refuses a changed envelope/image/model and runs the manual candidate projection only after checking the signature.
+
+The sealed envelope contains exact detector preview and full private review object plus lowercase SHA-256 digests for the **actual image and model file bytes**. A domain-separated HMAC authenticates their association using a pre-provisioned **private 32-byte issuer key**. No path, secret, or raw thermal image bytes are embedded. **The envelope contains sensitive camera/telemetry data** and must never be committed, logged, sent to the browser, shared, or uploaded.
+
+The image and model are hashed **before and after** model execution; changed content is refused. Verification rehashes both files and requires the external, independently approved model digest again. This limits post-hoc substitution, but cannot eliminate an adversarial file-replacement race or independently attest which bytes a third-party model loader actually opened. The frame and model MUST reside in private read-only storage through inference and verification. Any actor who controls the issuer key can forge an envelope; this is a *local integrity assertion*, not camera/flight authenticity or a trusted timestamp attestation.
+
+```bash
+# Create and protect a dedicated, per-environment HMAC key outside Git.
+umask 077
+head -c 32 /dev/urandom > /ABSOLUTE/PRIVATE/thermal-issuer.key
+chmod 600 /ABSOLUTE/PRIVATE/thermal-issuer.key
+
+# After independent approval of model weights, exact frame optics,
+# the calibration profile and per-frame measured pose:
+python3 backend/workers/thermal_person_provenance_offline.py seal \
+  --image /ABSOLUTE/READONLY/thermal-frame.png \
+  --model /ABSOLUTE/READONLY/reviewed-thermal-person.onnx \
+  --model-sha256 LOWERCASE_SHA256_OF_APPROVED_MODEL \
+  --key-file /ABSOLUTE/PRIVATE/thermal-issuer.key \
+  --review /ABSOLUTE/PRIVATE/manual-review.json \
+  --output /ABSOLUTE/PRIVATE/new-sealed-envelope.json \
+  --trust-local-model --accept-reviewed-handoff --allow-sensitive-location-output
+
+# Separate offline verification of immutable input bytes and HMAC:
+python3 backend/workers/thermal_person_provenance_offline.py verify \
+  --envelope /ABSOLUTE/PRIVATE/new-sealed-envelope.json \
+  --image /ABSOLUTE/READONLY/thermal-frame.png \
+  --model /ABSOLUTE/READONLY/reviewed-thermal-person.onnx \
+  --model-sha256 LOWERCASE_SHA256_OF_APPROVED_MODEL \
+  --key-file /ABSOLUTE/PRIVATE/thermal-issuer.key \
+  --output /ABSOLUTE/PRIVATE/new-unverified-candidates.json \
+  --accept-reviewed-handoff --allow-sensitive-location-output
+```
+
+The secret must be owned by the current process user, with no group/other permission bits, a regular non-symlink file, and **exactly 32 raw bytes**. Do not put it into environment variables, command arguments, URLs, Docker images or Git. The CLI never prints coordinates or private file paths, refuses existing output files, and writes exclusive `0600` JSON files.
+
+The verification result uses `skyhub-thermal-integrity-geolocation-preview-v1`, explicitly distinguishes `envelopeIntegrityVerified=true` from `geolocationVerified=false`, and keeps person presence, source/sensor authenticity, review independence, SAR readiness, tracking and positional accuracy **false**.
+
+**Not solved:** A manually issued review assertion is not a verifiable human identity or external camera-calibration certificate. An HMAC signed by the same local process is not a hardware-origin signature or absolute proof that a detector processed these pixels; an independent, authenticated capture attestation and externally checked M3T/M4T camera calibration remain necessary. No backend HTTP route, DJI topic, live map, or model deployment has been added.
+
+Tests: `python3 -m unittest discover -s tests -p 'test_thermal_person_provenance_offline.py'`. These use deterministic synthetic files and mock inference only.
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
