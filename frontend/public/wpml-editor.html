@@ -54,7 +54,12 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
    <h2>Waylines-JSON importieren (Referenz-SDK)</h2>
    <label for="waylines-reference-file">Lokale JSON-Datei</label>
    <input id="waylines-reference-file" type="file" accept=".json,application/json">
-   <p class="caption">Referenz: motecshine/dji-waylines-sdk. Ausschließlich das eng begrenzte Waylines-JSON-Teilformat mit numerischen DJI-IDs, konstanten Wegpunkthöhen und optionalen Einzelbildaktionen. Nicht unterstützte Parameter werden abgewiesen, nicht stillschweigend ignoriert. Maximal 128 KiB; die Datei bleibt im Browser. Kein Flugauftrag.</p>
+   <div class="tools">
+     <button type="button" id="waylines-reference-apply" disabled>Geprüften Entwurf übernehmen</button>
+     <button type="button" id="waylines-reference-discard" disabled>Import verwerfen</button>
+   </div>
+   <div id="waylines-reference-preview" role="status" aria-live="polite" class="caption">Keine Waylines-JSON-Datei ausgewählt. Der aktuelle Missionsentwurf bleibt unverändert.</div>
+   <p class="caption">Referenz: motecshine/dji-waylines-sdk. Ausschließlich das eng begrenzte Waylines-JSON-Teilformat mit numerischen DJI-IDs, konstanten Wegpunkthöhen und optionalen Einzelbildaktionen. Nicht unterstützte Parameter werden abgewiesen, nicht stillschweigend ignoriert. Eine Zusammenfassung wird vor der Übernahme gezeigt. Maximal 128 KiB; die Datei bleibt im Browser. Die RC-Verlustregeln können gegenüber dem Go-SDK abweichen. Kein Flugauftrag.</p>
    <hr>
    <label for="name">Missionsname</label><input id="name" maxlength="70" value="SkyHub Wegpunktmission" required>
    <label for="model">DJI-Fluggerät</label>
