@@ -40,6 +40,9 @@ jobs:
       - name: Backend unit tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
 
+      - name: Verify experimental Smart Farming UI schema and privacy without browser or DJI
+        run: node --test frontend/test/smart-farming-ui.test.js
+
       - name: Validate staging helper and Python tests
         run: |
           python3 -m py_compile scripts/pi-prepare-staging-env.py
