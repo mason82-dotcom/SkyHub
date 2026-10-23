@@ -8,6 +8,8 @@ on:
     paths:
       - '.github/workflows/pv-postgres-concurrency.yml'
       - 'backend/test/pv-postgres-concurrency.integration.cjs'
+      - 'backend/experimental/pv_job_store.cjs'
+      - 'backend/experimental/pv_jobs_isolated.sql'
       - 'docs/pv-postgres-concurrency-ci.md'
   workflow_dispatch:
 
