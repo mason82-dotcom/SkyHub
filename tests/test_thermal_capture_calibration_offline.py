@@ -252,7 +252,7 @@ class CaptureCalibrationTest(unittest.TestCase):
     def test_source_and_derivative_must_be_distinct_files(self):
         with self.assertRaises(cal.geo.InvalidInput):
             cal.seal_capture(
-                str(self.image), str(self.image), self.registry,
+                str(self.media), str(self.media), self.registry,
                 self.profile["profileId"], self.profile_sha,
                 self.capture_review, str(self.capture_key), accept_capture=True)
 
