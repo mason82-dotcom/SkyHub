@@ -284,10 +284,10 @@ Das kanonische Projekt liegt seit der Umbenennung unter
 [**mason82-dotcom/SkyHub-Next**](https://github.com/mason82-dotcom/SkyHub-Next).
 Alle neuen PR-, Clone- und CI-Verweise verwenden nur diese Adresse.
 Die lokale Git-Remote-Umstellung und die notwendige Trennung von
-`~/Projekte/SkyHub` (Legacy) sind in
-[repository-identity.md](repository-identity.md) beschrieben.
-`scripts/check-repository-identity.js` verhindert erneute alte Origin-URLs
-in gepflegten Projekt-Dokumenten und Automatisierungen.
+`~/Projekte/SkyHub` (Legacy) sind in der Main-basierten
+[WPML-Integrationsprüfung](wpml-main-integration.md) abgegrenzt.
+Die ältere Repository-Identitätsprüfung aus dem gestapelten Entwicklungsbranch
+wurde **nicht** als neuer Skriptzwang auf `main` übertragen.
 
 **P0-Fortsetzung:** Das lokale Bibliotheksmodell bietet jetzt
 `compareRevisions()` und `restoreRevision()`.
