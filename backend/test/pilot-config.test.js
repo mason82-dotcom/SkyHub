@@ -89,3 +89,25 @@ test('an unsafe or unclear public URL disables situation awareness without block
     assert.doesNotMatch(JSON.stringify(c.tsa),/pw|user/,url);
   }
 });
+
+test('opt-in Mosquitto profile requires a LAN-reachable matching Pilot 2 1883 endpoint',()=>{
+  const mosquito={
+    ...configured,
+    SKYHUB_MQTT_BROKER_KIND:'mosquitto',
+    SKYHUB_MQTT_REQUIRED_PORT:'1883',
+    SKYHUB_PILOT_MQTT_URL:'mqtt://192.168.178.63:1883'
+  };
+  const c=pilotConfiguration(mosquito);
+  assert.equal(c.ready,true);
+  assert.equal(c.bootstrap().mqtt.host,'tcp://192.168.178.63:1883');
+  for(const patch of [
+    {SKYHUB_PILOT_MQTT_URL:'mqtt://192.168.178.63:1884'},
+    {SKYHUB_MQTT_REQUIRED_PORT:'1884'},
+    {SKYHUB_MQTT_BROKER_KIND:'emqx'},
+    {SKYHUB_PILOT_MQTT_URL:'mqtt://127.0.0.1:1883'}
+  ]){
+    const result=pilotConfiguration({...mosquito,...patch});
+    assert.equal(result.ready,false);
+    assert.throws(()=>result.bootstrap(),/not configured/);
+  }
+});
