@@ -8,13 +8,14 @@
 
 **Wirkung von Pi-Skripten und Freigaben:** [Betriebswerkzeuge](scripts.md). `apply`-, `rollback`- und Kopplungsaufrufe nicht mit lesenden Diagnosen verwechseln.
 
-**Querverweise:** [Sicherheit](security.md), [Architektur](architecture.md), [MQTT/OSD](mqtt-osd-integration.md), [kontrollierte Migration](legacy-migration.md).
+**Querverweise:** [Sicherheit](security.md), [Architektur](architecture.md), [Konfiguration](config-reference.md), [API-Referenz](api-reference.md), [MQTT/OSD](mqtt-osd-integration.md), [kontrollierte Migration](legacy-migration.md).
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
     # Nur bei einer echten Neuinstallation; vorhandenes Projekt NICHT überschreiben.
-    test ! -e ~/Projekte/SkyHub-Next &&
+    if [ ! -e ~/Projekte/SkyHub-Next ]; then
       git clone --branch main https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+    fi
     cd ~/Projekte/SkyHub-Next
     # Nur falls .env noch nicht existiert:
     test -e .env || cp -n .env.example .env
