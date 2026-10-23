@@ -3,7 +3,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const {convert} = require('../../frontend/public/wpml-waylines-reference');
+const {convert,parseJson} = require('../../frontend/public/wpml-waylines-reference');
 const planner = require('../../frontend/public/wpml-editor-core');
 const {readKmz} = require('../wpml-kmz');
 const {validateDocuments} = require('../wpml');
@@ -15,6 +15,22 @@ function source(drone_model=77, payload_model=66) {
       actions:[{type:'takePhoto',params:{payload_position_index:0}}]},
       {latitude:49.2,longitude:8.7,height:50}]};
 }
+test('mission JSON parser rejects duplicate keys at all nesting levels',()=>{
+  const valid=JSON.stringify(source());
+  assert.equal(convert(parseJson(valid)).plan.model,'mavic3e');
+  const samples=[
+    '{"name":"original","name":"shadow"}',
+    '{"waypoints":[{"latitude":49,"latitude":50}]}',
+    '{"actions":[{"params":{"payload_position_index":0,"payload_position_index":1}}]}',
+    '{"name":"test","na\\u006de":"override"}'
+  ];
+  for(const json of samples)
+    assert.throws(()=>parseJson(json),/doppelter JSON-Schlüssel/);
+  assert.throws(()=>parseJson('['.repeat(33)+'0'+']'.repeat(33)),/Verschachtelung/);
+  assert.throws(()=>parseJson('{bad'),/ungültiges JSON/);
+  assert.throws(()=>parseJson(' '.repeat(128*1024+1)),/128 KiB/);
+  assert.throws(()=>parseJson({name:'not text'}),/Textdatei/);
+});
 test('numeric Go Waylines subset imports into offline-valid but never flight-ready KMZ',()=>{
   for (const [drone,payload,model] of [[77,66,'mavic3e'],[77,67,'mavic3t'],
     [99,88,'matrice4e'],[99,89,'matrice4t']]) {
@@ -127,6 +143,7 @@ test('editor connects local JSON file import without server or flight-command pa
   assert.match(html,/id="waylines-reference-discard"/);
   assert.match(html,/id="waylines-reference-preview"/);
   assert.match(editor,/reference\.convert\(payload\)/);
+  assert.match(editor,/reference\.parseJson\(await file\.text\(\)\)/);
   assert.match(editor,/core\.normalize\(mapped\.plan\)/);
   assert.match(editor,/pendingReference/);
   assert.match(editor,/review\.horizontalRouteMeters/);
