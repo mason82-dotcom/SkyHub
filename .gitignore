@@ -18,3 +18,8 @@ frontend/public/*.before-*
 **/*.pfx
 
 **/.skyhub-env-backups/
+
+# Isolated HiveMind reference lab: no upstream AGPL checkout, build cache or credentials
+simulators/hivemind/.upstream/
+simulators/hivemind/.m2-cache/
+simulators/hivemind/lab.env
