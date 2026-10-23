@@ -35,7 +35,7 @@ const event=JSON.stringify({
 });
 function guardDatabase(raw){
   const parsed=new URL(raw);
-  assert.ok(['127.0.0.1','localhost','::1','[::1'].includes(parsed.hostname),
+  assert.ok(['127.0.0.1','localhost','::1','[::1]'].includes(parsed.hostname),
     'Only isolated loopback PostgreSQL is permitted');
   assert.equal(decodeURIComponent(parsed.pathname),'/skyhub_test');
   assert.ok(['postgres:','postgresql:'].includes(parsed.protocol));
