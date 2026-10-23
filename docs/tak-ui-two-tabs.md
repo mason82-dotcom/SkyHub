@@ -12,6 +12,8 @@ Enthält unverändert den bisherigen Karten-, Geräte-, Telemetrie-, HMS-, PostG
 
 Eigene, standardmäßig verborgene Hauptansicht mit ausschließlich statischen, nicht vertraulichen Statusfeldern: Export aus, Ziel nicht konfiguriert, keine Workspace- oder Gerätefreigabe und kein angeschlossenes TAK-Audit. Es gibt **keinen aktiven Netzwerkaufruf, Exportbutton, Backend-Endpunkt oder Schreibpfad**. Die im Verlauf entwickelten Stage-1–4-Pakete wurden nicht in den GitHub-Hauptbranch integriert und dürfen durch die UI nicht als aktiv dargestellt werden.
 
+Beide Panels befinden sich innerhalb eines **gemeinsamen semantischen `<main>`-Landmarks**; die zuvor vom `role=tabpanel` überlagerte native `<main>`-Semantik wurde dadurch korrigiert. Der Operations-Rasterstil gilt ausschließlich für `#operationsPanel` und bleibt beim Umschalten erhalten.
+
 Die zwei Schaltflächen verwenden `role=tablist/tab`, `aria-selected`, `aria-controls`, `role=tabpanel`, roving `tabindex` und Pfeiltasten sowie Home/End. Der Tabzustand verbleibt nur im Browserseitenspeicher (keine Kennung in URL, LocalStorage oder Telemetrie).
 
 ## Sicherheitsgrenzen
@@ -42,3 +44,7 @@ Die eigenständige TAK-Statusansicht nutzt ein kompaktes responsives Raster:
 Ein **lokaler Chromium/Playwright-Layouttest mit nachgebauter UI-Fixture** hat 320, 360, 390, 599, 600, 601, 768, 834, 850, 851, 1024, 1100, 1101 und 1440 px gegen horizontalen Überlauf geprüft. Darüber hinaus wurden Klick, ArrowRight-Fokuswechsel und Rückkehr zum Operations-Panel geprüft. Die Test-Fansicht nutzt die Tab-Markup-/CSS-Struktur und statusbezogene Inhalte dieses PR, aber **nicht die vollständige SkyHub-Laufzeit**. Sie bestätigt deshalb weder Leaflet-Rendering noch Socket.IO/MQTT-Zustände, Browserkompatibilität auf Pilot-2-Hardware oder einen echten TAK-API-Vertrag.
 
 Hinweis auf den weiterhin nötigen Freigabetest: Der angepasste Backend-Hook darf erst nach gesonderter Hardware-, Security- und Browser-Abnahme einen TAK-Netzwerkpfad erhalten. Dieser Branch ändert keine produktiven Export-Flags.
+
+## Zusätzliche Landmark-Abnahme
+
+Mit dem korrigierten `<main>`-Layout wurde die isolierte Chromium/Playwright-Fixture erneut bei 320, 390, 834 und 1440 px ausgeführt. Alle vier Bildschirmgrößen: **kein horizontaler Überlauf**, Tabwechsel und Tastatur-Rückkehr erfolgreich. Ein zusätzlicher Node-Test erzwingt genau ein `<main>` mit beiden Tabpanels. Dies bleibt eine **synthetische Browserprüfung**; ein vollständiger SkyHub-Staginglauf mit Leaflet und Pilot-2-WebView ist weiterhin offen.
