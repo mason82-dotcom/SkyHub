@@ -79,6 +79,7 @@ services:
       # Needs the public https origin the RC uses for /pilot-login, e.g. https://rpi5.fritz.box
       SKYHUB_DJI_TSA_ENABLED: ${SKYHUB_DJI_TSA_ENABLED:-false}
       SKYHUB_PILOT_PUBLIC_URL: ${SKYHUB_PILOT_PUBLIC_URL:-}
+      SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS: ${SKYHUB_DJI_TSA_TRUSTED_PROXY_IPS:-127.0.0.1,::1}
       # Optional DJI protocol reply; requires dedicated MQTT publish-only ACL.
       SKYHUB_TOPOLOGY_ACK_ENABLED: ${SKYHUB_TOPOLOGY_ACK_ENABLED:-false}
       SKYHUB_TOPOLOGY_ACK_MQTT_USER: ${SKYHUB_TOPOLOGY_ACK_MQTT_USER:-}
