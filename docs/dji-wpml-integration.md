@@ -1,5 +1,7 @@
 # DJI WPML / KMZ – SkyHub Next (21.10.2026)
 
+**Aktuelle Integrationsgrenze (23.10.2026):** [PR #89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) bringt diese Offline-Module isoliert auf die aktuelle `main`-Basis. Historische Aussagen zu älteren Feature-Branches beschreiben die Entstehung, nicht die produktive Bereitstellung. Kein DJI-Missionsversand; siehe [Integrationsgates](wpml-main-integration.md).
+
 ## Offizielle Referenz (Cloud API 1.18)
 
 - Overview: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/overview.html
