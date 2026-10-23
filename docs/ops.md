@@ -10,25 +10,7 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-**Repository-Umbenennung (23.10.2026):** `origin` verwendet nun
-`https://github.com/mason82-dotcom/SkyHub-Next.git`. Bei einem bereits
-bestehenden Klon nur den Remote überprüfen und nötigenfalls ändern:
-
-```bash
-cd ~/Projekte/SkyHub-Next
-git remote -v
-git remote set-url origin https://github.com/mason82-dotcom/SkyHub-Next.git
-git fetch origin
-```
-
-Das ist ausschließlich eine Git-Konfigurationsänderung, **kein Update der
-laufenden Container**. Vor einem neuen Klon zuerst prüfen, ob das lokale
-Zielverzeichnis bereits vorhanden ist; eine produktive `.env` nicht
-überschreiben. Die nachfolgende historische Erstinstallationsskizze
-ist kein Pi-Cutover-Auftrag.
-
-
-    git clone https://github.com/mason82-dotcom/SkyHub-Next.git ~/Projekte/SkyHub-Next
+    git clone --branch develop/skyhub-next-mqtt-integrity-v3 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
