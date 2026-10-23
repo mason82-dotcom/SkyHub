@@ -1,0 +1,4 @@
+# Optional isolated YOLO11 inference only; never install in the production backend.
+# Resolve/lock versions and approve licenses before production deployment.
+Pillow>=10,<13
+ultralytics>=8.3,<9
