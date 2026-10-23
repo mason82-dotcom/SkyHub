@@ -148,6 +148,12 @@ class OfflineVisionTest(unittest.TestCase):
                 image_probe=lambda _: (100_000, 100_000),
                 model_factory=lambda *a, **k: hits.append(True))
         self.assertEqual(hits, [])
+        for dims in [(400_000, 32), (32, 400_000)]:
+            with self.subTest(dims=dims), self.assertRaises(vision.InvalidInput):
+                vision.analyze(str(self.image), str(self.model),
+                    image_probe=lambda _, xy=dims: xy,
+                    model_factory=lambda *a, **k: hits.append(True))
+        self.assertEqual(hits, [])
 
     def test_cli_errors_do_not_leak_inputs(self):
         secret_path = str(self.image) + "-PRIVATE"
