@@ -74,5 +74,50 @@
       '<wpml:actionTrigger>'+xmlField('actionTriggerType','reachPoint')+
       '</wpml:actionTrigger>'+actions+'</wpml:actionGroup>';
   }
-  return Object.freeze({TYPES,normalize,serializeGroup});
+  const TEMPLATES=Object.freeze({
+    photo:Object.freeze([{type:'takePhoto'}]),
+    hoverPhoto:Object.freeze([{type:'hover',seconds:2},{type:'takePhoto'}]),
+    yawPhoto:Object.freeze([{type:'rotateYaw',degrees:0},{type:'takePhoto'}])
+  });
+  function copy(value){return JSON.parse(JSON.stringify(value));}
+  function applyTemplate(groups,waypointCount,{indices,template,mode='replace'}={}){
+    if(!Object.hasOwn(TEMPLATES,template)||!['replace','append'].includes(mode)||
+       !Array.isArray(indices)||indices.length<1||indices.length>waypointCount)bad();
+    const selected=new Set(indices);
+    if(selected.size!==indices.length||indices.some(i=>!Number.isInteger(i)||i<0||i>=waypointCount))bad();
+    const existing=normalize(groups,waypointCount);
+    const draft=existing.map(g=>({index:g.index,actions:copy(g.actions)}));
+    for(const at of indices){
+      const item=draft.find(g=>g.index===at);
+      if(!item)draft.push({index:at,actions:copy(TEMPLATES[template])});
+      else if(mode==='replace')item.actions=copy(TEMPLATES[template]);
+      else item.actions.push(...copy(TEMPLATES[template]));
+    }
+    const result=normalize(draft,waypointCount);
+    // No implicit changes to waypoint coordinates; even valid action sets
+    // are NOT hardware reviewed.
+    return {groups:copy(result),requiresReview:true,flightReady:false};
+  }
+  function reverseRoute(plan){
+    if(!plan||typeof plan!=='object'||Array.isArray(plan)||
+       !Array.isArray(plan.waypoints)||plan.waypoints.length<2||
+       plan.waypoints.length>500)bad();
+    const count=plan.waypoints.length;
+    if(plan.intervalPhotos||plan.waypoints.some(p=>p.photo===true))bad();
+    const groups=normalize(plan.actionGroups||[],count);
+    // Reversing stop/start video semantics safely requires DJI/Pilot 2
+    // behavioral evidence. Do not infer equivalent recording behavior.
+    if(groups.some(g=>g.actions.some(a=>a.type==='startRecord'||a.type==='stopRecord')))bad();
+    const reversed={
+      ...copy(plan),
+      waypoints:copy(plan.waypoints).reverse(),
+      actionGroups:groups.map(g=>({
+        index:count-1-g.index,actions:copy(g.actions)
+      })).sort((a,b)=>a.index-b.index)
+    };
+    normalize(reversed.actionGroups,count);
+    return {plan:reversed,requiresReview:true,flightReady:false,
+      cameraHardwareVerified:false,headingAndRthRevalidationRequired:true};
+  }
+  return Object.freeze({TYPES,TEMPLATES,normalize,serializeGroup,applyTemplate,reverseRoute});
 });
