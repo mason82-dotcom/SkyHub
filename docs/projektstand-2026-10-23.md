@@ -1,6 +1,6 @@
 # Projektstand und Integrationsregister – 23.10.2026
 
-> **Aktualisiert:** 23.10.2026. **Verifizierte Main-Basis:** [`496a1f84f22b15f85ad5442965b2cd218a93969a`](https://github.com/mason82-dotcom/SkyHub/commit/496a1f84f22b15f85ad5442965b2cd218a93969a), mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (DJI-HTTP-Modellvalidierung) und [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetischer Offline-Protokoll-Paritätsaudit). Diese GitHub-Basis ist **keine Pi-Laufzeitabnahme**; gestapelte offene Feature-Branches bleiben getrennt.
+> **Aktualisiert:** 23.10.2026. **Verifizierte Main-Basis:** [`399e18900db11d976b61cc59a5cd8b081b6570e1`](https://github.com/mason82-dotcom/SkyHub/commit/399e18900db11d976b61cc59a5cd8b081b6570e1), mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (DJI-HTTP-Modellvalidierung), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetischer Protokoll-Paritätsaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (isolierte RC-Pro/M3M- und RC-Plus-2/M4T-Diagnostik). Diese GitHub-Basis ist **keine Pi-Laufzeitabnahme**; gestapelte offene Feature-Branches bleiben getrennt.
 
 ## Statusbegriffe (verbindlich)
 
@@ -63,7 +63,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 | PR | Stand / technische Aussage |
 | --- | --- |
-| [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), [#21](https://github.com/mason82-dotcom/SkyHub/pull/21), [#22](https://github.com/mason82-dotcom/SkyHub/pull/22), [#27](https://github.com/mason82-dotcom/SkyHub/pull/27) | Offene Gerätediagnose-/Hardware-Evidenzzweige: RC Plus 2/M4T, M3M-OSD/Capability-Gaps und Validierungsfixes. **Nicht pauschal Main-Funktionalität** |
+| [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) | **In Main gemergt:** aus #18/#21/#22/#27 selektiv portierte, rein lesende M3M-Gap-/State-/RC-Plus-2/M4T-Offline-Diagnose mit Unit-/Integrationstests und manuellem Pi-Leseprüfer. **Keine** echte RC-Plus-2/M4T-Hardwareabnahme oder neue DJI-Kommandos |
 | [#16](https://github.com/mason82-dotcom/SkyHub/pull/16), [#44](https://github.com/mason82-dotcom/SkyHub/pull/44) | Gestapelte WPML-/KMZ-Offline-Tests und externe DJI-Referenzanalyse; kein produktives Wayline-Deployment |
 | [#43](https://github.com/mason82-dotcom/SkyHub/pull/43) | Draft auf #40: Opt-in-**RGB**-YOLO11-Worker für lokale Bilder und kontrollierte Modelle; kein Livestream, keine DJI-Cloud-API-Integration |
 | [#45](https://github.com/mason82-dotcom/SkyHub/pull/45) → [#49](https://github.com/mason82-dotcom/SkyHub/pull/49) | Gestapelte Drafts auf #43: Offline-Thermal-Pixel→GPS-*Kandidaten* und lokale HMAC-Provenienz; ohne verifizierte Kamera-/Geländekalibrierung, Personenbestätigung oder SAR-Einsatzfreigabe |
@@ -85,7 +85,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 ## 4. Hardware- und Testevidenz
 
 - **20.–21.10.2026, RC Pro Enterprise + Mavic 3M:** MQTT-Topologie/OSD und modellbezogene Aircraft-Rootfelder wurden am echten Gerät beobachtet; Einzelheiten in [Hardwareabnahme](hardware-rc-pro-m3m.md). Die M3M-Overlay-Definitionen sind teilweise vorläufig. „Nicht beobachtet“ bedeutet nicht „Hardware defekt“; Kamerafunktionen und nicht passende Aircraft-Feldpfade dürfen nicht zusammengezählt werden.
-- **RC Plus 2 + Matrice 4T:** getrennte Entwicklungs-/Abnahmebelege im offenen [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), nicht als allgemeine 1.18-Konformität oder bereits gemergter Main-Support ausgeben.
+- **RC Plus 2 + Matrice 4T:** die Offline-Hardwareprüfer und synthetischen Regressionen sind mit [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) nun in Main. **Eine reale DJI-Pilot-2-/RC-Plus-2-/M4T-Abnahme ist weiterhin offen**; die historischen Testvorbereitungen in [#18](https://github.com/mason82-dotcom/SkyHub/pull/18) belegen keine Cloud-API-1.18-Gesamtkompatibilität.
 - **GitHub Actions:** Die Main-Konfiguration definiert Node-/Python-Prüfungen sowie isolierte PostGIS-Integration und isolierten Dump-/Restore-Test. Grün gemeldete CI einzelner PR-Commits betrifft **genau diese Commits**; nach Änderungen ist der jeweilige neue Head erneut zu prüfen.
 - **Standort / Zeit:** `telemetryFieldAt` und `telemetryFieldTimeVerified` sind nur Live-Snapshot-Metadaten; sie werden nicht in den Redis-Gerätecache kopiert. Ein gültiges Koordinatenpaar benötigt denselben OSD-Eingang; `(0,0)` begründet keinen gültigen Standort.
 - **Flug-/Agrarfunktionen:** Keine Test-/CI-Meldung ist eine Fluggenehmigung, agronomische Diagnose, thermische Personenerkennung oder Kalibrierungszertifizierung.

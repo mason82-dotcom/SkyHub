@@ -20,7 +20,7 @@ Unterscheiden:
 | --- | --- | --- | --- | --- |
 | **Erledigt** | [#61 – DJI-Feld-Diagnose-Regex](https://github.com/mason82-dotcom/SkyHub/pull/61) | Aus altem [#26](https://github.com/mason82-dotcom/SkyHub/pull/26) isoliert, inzwischen in Main gemergt | Alle sechs Modellkennungen, 400/404 und View-Token-/LAN-Negativtests über CI abgenommen | Kein Pi-Deployment; alter #26 darf **nicht** zusätzlich blind gemergt werden |
 | **Erledigt** | [#47 – DJI 1.18 Offline-Protokollabgleich](https://github.com/mason82-dotcom/SkyHub/pull/47) | Fünf isolierte Dateien in Main gemergt; 16 synthetische Fixtures | Pinned SDK-Referenz, kein Live-MQTT, CI erfolgreich | **Nur Offline-Regressionsnachweis**, keine echte DJI-1.18-Gerätezertifizierung |
-| **P1** | [#27 – gemeinsame RC-/M3M-/M4T-Diagnose](https://github.com/mason82-dotcom/SkyHub/pull/27) | Direkter Main-PR, über 20 Dateien inkl. Parser, Katalog, `server.js` und CI | Auf aktuellen Katalog, bereits übernommenes M3M-Overlay und #26-Fix rebasen; Modell-Zeitfrische und Hardwareevidenz getrennt prüfen | Nach dem isolierten #61-Fix, **keine pauschale 1.18-Abnahme** |
+| **Erledigt (Offline)** | [#66 – konsolidierte Hardwarediagnostik](https://github.com/mason82-dotcom/SkyHub/pull/66) | Aus #18/#21/#22/#27 auf Main nach #61/#47/#63 **selektiv portiert**; 18-Datei-Diff, keine Änderung an `server.js`, HTTP-Tokenregeln oder Compose | [CI 3/3 grün](https://github.com/mason82-dotcom/SkyHub/actions/runs/39899832234); M3M-Kamera-/State-Gaps und RC-Plus-2/M4T read-only Prüfer | **Noch kein** echter RC-Plus-2/M4T-Test; altes #27 darf nicht pauschal gemergt werden |
 | **P1-Lab** | [#46 – HiveMind-Pilot/Dock/Wayline/HMS](https://github.com/mason82-dotcom/SkyHub/pull/46) | Direkter Main-PR; eigenständiges Simulationslabor, separate CI und Compose | Isolationsnetz, private Wegwerf-Credentials, AGPL-Kompatibilität, keine produktiven Broker-/Volumes. Simulator basiert auf DJI-SDK **1.16.1.3** | Als **separate opt-in Laborreferenz**, nicht als Betriebsfeature |
 | **P2** | [#24 – MinIO/M3M-Funktionslinie](https://github.com/mason82-dotcom/SkyHub/pull/24) | Direkter Main-PR, **über 100 geänderte Dateien**, darunter Backend, Auth, MQTT, Registry, Compose, Frontend und Medien | Nach Funktionsgrenzen zerlegen; authentifizierte read-only Medieninventur, S3-ACL/Prefix, bestehende Pi-Speicher-/Token-Verträge und Migrationen getrennt abnehmen | **Kein Direktmerge** |
 | **P2** | [#28](https://github.com/mason82-dotcom/SkyHub/pull/28) → [#29](https://github.com/mason82-dotcom/SkyHub/pull/29) → [#30](https://github.com/mason82-dotcom/SkyHub/pull/30) | TSA-Proxy/Replay → integrierte WPML-/Diagnostik-/MinIO-Tools → opt-in-KMZ-Inspektion | Vorfahren zuerst reviewen; unkontrollierte Schreibpfade, Trusted-Proxy-Vertrauen, WPML `flightReady=false` und Eingabelimits nachweisen | In isolierten Integrationsbranch konsolidieren |
@@ -41,7 +41,7 @@ Unterscheiden:
 main (496a1f84…)
  ├─ #61  Regex + HTTP-Tests                     [MERGED]
  ├─ #47  Offline DJI 1.18 Paritätsaudit         [MERGED; nur synthetisch]
- ├─ #27  Hardware-Diagnose                      [als Nächstes konsolidieren]
+ ├─ #66  Hardwarediagnostik aus #18/#21/#22/#27 [MERGED; rein offline]
  ├─ #46  Isoliertes HiveMind-Labor              [eigenständig]
  └─ #24  Große MinIO/M3M/TSA-Basis              [ZERLEGEN, nicht direkt mergen]
       ├─ #28  TSA-Proxy-Schutz
@@ -109,8 +109,8 @@ Der Graph bezeichnet **Branch-Bases**, nicht automatisch verschmelzbare Codeänd
 
 1. **Erledigt – #61:** Modell-Diagnose-Regex isoliert behoben und real über HTTP-Tests abgesichert. Kein Pi-Update.
 2. **Erledigt – #47:** synthetischen, strikt lokalen Paritätsaudit aufgenommen; keine Live-Geräteabnahme.
-3. **P1 als Nächstes – #27:** gemeinsame Hardwarediagnosen gegen Main inklusive #61 und #47 prüfen; echte OSD-Feldpfade, Frischegrenzen und RC/M4T-spezifische Nicht-Anwendbarkeit getrennt zählen.
-4. **P2-Storage-Stückelung**: #24 in unabhängige PRs teilen (Read-only-M3M-Dateinamen, S3-Leseadapter, HTTP-Auth, Backup/Restore, TSA). Security-Pfade vor UI-Montage freigeben.
+3. **Erledigt – #66:** Offline-Hardwarediagnostik und Geräte-/State-Feldlücken auf Main konsolidiert. Reale RC-Plus-2/M4T-Hardwareabnahme bleibt **separater, offener Betriebsschritt**.
+4. **Als Nächstes P2 – Storage-Stückelung**: #24 in unabhängige PRs teilen (Read-only-M3M-Dateinamen, S3-Leseadapter, HTTP-Auth, Backup/Restore, TSA). Security-Pfade vor UI-Montage freigeben.
 5. **P3-Forschungszweige**: bestehende Offline-Experimente unverändert isoliert halten, bis Herkunfts-/Kalibrierungs-/Lizenz-/Privacy-Gates belegt sind.
 
 **Stop-Bedingung:** Jede unerwartete Änderung an Pilot-Pairing, Caddy/EMQX-Rechten, Container-Ports, PostGIS-Schema, MinIO-Policies oder realen DJI-Missionspfaden stoppt die Konsolidierung bis zu einer gesonderten Betriebsfreigabe. Kein automatischer Merge von Draft-PRs und keine realen Flugbefehle zum Testen.
