@@ -1,6 +1,6 @@
 # DJI WPML / KMZ – SkyHub Next (21.10.2026)
 
-**Aktuelle Integrationsgrenze (23.10.2026):** [PR #89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) bringt diese Offline-Module isoliert auf die aktuelle `main`-Basis. Historische Aussagen zu älteren Feature-Branches beschreiben die Entstehung, nicht die produktive Bereitstellung. Kein DJI-Missionsversand; siehe [Integrationsgates](wpml-main-integration.md).
+**Aktuelle Integrationsgrenze (24.10.2026):** [PR #89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) hat diese Offline-Module isoliert nach `main` integriert (Merge `1a2a01cf`). Historische Aussagen zu älteren Feature-Branches beschreiben die Entstehung, nicht die produktive Bereitstellung. Kein DJI-Missionsversand; siehe [Integrationsgates](wpml-main-integration.md).
 
 ## Offizielle Referenz (Cloud API 1.18)
 
@@ -436,4 +436,4 @@ müssen an echten Pilot-2-Exporten getestet werden. Erst danach UI/Dispatch.
 
 Das Go-SDK ist als **Vergleichsreferenz** und über einen **separaten, strikt geprüften lokalen Waylines-JSON-Import** mit dem bestehenden SkyHub-Editor verknüpft. Es ersetzt weder SkyHubs WPML-Kern noch die DJI-WPML-Dokumentation. Besonders die unvollständige Upstream-Subtyp-Zuordnung und die abweichenden RC-Loss-Defaults verbieten eine Gleichsetzung der generierten Flugmissionen.
 
-Details, erlaubte Felder/Profile, Sicherheitsgrenzen und Tests: [dji-waylines-sdk-reference.md](dji-waylines-sdk-reference.md). Der neue Import ist nur in der isolierten Entwicklungsbranch-Version verfügbar; `flightReady:false` bleibt unverändert.
+Details, erlaubte Felder/Profile, Sicherheitsgrenzen und Tests: [dji-waylines-sdk-reference.md](dji-waylines-sdk-reference.md). Der lokale Waylines-JSON-Import ist seit dem Merge von PR #89 als **Offline-Entwicklungsfunktion in `main`** enthalten; er ist nicht mit dem DJI-Missionsversand verbunden. `flightReady:false` bleibt unverändert.

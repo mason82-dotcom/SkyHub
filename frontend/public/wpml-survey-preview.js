@@ -6,7 +6,7 @@
   const capture=window.SkyHubCapturePreview;
   const $=id=>document.getElementById(id);
   if(!engine){$('status').textContent='Offline-Geometriemodul fehlt.';return;}
-  const points=[];let map=null,polygon=null,markers=[],lines=[],photoMarkers=[],report=null,photoReport=null,captureReport=null,firstFit=false;
+  const points=[];let importedGeometry=null,map=null,polygon=null,markers=[],lines=[],photoMarkers=[],report=null,photoReport=null,captureReport=null,firstFit=false;
   const feedback=(txt,error=false)=>{
     $('status').textContent=txt;
     $('status').style.color=error?'#ffdda6':'#e5f7ff';
@@ -26,17 +26,28 @@
     if(points.length>=80){feedback('Polygon höchstens 80 Punkte.',true);return;}
     const a=normalize(lat,-85,85),b=normalize(lon,-180,180);
     if(a===null||b===null){feedback('Koordinate außerhalb der erlaubten Grenzen.',true);return;}
+    if(importedGeometry&&!window.confirm('Importierte GeoJSON-Fläche durch ein manuelles Polygon ersetzen?'))return;
+    importedGeometry=null;
     points.push({lat:a,lon:b});invalidate();render();
   }
   function invalidate(){report=null;photoReport=null;captureReport=null;$('geojson').disabled=true;
     $('show-photo-centers').disabled=true;}
   function fit(){
-    if(!map||!points.length)return;
+    if(!map)return;
+    if(importedGeometry&&polygon){
+      map.fitBounds(polygon.getBounds().pad(.22),{maxZoom:17});return;
+    }
+    if(!points.length)return;
     if(points.length===1)map.setView([points[0].lat,points[0].lon],15);
     else map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lon])).pad(.22),{maxZoom:17});
   }
   function render(){
     $('points').replaceChildren();
+    if(importedGeometry){
+      const li=document.createElement('li');
+      li.textContent='GeoJSON '+importedGeometry.type+' geladen (nur lesende Vorschau, keine Eckpunkt-Bearbeitung).';
+      $('points').appendChild(li);
+    }
     points.forEach((p,index)=>{
       const li=document.createElement('li');
       li.textContent=(index+1)+': '+p.lat.toFixed(7)+', '+p.lon.toFixed(7);
@@ -58,7 +69,10 @@
       });
       markers.push(m);
     });
-    if(points.length>=3)polygon=L.polygon(points.map(p=>[p.lat,p.lon]),{
+    if(importedGeometry)polygon=L.geoJSON(importedGeometry,{
+      style:()=>({color:'#44c6e5',fillColor:'#44c6e5',fillOpacity:.12,weight:2})
+    }).addTo(map);
+    else if(points.length>=3)polygon=L.polygon(points.map(p=>[p.lat,p.lon]),{
       color:'#44c6e5',fillColor:'#44c6e5',fillOpacity:.12,weight:2
     }).addTo(map);
     else if(points.length===2)polygon=L.polyline(points.map(p=>[p.lat,p.lon]),{
@@ -69,13 +83,18 @@
         color:'#ffcc68',weight:3,opacity:.93
       }).addTo(map));
     }
+    if(report)for(const gap of report.unplannedTransitions){
+      lines.push(L.polyline([[gap.from.lat,gap.from.lon],[gap.to.lat,gap.to.lon]],{
+        color:'#ff866b',weight:2,opacity:.8,dashArray:'5,9'
+      }).addTo(map));
+    }
     if(captureReport&&$('show-photo-centers').checked){
       for(const p of captureReport.photoCenters)
         photoMarkers.push(L.circleMarker([p.lat,p.lon],{
           radius:3,color:'#f5c85c',weight:1,opacity:.85,fillOpacity:.85
         }).addTo(map));
     }
-    if(!firstFit&&points.length){fit();firstFit=true;}
+    if(!firstFit&&(points.length||importedGeometry)){fit();firstFit=true;}
   }
   $('add').addEventListener('click',()=>{
     if($('lat').value.trim()===''||$('lon').value.trim()===''){
@@ -84,17 +103,34 @@
     add(Number($('lat').value),Number($('lon').value));
   });
   $('undo').addEventListener('click',()=>{
+    if(importedGeometry){feedback('GeoJSON-Geometrie kann nicht punktweise bearbeitet werden. Bitte zurücksetzen.',true);return;}
     if(!points.length)return;
     points.pop();invalidate();render();
     feedback('Letzten Polygonpunkt entfernt.');
   });
   $('clear').addEventListener('click',()=>{
-    if(!points.length)return;
+    if(!points.length&&!importedGeometry)return;
     if(!window.confirm('Polygon und Vermessungsvorschau zurücksetzen?'))return;
-    points.length=0;firstFit=false;invalidate();render();
+    points.length=0;importedGeometry=null;firstFit=false;invalidate();render();
     feedback('Polygon zurückgesetzt.');
   });
   $('fit').addEventListener('click',fit);
+  $('import-geometry').addEventListener('click',async()=>{
+    const file=$('geometry-file').files?.[0];
+    if(!file){feedback('Bitte lokale GeoJSON-Datei auswählen.',true);return;}
+    try{
+      if(file.size>65536)throw new Error('GeoJSON größer als 64 KiB.');
+      const raw=JSON.parse(await file.text());
+      if(!raw||!['Polygon','MultiPolygon'].includes(raw.type))
+        throw new Error('Nur GeoJSON-Geometrien vom Typ Polygon oder MultiPolygon.');
+      const checked=engine.validateGeometry(raw);
+      points.length=0;
+      importedGeometry=checked.outlineGeometry;
+      firstFit=false;invalidate();render();
+      feedback('GeoJSON-Fläche lokal geladen: '+checked.componentCount+' Komponenten, '+
+        checked.holeCount+' Aussparungen. Streifenberechnung separat starten.');
+    }catch(err){feedback(err instanceof Error?err.message:'Ungültige GeoJSON-Datei.',true);}
+  });
   $('show-photo-centers').addEventListener('change',render);
   $('optics-enable').addEventListener('change',()=>{
     $('optics-fields').hidden=!$('optics-enable').checked;
@@ -131,7 +167,7 @@
       if(photogrammetry&&(!optics||!capture))throw new Error('Kamerageometriemodul nicht geladen');
       const camera=photogrammetry?cameraInputs():null;
       const profile=photogrammetry?optics.optics(camera):null;
-      report=engine.preview(points,{
+      report=engine.preview(importedGeometry||points,{
         spacing:photogrammetry?profile.stripSpacingM:$('spacing').value,
         heading:$('heading').value
       });
@@ -142,7 +178,8 @@
       render();
       let message='2D-Geometrie: '+Math.round(report.areaSqMeters)+' m² Fläche, '+
         report.stripeCount+' Streifen, '+report.segmentCount+' Linienstücke, '+
-        Math.round(report.previewSegmentLengthMeters)+' m Strecken innerhalb der Fläche.';
+        Math.round(report.previewSegmentLengthMeters)+' m Strecken innerhalb der Fläche. '+
+        report.unplannedTransitions.length+' ungeplante Übergangslücken (rot gestrichelt; KEINE Flugroute).';
       if(photoReport){
         const p=photoReport,cam=p.optics;
         message+='\nOptik (nur theoretisch): GSD quer '+cam.gsdAcrossCmPerPx.toFixed(2)+
@@ -176,13 +213,20 @@
       properties:{flightReady:false,exportableAsWaylines:false,scope:report.validationScope,
         opticsEstimate:photoReport?{...photoReport}:null},
       features:[
-        {type:'Feature',geometry:{type:'Polygon',coordinates:[closed.map(p=>[p.lon,p.lat])]},
-          properties:{kind:'user-defined-survey-outline',areaSqMeters:report.areaSqMeters}},
+        {type:'Feature',geometry:report.outlineGeometry||
+          {type:'Polygon',coordinates:[closed.map(p=>[p.lon,p.lat])]},
+          properties:{kind:'user-defined-survey-outline',areaSqMeters:report.areaSqMeters,
+            componentCount:report.componentCount,holeCount:report.holeCount}},
         {type:'Feature',
           geometry:{type:'MultiLineString',coordinates:report.segments.map(s=>
             [[s.start.lon,s.start.lat],[s.end.lon,s.end.lat]])},
           properties:{kind:'approximate-coverage-preview-not-flight-route',
             spacingMeters:report.lineSpacingMeters,headingDegrees:report.headingDegrees}},
+        ...(report.unplannedTransitions.length?[{type:'Feature',
+          geometry:{type:'MultiLineString',coordinates:report.unplannedTransitions.map(g=>
+            [[g.from.lon,g.from.lat],[g.to.lon,g.to.lat]])},
+          properties:{kind:'unplanned-direct-gaps-NOT-safe-flight-paths',planned:false,
+            safetyVerified:false,flightReady:false,exportableAsWaylines:false}}]:[]),
         ...(captureReport?[{type:'Feature',geometry:{type:'MultiPoint',
           coordinates:captureReport.photoCenters.map(p=>[p.lon,p.lat])},
           properties:{kind:'nominal-photo-centers-NOT-DJI-actions',
