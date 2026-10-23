@@ -107,8 +107,40 @@ Erkannte Abweichungen, die **nur eine fachliche Warnung**, keine automatisierte 
 | `ELLIPSOID_EQUALS_OTHER_HEIGHT_REQUIRES_REVIEW` | Numerisch gleiche Höhen in zwei Referenzsystemen; das ist **nicht zwangsläufig falsch**, verlangt aber bei der SDK-Konvertierung einen Herkunftsnachweis |
 | `WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED` | `distance`/`duration` im KMZ; die Upstream-Schätzung rechnet mit ca. 111.000 m je Breiten- **und** Längengrad, was von der geografischen Breite und Route abhängige Fehler auslösen kann |
 
-Blockierende Befunde sind u. a. `AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT`, `AIRCRAFT_SUBTYPE_UNRECOGNIZED`, `WPML_OFFLINE_VALIDATION_FAILED` und `WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB`. Insbesondere verwendet der Upstream `NewDocument()` den Namespace `1.0.6`, während der aktuell gepinnte SkyHub-WPML-Parser nur `1.0.2` prüft. **Der Audit erkennt `1.0.6`, normalisiert ihn aber nicht heimlich auf `1.0.2` und erhebt keine Aussage zur realen DJI-Pilot-2-Akzeptanz.** Unbekannte oder gemischte Namespaces werden ebenfalls blockiert.
+Blockierende Befunde sind u. a. `AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT`, `AIRCRAFT_SUBTYPE_UNRECOGNIZED`, `WPML_OFFLINE_VALIDATION_FAILED` und `WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB`. Insbesondere verwendet der Upstream `NewDocument()` den Namespace `1.0.6`, während der aktuell gepinnte SkyHub-WPML-Parser nur `1.0.2` prüft. **Der Audit untersucht `1.0.6` ausschließlich über eine temporäre In-Memory-Namespace-Umetikettierung für einen zusätzlichen lesenden Strukturcheck. Das Original wird nicht verändert oder neu exportiert; der Prüfstatus bleibt immer `blocked` und `offlineValid:null`.** Dies bestätigt ausdrücklich **keine** DJI-Pilot-2-Kompatibilität. Unbekannte oder gemischte Namespaces werden ebenfalls blockiert.
 
 Geprüft werden beide XML-Dokumente innerhalb einer durch SkyHub größen- und CRC-begrenzten KMZ. Das Tool erzeugt **keine** Flugroute, sendet **keine** DJI-Kommandos und liest keine Kamera-/Ressourceninhalte. Auch ein unauffälliger Audit besitzt `flightReady:false`, `pilot2HardwareVerified:false` und `sdkOutputVerified:false`.
 
 Tests: `node --test backend/test/wpml-reference-audit.test.js`.
+
+## Reproduzierbare synthetische WPML-Kompatibilitätsmatrix (Phase 5)
+
+**Ziel:** bekannte Quellcode-Abweichungen über alle fünf SkyHub-Profile reproduzierbar sichtbar machen, ohne Go-Binärdateien, private Missionen, Pilot 2 oder Hardware zu benötigen.
+
+```bash
+node scripts/wpml-reference-matrix.js
+node --test backend/test/wpml-reference-matrix.test.js
+```
+
+Der Generator `backend/wpml-reference-matrix.js` erzeugt **30 lokale synthetische In-Memory-KMZ-Prüffälle**: fünf Modelle (Mavic 3E, Mavic 3T, Mavic 3M, Matrice 4E, Matrice 4T) mal sechs Szenarien. Die Fälle modellieren SkyHub-Basisexport, Go-artige RC-Loss-Einstellungen, die Upstream-Subtyp-Nullsetzung, gleiche relative/Ellipsoidhöhe, die grobe Grad-zu-Meter-Distanzschätzung und den Upstream-Namespace `1.0.6`.
+
+Die Statuscodes sind:
+- `no-listed-divergence-observed`: keine der **explizit** kodierten Auffälligkeiten in diesem künstlichen Datensatz;
+- `review-required`: mindestens ein bekannter fachlicher Reviewpunkt, keine automatische Korrektur;
+- `blocked`: Profil-/Schema-/Versionskonflikt oder andere blockierende Validierung.
+
+**Evidenzgrenze:** Das CLI erzeugt ausschließlich synthetische SkyHub-KMZ mit gezielten XML-Mutationen. Weder Go-SDK-Code noch DJI Pilot 2 werden in diesem Test ausgeführt. Die beiden booleschen Felder `actualGoSdkExecutableRun:false` und `actualPilot2ImportTest:false` verhindern eine Verwechslung mit echten Fremdhersteller- oder Hardwaretests. Besonders die Mavic 3M ist kein freigegebenes Go-JSON-Importprofil, selbst wenn SkyHub einen eigenen Offline-WPML-Generator besitzt.
+
+Der zusätzlich lesende Prüfer kann nun auch `1.0.6`-KMZ nach den **inhaltlichen** Go-SDK-typischen Risikomustern untersuchen. Das erfolgt ausschließlich in-memory; die archivierte Version bleibt unverändert und ihr Abnahmestatus bleibt blockiert. Ein grober Haversine-Vergleich markiert starke Abweichungen zwischen der im XML notierten `distance` und der horizontalen Segmentstrecke als `WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION`. Es werden keine Strecken-, Koordinaten- oder sonstigen Rohwerte ausgegeben. Diese Distanzprüfung ist **keine** Flugzeit-, Gelände- oder Energieberechnung.
+
+### Echte Referenzen einbringen – ausschließlich offline
+
+Die realen Vergleichsdateien werden **nicht erfunden** und nicht in Git eingecheckt. Nach rechtmäßiger Bereitstellung durch den Operator können ein tatsächlicher Go-SDK-Export und ein DJI-Pilot-2-Export lokal analysiert werden:
+
+```bash
+node scripts/wpml-reference-audit.js /lokaler/pfad/go-sdk.kmz
+node scripts/wpml-reference-audit.js /lokaler/pfad/pilot2.kmz
+node scripts/wpml-compare.js /lokaler/pfad/skyhub.kmz /lokaler/pfad/pilot2.kmz
+```
+
+Der Vergleich verwendet bestehende Privacy-Redaction und ist nur für vom aktuellen Parser akzeptierte Namespace-Versionen aussagekräftig; für `1.0.6` zunächst den separaten Risikoprüfer verwenden. Ein echter Pilot-2-Import, einschließlich Firmware- und Gerätekennung, bedarf einer **separaten, dokumentierten Hardwareabnahme**. Selbst dabei darf `flightReady:false` nicht implizit aufgehoben werden.
