@@ -51,6 +51,20 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertNotIn("apt-get", dockerfile)
         self.assertNotIn("ffmpeg", dockerfile.lower().split("from eclipse-temurin")[1])
 
+    def test_dock_mock_explicit_profile_and_no_exposed_ports(self):
+        overlay = (LAB / "compose.lab.yml").read_text()
+        self.assertIn('profiles: ["dock-rpc"]', overlay)
+        mock = overlay.split("  dock-mock:", 1)[1].split("  hivemind-simulator:", 1)[0]
+        self.assertNotIn("ports:", mock)
+        self.assertIn("cap_drop: [ALL]", mock)
+        self.assertIn("no-new-privileges:true", mock)
+        wrapper = (LAB / "lab.sh").read_text()
+        self.assertIn("--profile dock-rpc", wrapper)
+        self.assertIn("dock-smoke", wrapper)
+        dockerfile = (LAB / "Dockerfile.dock-mock").read_text()
+        self.assertIn("USER node", dockerfile)
+        self.assertIn("node:22-alpine", dockerfile)
+
     def test_lab_broker_anonymous_only_inside_lab(self):
         conf = (LAB / "mosquitto.conf").read_text()
         self.assertIn("listener 1884 0.0.0.0", conf)
