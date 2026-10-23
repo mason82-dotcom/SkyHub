@@ -44,7 +44,9 @@
     if(!Number.isSafeInteger(maxLength)||maxLength<1||maxLength>512*1024)
       fail('ungültige JSON-Größenbeschränkung');
     if (typeof raw !== 'string' || raw.length > maxLength)
-      fail('JSON überschreitet die zulässige Dateigröße');
+      fail(maxLength===128*1024 ?
+        'JSON muss eine Textdatei bis 128 KiB sein' :
+        'JSON überschreitet die zulässige Dateigröße');
     let result;
     try { result = JSON.parse(raw); }
     catch { fail('ungültiges JSON'); }
