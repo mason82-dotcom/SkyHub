@@ -6,6 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const planner=require('../../frontend/public/wpml-editor-core');
 const reference=require('../../frontend/public/wpml-waylines-reference');
+const review=require('../../frontend/public/wpml-mission-review');
 
 const script=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/wpml-editor.js'),'utf8');
 function sample(){
@@ -40,6 +41,7 @@ function makeHarness(){
   let confirmResult=true,confirmCount=0;
   const window={
     SkyHubWpmlPlanner:planner,SkyHubWpmlWaylinesReference:reference,
+    SkyHubWpmlMissionReview:review,
     confirm(){confirmCount++;return confirmResult;}
   };
   const document={getElementById:get,createElement:make,
@@ -144,4 +146,32 @@ test('invalid Waylines schema never replaces an active draft',async()=>{
   assert.match(app.get('waylines-reference-preview').textContent,/nicht unterstütztes Feld/);
   assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
   assert.equal(app.get('waypoints').children.length,1);
+});
+
+test('offline mission review updates after import and speed edits without leaking GPS',async()=>{
+  const app=makeHarness();
+  assert.match(app.get('mission-review').textContent,/UNVOLLSTÄNDIG/);
+  await app.load(sample());
+  // Staging must not mutate active route or its review.
+  assert.match(app.get('mission-review').textContent,/UNVOLLSTÄNDIG/);
+  app.get('waylines-reference-apply').listeners.click();
+  const summary=app.get('mission-review').textContent;
+  assert.match(summary,/2 Wegpunkte/);
+  assert.match(summary,/2D-Luftliniensegmente/);
+  assert.match(summary,/KEINE Flugfreigabe/);
+  assert.doesNotMatch(summary,/49\.1|49\.2|8\.6|8\.7|Externer Referenzentwurf/);
+  app.get('speed').value='0';
+  app.get('speed').listeners.input();
+  assert.match(app.get('mission-review').textContent,/EINGABEN PRÜFEN/);
+  assert.match(app.get('mission-review').textContent,/Sollgeschwindigkeit/);
+});
+test('local-height input changes invalidate preview when measured ellipsoid is absent',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  app.get('waylines-reference-apply').listeners.click();
+  app.get('local-heights').checked=true;
+  app.get('local-heights').listeners.change();
+  assert.match(app.get('mission-review').textContent,/EINGABEN PRÜFEN/);
+  assert.match(app.get('mission-review').textContent,/WGS84-Ellipsoidhöhe/);
+  assert.match(app.get('mission-review').textContent,/KEINE Flugfreigabe/);
 });
