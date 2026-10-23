@@ -256,6 +256,16 @@ class CaptureCalibrationTest(unittest.TestCase):
                 self.profile["profileId"], self.profile_sha,
                 self.capture_review, str(self.capture_key), accept_capture=True)
 
+    def test_hard_linked_source_and_frame_are_rejected(self):
+        other = self.root / "hardlink.jpg"
+        other.hardlink_to(self.media)
+        with self.assertRaisesRegex(cal.geo.InvalidInput,
+                                    "source_and_frame_must_be_distinct"):
+            cal.seal_capture(
+                str(self.media), str(other), self.registry,
+                self.profile["profileId"], self.profile_sha,
+                self.capture_review, str(self.capture_key), accept_capture=True)
+
     def test_verify_does_not_access_model_before_capture_checks_pass(self):
         cap = self.seal_capture()
         self.media.write_bytes(b"modified")
