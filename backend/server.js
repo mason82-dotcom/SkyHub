@@ -25,6 +25,7 @@ const {createTrackStore,retentionDays}=require('./track-store');
 const {createTrackRecorder}=require('./track-recorder');
 const {createMapElementStore}=require('./map-element-store');
 const {createMapElementHandler}=require('./map-element-api');
+const {createSmartFarmingCatalogRouter}=require('./smart-farming-catalog');
 const {mapPrincipal}=require('./map-element-permissions');
 
 const secret=process.env.SKYHUB_VIEW_TOKEN;
@@ -363,6 +364,15 @@ app.get('/api/health',(req,res)=>res.json({
   trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
+// Experimental metadata-only M3M catalog; OFF by default and never accessible via LAN bypass.
+// Must have both separately configured root and independently pinned manifest SHA256.
+if (process.env.SKYHUB_M3M_CATALOG_ENABLED === 'true') {
+  app.use('/api/smart-farming/candidates', createSmartFarmingCatalogRouter({
+    express, auth,
+    root: process.env.SKYHUB_M3M_CATALOG_ROOT,
+    manifestSha256: process.env.SKYHUB_M3M_CATALOG_SHA256
+  }));
+}
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
 app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
   lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));
