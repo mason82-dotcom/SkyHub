@@ -71,6 +71,20 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 **Zusatz:** Die drei in Main gemergten Grundlagen [#15](https://github.com/mason82-dotcom/SkyHub/pull/15) (DJI-Feldkatalog), [#17](https://github.com/mason82-dotcom/SkyHub/pull/17) (RC Pro/M3M-Diagnose) und [#20](https://github.com/mason82-dotcom/SkyHub/pull/20) (modellbezogene M3M-OSD-Erweiterung) sind von den oben genannten offenen Ergänzungen zu unterscheiden.
 
+## 3. Bekannte Main-Lücken, die nicht als Feature zählen
+
+- **DJI-Modell-Diagnose: Regression in Main.** In `backend/server.js` nutzt die Validierung von
+  `GET /api/diagnostics/dji-fields?model=0:77:2` ein Regex-Literal mit
+  **doppelt maskiertem `\\d`** und weist dadurch reguläre numerische
+  Modellschlüssel mit HTTP 400 zurück. Ein konkreter Fix samt Regressionstests
+  liegt in [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26), aber
+  **nicht in Main**. Vor Nutzung der Route muss der Fix integriert und geprüft werden.
+- **DJI-Kartengruppen-Flag:** `.env.example` nennt die Flag, Root-Compose reicht sie
+  jedoch nicht durch; dies ist kein dokumentierter sofort aktivierbarer API-Schalter.
+- **Gesamtintegration:** Offene gestapelte Medien-/Analyse-PRs haben teilweise
+  eigene Backend-Router und Worker. **Existenz einer Datei in einem PR ist
+  kein Nachweis einer Runtime-Montage oder einer erfolgreichen Hardwareabnahme.**
+
 ## 3. Hardware- und Testevidenz
 
 - **20.–21.10.2026, RC Pro Enterprise + Mavic 3M:** MQTT-Topologie/OSD und modellbezogene Aircraft-Rootfelder wurden am echten Gerät beobachtet; Einzelheiten in [Hardwareabnahme](hardware-rc-pro-m3m.md). Die M3M-Overlay-Definitionen sind teilweise vorläufig. „Nicht beobachtet“ bedeutet nicht „Hardware defekt“; Kamerafunktionen und nicht passende Aircraft-Feldpfade dürfen nicht zusammengezählt werden.
