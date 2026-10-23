@@ -76,6 +76,26 @@ code{font-size:12px}a{color:#9de5fb}hr{border:0;border-top:1px solid #375b72;mar
 <label for="group-index">Wegpunkt für neue Action Group</label><select id="group-index"></select>
 <button id="add-group" type="button">Action Group hinzufügen</button>
 <div id="groups" role="list" aria-label="Aktionsgruppen"></div>
+<h3>Aktionsvorlagen und Batch-Editing</h3>
+<p class="caption">Wegpunktnummern sind 1-basiert (z. B. 1,3-5); „Alle“ erfasst die gesamte Route. Vorlagen ersetzen oder ergänzen die geordneten Gruppen – Änderungen bleiben zunächst im Entwurf.</p>
+<label for="batch-indices">Wegpunktnummern (1,3-5 oder alle)</label>
+<input id="batch-indices" type="text" maxlength="120" value="alle" autocomplete="off">
+<div class="grid">
+<div><label for="batch-template">Aktionsvorlage</label><select id="batch-template">
+<option value="photo">Einzelbild</option>
+<option value="hoverPhoto">2 s schweben + Foto</option>
+<option value="yawPhoto">Yaw 0° + Foto</option>
+</select></div>
+<div><label for="batch-mode">Anwendung</label><select id="batch-mode">
+<option value="replace">Vorhandene Aktionen ersetzen</option>
+<option value="append">An vorhandene Aktionen anhängen</option>
+</select></div>
+</div>
+<div class="row">
+<button id="batch-apply" type="button">Vorlage anwenden</button>
+<button id="reverse" type="button">Flugroute umkehren (nur sichere Teilmenge)</button>
+</div>
+<p class="caption">Umkehr ist bei Video-Start/Stopp und Legacy-/Intervall-Auslösern gesperrt. Der neu erzeugte Entwurf verlangt eine erneute visuelle Prüfung von Höhe, Heading, Gimbal, Hindernissen, RTH und Aufnahmezielen. Keine Flugfreigabe.</p>
 <hr>
 <div class="row"><button id="review" type="button">WPML-Struktur lokal prüfen</button>
 <button id="export" type="button">Offline-KMZ exportieren</button></div>
