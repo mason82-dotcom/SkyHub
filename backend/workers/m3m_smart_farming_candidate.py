@@ -119,7 +119,7 @@ def _validated_indices(report: dict) -> list[dict]:
             if type(v) not in (int, float) or not math.isfinite(v) or not -2 <= v <= 2:
                 raise CandidateError('Invalid index summary statistic')
             stat[key] = float(v)
-        if not stat['min'] <= stat['mean'] <= stat['max']:
+        if not stat['min'] - 1e-6 <= stat['mean'] <= stat['max'] + 1e-6:
             raise CandidateError('Contradictory index statistics')
         cards.append({'index': name, 'title': NAMES[name], 'validPixels': valid,
                       'mean': stat['mean'], 'min': stat['min'], 'max': stat['max'],
