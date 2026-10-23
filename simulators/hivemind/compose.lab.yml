@@ -30,7 +30,7 @@ services:
     # Downloaded from upstream at a fixed commit via prepare.sh; no AGPL source is vendored.
     build:
       context: ./simulators/hivemind/.upstream
-      dockerfile: Dockerfile
+      dockerfile: ../Dockerfile.lab
     image: skyhub-hivemind-reference:1.4.10
     restart: "no"
     ports:
