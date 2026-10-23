@@ -45,3 +45,32 @@ Der [Workspace-Rollenvertrag](dji-map-access.md) ist als isoliertes, fehlertoler
 ## P2 · Konfliktfeste Schreibtransaktionen als isolierter Entwurf (21.10.2026)
 
 Nach dem Read-only-RBAC-Schutz ist ein [interner Mutationsvertrag](dji-map-mutation-contract.md) für DJI-Kartenelemente ergänzt: eine additive, **nicht angewendete** Revisions-/Auditmigration, ein vom Server entkoppelter Transaktionsbaustein mit gruppenweiser SQL-Sperre, Versionsvergleich (CAS), Rollback bei fehlerhaftem Audit und eigene PostgreSQL-Integrationstests. Weder die tatsächliche Operator-/Admin-Authentifizierung noch HTTP-Create/Update/Delete oder DJI-WebSocket-Synchronisation ist aktiviert. Diese P2-Arbeit ist Vorbereitung; hardwaregetestete und autorisierte Schreibpfade bleiben weitere Meilensteine.
+
+## FlightHub-2-Flight-Route-Library – eigenständige P0/P1-Roadmap (23.10.2026)
+
+**Repository:** https://github.com/mason82-dotcom/SkyHub-Next. Die hier genannten
+P0/P1-Buchstaben beziehen sich auf die *Routenbibliothek*, nicht auf die
+unabhängige frühere Prioritätenfolge für die DJI-Einsatzkarte.
+
+| Stufe | Bereits umgesetzt im Feature-Branch | Für eine zentrale Produktivlösung noch offen |
+|---|---|---|
+| **Route P0** | Browserlokales Routenverzeichnis mit Ordnerfilter, Revisionen, Kopien, explizitem Speichern, datensparsamem Revisionsvergleich und append-only Wiederherstellung; Offline-Task-Snapshot | Team-/Workspace-Identitäten, unabhängige Operator-Anmeldung, API-CRUD mit PostgreSQL-Transaktionen und RLS-Policies, Audit/Backup/Retention |
+| **Route P1** | Reihenfolge von `reachPoint`-Kameraaktionen, Hover, Yaw und Video-Start/Stopp; vorgeprüfte Aktionsvorlagen, Batch-Editing, gesperrte Umkehr bei riskanten Aktionen | Gimbal-/Zoom-Aktionen, Kamera-Capability-Registry, mehrere Trigger, FPV-/3D-Vorschau, Hardware- und DJI-Pilot-2-Kompatibilität |
+| **Route P2** | Erste lokale 2D-Streifenvorschau | Korrekte WPML-Flächen-/Korridorplanung aus GSD, Überlappung, Sensorprofil und DEM |
+| **Route P3/P4** | Konzepte aus der FlightHub-2-Handbuchanalyse | Geometrische/3D-Routen sowie getrennte Onboard- und Server-KI-Workflows |
+
+Offizielle Detailseiten: [Flight Route Library](https://fh.dji.com/user-manual/en/flight-route-library/),
+[Edit Waypoint Flight Routes](https://fh.dji.com/user-manual/en/flight-route-library/edit-waypoint-flight-routes.html),
+[Manage Flight Routes](https://fh.dji.com/user-manual/en/flight-route-library/manage-flight-routes.html)
+und [Sync Flight Routes](https://fh.dji.com/user-manual/en/flight-route-library/sync-flight-routes.html).
+Diese Referenzen beschreiben **FlightHub-2-Produktfunktionen**, nicht automatisch
+freigegebene DJI-Cloud-API-Endpunkte für SkyHub-Next.
+
+**Abnahmekriterien vor Route-P0-Zentralspeicherung:** nicht nur funktionierende
+SQL-Tabellen, sondern ein von Pilot-2-Pairing und dem View-Token getrenntes
+Benutzerauthentifizierungsmodell, eindeutig gebundene Workspace-/Rollenidentität,
+`FORCE ROW LEVEL SECURITY` mit expliziten Least-Privilege-Policies, CAS bei
+parallelen Revisionen, Transaktionsaudit sowie Datenzugriffs-/Negativtests.
+Die aktuelle Migration `003_wpml_route_library_draft.sql` bleibt bis dahin
+unaktiviert. Alle WPML-Entwürfe verbleiben bei `flightReady:false`,
+`dispatchAllowed:false`.
