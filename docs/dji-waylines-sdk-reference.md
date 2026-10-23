@@ -277,3 +277,41 @@ node --test backend/test/wpml-action-batch.test.js backend/test/wpml-route-libra
 ```
 
 **Grenze:** Das sind weiterhin Offline-Planungs- und Vorschaufunktionen. Es gibt keine DJI-FlightHub-2-Aktionsparität, keine automatisch validierte Richtungsumkehr bei Video und keinen in SkyHub freigegebenen autonomen Flug.
+
+## Phase 10 – Repository-Identität und datensparsamer Revisionsvergleich (23.10.2026)
+
+Das kanonische Projekt liegt seit der Umbenennung unter
+[**mason82-dotcom/SkyHub-Next**](https://github.com/mason82-dotcom/SkyHub-Next).
+Alle neuen PR-, Clone- und CI-Verweise verwenden nur diese Adresse.
+Die lokale Git-Remote-Umstellung und die notwendige Trennung von
+`~/Projekte/SkyHub` (Legacy) sind in
+[repository-identity.md](repository-identity.md) beschrieben.
+`scripts/check-repository-identity.js` verhindert erneute alte Origin-URLs
+in gepflegten Projekt-Dokumenten und Automatisierungen.
+
+**P0-Fortsetzung:** Das lokale Bibliotheksmodell bietet jetzt
+`compareRevisions()` und `restoreRevision()`.
+
+- `compareRevisions()` liefert nur die Anzahl geänderter Wegpunktpositionen,
+  Höhen-/Fotoattribute, betroffene Profil-Feldnamen und Flags für geänderte
+  Action-Groups/Intervalle. **Keine** Koordinaten, Missionsnamen, unverifizierte
+  Messwerte oder Dateipfade verlassen den Vergleich. Der Vergleich ist
+  positionsbasiert, erkennt aber **keine** sichere geometrische oder
+  flugbetriebliche Gleichwertigkeit zweier Routen.
+- `restoreRevision()` fügt den vollständig validierten Plan einer früheren
+  Revision als **neue Revision** an; die ältere Historie wird nicht geändert.
+  In der Browseroberfläche wird dafür eine explizite Bestätigung verlangt.
+  Ein möglicherweise abweichender aktueller Editordraft bleibt unverändert.
+- `/wpml-route-library.html` bietet zwei zusätzliche Kontrollen:
+  „Mit aktueller Revision vergleichen“ und
+  „Als neue Revision wiederherstellen“. Nach einer Wiederherstellung muss
+  die neue Revision gesondert in den Editor geladen werden, bevor weitere
+  Revisionen an die Route angehängt werden können.
+- Bestätigte Wiederherstellung und Differenzprüfung funktionieren weiterhin
+  **nur lokal im Browser**; die zentrale SQL-Migration ist weiterhin
+  deaktiviert, die Berechtigungsprüfung für zentrale Schreibzugriffe offen.
+
+Neue Regressionstests prüfen Revisionsdifferenzen, Historienerhalt,
+Fehlzuordnungs-Sperre und eine Browser-Revisionswiederherstellung. Auch hier
+bleiben `flightReady:false`, `dispatchAllowed:false` und das Erfordernis
+eines eigenständigen DJI-Pilot-2-Hardwaretests unverändert.
