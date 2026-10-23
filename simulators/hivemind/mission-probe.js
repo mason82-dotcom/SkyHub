@@ -8,6 +8,7 @@ const EXPECTED_DOCK3_SN = /^7UUXN[A-Z0-9]{9}$/;
 const FLIGHT_ID = 'skyhub-lab-mission-01';
 const ALLOWED = Object.freeze(['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery','flighttask_undo','flighttask_stop']);
 const TIMEOUT_MS = 12000;
+let phase='init';
 const safe = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const uuid = (x) => typeof x === 'string' && /^[a-f0-9-]{36}$/i.test(x);
 
@@ -41,6 +42,7 @@ function validProgress(msg, executeBid) {
 async function run() {
   if (process.argv.length!==3 || !EXPECTED_DOCK3_SN.test(process.argv[2]))
     throw Error('Only the pinned Dock3 test identity is accepted');
+  phase='mqtt_connect';
   const mqtt=require('mqtt');
   const client=mqtt.connect('mqtt://hivemind-broker:1884',{
     clientId:'skyhub_hivemind_mission_'+crypto.randomBytes(6).toString('hex'),
@@ -95,24 +97,33 @@ async function run() {
       });
       await wait;
     }
+    phase='prepare_before_cancel';
     await command('flighttask_prepare',{flight_id:FLIGHT_ID,task_type:0,rth_altitude:50});
+    phase='ground_undo';
     undoBid=crypto.randomUUID();
     await command('flighttask_undo',{flight_ids:[FLIGHT_ID]},undoBid);
+    phase='await_cancel_event';
     const canceledUntil=Date.now()+4000;
     while(cancellation.length===0 && Date.now()<canceledUntil)
       await new Promise(resolve=>setTimeout(resolve,100));
     if(cancellation.length===0)throw Error('Ground cancellation event not confirmed');
+    phase='prepare_after_cancel';
     await command('flighttask_prepare',{flight_id:FLIGHT_ID,task_type:0,rth_altitude:50});
+    phase='execute';
     execBid=crypto.randomUUID();
     await command('flighttask_execute',{flight_id:FLIGHT_ID},execBid);
+    phase='await_progress';
     const until=Date.now()+14000;
     while(progress.length===0 && Date.now()<until)
       await new Promise(resolve=>setTimeout(resolve,250));
     if(progress.length===0)throw Error('no simulator flighttask_progress event');
     // The simulator must reject flighttask_stop when already airborne.
+    phase='airborne_stop';
     await command('flighttask_stop',{flight_id:FLIGHT_ID,reason:0},
       crypto.randomUUID(),326109);
+    phase='pause';
     await command('flighttask_pause',{});
+    phase='recovery';
     await command('flighttask_recovery',{});
     completed=true;
     console.log('PASS: synthetic ground cancel, airborne stop rejected, execute/progress/pause/recovery');
@@ -124,6 +135,6 @@ async function run() {
   if(!completed)throw Error('mission probe did not finish');
 }
 if(require.main===module){
-  run().catch(e=>{console.error('FAIL: '+e.message);process.exitCode=1;});
+  run().catch(_e=>{console.error('FAIL_STAGE: '+phase);process.exitCode=1;});
 }
 module.exports={GATEWAY,FLIGHT_ID,ALLOWED,EXPECTED_DOCK3_SN,requestEnvelope,replyMatches,validProgress};
