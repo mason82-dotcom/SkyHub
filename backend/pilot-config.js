@@ -36,7 +36,7 @@ function pilotConfiguration(env) {
   let mqttHost=null;
   if(broker){
     try{
-      const b=validateBrokerConfig(broker,'1884');
+      const b=validateBrokerConfig(broker,env.SKYHUB_MQTT_REQUIRED_PORT||'1884',env.SKYHUB_MQTT_BROKER_KIND||'emqx');
       const hostname=b.host;
       // The RC must reach an actual LAN hostname/IP, never Docker's virtual gateway.
       if(hostname==='host.docker.internal'||hostname==='localhost'||hostname==='127.0.0.1'||hostname==='0.0.0.0'){
