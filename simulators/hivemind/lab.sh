@@ -7,7 +7,7 @@ ENV_FILE="$HERE/lab.env"
 PROJECT="skyhub-hivemind-lab"
 
 usage() {
-  echo "Usage: bash simulators/hivemind/lab.sh init-env|prepare|config|up|smoke|ps|logs|down"
+  echo "Usage: bash simulators/hivemind/lab.sh init-env|prepare|config|up|smoke|dock-up|dock-smoke|ps|logs|down"
   echo "Only 'up' starts containers. 'down' preserves all named volumes."
 }
 if [[ $# -ne 1 ]]; then usage; exit 2; fi
@@ -44,7 +44,7 @@ EOF
   prepare)
     exec bash "$HERE/prepare.sh"
     ;;
-  config|up|smoke|ps|logs|down)
+  config|up|smoke|dock-up|dock-smoke|ps|logs|down)
     ;;
   *)
     usage
@@ -100,10 +100,29 @@ case "$1" in
     "${compose[@]}" config --quiet
     exec python3 "$HERE/smoke.py"
     ;;
-  ps) "${compose[@]}" ps --all ;;
+  dock-up)
+    if [[ ! -s "$HERE/.upstream/target/dji-dock-simulator-1.4.10.jar" ]]; then
+      echo "Prepare pinned upstream first: bash simulators/hivemind/lab.sh prepare" >&2
+      exit 2
+    fi
+    "${compose[@]}" --profile dock-rpc config --quiet
+    "${compose[@]}" --profile dock-rpc up -d --build
+    echo "Dock lab running: simulator localhost:19090, SkyHub localhost:14001; RPC mock is opt-in."
+    ;;
+  dock-smoke)
+    command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 2; }
+    "${compose[@]}" --profile dock-rpc config --quiet
+    if ! "${compose[@]}" --profile dock-rpc ps --status running --services dock-mock |
+        grep -Fxq dock-mock; then
+      echo "Dock mock is not running; first run: bash simulators/hivemind/lab.sh dock-up" >&2
+      exit 2
+    fi
+    exec python3 "$HERE/dock-smoke.py"
+    ;;
+  ps) "${compose[@]}" --profile dock-rpc ps --all ;;
   logs) "${compose[@]}" logs --tail=80 ;;
   down)
-    "${compose[@]}" down
+    "${compose[@]}" --profile dock-rpc down
     echo "Lab stopped; named volumes retained (no -v)."
     ;;
 esac
