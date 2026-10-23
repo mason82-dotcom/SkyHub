@@ -97,7 +97,9 @@ function createFlightAreaSyncMonitor({expectedGatewaySn,timeoutMs=DEFAULT_TIMEOU
     lastSourceTimestamp=event.sourceTimestamp;
     reportStatus=event.status;
     reportReason=event.reasonCode;
-    reportedTargetChecksumMatch=event.reportedTargetChecksumMatch;
+    // Checksum equality during wait/failure is NOT successful device reporting.
+    reportedTargetChecksumMatch=event.status==='synchronized' &&
+      event.reasonCode===0 && event.reportedTargetChecksumMatch===true;
     acceptedEvents++;
     if(event.status==='fail'||event.status==='switch_fail'||event.reasonCode!==0)
       phase='device_failed';
