@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const GATEWAY = process.argv[2] || '7UUXNABCDE1234';
 const EXPECTED_DOCK3_SN = /^7UUXN[A-Z0-9]{9}$/;
 const FLIGHT_ID = 'skyhub-lab-mission-01';
-const ALLOWED = Object.freeze(['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery']);
+const ALLOWED = Object.freeze(['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery','flighttask_undo','flighttask_stop']);
 const TIMEOUT_MS = 12000;
 const safe = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const uuid = (x) => typeof x === 'string' && /^[a-f0-9-]{36}$/i.test(x);
@@ -14,13 +14,17 @@ const uuid = (x) => typeof x === 'string' && /^[a-f0-9-]{36}$/i.test(x);
 function requestEnvelope(method, data, tid, bid, now=Date.now()) {
   if (!EXPECTED_DOCK3_SN.test(GATEWAY) || !ALLOWED.includes(method) || !uuid(tid) || !uuid(bid) || !safe(data) ||
       (method==='flighttask_prepare'||method==='flighttask_execute') &&
-        (data.flight_id!==FLIGHT_ID)) throw Error('lab mission contract violated');
+        (data.flight_id!==FLIGHT_ID) ||
+      method==='flighttask_stop' && (data.flight_id!==FLIGHT_ID || data.reason!==0) ||
+      method==='flighttask_undo' && (!Array.isArray(data.flight_ids) ||
+        data.flight_ids.length!==1 || data.flight_ids[0]!==FLIGHT_ID))
+    throw Error('lab mission contract violated');
   return {tid,bid,timestamp:now,gateway:GATEWAY,method,data};
 }
-function replyMatches(msg, expected) {
+function replyMatches(msg, expected, expectedResult=0) {
   return safe(msg) && msg.tid===expected.tid && msg.bid===expected.bid &&
     msg.method===expected.method && msg.gateway===GATEWAY &&
-    safe(msg.data) && msg.data.result===0 &&
+    safe(msg.data) && msg.data.result===expectedResult &&
     Number.isSafeInteger(msg.timestamp);
 }
 function validProgress(msg, executeBid) {
@@ -61,7 +65,8 @@ async function run() {
       });
       client.once('error',()=>{clearTimeout(timer);reject(Error('lab broker unavailable'));});
     });
-    let execBid=null;
+    let execBid=null, undoBid=null;
+    const cancellation=[];
     client.on('message',(topic,bytes,packet)=>{
       if(packet?.retain||!Buffer.isBuffer(bytes)||bytes.length>16384)return;
       let msg;try{msg=JSON.parse(bytes.toString('utf8'));}catch{return;}
@@ -70,18 +75,20 @@ async function run() {
         if(!item)return;
         pending.delete(msg.tid);
         clearTimeout(item.timer);
-        if(replyMatches(msg,item.request))item.resolve(msg);
+        if(replyMatches(msg,item.request,item.expectedResult))item.resolve(msg);
         else item.reject(Error('service reply mismatch or failure'));
-      }else if(topic.endsWith('/events') && execBid &&
+      }else if(topic.endsWith('/events') && undoBid && validProgress(msg,undoBid) &&
+          msg.data.output.status==='canceled')cancellation.push(true);
+      else if(topic.endsWith('/events') && execBid &&
           validProgress(msg,execBid))progress.push({step:msg.data.output.progress.current_step,
           percent:msg.data.output.progress.percent,status:msg.data.output.status});
     });
-    async function command(method,data,bid=crypto.randomUUID()){
+    async function command(method,data,bid=crypto.randomUUID(),expectedResult=0){
       const tid=crypto.randomUUID();
       const req=requestEnvelope(method,data,tid,bid);
       const wait=new Promise((resolve,reject)=>{
         const timer=setTimeout(()=>{pending.delete(tid);reject(Error('service reply timeout: '+method));},TIMEOUT_MS);
-        pending.set(tid,{request:req,resolve,reject,timer});
+        pending.set(tid,{request:req,expectedResult,resolve,reject,timer});
       });
       client.publish(services,JSON.stringify(req),{qos:0,retain:false},err=>{
         if(err){const p=pending.get(tid);if(p){pending.delete(tid);clearTimeout(p.timer);p.reject(Error('lab publish failed'));}}
@@ -89,16 +96,26 @@ async function run() {
       await wait;
     }
     await command('flighttask_prepare',{flight_id:FLIGHT_ID,task_type:0,rth_altitude:50});
+    undoBid=crypto.randomUUID();
+    await command('flighttask_undo',{flight_ids:[FLIGHT_ID]},undoBid);
+    const canceledUntil=Date.now()+4000;
+    while(cancellation.length===0 && Date.now()<canceledUntil)
+      await new Promise(resolve=>setTimeout(resolve,100));
+    if(cancellation.length===0)throw Error('Ground cancellation event not confirmed');
+    await command('flighttask_prepare',{flight_id:FLIGHT_ID,task_type:0,rth_altitude:50});
     execBid=crypto.randomUUID();
     await command('flighttask_execute',{flight_id:FLIGHT_ID},execBid);
     const until=Date.now()+14000;
     while(progress.length===0 && Date.now()<until)
       await new Promise(resolve=>setTimeout(resolve,250));
     if(progress.length===0)throw Error('no simulator flighttask_progress event');
+    // The simulator must reject flighttask_stop when already airborne.
+    await command('flighttask_stop',{flight_id:FLIGHT_ID,reason:0},
+      crypto.randomUUID(),326109);
     await command('flighttask_pause',{});
     await command('flighttask_recovery',{});
     completed=true;
-    console.log('PASS: synthetic flighttask_prepare/execute/progress/pause/recovery through private MQTT');
+    console.log('PASS: synthetic ground cancel, airborne stop rejected, execute/progress/pause/recovery');
   }finally{
     for(const item of pending.values()){clearTimeout(item.timer);item.reject(Error('connection closed'));}
     pending.clear();
