@@ -81,7 +81,7 @@ test('TSA accepts only exact trusted proxy IP addresses',()=>{
 
 test('situation awareness is off by default and never part of the bootstrap then',()=>{
   const c=pilotConfiguration(configured);
-  assert.deepEqual(c.tsa,{enabled:false,issue:null,apiHost:null,wsHost:null});
+  assert.deepEqual(c.tsa,{enabled:false,issue:null,apiHost:null,wsHost:null,trustedProxyIps:[]});
   assert.equal('tsa' in c.bootstrap(),false);
   // A public URL alone does not switch it on.
   const urlOnly=pilotConfiguration({...configured,SKYHUB_PILOT_PUBLIC_URL:'https://rpi5.fritz.box'});
@@ -93,7 +93,7 @@ test('enabled situation awareness hands the RC an https api host and a wss chann
     SKYHUB_PILOT_PUBLIC_URL:'https://rpi5.fritz.box'});
   assert.equal(c.ready,true);
   assert.deepEqual(c.tsa,{enabled:true,issue:null,apiHost:'https://rpi5.fritz.box',
-    wsHost:'wss://rpi5.fritz.box/ws/tsa'});
+    wsHost:'wss://rpi5.fritz.box/ws/tsa',trustedProxyIps:['127.0.0.1','::1']});
   assert.deepEqual(c.bootstrap().tsa,{apiHost:'https://rpi5.fritz.box',wsHost:'wss://rpi5.fritz.box/ws/tsa'});
   const port=pilotConfiguration({...configured,SKYHUB_DJI_TSA_ENABLED:'true',
     SKYHUB_PILOT_PUBLIC_URL:'https://rpi5.fritz.box:8443/'});
@@ -106,7 +106,7 @@ test('an unsafe or unclear public URL disables situation awareness without block
     const c=pilotConfiguration({...configured,SKYHUB_DJI_TSA_ENABLED:'true',SKYHUB_PILOT_PUBLIC_URL:url});
     assert.equal(c.ready,true,url);
     assert.equal(c.tsa.enabled,false,url);
-    assert.match(c.tsa.issue,/https origin/,url);
+    assert.match(c.tsa.issue,/HTTPS origin/,url);
     assert.equal('tsa' in c.bootstrap(),false,url);
     assert.doesNotMatch(JSON.stringify(c.tsa),/pw|user/,url);
   }
