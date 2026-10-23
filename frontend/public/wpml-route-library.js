@@ -233,6 +233,51 @@
     groups.push({index:i,actions:[{type:'takePhoto'}]});
     dirty=true;renderGroups();
   });
+  function batchSelection(raw,count){
+    if(raw==='alle')return Array.from({length:count},(_,i)=>i);
+    if(typeof raw!=='string'||raw.length>120||!/^[0-9, -]+$/.test(raw))throw Error('syntax');
+    const values=new Set();
+    for(const token of raw.split(',')){
+      const match=/^\\s*([1-9]\\d{0,2})(?:\\s*-\\s*([1-9]\\d{0,2}))?\\s*$/.exec(token);
+      if(!match)throw Error('syntax');
+      const start=Number(match[1]),end=Number(match[2]||match[1]);
+      if(start<1||end>count||end<start)throw Error('range');
+      for(let i=start;i<=end;i++){
+        if(values.has(i-1))throw Error('duplicate index');
+        values.add(i-1);
+      }
+    }
+    if(!values.size)throw Error('empty selection');
+    return [...values].sort((a,b)=>a-b);
+  }
+  $('batch-apply').addEventListener('click',()=>{
+    try{
+      if(points.length<2)throw Error('no route');
+      const indices=batchSelection($('batch-indices').value.trim().toLocaleLowerCase(),points.length);
+      // All-or-nothing transformation, never partially mutates the draft.
+      const next=actionDraft.applyTemplate(groups,points.length,{
+        indices,template:$('batch-template').value,mode:$('batch-mode').value
+      });
+      groups=next.groups;
+      dirty=true;renderGroups();
+      message('Aktionsvorlage auf '+indices.length+
+        ' Wegpunkte angewendet. Flugroute und Kameraaktionen erneut prüfen; flightReady=false.');
+    }catch{message('Batch-Aktion abgelehnt: Auswahl, Grenze oder Aufnahmesequenz ungültig.',true);}
+  });
+  $('reverse').addEventListener('click',()=>{
+    try{
+      const plan=makePlan();
+      const result=actionDraft.reverseRoute(plan);
+      if(!window.confirm('Routenrichtung und Wegpunktnummern umkehren? Heading, Gimbal, RTH und Kameraziele müssen neu geprüft werden.'))return;
+      // All-or-nothing, recording actions cannot be reversed implicitly.
+      points=result.plan.waypoints.map(p=>({lat:p.lat,lon:p.lon}));
+      groups=result.plan.actionGroups.map(g=>({
+        index:g.index,actions:g.actions.map(a=>({...a}))
+      }));
+      dirty=true;renderEditor();
+      message('Flugroute umgekehrt. NEUE Sicht-, Heading-, Gelände- und RTH-Prüfung zwingend; flightReady=false.');
+    }catch{message('Routenumkehr blockiert. Video-/Intervallaktionen oder Wegpunkte nicht sicher umkehrbar.',true);}
+  });
   $('review').addEventListener('click',()=>{try{review();}catch{
     message('Entwurf enthält ungültige Koordinaten, Flugwerte oder Aktionen.',true);
   }});
