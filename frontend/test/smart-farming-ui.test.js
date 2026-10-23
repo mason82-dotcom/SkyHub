@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {normalizeCatalog,format,mount}=require('../public/smart-farming-ui');
+const {normalizeCatalog,format,mount,allowsBearerOrigin}=require('../public/smart-farming-ui');
 const id='m3m-exp-'+('a'.repeat(24));
 const base=()=>({
   schema:'skyhub-m3m-smart-farming-catalog-api-v1',
@@ -82,4 +82,27 @@ test('main dashboard has a discoverable navigation link',()=>{
   const src=fs.readFileSync(path.resolve(__dirname,'../public/index.html'),'utf8');
   assert.match(src,/href="\/smart-farming.html"/);
   assert.match(src,/aria-label="SkyHub-Module"/);
+});
+
+test('M3M access-token transport rejects unencrypted LAN and credential-bearing origins',()=>{
+  for(const url of [
+    'https://rpi5.fritz.box',
+    'https://rpi5.fritz.box:8443',
+    'http://localhost:4001',
+    'http://127.0.0.1:4001',
+    'http://[::1]:4001'
+  ])assert.equal(allowsBearerOrigin(url),true,url);
+  for(const url of [
+    'http://192.168.178.63:4001',
+    'http://rpi5.fritz.box',
+    'http://host.docker.internal',
+    'ftp://localhost',
+    'https://user:password@rpi5.fritz.box',
+    'https://rpi5.fritz.box/private',
+    '',
+    null
+  ])assert.equal(allowsBearerOrigin(url),false,String(url));
+  const src=fs.readFileSync(path.resolve(__dirname,'../public/smart-farming-ui.js'),'utf8');
+  assert.match(src,/if\(!allowsBearerOrigin\(global\?\.location\?\.origin\)\)/);
+  assert.match(src,/token\.value='';\s*setStatus\(doc,'Katalog-Token nur über HTTPS/);
 });
