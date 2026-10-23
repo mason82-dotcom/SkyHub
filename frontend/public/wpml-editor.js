@@ -33,8 +33,8 @@
       // Match the exporter's decimal-only camera cadence parser, rather than
       // accepting JS number syntax (e.g. 1e2 / hex) that WPML refuses.
       const decimalField=id=>{
-        const raw=$(''+id).value.trim();
-        return /^(?:\\d+(?:\\.\\d*)?|\\.\\d+)$/.test(raw)?Number(raw):NaN;
+        const raw=$(id).value.trim();
+        return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)?Number(raw):NaN;
       };
       const cameraRaw=$('photo-camera-min').value.trim();
       const output=reviewCore.analyze({
