@@ -25,6 +25,7 @@ NAME = re.compile(r'^(DJI_\d{14}_\d{4})_MS_(G|R|RE|NIR)\.TIF$', re.I)
 CAPTURE = re.compile(r'^DJI_\d{14}_\d{4}$', re.I)
 SHA256 = re.compile(r'^[a-fA-F0-9]{64}$')
 MAX_IMAGES = 2500
+MAX_ENTRIES = 10000
 MAX_IMAGE_BYTES = 128 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 20 * 1024 * 1024
 MAX_PANEL_BYTES = 64 * 1024
@@ -123,9 +124,13 @@ def _images(directory: Path, panel_captures: tuple[str, ...]):
     groups = {}
     fingerprints = []
     count = 0
+    scanned = 0
     # No recursive traversal, and no silently ignored TIFF files.
     with os.scandir(directory) as entries:
         for entry in entries:
+            scanned += 1
+            if scanned > MAX_ENTRIES:
+                raise PreflightError('Too many directory entries')
             if entry.is_dir(follow_symlinks=False):
                 continue
             if entry.name.upper().endswith(('.TIF', '.TIFF')):
