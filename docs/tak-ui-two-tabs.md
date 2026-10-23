@@ -30,3 +30,15 @@ node scripts/check-dashboard-inline.js frontend/public/index.html
 ```
 
 Tests prüfen die Panel-Zuordnung, Klick/Pfeiltasten/Home/End, Rückkehr zur Karte, Fehler bei unvollständigem DOM und den nicht sendenden TAK-Platzhalter. Browser-QA auf Desktop, Smartphone und DJI Pilot 2 ist zusätzlich erforderlich. Der hier geprüfte GitHub-Branch wurde nicht automatisch auf den Raspberry Pi übertragen oder produktiv gestartet.
+
+## Responsive Abnahme und Browser-Fixture (23.10.2026)
+
+Die eigenständige TAK-Statusansicht nutzt ein kompaktes responsives Raster:
+
+- unter 600 px: eine Spalte,
+- 600 bis einschließlich 1100 px: zwei Spalten,
+- über 1100 px: drei Spalten.
+
+Ein **lokaler Chromium/Playwright-Layouttest mit nachgebauter UI-Fixture** hat 320, 360, 390, 599, 600, 601, 768, 834, 850, 851, 1024, 1100, 1101 und 1440 px gegen horizontalen Überlauf geprüft. Darüber hinaus wurden Klick, ArrowRight-Fokuswechsel und Rückkehr zum Operations-Panel geprüft. Die Test-Fansicht nutzt die Tab-Markup-/CSS-Struktur und statusbezogene Inhalte dieses PR, aber **nicht die vollständige SkyHub-Laufzeit**. Sie bestätigt deshalb weder Leaflet-Rendering noch Socket.IO/MQTT-Zustände, Browserkompatibilität auf Pilot-2-Hardware oder einen echten TAK-API-Vertrag.
+
+Hinweis auf den weiterhin nötigen Freigabetest: Der angepasste Backend-Hook darf erst nach gesonderter Hardware-, Security- und Browser-Abnahme einen TAK-Netzwerkpfad erhalten. Dieser Branch ändert keine produktiven Export-Flags.
