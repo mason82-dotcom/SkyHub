@@ -21,7 +21,7 @@ test('DJI component inventory exposes the documented methods without loading the
     assert.equal(c.djiLoad, load);
     assert.equal(c.djiDestroy, destroy);
     assert.equal(Object.isFrozen(c), true);
-    assert.match(c.demo, /^demo\/en\/[a-z-]+\.html$/);
+    assert.match(c.demo, /^demo\/en\/[a-z_-]+\.html$/);
   }
   assert.equal(ref.describeComponent('__proto__'), null);
   assert.equal(ref.describeComponent('toString'), null);
