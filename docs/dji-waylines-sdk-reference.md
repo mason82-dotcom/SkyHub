@@ -207,3 +207,37 @@ Der Parser erkennt die beiden Kennungen nun **explizit und strikt getrennt**:
 Tests: `node --test backend/test/wpml-namespace-compat.test.js backend/test/wpml-reference-audit.test.js`.
 
 **Offene Abnahme:** Ein echter Pilot-2-/FlightHub-2-KMZ-Export mit unverändertem Namespace, Fluggeräte-/Firmwareprofil und XML-Feldinventar ist erforderlich, um das tatsächlich verwendete Dialektprofil weiter einzugrenzen. Weder eine erfolgreiche partielle Validierung noch der Namespace allein genügen für einen Hardware-Nachweis.
+
+## P0: Lokale Routenbibliothek und unveränderliche Revisions-Snapshots (Phase 8)
+
+Der Browser-Prototyp `/wpml-route-library.html` ergänzt den bestehenden einfachen WPML-Editor **ohne Änderung der DJI-Datenbank oder Cloud-APIs**. Die Bibliothek liegt im Browser-Origin unter dem separaten Schlüssel `skyhub.wpml.local-route-library.v1` und wird **nur nach ausdrücklichem Klick auf „Revision lokal speichern“** persistent abgelegt. Der Inhalt einschließlich GPS-Positionen liegt **unverschlüsselt in `localStorage`**. Nicht für öffentlich zugängliche oder geteilte Geräte verwenden; kein automatisches Speichern, Backup, Upload, Cross-Browser-Sync oder Multiuser-ACL.
+
+Funktionen des `wpml-route-library-core.js`:
+- Routen neu erstellen, benennen, mit Ordnerzeichenfolge kategorisieren, filtern, duplizieren und nach Bestätigung vollständig löschen;
+- revisionsweise speichern und beliebige Revision explizit laden; eine neue Revision überschreibt **nie** die Plandaten einer vorherigen Revision;
+- 32 Routen, maximal 12 Revisionen je Route, insgesamt höchstens 512 KiB JSON; keine automatische Historienkürzung;
+- für eine konkrete Revision mit `taskSnapshot()` einen von der Bibliothek losgelösten, rekursiv eingefrorenen **Offline-Task-Referenzsnapshot** erzeugen. Dieser ist weder ein geplanter Flugauftrag noch ein persistierter DJI-Task-Plan;
+- bei unlesbarem/ungültigem Bibliotheksinhalt oder überlaufendem Speicher keine stillschweigende Reparatur oder Datenüberschreibung.
+
+Die Routen lassen sich über `/wpml-route-library.html` interaktiv bearbeiten. Der neue Bildschirm enthält eine eigene Punktliste, Ordnerfilter, Revisionsauswahl, Gruppenliste und einen lokalen KMZ-Export. Revisionen mit Höhenmodus, Legacy-Fotoflags oder Foto-Intervall-Optionen, die der aktuelle Bildschirm **noch nicht verlustfrei bearbeiten kann**, werden beim Laden **abgelehnt, statt stillschweigend vereinfacht**. Die ursprünglichen Daten in der Bibliothek bleiben erhalten.
+
+## P1: Geordnete Wegpunktaktionen – konservative ausführbare WPML-Teilmenge
+
+`frontend/public/wpml-action-draft.js` beschreibt pro Wegpunkt höchstens **eine `reachPoint`-Action Group mit maximal acht Aktionen**, einschließlich deren Reihenfolge. Der vorhandene `wpml-editor-core.js` serialisiert die Gruppen jetzt im generierten `waylines.wpml` in DJI-konforme Elementstrukturen:
+
+| Aktion | Einschränkung |
+|---|---|
+| `takePhoto` | Kamera-Payload-Position fest 0, keine unbewiesene Objektivauswahl |
+| `hover` | 0,1–120 Sekunden |
+| `rotateYaw` | −180° bis +180° |
+| `startRecord` / `stopRecord` | Nur ausgewogene, entlang der Flugroute sortierte Start-/Stop-Paare |
+
+Nicht implementierte WPML-Aktionen wie `zoom`, `focus`, `gimbalRotate`, `orientedShoot`, Drittanbieter-KI und Kamera-spezifische Linsenprofile werden **abgewiesen**, niemals kommentarlos ausgelassen. Ebenso werden bisherige Wegpunkt-Photo-Flags und Foto-Intervall-Auslöser **nicht** gemeinsam mit dem neuen Action-Group-Modell akzeptiert, solange ein semantisch sicherer Merge fehlt. Jeder Export verbleibt bei `flightReady:false`, `cameraHardwareVerified:false`; auch gültiges WPML bedeutet **keine** bestätigte Pilot-2-Kompatibilität.
+
+Das UI unterstützt das Hinzufügen, Entfernen und Umordnen von Wegpunkten sowie das Anlegen, Bearbeiten und Umordnen der Aktionseinträge. Eine spätere P1-Ausbaustufe benötigt erst gesicherte Go-/Pilot2-Referenzdateien für weitere Trigger, Kameraparameter und Onboard-KI.
+
+```bash
+node --test backend/test/wpml-library-actions.test.js
+```
+
+**Grenze P0:** Es handelt sich bewusst um eine browserlokale MVP-Bibliothek, **nicht** um die spätere zentrale, serverseitige Routenverwaltung mit projektweiten Ordnern, Berechtigungen, Team-Synchronisation und transaktionalen Datenbanksnapshots. Diese Funktionen verlangen vor einem Server-Rollout eine eigenständige Authentifizierungs-, Datenmodell- und Migrationsprüfung.
