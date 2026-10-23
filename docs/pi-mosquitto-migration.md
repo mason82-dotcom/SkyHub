@@ -68,7 +68,7 @@ cd ~/Projekte/SkyHub-Next
 docker compose -p skyhub-next --env-file .env config --quiet
 bash scripts/pi-preflight.sh --broker-kind mosquitto --broker-port 1883
 node --test backend/test/mqtt-config.test.js backend/test/pilot-config.test.js
-python3 -m unittest tests.test_pi_broker_preflight
+python3 -m unittest discover -s tests -p 'test_pi_broker_preflight.py'
 ```
 
 Erst nach abgeschlossener Broker-/Topic-/Pilot-2-Abnahme und DB-/Env-Backup:
