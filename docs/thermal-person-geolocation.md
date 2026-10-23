@@ -194,6 +194,10 @@ Full implementation contract, synthetic example, sensitive-file rules and CLI: [
 
 A new `backend/workers/thermal_dji_jpeg_markers_offline.py` adds a **bounded**, signed-capture-gated inspection of APP1 DJI-XMP/EXIF *marker names only*. It cannot supply position, image authenticity, AGL, Gimbal pose, time alignment, calibration or detected persons. Whitelisted field-name presence is returned in a privacy-redacted JSON report with all mission-readiness and geolocation verification flags false. Non-JPEG originals are explicitly `unsupported-media-format`; there is no video/SRT or radiometric decoder. Full contract: [DJI JPEG marker probe](thermal-dji-jpeg-marker-probe.md).
 
+## MP4/MOV and SRT timebase inspection (offline only)
+
+`backend/workers/thermal_dji_video_timebase_offline.py` adds a bounded, read-only inspection of **MP4/MOV container atom headers and independently SHA-256-pinned SRT cue timecodes** behind the existing PR #50 sealed-capture/profile gate. It does not decode video frames, read GPS values from subtitles, compute DJI flight/telemetry timestamps or assert clock synchronization. Nominal movie duration and monotonic relative SRT timecodes remain **unverified source metadata**, not real UTC or frame-to-pose alignment. Full documentation: [MP4/MOV/SRT timebase probe](thermal-dji-video-timebase-offline.md). All geolocation/mission-readiness flags stay false.
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
