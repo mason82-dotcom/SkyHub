@@ -40,7 +40,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
 <body>
 <header>
   <div><h1>SkyHub <span>WPML Missionsentwurf</span></h1><small>DJI Cloud API 1.18 · ausschließlich Offline-Dateierstellung</small></div>
-  <nav><a href="/wpml-survey-preview.html">2D-Vermessungsvorschau</a> · <a href="/">← Zum Live-Dashboard</a></nav>
+  <nav><a href="/wpml-route-library.html">Routenbibliothek & Action Groups</a> · <a href="/wpml-survey-preview.html">2D-Vermessungsvorschau</a> · <a href="/">← Zum Live-Dashboard</a></nav>
 </header>
 <main>
  <section class="map-wrap" aria-label="Wegpunktkarte">
@@ -51,6 +51,16 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
   <h2>Mission konfigurieren</h2>
   <p class="caption">Die Verarbeitung erfolgt lokal im Browser. WPML/XML oder GPS-Koordinaten werden nicht an den SkyHub-Server gesendet. Kartenausschnitte werden gegebenenfalls von OpenStreetMap geladen.</p>
   <form id="mission-form" autocomplete="off">
+   <h2>Waylines-JSON importieren (Referenz-SDK)</h2>
+   <label for="waylines-reference-file">Lokale JSON-Datei</label>
+   <input id="waylines-reference-file" type="file" accept=".json,application/json">
+   <div class="tools">
+     <button type="button" id="waylines-reference-apply" disabled>Geprüften Entwurf übernehmen</button>
+     <button type="button" id="waylines-reference-discard" disabled>Import verwerfen</button>
+   </div>
+   <div id="waylines-reference-preview" role="status" aria-live="polite" class="caption">Keine Waylines-JSON-Datei ausgewählt. Der aktuelle Missionsentwurf bleibt unverändert.</div>
+   <p class="caption">Referenz: motecshine/dji-waylines-sdk. Ausschließlich das eng begrenzte Waylines-JSON-Teilformat mit numerischen DJI-IDs, konstanten Wegpunkthöhen und optionalen Einzelbildaktionen. Nicht unterstützte Parameter werden abgewiesen, nicht stillschweigend ignoriert. Eine Zusammenfassung wird vor der Übernahme gezeigt. Maximal 128 KiB; die Datei bleibt im Browser. Die RC-Verlustregeln können gegenüber dem Go-SDK abweichen. Kein Flugauftrag.</p>
+   <hr>
    <label for="name">Missionsname</label><input id="name" maxlength="70" value="SkyHub Wegpunktmission" required>
    <label for="model">DJI-Fluggerät</label>
    <select id="model">
@@ -92,6 +102,12 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
      <p class="caption">Nur offline generierte WPML-Aktionsgruppe; nicht auf DJI Pilot 2, Mavic 3M oder anderen Geräten verifiziert. Einzelbilder je Wegpunkt werden in diesem Modus deaktiviert. Insbesondere Start-/Endauslösung und Stopps an Wegpunkten sind NICHT hardwaregetestet.</p>
    </div>
    <hr>
+   <section aria-label="Lokale Missionsprüfung">
+     <h2>Missionsprüfung · nur Entwurf</h2>
+     <p class="caption">Ausschließlich lokale, ungefähre 2D-Geometrie und Eingabeprüfung. Keine DJI-Geräteprüfung, Flugzeitschätzung, Terrain-, Luftraum- oder Kollisionsprüfung.</p>
+     <div id="mission-review" class="waypoint" role="status" aria-live="polite">Lokale Prüfung noch nicht verfügbar. Kein Flugbereitschaftsnachweis.</div>
+   </section>
+   <hr>
    <button type="submit" id="export">WPML-KMZ lokal exportieren</button>
    <p class="caption">Ausgegeben werden template.kml und waylines.wpml im KMZ-Archiv. Wegpunkte, relative und WGS84-Ellipsoidhöhen sowie experimentelle, noch nicht in DJI Pilot 2 geprüfte Intervall-Fotoaktionen. Mapping2D/3D, Korridore, Terrain-Referenzen und Multispektralaktionen werden hier noch nicht zu Missionswegen berechnet.</p>
    <div id="message" role="status" aria-live="polite">Mindestens zwei unterschiedliche Wegpunkte setzen.</div>
@@ -102,6 +118,8 @@ hr{border:0;border-top:1px solid var(--edge);margin:16px 0}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/wpml-interval-actions.js"></script>
 <script src="/wpml-editor-core.js"></script>
+<script src="/wpml-waylines-reference.js"></script>
+<script src="/wpml-mission-review.js"></script>
 <script src="/wpml-editor.js"></script>
 </body>
 </html>

@@ -1,4 +1,6 @@
-# SkyHub Next
+# SkyHub-Next
+
+**Kanonisches Repository:** [mason82-dotcom/SkyHub-Next](https://github.com/mason82-dotcom/SkyHub-Next) · [Repository-Umbenennung und sichere lokale Remote-Umstellung](docs/repository-identity.md).
 
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
@@ -28,6 +30,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
 - [DJI WPML 1.18: KMZ-Inspektion, Feldabgleich und Einschränkungen](docs/dji-wpml-integration.md)
+- [Flight-Route-Library: WPML-Referenz-Audit, P0-Revisionsbibliothek und P1-Aktionsmodell](docs/dji-waylines-sdk-reference.md)
+- [Repository-Adresse, lokale Git-Remotes und Trennung zum Legacy-System](docs/repository-identity.md)
 
 ### WPML-Wegpunkteditor (noch nicht produktiv ausgerollt)
 
@@ -144,3 +148,7 @@ Der konsolidierte Root-Stack enthält die isoliert getesteten PostGIS- und Backu
 - [Entwicklungsplan und Fortschritt](docs/entwicklungsplan-2026-10-20.md)
 
 **Pi-Update:** Ein Git-Merge ist kein Deployment. Vor einem Update auf dem Pi lokale `.env`, Overrides und persistente PostGIS-Daten sichern, nur das bestehende Backend aktualisieren und danach über `/api/health` prüfen. Keine Compose-Volumes löschen, keine Legacy-Dienste starten und keine offenen DJI-Feature-Flags ungeprüft aktivieren.
+
+## Zusätzliche Waylines-SDK-Referenz für Offline-Missionsplanung
+
+Der WPML-Wegpunkteditor kann jetzt das **stark eingeschränkte, numerische Waylines-JSON-Teilformat** aus der Motecshine-Go-SDK-Referenz als lokale Datei importieren. Eine unveränderte Übernahme von SDK-KMZ oder Drittquellcode findet nicht statt; der DJI-Cloud-API-Missionsversand bleibt deaktiviert. Herkunft, Feldgrenzen, Validierung und offene Lizenzklärung: [Waylines-SDK-Referenz](docs/dji-waylines-sdk-reference.md). Ein zusätzlicher rein lesender KMZ-Referenzrisiko-Audit ist über `node scripts/wpml-reference-audit.js /pfad/mission.kmz` verfügbar. Die reproduzierbare synthetische Vergleichsmatrix (`5 Modelle × 6 Szenarien`) läuft über `node scripts/wpml-reference-matrix.js`. Der **P0/P1 Offline-Prototyp** für lokale Routenrevisionen und geordnete Wegpunkt-Aktionsgruppen steht unter `/wpml-route-library.html`; nur explizite Speicheraktionen legen die GPS-Daten im lokalen Browser-Speicher ab. Über den Abschnitt **Lokale Sicherung und Wiederherstellung** kann die Bibliothek nach expliziter Bestätigung als **unverschlüsselte JSON-Datei** gesichert und erst nach strenger lokaler Prüfung und zweiter Bestätigung wiederhergestellt werden; dabei ersetzt der Import die gesamte Bibliothek. Kein zentraler Server-Abgleich oder Flugauftrag. Echte, ausschließlich lokal vorliegende KMZ-Referenzen lassen sich mittels privatem, per `.gitignore` ausgeschlossenem Manifest durch `node scripts/wpml-reference-evidence.js .local-wpml-evidence/references.json` paarweise untersuchen; die Rollenbezeichnungen sind unbestätigte Bedienerangaben, kein DJI-Pilot-2-Nachweis. Er meldet nur feste Diagnosecodes, gibt weder GPS-Koordinaten noch Missionsnamen aus und ersetzt keine DJI-Pilot-2-Abnahme.

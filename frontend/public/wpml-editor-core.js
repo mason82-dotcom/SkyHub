@@ -4,9 +4,9 @@
  * https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports=factory(require('./wpml-interval-actions'));
-  else root.SkyHubWpmlPlanner=factory(root.SkyHubWpmlIntervalActions);
-})(typeof globalThis === 'object' ? globalThis : this, function (intervalActions) {
+  if (typeof module === 'object' && module.exports) module.exports=factory(require('./wpml-interval-actions'),require('./wpml-action-draft'));
+  else root.SkyHubWpmlPlanner=factory(root.SkyHubWpmlIntervalActions,root.SkyHubWpmlActionDraft);
+})(typeof globalThis === 'object' ? globalThis : this, function (intervalActions,actionDraft) {
   const MODELS=Object.freeze({
     mavic3e:Object.freeze({name:'DJI Mavic 3E',drone:77,subtype:0,payload:66}),
     mavic3t:Object.freeze({name:'DJI Mavic 3T',drone:77,subtype:1,payload:67}),
@@ -73,11 +73,16 @@
       });
     if(input.intervalPhotos!==undefined&&!intervalActions)
       invalid('interval action module unavailable');
+    if(input.actionGroups!==undefined&&!actionDraft)
+      invalid('action group module unavailable');
+    const actionGroups=input.actionGroups===undefined?Object.freeze([]):
+      actionDraft.normalize(input.actionGroups,waypoints.length,
+        waypoints.some(p=>p.photo),intervalPhotos!==null);
     const timestamp=input.timestamp??Date.now();
     if(!Number.isSafeInteger(timestamp)||timestamp<0||timestamp>9999999999999)
       invalid('timestamp');
     return Object.freeze({name:name.trim(),modelKey:input.model,model,speed,transitionSpeed,
-      takeoffHeight,finishAction,waypoints,useLocalHeights,intervalPhotos,timestamp});
+      takeoffHeight,finishAction,waypoints,useLocalHeights,intervalPhotos,actionGroups,timestamp});
   }
   function field(name,value){return '<wpml:'+name+'>'+esc(value)+'</wpml:'+name+'>';}
   function missionConfig(p){
@@ -148,7 +153,9 @@
         field('waypointTurnMode','toPointAndStopWithDiscontinuityCurvature')+
         '</wpml:waypointTurnParam>'+
         (index===0?intervalGroup:'')+
-        (point.photo?actionGroup(index,groupId++):'')+'</Placemark>').join('')+
+        (point.photo?actionGroup(index,groupId++):'')+
+        p.actionGroups.filter(group=>group.index===index).map(group=>
+          actionDraft.serializeGroup(group,groupId++)).join('')+'</Placemark>').join('')+
       '</Folder>\n';
     const templateXml=KML_HEADER+metadata+config+templateFolder+KML_FOOTER;
     const waylinesXml=KML_HEADER+metadata+config+waylineFolder+KML_FOOTER;
@@ -206,7 +213,11 @@
       kmz:createKmz(output.templateXml,output.waylinesXml),
       summary:{name:output.plan.name,aircraft:output.plan.model.name,
         waypointCount:output.plan.waypoints.length,
-        photoCount:output.plan.waypoints.filter(x=>x.photo).length,
+        photoCount:output.plan.waypoints.filter(x=>x.photo).length+
+          output.plan.actionGroups.reduce((n,g)=>n+g.actions.filter(a=>a.type==='takePhoto').length,0),
+        actionGroupCount:output.plan.actionGroups.length,
+        orderedActionCount:output.plan.actionGroups.reduce((n,g)=>n+g.actions.length,0),
+        cameraHardwareVerified:false,
         intervalPhotos:output.plan.intervalPhotos?{
           type:output.plan.intervalPhotos.type,
           interval:output.plan.intervalPhotos.interval,
