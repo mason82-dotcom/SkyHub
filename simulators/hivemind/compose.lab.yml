@@ -15,6 +15,7 @@ services:
 
   hivemind-broker:
     image: eclipse-mosquitto:2
+    user: "1883:1883"
     restart: "no"
     command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
     volumes:
