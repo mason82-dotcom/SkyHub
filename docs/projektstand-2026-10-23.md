@@ -105,7 +105,22 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 6. **M3M-Messwertgüte vor Smart Farming:** reale vollständige 5-Band-Aufnahmen, Herkunft/Metadaten, DN→Reflexion, Kalibrierung, Bandregistrierung, Maskierung, geographischer Bezug, Referenzflächen, QA und nachvollziehbarer Export. Erst danach operationelle NDVI-/NDRE-Karten oder Agronomie-Funktionen erwägen.
 7. **Thermal / YOLO / WPML:** Lizenzen, Modellherkunft, reale Kamera- und Gimbalmetadaten, Ground-Truth, sichere Offline-Prozesse und getrennte DJI-1.18-End-to-End-Abnahmen vor Live-Integration.
 
-## 6. Nützliche Dokumente und verbindliche Trennlinien
+## 6. Nachtrag zur Konsolidierung (23.10.2026)
+
+Seit dieser ersten Momentaufnahme sind drei weitere offene Drafts hinzugekommen:
+[#54](https://github.com/mason82-dotcom/SkyHub/pull/54) (offline MP4/MOV-/SRT-Zeitstrukturen),
+[#55](https://github.com/mason82-dotcom/SkyHub/pull/55) (extern vorbereitetes DEDAL/ODM-Orthomosaik-Handoff)
+und [#56](https://github.com/mason82-dotcom/SkyHub/pull/56) (relative MP4-Sample-DTS/PTS).
+**Keines** ist in Main oder auf dem Pi integriert; die Versuche beweisen keine
+reale DJI-Video-/UTC-Synchronisation, Reflexionskalibrierung oder operative
+Karten-/SAR-Bereitschaft.
+
+Die vollständige **Merge-Reihenfolge, Basiskette und Review-Gates** stehen im
+[priorisierten Integrationsplan](integration-priorities-2026-10-23.md).
+Insbesondere ist der sehr umfangreiche [#24](https://github.com/mason82-dotcom/SkyHub/pull/24)
+kein sicherer pauschaler Merge-Kandidat.
+
+## 7. Nützliche Dokumente und verbindliche Trennlinien
 
 - [README](../README.md) – Startpunkt und Root-/Legacy-Grenze
 - [Architektur](architecture.md) und [Sicherheitsmodell](security.md) – **nur Main** als Runtime-Vertrag
