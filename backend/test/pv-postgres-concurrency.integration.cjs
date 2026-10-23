@@ -120,7 +120,7 @@ test.before(async () => {
     `);
     assert.equal((await pool.query('SELECT current_schema() AS s')).rows[0].s,schema);
     await pool.query('CREATE TABLE dji_pilot_media_verified(workspace_id uuid NOT NULL,asset_id uuid NOT NULL,PRIMARY KEY(workspace_id,asset_id))');
-    await pool.query("CREATE FUNCTION skyhub_dji_pilot_media_audit_immutable() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'Immutable PV audit'; END $");
+    await pool.query("CREATE FUNCTION skyhub_dji_pilot_media_audit_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Immutable PV audit'; END; $$");
     await pool.query(fs.readFileSync(path.join(__dirname,'..','experimental','pv_jobs_isolated.sql'),'utf8'));
     await pool.query('INSERT INTO dji_pilot_media_verified(workspace_id,asset_id) VALUES($1,$2),($1,$3),($4,$2)',[workspace,asset,otherAsset,otherWorkspace]);
     store=createPvJobStore({db:pool,authorize:async({operation})=>['pv_job_request','pv_job_read','pv_job_recovery'].includes(operation),auditDenied:async({workspaceId,action})=>{await pool.query('INSERT INTO skyhub_pv_job_denied_audit(workspace_id,action) VALUES($1,$2)',[workspaceId,action]);}});
