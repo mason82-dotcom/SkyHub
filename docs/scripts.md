@@ -2,7 +2,7 @@
 
 Diese Übersicht bezieht sich auf das **aktive SkyHub-Next-Repository-Root**. Ein Skript im Verzeichnis `scripts/` ist nicht automatisch harmlos; die **Argumente** entscheiden über Schreibzugriffe. Die aktuelle Live-Installation und ihre Konfiguration müssen vor betrieblichen Änderungen erneut geprüft werden.
 
-**Keine Befehle in dieser Tabelle werden durch GitHub Actions ausgeführt.** Die CI prüft ausschließlich ihre Syntax; `docker compose config` und ein isolierter Image-Build sind separate CI-Prüfungen, keine Pi-Deployments.
+**CI-/Betriebsgrenze:** GitHub Actions führt eine Reihe von Syntax-, Node-/Python-, Compose- und isolierten Datenbank-/Backup-/Restore-Prüfungen mit Wegwerf-Testumgebungen aus, jedoch keine der hier beschriebenen **Pi-Live-Aktionen** wie EMQX-/Caddy-Apply, Pilot-Pairing, Backend-Update oder Legacy-Übernahme. Ein synthetischer CI-Restore ist kein Restore-Test des echten Pi-Datenbestands. Bei Branch-spezifischen Simulator-/Medien-Workflows deren eigene Schutzgrenzen beachten.
 
 ## Wirkungsgruppen
 
