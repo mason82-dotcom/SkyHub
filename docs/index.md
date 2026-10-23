@@ -5,7 +5,8 @@
 ## Zuerst lesen
 
 1. [README / Produktumfang und sichere lokale Checks](../README.md)
-2. [Projektstand 23.10.2026 / verifizierter Main-SHA, PR-Status und Integrationsgates](projektstand-2026-10-23.md) – **maßgeblich für aktuelle Fortschrittsaussagen**
+2. [Projektstand 23.10.2026 / verifizierter Main-SHA, PR-Status und Integrationsgates](projektstand-2026-10-23.md)
+   - [Priorisierte Integrationsstrategie: PR-Abhängigkeiten, Merge-Gates und neue Research-Zweige](integration-priorities-2026-10-23.md) – **maßgeblich für aktuelle Fortschrittsaussagen**
 3. [Architektur, Datenwege und API](architecture.md)
 4. [Sicherheitsmodell, Authentifizierung und LAN/TLS](security.md)
 5. [Betrieb, Checks und kontrolliertes Backend-Update](ops.md)
