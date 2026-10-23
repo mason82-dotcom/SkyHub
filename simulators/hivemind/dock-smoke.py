@@ -69,7 +69,24 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
             any(isinstance(e, dict) and e.get("sn") == dock_sn and
                 e.get("method") == "flighttask_progress" for e in events),
             "Mission progress event not observed by SkyHub")
-    print("PASS: synthetic Dock HMS and prepare/execute/progress/pause/recovery")
+    # Metadata-only: storage_config_get MUST deny STS and upload reports MUST
+    # acknowledge with matching tid/bid. The monitor runs inside dock-mock,
+    # never against a real bucket or production broker.
+    media_args = args[:-2] + ["/app/media-probe.js", dock_sn]
+    try:
+        media = subprocess.run(media_args, cwd=ROOT, timeout=45,
+                               capture_output=True, text=True, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        raise SmokeFailure("Metadata-only media probe failed to launch") from None
+    if media.returncode != 0 or "PASS: STS denied" not in media.stdout:
+        raise SmokeFailure("Metadata-only media MQTT acknowledgement failed")
+    events_after = request(SKYHUB, "/api/events", token=token)
+    require(isinstance(events_after, list) and
+            any(isinstance(e, dict) and e.get("sn") == dock_sn and
+                e.get("method") == "file_upload_callback" for e in events_after),
+            "File upload metadata event not observed by SkyHub")
+    print("PASS: no-STS media metadata, upload priority, callbacks and events_reply")
+    print("PASS: synthetic Dock HMS, safe ground cancellation, airborne-stop refusal and progress")
 
 def run() -> None:
     token = local_token()
