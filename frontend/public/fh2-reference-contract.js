@@ -48,6 +48,7 @@
   const baselineGates = Object.freeze([
     'fh2-on-prem-runtime-and-license',
     'version-and-documentation-pinned',
+    'supported-device-model-confirmed-by-dji',
     'workspace-and-project-boundary-reviewed',
     'organization-key-browser-exposure-blocked-or-explicitly-resolved',
     'approved-credential-lifecycle',
