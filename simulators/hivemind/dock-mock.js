@@ -2,8 +2,6 @@
 
 // Synthetic lab-only DJI Dock onboarding responder. NOT a production Cloud API.
 // No external targets, no real credentials, no serials or request bodies in logs.
-const mqtt = require('mqtt');
-
 const ORG = 'skyhub-lab-org';
 const CODE = 'skyhub-lab-code';
 const MAX_BYTES = 8192;
@@ -108,6 +106,7 @@ function createResponder(clock = Date.now) {
 }
 
 function start() {
+  const mqtt = require('mqtt');
   // Container DNS and port are compile-time allowlisted for this lab.
   // Never accept user-provided MQTT URLs or production broker credentials.
   const client = mqtt.connect('mqtt://hivemind-broker:1884', {
