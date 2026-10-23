@@ -1,6 +1,7 @@
 'use strict';
 const mqtt=require('mqtt');
-const {parseMessage}=require('./dji');
+const {parseMessage,parseTopic}=require('./dji');
+const {parseServiceReply}=require('./dji-service-reply-contract');
 const {classifyMessage}=require('./message-guard');
 const {createStatusReply}=require('./topology-ack');
 const {deviceCachePayload}=require('./device-cache');
@@ -12,7 +13,8 @@ const SUBSCRIPTIONS=[
 
 // Read-only DJI MQTT ingest plus the optional, ACL-restricted status_reply publisher.
 function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecorder,
-  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,onTopologyChanged=null}){
+  trackRecordingEnabled,pool,mqttStats,mqttShapes,mqttModelShapes,onTopologyChanged=null,
+  mqttConnect=mqtt.connect}){
   const ackEnabled=env.SKYHUB_TOPOLOGY_ACK_ENABLED==='true';
   const ackUser=env.SKYHUB_TOPOLOGY_ACK_MQTT_USER||'';
   const ackPassword=env.SKYHUB_TOPOLOGY_ACK_MQTT_PASSWORD||'';
@@ -46,6 +48,22 @@ function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecor
   function onMessage(topic,payload,packet){
     // Passive transport diagnostics, without recording device IDs or payloads.
     mqttStats.observed(topic);
+    // Service replies are NOT device events or OSD telemetry. Validate them
+    // independently; never create registry devices, store payloads, or emit to UI.
+    // No outbound command manager exists here, so even a valid reply is uncorrelated.
+    if(parseTopic(topic)?.channel==='services_reply'){
+      const at=Date.now();
+      try{
+        const reply=parseServiceReply(topic,payload,{retained:packet?.retain===true,now:at});
+        mqttStats.accepted({channel:'services_reply',timestamp:reply.timestamp},null,at);
+        mqttStats.serviceReplyValidated();
+      }catch(_err){
+        // Error details and reply payloads may contain secrets; log neither.
+        mqttStats.serviceReplyRejected();
+        mqttStats.rejected(packet?.retain===true?'retained':'malformed');
+      }
+      return;
+    }
     // A retained MQTT delivery is not evidence of a currently connected DJI device.
     if(packet?.retain===true){mqttStats.rejected('retained');return;}
     try {
@@ -101,9 +119,9 @@ function createMqttIngest({broker,env,registry,io,redis,topologyStore,trackRecor
   const options={...base,clientId:'skyhub_next_readonly_'+process.pid};
   if(env.MQTT_USER)options.username=env.MQTT_USER;
   if(env.MQTT_PASSWORD)options.password=env.MQTT_PASSWORD;
-  const client=mqtt.connect(broker.url,options);
+  const client=mqttConnect(broker.url,options);
   if(ack.enabled){
-    ack.client=mqtt.connect(broker.url,{...base,clientId:'skyhub_next_topology_ack_'+process.pid,
+    ack.client=mqttConnect(broker.url,{...base,clientId:'skyhub_next_topology_ack_'+process.pid,
       username:ackUser,password:ackPassword});
     ack.client.on('connect',()=>{ack.connected=true;});
     ack.client.on('close',()=>{ack.connected=false;});
