@@ -190,6 +190,10 @@ A new **offline-only** two-envelope verifier, `backend/workers/thermal_capture_c
 
 Full implementation contract, synthetic example, sensitive-file rules and CLI: [Thermal camera capture and calibration](thermal-camera-capture-calibration.md).
 
+## DJI JPEG APP1/XMP marker presence (separate read-only offline adapter)
+
+A new `backend/workers/thermal_dji_jpeg_markers_offline.py` adds a **bounded**, signed-capture-gated inspection of APP1 DJI-XMP/EXIF *marker names only*. It cannot supply position, image authenticity, AGL, Gimbal pose, time alignment, calibration or detected persons. Whitelisted field-name presence is returned in a privacy-redacted JSON report with all mission-readiness and geolocation verification flags false. Non-JPEG originals are explicitly `unsupported-media-format`; there is no video/SRT or radiometric decoder. Full contract: [DJI JPEG marker probe](thermal-dji-jpeg-marker-probe.md).
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
