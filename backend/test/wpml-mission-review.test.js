@@ -7,8 +7,10 @@ const review=require('../../frontend/public/wpml-mission-review');
 
 const p=(lat,lon,other={})=>({lat,lon,height:50,...other});
 const draft=(waypoints=[p(49,8),p(49.0009,8.0009)],other={})=>({
-  model:'mavic3e',speed:5,globalHeight:50,localHeights:false,
-  photoTrigger:'reachPoint',waypoints,...other
+  name:'Synthetic route',model:'mavic3e',speed:5,globalHeight:50,
+  takeoffHeight:30,finishAction:'goHome',localHeights:false,
+  photoTrigger:'reachPoint',photoInterval:null,cameraMinIntervalSeconds:null,
+  waypoints,...other
 });
 test('valid nominal draft is only a review, never ready or dispatchable',()=>{
   const result=review.analyze(draft());
@@ -93,6 +95,53 @@ test('fail closed for oversized, malformed and non-finite inputs',()=>{
   const bad=review.analyze(draft([p(49,8),p(NaN,Infinity)]));
   assert.equal(bad.status,'invalid');
   assert.equal(bad.horizontalDistanceMeters,null);
+});
+test('review detects missing name, takeoff and unsupported finish action',()=>{
+  for(const [field,value,issue] of [
+    ['name','   ','invalid-name'],
+    ['name','A'.repeat(71),'invalid-name'],
+    ['takeoffHeight',0,'invalid-takeoff-height'],
+    ['takeoffHeight',121,'invalid-takeoff-height'],
+    ['finishAction','autoLand','invalid-finish-action']
+  ]){
+    const r=review.analyze(draft(undefined,{[field]:value}));
+    assert.equal(r.status,'invalid');
+    assert.ok(r.issueCodes.includes(issue),issue);
+    assert.equal(r.flightReady,false);
+  }
+});
+test('periodic camera interval obeys same bounds as WPML exporter',()=>{
+  for(const [photoTrigger,photoInterval,cameraMinIntervalSeconds,issue] of [
+    ['multipleDistance',0,null,'invalid-photo-interval'],
+    ['multipleDistance',1001,null,'invalid-photo-interval'],
+    ['multipleTiming',61,null,'invalid-photo-interval'],
+    ['multipleTiming',3,0,'invalid-camera-min-interval'],
+    ['multipleTiming',3,61,'invalid-camera-min-interval'],
+    ['multipleDistance',12,4,'camera-interval-too-short'],
+    ['multipleTiming',2,3,'camera-interval-too-short']
+  ]){
+    const r=review.analyze(draft(undefined,{photoTrigger,photoInterval,cameraMinIntervalSeconds}));
+    assert.equal(r.status,'invalid');
+    assert.ok(r.issueCodes.includes(issue));
+    assert.equal(r.flightReady,false);
+    assert.equal(r.waypointPhotoCount,0);
+  }
+});
+test('unknown camera cadence is a warning, not evidence of camera verification',()=>{
+  const r=review.analyze(draft(undefined,{
+    photoTrigger:'multipleDistance',photoInterval:12,cameraMinIntervalSeconds:null
+  }));
+  assert.equal(r.status,'review-only');
+  assert.ok(r.issueCodes.includes('camera-interval-unverified'));
+  assert.equal(r.periodicPhotoMode,true);
+  assert.equal(r.hardwareVerified,false);
+});
+test('periodic and per-waypoint photo actions cannot silently coexist',()=>{
+  const r=review.analyze(draft([p(49,8,{photo:true}),p(49.001,8.001)],{
+    photoTrigger:'multipleTiming',photoInterval:3
+  }));
+  assert.equal(r.status,'invalid');
+  assert.ok(r.issueCodes.includes('photo-mode-conflict'));
 });
 test('editor page and controller present a local-only review, without flight API calls',()=>{
   const root=path.resolve(__dirname,'../../frontend/public');
