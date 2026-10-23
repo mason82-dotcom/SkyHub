@@ -2,6 +2,8 @@
 
 **Wichtig:** Die folgenden Pi-Zustände und Portbelegungen wurden am 20.10.2026 dokumentiert; sie ersetzen keine erneute Prüfung am Zielsystem. Dieser Text unterscheidet zwischen lesenden Diagnosebefehlen und Befehlen, die Container/Dateien verändern. Ein Git-Checkout oder ein Merge nimmt **keinen** automatischen Cutover vor.
 
+**Repository-Stichtag:** [Projektstand 23.10.2026](projektstand-2026-10-23.md), Main-Commit `4d878314f8345f8cd370f0004916426523e577c0`. Die bis dahin hinzugekommenen Feature-PRs und in den Integrationsbranch übernommenen UI-PRs sind **kein** automatisches Upgrade dieser Root-Compose-Installation. Die folgenden historischen Hardwareangaben behalten ihr jeweiliges Datum.
+
 **Betriebsgrenzen:** Das Root-Compose ist `skyhub-next` mit Backend-Hostport `127.0.0.1:4001`; der vorhandene Broker ist auf Hostport `1884`. Der bisherige produktive Backend-Hostport `4000` darf nicht ungeprüft übernommen werden. Das Compose im Legacy-Snapshot darf nicht gestartet werden.
 
 **Wirkung von Pi-Skripten und Freigaben:** [Betriebswerkzeuge](scripts.md). `apply`-, `rollback`- und Kopplungsaufrufe nicht mit lesenden Diagnosen verwechseln.
@@ -10,13 +12,13 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-    git clone --branch develop/skyhub-next-mqtt-integrity-v3 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+    git clone --branch main https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
     cp .env.example .env
 
 Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
 
-Nach Behebung der bekannten NVMe-Störung und nach Prüfung der Compose-Konfiguration:
+**Nur nach eigener, aktueller Prüfung** von SSD/NVMe-Gesundheit, Ressourcen, Sicherungen, Portbelegung, Git-Arbeitsbaum und Compose-Konfiguration (die älteren NVMe-Befunde sind keine Aussage über den Zustand am 23.10.2026):
 
     docker compose config --quiet
     docker compose up -d --build
@@ -99,6 +101,8 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
     node --check backend/dji.js
     node --check backend/mqtt-metrics.js
     node --test backend/test/*.test.js
+    python3 -m unittest discover -s tests -p 'test_*.py'
+    docker compose --env-file .env.example config --quiet
 
 ## MQTT/OSD-Adapter (Version 0.1.0)
 
