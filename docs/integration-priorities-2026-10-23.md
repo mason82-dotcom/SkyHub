@@ -58,6 +58,7 @@ main (fcdede48…)
                                          ├─ #48  Offline Indexraster
                                          │    └─ #51  TIFF-Payload-Audit
                                          │         └─ #55  DEDAL/ODM-Ortho-Handoff
+                                         │         └─ #59  DEDAL-ZIP-/M3M-Preflight (ohne Ausführung)
                                          └─ #43  RGB YOLO11
                                               └─ #45  Thermal Pixel→GPS
                                                    └─ #49  lokale HMAC-Provenienz
@@ -67,7 +68,8 @@ main (fcdede48…)
                                                                        └─ #56  relative MP4 DTS/PTS-Samples
 
 Separate UI-Kette: feature/dashboard-next-ui → #41 → #42
-Separater WPML-Referenzzweig: #16 → #44
+Separater WPML-Referenzzweig: #16 → #44 sowie #16 → #57
+Unabhängiges UI-Draft: main → #58 (TAK-/CoT-Platzhalter; keine Backend-Integration)
 ```
 
 Der Graph bezeichnet **Branch-Bases**, nicht automatisch verschmelzbare Codeänderungen. #41 liegt auf `feature/dashboard-next-ui`, nicht schlicht auf `main`. Jede Kette kann weitere nicht dokumentierte Vorfahren enthalten; Git-Baum-/Merge-Base prüfen.
@@ -82,7 +84,15 @@ Der Graph bezeichnet **Branch-Bases**, nicht automatisch verschmelzbare Codeänd
 
 **Es existiert damit weiterhin kein belastbarer automatischer Datenweg von rohen DJI-M3M-/M4T-Medien über kalibrierte/registrierte Messwerte zu einsatzfähigen Karten oder Personenstandorten.**
 
-## 5. Verbindliche Merge-Gates
+## 5. Ergänzungen aus den PRs #57–#59
+
+| PR | Base / technischer Umfang | Abnahmegrenze |
+| --- | --- | --- |
+| [#57 – Motecshine Waylines](https://github.com/mason82-dotcom/SkyHub/pull/57) | **Gestapelt auf #16**, nicht auf Main. Lokaler JSON→WPML-Editorimport, keine DJI-API-Schreibrechte | Lizenz-/Go-Modulpfad prüfen; fremde RC-Loss-/SubEnum-Defaults **nicht** unbemerkt übernehmen; keine M3M-/Hardware-/Flugfreigabe |
+| [#58 – TAK-/CoT-Zweittab](https://github.com/mason82-dotcom/SkyHub/pull/58) | **Direkt auf Main**, reines Dashboard-UI mit ARIA-/Tastaturbedienung und fail-closed Platzhalter | UI-Tests, Fokus-/Karten-Rückwechsel, keine CoT-Netzwerk-/Backend-Rechte. Separat reviewbar ohne die gestapelte Medienkette |
+| [#59 – DEDAL-Preflight](https://github.com/mason82-dotcom/SkyHub/pull/59) | **Gestapelt auf #55**; rein lokaler ZIP-/TIFF-Dateinamen-/Panelzertifikats-Check mit SHA-256-Pinning, **keine** DEDAL-Ausführung | Kein echtes ZIP inspiziert, keine echte Kalibrierung, keine DJI-Fünfband-Orthomosaik-Verifikation; private Manifeste bleiben lokal |
+
+## 6. Verbindliche Merge-Gates
 
 | Gate | Nachweis für jeden Integrationskandidaten |
 | --- | --- |
@@ -95,7 +105,7 @@ Der Graph bezeichnet **Branch-Bases**, nicht automatisch verschmelzbare Codeänd
 | **G6 – Betrieb** | Separater Pi-Preflight, planbarer Rollback, explizite Freigabe für Dienständerungen; GitHub-Merge **nicht** als Deployment ausgeben |
 | **G7 – Dokumentation** | README, Architektur, API/Compose-Referenz, Funktions-/Modulstatus und PR-Abhängigkeiten auf neuen Main-SHA aktualisieren; historische Evidenz unverändert datieren |
 
-## 6. Nächste technisch kleine Arbeitspakete
+## 7. Nächste technisch kleine Arbeitspakete
 
 1. **P0-Fix #26 isolieren**: ausschließlich Korrektur des HTTP-Diagnose-Regex und neue Autorisierungs-/Modell-ID-Regressionsprüfungen; die restlichen alten Projektstandsdateien nicht übernehmen. Kein Pi-Update.
 2. **P1-Paritätsaudit #47 prüfen**: nur offline Module/Fixtures/Dokumentation; keine Broker-/Steuerungs-Änderung. Für spätere Modelltests Checklisten statt fiktiver DJI-Rohdaten.
