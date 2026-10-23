@@ -105,6 +105,17 @@ test('index count, stats and index type fail closed',t=>{
   const f=fixture(t);f.candidate.indexLayers[0].validPixels=-1;f.repin();
   assert.throws(()=>listCandidates(f.options),CatalogError);
 });
+test('float32 constant-index mean rounding is tolerated but large drift is refused',t=>{
+  const f=fixture(t);
+  f.candidate.indexLayers[0].min=0.25;
+  f.candidate.indexLayers[0].max=0.25;
+  f.candidate.indexLayers[0].mean=0.24999996;
+  f.repin();
+  assert.equal(listCandidates(f.options).length,1);
+  f.candidate.indexLayers[0].mean=0.249;
+  f.repin();
+  assert.throws(()=>listCandidates(f.options),CatalogError);
+});
 test('empty pinned manifest returns an empty list',t=>{
   const f=fixture(t);f.registry.entries=[];f.options.manifestSha256=f.saveRegistry();
   assert.deepEqual(listCandidates(f.options),[]);
