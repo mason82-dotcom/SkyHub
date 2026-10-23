@@ -1,0 +1,19 @@
+/* Workspace-bound Pilot 2 asset catalog. No image/metadata previews. */
+#verified-library{display:grid;gap:10px;margin-bottom:14px;padding:16px}
+#verified-library .verified-help{margin:0;font-size:12px;line-height:1.5;opacity:.88}
+#verified-library .verified-controls{display:flex;flex-wrap:wrap;align-items:end;gap:9px}
+#verified-library .verified-controls label{display:grid;gap:5px;flex:1;min-width:180px;font-size:11px}
+#verified-library input{border:1px solid #355064;background:#0a1b29;color:#e4eef5;border-radius:7px;padding:9px;min-height:34px;width:100%;max-width:100%}
+#verified-library .verified-results{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,1fr);gap:12px}
+#verified-library .verified-list{list-style:none;display:grid;gap:6px;max-height:300px;overflow:auto;padding:0;margin:0}
+#verified-library .verified-entry{min-width:0}
+#verified-library .verified-asset{display:grid;text-align:left;gap:5px;width:100%;padding:10px;border:1px solid #355064;border-radius:7px;background:#0b1c2a;color:inherit;cursor:pointer}
+#verified-library .verified-asset strong{overflow-wrap:anywhere}
+#verified-library .verified-asset small{opacity:.82;overflow-wrap:anywhere;font-size:11px}
+#verified-library .verified-asset:hover,#verified-library .verified-asset:focus-visible{outline:2px solid #47c3e7}
+#verified-library .verified-detail{padding:10px;min-height:85px;border:1px solid #355064;border-radius:7px;font-size:12px;overflow-wrap:anywhere}
+#verified-library .verified-detail p{margin:7px 0;line-height:1.45}
+#verified-library .verified-message{margin:0;font-size:12px}
+#verified-library .verified-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:11px}
+#verified-library button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:780px){#verified-library .verified-results{grid-template-columns:1fr}}
