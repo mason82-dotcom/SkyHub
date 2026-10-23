@@ -77,6 +77,24 @@ The worker never opens sockets or loads ML libraries. It refuses missing opt-in,
 
 The output schema is skyhub-thermal-person-geolocation-preview-v1 with status, detection counters and estimates. Each estimate is marked unverified_candidate; the top-level flags geolocationVerified, accuracyMetersVerified, flightControlReady and searchAndRescueReady are always false.
 
+## Bounded offline batch alignment
+
+An independent optional adapter `backend/workers/thermal_person_batch_offline.py` consumes previously produced, trusted thermal-frame detections and independently verified telemetry. It does **not** run a detector, inspect video, subscribe to DJI topics or expose HTTP.
+
+- Input schema: `skyhub-thermal-geolocation-batch-input-v1` with only `schema`, `frames` and `telemetry`.
+- Each frame has `timestampMs`, the already-calibrated `frame`, `camera` and `detections` objects documented above. Each telemetry record uses the single-frame `telemetry` contract.
+- Both arrays must have strictly increasing timestamps; at most 128 frames and 256 telemetry states. Every state, frame, calibration and box is validated (including frames with no valid pose).
+- Nearest-neighbour matching uses a 250 ms verified-source-time cutoff with earlier-sample tie-breaking; there is **no** interpolation, extrapolation, Kalman smoothing or promise that 250 ms implies accurate moving-aircraft positioning.
+- Out-of-window frames return `pose_unavailable` with no candidate coordinates; invalid geometry or unverified calibration fails the batch. Output includes only frame indexes, unverified candidates, counts and fixed false readiness flags, never raw telemetry or original timestamps.
+- An optional JSON file CLI requires explicit `--allow-sensitive-location-output`, absolute local input/output paths and exclusive private output (0600). No model weights or camera data are bundled.
+
+```bash
+python3 -m unittest discover -s tests -p 'test_thermal_person_batch_offline.py'
+python3 backend/workers/thermal_person_batch_offline.py --input /ABSOLUTE/PRIVATE/batch.json --output /ABSOLUTE/PRIVATE/new-candidates.json --allow-sensitive-location-output
+```
+
+**Hard limitation:** This is the offline **synchronizer and geometry half only**, not a complete thermal computer-vision pipeline. The YOLOv8x trained weights from the reference repository are not integrated; no conversion/normalization of raw DJI thermal video, SRT metadata, M3T/M4T runtime sensor payload mapping or hardware-based accuracy test has been done. Default deny/no deployment remains mandatory.
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
