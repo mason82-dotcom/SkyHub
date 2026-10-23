@@ -39,6 +39,8 @@ jobs:
         run: node scripts/check-dashboard-inline.js
       - name: Backend unit tests (no broker or DJI hardware)
         run: node --test backend/test/*.test.js
+      - name: Experimental read-only Smart Farming frontend tests
+        run: node --test frontend/test/smart-farming-ui.test.js
 
       - name: Validate staging helper and Python tests
         run: |
@@ -72,6 +74,28 @@ jobs:
         run: |
           docker run --rm --network none --entrypoint node skyhub-next:test \
             -e '["./catalog","./dji","./registry","./mqtt-config","./mqtt-metrics","./pilot-config","./topology-ack","./mqtt-shape","./pilot-pairing","./topology-store","./hms-catalog","./track-policy","./track-store","./track-recorder","./lan-access","./message-guard","./map-element-api","./map-element-contract","./map-element-store","./map-element-permissions","./map-element-mutation","./hardware-validation","./m3m-gap-classifier","./rc-plus2-m4t-hardware-validation","./m3m-media-inventory","./m3m-s3-read-contract","./m3m-s3-inventory"].forEach(require)'
+
+  # Force real raster-wheel execution; ordinary Python tests may skip optional
+  # Numpy/Rasterio if dependencies are not present in the core runner.
+  m3m-raster-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install isolated binary raster wheels (no live Pi services)
+        run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
+      - name: Syntax-check every offline M3M worker
+        run: python -m py_compile backend/workers/m3m_*.py
+      - name: Run synthetic M3M integration and security tests
+        run: python -m unittest discover -s tests -p 'test_m3m_*.py' -v
+      - name: Verify operator CLIs only print usage
+        run: |
+          python backend/workers/m3m_dedal_offline_pipeline.py --help
+          python backend/workers/m3m_raster_bundle_seal.py --help
+          python backend/workers/m3m_smart_farming_candidate.py --help
 
   isolated-postgis-integration:
     runs-on: ubuntu-latest
