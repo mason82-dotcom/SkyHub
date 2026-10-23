@@ -140,6 +140,12 @@ class PreflightTests(unittest.TestCase):
             self.run_preflight()
         self.assertEqual((self.output/'untouched.txt').read_text(),'intact')
 
+    def test_bounded_directory_entries_include_non_tiffs(self):
+        (self.images / 'unrelated.txt').write_text('x')
+        with patch.object(worker, 'MAX_ENTRIES', 8):
+            with self.assertRaises(worker.PreflightError):
+                self.run_preflight()
+
     def test_direct_image_filename_magic_check(self):
         (self.images/(self.flight_capture+'_MS_G.TIF')).write_bytes(b'ZZZZnot-tiff')
         with self.assertRaises(worker.PreflightError):
