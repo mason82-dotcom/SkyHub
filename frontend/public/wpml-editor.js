@@ -174,8 +174,14 @@
       if(!reference)throw new TypeError('Referenzimport nicht verfügbar.');
       if(file.size>128*1024)throw new TypeError('JSON-Datei überschreitet 128 KiB.');
       let payload;
-      try{payload=JSON.parse(await file.text());}
-      catch{throw new TypeError('Ungültiges Waylines-JSON.');}
+      try{payload=reference.parseJson(await file.text());}
+      catch(error){
+        if(error instanceof Error && /doppelter JSON-Schlüssel/.test(error.message))
+          throw new TypeError('Ungültiges Waylines-JSON: doppelter JSON-Schlüssel.');
+        if(error instanceof Error && /JSON-Verschachtelung zu tief/.test(error.message))
+          throw new TypeError('Ungültiges Waylines-JSON: Verschachtelung zu tief.');
+        throw new TypeError('Ungültiges Waylines-JSON.');
+      }
       if(generation!==importGeneration)return;
       const mapped=reference.convert(payload);
       // Dry-run the SkyHub model validator before staging; no UI mutation yet.
