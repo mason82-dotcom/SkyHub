@@ -17,7 +17,7 @@ in the Compose project `skyhub-hivemind-lab`, using a disposable Mosquitto broke
 SkyHub's real Pi EMQX (host 1884), Mosquitto (host 1883), legacy backend (4000),
 and SkyHub Next staging backend (4001) are **not touched**. No broker port is
 published to the host. Lab SkyHub HTTP is bound at **127.0.0.1:14001** and
-the simulator console at **127.0.0.1:19090**. The Docker network is internal.
+the simulator console at **127.0.0.1:19090**. The Docker network is a dedicated, project-namespaced bridge, not shared with production stacks. The broker has no host port. Unlike a Docker `internal: true` network, the bridge supports these host-loopback HTTP bindings but does **not** prohibit outbound connections; never supply production credentials or endpoints.
 The lab has its own isolated database, device IDs and volumes.
 
 Start with the simulator's **Pilot-to-Cloud mode** (RC Plus / RC Plus 2 / RC Pro).
@@ -88,8 +88,10 @@ bash simulators/hivemind/lab.sh down  # only lab; keeps its data volumes
 
 For a quick **offline-only** verification of the orchestration and smoke-test
 contract, run `python3 -m unittest discover -s tests -p 'test_hivemind*.py'`.
-The standard GitHub CI executes these tests automatically but does **not**
-build, start or network-test the externally licensed simulator.
+The regular SkyHub CI executes these offline tests without starting the simulator.
+The separate `.github/workflows/hivemind-lab-e2e.yml` job builds the pinned
+AGPL simulator and runs the actual synthetic MQTT acceptance test on a
+GitHub-hosted runner. This heavyweight workflow does not execute on the Pi.
 
 To clean the lab data, examine project-specific volumes manually first.
 **Never run `docker compose down -v` or prune volumes blindly.**
@@ -113,8 +115,8 @@ changes to the existing EMQX ACL, Caddy, legacy Docker Compose or Pi `.env`.
 
 The simulator Web API and its MQTT monitor are development tools, not hardened
 public services. Host HTTP ports are loopback-only; the Mosquitto broker permits
-anonymous clients **only inside the internal, isolated lab network** and has
-no host port. Never attach the lab to the live Pi broker or share its MQTT
+anonymous clients **only on the dedicated lab bridge** and has
+no host port. This separate bridge is **not** an egress firewall. Never attach the lab to the live Pi broker or share its MQTT
 network with production. For reproducibility, review upstream changes and
 the supplied binary SDK before advancing the pinned revision.
 
