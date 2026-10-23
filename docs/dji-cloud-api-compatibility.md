@@ -4,6 +4,26 @@
 
 Zielstand: DJI Cloud API 1.18 (vom Projekt vorgegeben). Protokolldetails gelten nur soweit durch die verlinkten offiziellen API-Referenzen belegt. Vollständige 1.18-Konformität ist nicht getestet.
 
+## Statuskorrektur (23.10.2026)
+
+**Quelle der Runtime-Aussage:** `main` @ `4d878314f8345f8cd370f0004916426523e577c0`.
+Mit [#15](https://github.com/mason82-dotcom/SkyHub/pull/15),
+[#17](https://github.com/mason82-dotcom/SkyHub/pull/17) und
+[#20](https://github.com/mason82-dotcom/SkyHub/pull/20) wurden der
+typisierte Feldkatalog, die RC-Pro/M3M-Diagnostik und die zusätzlichen
+M3M-OSD-Feldpfade in Main integriert. Vorläufige Katalogpfade sind keine
+durch Hardware bestätigten Messwerte. Einzelheiten: [Hardwarebericht](hardware-rc-pro-m3m.md).
+
+**Außerhalb von Main:** Die [RC-Plus-2/Matrice-4T-Abnahme #18](https://github.com/mason82-dotcom/SkyHub/pull/18),
+[WPML #16](https://github.com/mason82-dotcom/SkyHub/pull/16),
+[DJI-1.18-Paritätsaudit #47](https://github.com/mason82-dotcom/SkyHub/pull/47)
+und [HiveMind-Labor #46](https://github.com/mason82-dotcom/SkyHub/pull/46)
+sind getrennte offene Entwicklungen. Simulation mit SDK 1.16.1.3
+oder 16 synthetische Protokoll-Fixtures belegen keine Cloud-API-1.18-
+Hardwarekonformität. Ein erfolgreiches M3M-OSD-Ereignis belegt ebenso wenig
+Pilot-2-Medien-HTTPS, WPML-Missionsausführung oder Multispektral-Radiometrie.
+[Komplettes Statusregister](projektstand-2026-10-23.md).
+
 ## Eingesetzte Referenzen
 
 - Offiziell: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/

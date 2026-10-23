@@ -1,5 +1,7 @@
 # Hardwareabnahme: RC Pro Enterprise + Mavic 3M
 
+> **Einordnung vom 23.10.2026:** Dies ist ein datierter Hardware-Abnahmebericht. Die zusätzlichen Befunde zu sechs typisierten M3M-OSD-Pfaden in [PR #21](https://github.com/mason82-dotcom/SkyHub/pull/21) liegen als offener Zweig vor; die dokumentierte Hardwarebeobachtung darf nicht mit einem Merge nach `main` gleichgesetzt werden. [Aktuelle Integrationsübersicht](projektstand-2026-10-23.md).
+
 **Stand:** 21.10.2026. Dies ist eine **Leseprüfung**, kein Flugtest und kein Deployment.
 
 ## Voraussetzungen
