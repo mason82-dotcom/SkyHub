@@ -1,5 +1,7 @@
 # MQTT / OSD integration – SkyHub Next 0.1.0
 
+> **Profilnachtrag 23.10.2026:** Diese Seite dokumentiert die historische DJI-Abnahme auf EMQX/1884. Für den aktuellen Root-Stack ist zusätzlich Mosquitto/1883 als **ausdrückliches Opt-in** vorbereitet. Die historische RC-Pro/M3M-Abnahme überträgt sich nicht automatisch auf den Mosquitto-Broker. Weitere Sicherheits- und Betriebsschritte: [Pi-Mosquitto-Migration](pi-mosquitto-migration.md).
+
 ## Upstream reference
 
 Functionality was reviewed against [OmerMersin/dji-cloud-platform-minimal](https://github.com/OmerMersin/dji-cloud-platform-minimal) (MIT License, © 2025 Ömer Mersin), particularly `mqtt_client.py` and `public/dashboard.html`.
