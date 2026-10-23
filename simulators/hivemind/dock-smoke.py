@@ -62,7 +62,18 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
     if completed.returncode != 0 or "PASS: synthetic flighttask_prepare" not in completed.stdout:
         # Do not echo container logs or uncontrolled stderr; it could contain
         # IDs, arbitrary upstream telemetry, or secrets.
-        raise SmokeFailure("Synthetic mission MQTT service/progress acceptance failed")
+        # Match only fixed diagnostics emitted by our own one-shot test code.
+        # Never surface arbitrary container stderr/JSON/device identifiers.
+        known = (
+            "Ground cancellation event not confirmed",
+            "service reply mismatch or failure",
+            "service reply timeout: flighttask_undo",
+            "service reply timeout: flighttask_stop",
+            "no simulator flighttask_progress event",
+            "connection closed",
+        )
+        matched = next((item for item in known if item in completed.stderr), "unknown")
+        raise SmokeFailure("Synthetic mission probe failed: " + matched)
 
     events = request(SKYHUB, "/api/events", token=token)
     require(isinstance(events, list) and
