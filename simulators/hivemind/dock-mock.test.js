@@ -39,7 +39,8 @@ test('DJI Dock registration rejects out-of-order commands and honors tid/bid',()
  assert.deepEqual(METHODS,reqs.map(x=>x[0]));
  assert.deepEqual(mock.snapshot(),{
    config:1,airport_bind_status:1,airport_organization_get:1,
-   airport_organization_bind:1,update_topo:0
+   airport_organization_bind:1,update_topo:0,storage_config_get:0,
+   highest_priority_upload_flighttask_media:0,file_upload_callback:0
  });
 });
 
@@ -106,4 +107,46 @@ test('maximum eight distinct synthetic gateways per mock lifetime',()=>{
  }
  const ninth=base(...reqs[0],{gateway:'LAB_DOCK_8'});
  assert.equal(mock.reply('thing/product/LAB_DOCK_8/requests',ninth),null);
+});
+
+test('media adapter denies storage credentials and replies only to bounded synthetic callbacks',()=>{
+ const mock=createResponder(()=>T);
+ const eventTopic=`thing/product/${GATEWAY}/events`;
+ function event(method,data,tid){
+   return Buffer.from(JSON.stringify({method,data,tid,bid:BID,
+     gateway:GATEWAY,timestamp:T,need_reply:1}));
+ }
+ const tid1='f88caf13-0df1-44c7-a379-f1b7861a8c93';
+ const tid2='f88caf13-0df1-44c7-a379-f1b7861a8c94';
+ const tid3='f88caf13-0df1-44c7-a379-f1b7861a8c95';
+ const flight='skyhub-lab-media-01';
+ const priority=event('highest_priority_upload_flighttask_media',{flight_id:flight},tid1);
+ assert.equal(mock.eventReply(eventTopic,priority),null);
+ for(const [method,data] of reqs)assert.ok(mock.reply(TOPIC,base(method,data)));
+ assert.equal(mock.eventReply(eventTopic,priority),null);
+ const storage=mock.reply(TOPIC,base('storage_config_get',{module:0}));
+ assert.ok(storage);
+ const answer=JSON.parse(storage.payload);
+ assert.equal(answer.data.result,1);
+ assert.equal(answer.data.output,undefined);
+ assert.equal(mock.reply(TOPIC,base('storage_config_get',{module:1})),null);
+ const pri=mock.eventReply(eventTopic,priority);
+ assert.ok(pri);assert.deepEqual(JSON.parse(pri.payload).data,{result:0});
+ assert.equal(mock.eventReply(eventTopic,priority),null);
+ function file(index,tid){
+   const name=`SIM_${flight}_${index}.jpg`;
+   return event('file_upload_callback',{file:{name,object_key:`sim/${flight}/${name}`,
+     path:flight,ext:{flight_id:flight}}},tid);
+ }
+ const wrong=file(3,tid2);
+ assert.equal(mock.eventReply(eventTopic,wrong),null);
+ const first=mock.eventReply(eventTopic,file(1,tid2));
+ assert.ok(first);assert.equal(JSON.parse(first.payload).tid,tid2);
+ assert.equal(mock.eventReply(eventTopic,file(1,tid3)),null);
+ const second=mock.eventReply(eventTopic,file(2,tid3));
+ assert.ok(second);
+ assert.equal(mock.snapshot().file_upload_callback,2);
+ assert.equal(mock.snapshot().highest_priority_upload_flighttask_media,1);
+ assert.equal(mock.snapshot().storage_config_get,1);
+ assert.equal(mock.eventReply(eventTopic,file(2,ID)),null);
 });
