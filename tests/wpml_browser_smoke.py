@@ -307,6 +307,62 @@ def main() -> None:
                           " | ".join(library_errors[:2]))
                     route_ctx.close()
 
+                    # Survey: import synthetic Polygon WITH an exclusion hole;
+                    # confirm colored gap markers and downloaded preview never become a DJI route.
+                    survey_ctx = browser.new_context(viewport={"width": 1260, "height": 850},
+                                                     accept_downloads=True)
+                    survey = survey_ctx.new_page()
+                    survey_requests, survey_errors = [], []
+                    survey.on("pageerror", lambda err: survey_errors.append(str(err)))
+                    survey.on("dialog", lambda dlg: dlg.accept())
+                    guard(survey, base, real_map=True, unexpected=survey_requests)
+                    survey.goto(base + "/wpml-survey-preview.html", wait_until="load")
+                    survey.locator(".leaflet-container").wait_for()
+                    outer = [[8, 49], [8.0018, 49], [8.0018, 49.0011],
+                             [8, 49.0011], [8, 49]]
+                    hole = [[8.0006, 49.0003], [8.0012, 49.0003],
+                            [8.0012, 49.0008], [8.0006, 49.0008],
+                            [8.0006, 49.0003]]
+                    fixture = {"type": "Polygon", "coordinates": [outer, hole]}
+                    survey.locator("#geometry-file").set_input_files({
+                        "name": "synthetic-exclusion.geojson",
+                        "mimeType": "application/geo+json",
+                        "buffer": json.dumps(fixture).encode("utf-8")
+                    })
+                    survey.locator("#import-geometry").click()
+                    check("lokal geladen" in survey.locator("#status").inner_text(),
+                          "Local excluded survey geometry was not imported")
+                    survey.locator("#preview").click()
+                    check("ungeplante Übergangslücken" in survey.locator("#status").inner_text(),
+                          "Gap warning is missing from survey UI")
+                    check(survey.locator("#map path[stroke-dasharray]").count() > 0,
+                          "Unsafe direct transitions are not visually distinguished")
+                    with survey.expect_download() as event:
+                        survey.locator("#geojson").click()
+                    exported = json.loads(Path(event.value.path()).read_text(encoding="utf-8"))
+                    check(exported["properties"]["flightReady"] is False,
+                          "Synthetic geometry cannot gain flight authorization")
+                    check(exported["properties"]["exportableAsWaylines"] is False,
+                          "GeoJSON preview cannot be classified as Waylines")
+                    check(exported["features"][0]["geometry"]["type"] == "Polygon",
+                          "Survey import lost its Polygon geometry")
+                    check(len(exported["features"][0]["geometry"]["coordinates"]) == 2,
+                          "Exclusion hole was lost during export")
+                    gap_features = [x for x in exported["features"]
+                                    if x["properties"].get("kind")
+                                    == "unplanned-direct-gaps-NOT-safe-flight-paths"]
+                    check(len(gap_features) == 1 and
+                          gap_features[0]["properties"]["safetyVerified"] is False,
+                          "Survey gap not preserved as explicitly unsafe")
+                    survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-exclusion.png"),
+                                      full_page=True)
+                    check(not survey_requests, "Survey attempted outbound or non-GET request")
+                    check(not survey_errors,
+                          "Survey JS errors: " + " | ".join(survey_errors[:2]))
+                    survey_ctx.close()
+
+
+                    print("Chromium survey hole import, red transition gaps and safe GeoJSON preview PASS")
                     print("Chromium route library: local backup, redacted preview, confirmed restore PASS")
                     print("Chromium desktop (real Leaflet) and 390px mobile (offline fallback): PASS")
                     print("No DJI/MQTT/SkyHub write requests; KMZ verified locally; no flight approval.")
