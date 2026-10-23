@@ -27,6 +27,23 @@ services:
     tmpfs:
       - /tmp
 
+  dock-mock:
+    # Never active under plain lab.sh up: opt-in via --profile dock-rpc only.
+    profiles: ["dock-rpc"]
+    build:
+      context: .
+      dockerfile: simulators/hivemind/Dockerfile.dock-mock
+    restart: "no"
+    depends_on:
+      hivemind-broker:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp
+
   hivemind-simulator:
     # Downloaded from upstream at a fixed commit via prepare.sh; no AGPL source is vendored.
     build:
