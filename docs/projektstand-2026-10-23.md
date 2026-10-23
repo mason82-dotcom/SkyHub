@@ -85,7 +85,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
   eigene Backend-Router und Worker. **Existenz einer Datei in einem PR ist
   kein Nachweis einer Runtime-Montage oder einer erfolgreichen Hardwareabnahme.**
 
-## 3. Hardware- und Testevidenz
+## 4. Hardware- und Testevidenz
 
 - **20.–21.10.2026, RC Pro Enterprise + Mavic 3M:** MQTT-Topologie/OSD und modellbezogene Aircraft-Rootfelder wurden am echten Gerät beobachtet; Einzelheiten in [Hardwareabnahme](hardware-rc-pro-m3m.md). Die M3M-Overlay-Definitionen sind teilweise vorläufig. „Nicht beobachtet“ bedeutet nicht „Hardware defekt“; Kamerafunktionen und nicht passende Aircraft-Feldpfade dürfen nicht zusammengezählt werden.
 - **RC Plus 2 + Matrice 4T:** getrennte Entwicklungs-/Abnahmebelege im offenen [#18](https://github.com/mason82-dotcom/SkyHub/pull/18), nicht als allgemeine 1.18-Konformität oder bereits gemergter Main-Support ausgeben.
@@ -93,7 +93,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 - **Standort / Zeit:** `telemetryFieldAt` und `telemetryFieldTimeVerified` sind nur Live-Snapshot-Metadaten; sie werden nicht in den Redis-Gerätecache kopiert. Ein gültiges Koordinatenpaar benötigt denselben OSD-Eingang; `(0,0)` begründet keinen gültigen Standort.
 - **Flug-/Agrarfunktionen:** Keine Test-/CI-Meldung ist eine Fluggenehmigung, agronomische Diagnose, thermische Personenerkennung oder Kalibrierungszertifizierung.
 
-## 4. Freigabegates und nächste sichere Integrationsschritte
+## 5. Freigabegates und nächste sichere Integrationsschritte
 
 1. **Baseline festhalten:** `git status`, `git rev-parse HEAD` und tatsächliche Pi-Container/Ports separat aufnehmen. Branch-Komponenten nicht als Main-Funktionen dokumentieren.
 2. **Offene Ketten konsolidieren:** #24/#28/#29, danach nur benötigte UI-/WPML- und Pilot-Medien-Teilzweige. Doppelte MinIO-/M3M-Implementierungen in #19/#23/#25 vorab auflösen. Keine gestapelten PRs wahllos nach Main mergen.
@@ -103,7 +103,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 6. **M3M-Messwertgüte vor Smart Farming:** reale vollständige 5-Band-Aufnahmen, Herkunft/Metadaten, DN→Reflexion, Kalibrierung, Bandregistrierung, Maskierung, geographischer Bezug, Referenzflächen, QA und nachvollziehbarer Export. Erst danach operationelle NDVI-/NDRE-Karten oder Agronomie-Funktionen erwägen.
 7. **Thermal / YOLO / WPML:** Lizenzen, Modellherkunft, reale Kamera- und Gimbalmetadaten, Ground-Truth, sichere Offline-Prozesse und getrennte DJI-1.18-End-to-End-Abnahmen vor Live-Integration.
 
-## 5. Nützliche Dokumente und verbindliche Trennlinien
+## 6. Nützliche Dokumente und verbindliche Trennlinien
 
 - [README](../README.md) – Startpunkt und Root-/Legacy-Grenze
 - [Architektur](architecture.md) und [Sicherheitsmodell](security.md) – **nur Main** als Runtime-Vertrag
