@@ -59,7 +59,7 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
                                    capture_output=True, text=True, check=False)
     except (OSError, subprocess.TimeoutExpired):
         raise SmokeFailure("Private mission probe failed to launch or timed out") from None
-    if completed.returncode != 0 or "PASS: synthetic flighttask_prepare" not in completed.stdout:
+    if completed.returncode != 0 or "PASS: synthetic ground cancel, airborne stop rejected" not in completed.stdout:
         # Do not echo container logs or uncontrolled stderr; it could contain
         # IDs, arbitrary upstream telemetry, or secrets.
         # Match only fixed diagnostics emitted by our own one-shot test code.
