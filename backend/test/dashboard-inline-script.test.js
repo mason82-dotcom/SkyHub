@@ -36,7 +36,9 @@ test('event panel displays unverified media and reported flight status without r
   assert.ok(start>0 && end>start,'expected local read-only event adapter');
   // Test only the pure event adapter/label; never execute dashboard boot code.
   const view=vm.runInNewContext(html.slice(start,end)+
-    '\n({normalizeDeviceEvent,eventDescription});',{});
+    '\n({normalizeDeviceEvent,eventDescription});',{
+      eventChannels:new Set(['events','status','services_reply'])
+    });
   const evt={sn:'DOCK1',channel:'events',method:'file_upload_callback',at:1760000000000,
     mediaReport:{kind:'file_metadata_report',storageVerification:'not_checked'},
     file:{name:'PRIVATE_IMAGE.JPG',object_key:'PRIVATE_OBJECT_X',secret:'PRIVATE_SECRET_X'}};
