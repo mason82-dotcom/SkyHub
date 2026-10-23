@@ -117,3 +117,7 @@ Der konsolidierte Root-Stack enthält die isoliert getesteten PostGIS- und Backu
 - [Entwicklungsplan und Fortschritt](docs/entwicklungsplan-2026-10-20.md)
 
 **Pi-Update:** Ein Git-Merge ist kein Deployment. Vor einem Update auf dem Pi lokale `.env`, Overrides und persistente PostGIS-Daten sichern, nur das bestehende Backend aktualisieren und danach über `/api/health` prüfen. Keine Compose-Volumes löschen, keine Legacy-Dienste starten und keine offenen DJI-Feature-Flags ungeprüft aktivieren.
+
+## Opt-in HiveMind DJI-Referenzsimulator
+
+Für reproduzierbare Cloud-API-Tests gibt es ein **vollständig separates Labor** mit dem AGPLv3-Referenzsimulator von cdmiltd (fest gepinnter Commit, kein übernommener Quellcode). Der Labor-Compose-Stack startet nur auf ausdrücklichen Aufruf über [`simulators/hivemind/lab.sh`](simulators/hivemind/README.md). Er verwendet einen eigenen internen MQTT-Broker, eine eigene Datenbank und Loopback-Ports `14001` / `19090`; weder das aktive Root-Compose noch Pi-EMQX, Port 1884 und produktive Daten werden geändert. **Pilot-Modus** ist der erste Integrationspfad; der Dock-Registrierungsdialog benötigt derzeit noch nicht implementierte Backend-RPCs. Siehe [Betriebsanleitung und Sicherheitsgrenzen](simulators/hivemind/README.md).
