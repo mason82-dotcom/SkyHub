@@ -109,10 +109,12 @@ test('invalid prefixes fail before S3 access', async () => {
   }
 });
 
-test('repeated continuation tokens fail closed', async () => {
+test('repeated continuation tokens fail closed with distinct page keys', async () => {
+  let calls = 0;
   const storage = {
     async objects() {
-      return page([FILES[0]], true, 'same-token');
+      calls++;
+      return page([FILES[calls - 1]], true, 'same-token');
     }
   };
 
@@ -120,6 +122,7 @@ test('repeated continuation tokens fail closed', async () => {
     inventoryM3MFromS3(storage, PREFIX),
     /Invalid S3 inventory pagination/
   );
+  assert.equal(calls, 2);
 });
 
 test('repeated S3 object keys across pages fail closed', async () => {
