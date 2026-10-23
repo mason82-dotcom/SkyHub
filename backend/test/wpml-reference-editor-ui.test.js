@@ -1,0 +1,125 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const planner=require('../../frontend/public/wpml-editor-core');
+const reference=require('../../frontend/public/wpml-waylines-reference');
+
+const script=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/wpml-editor.js'),'utf8');
+function sample(){
+  return {name:'Externer Referenzentwurf',drone_model:77,payload_model:66,
+    template_type:'waypoint',global_height:50,global_speed:5,
+    waypoints:[{latitude:49.1,longitude:8.6,height:50},
+      {latitude:49.2,longitude:8.7,height:50,actions:[{type:'takePhoto'}]}]};
+}
+function makeHarness(){
+  const nodes=new Map();
+  const make=()=>({
+    value:'',textContent:'',checked:false,disabled:false,hidden:false,style:{},
+    files:null,children:[],listeners:{},
+    setAttribute(){},addEventListener(type,callback){this.listeners[type]=callback;},
+    replaceChildren(...parts){this.children=[...parts];},
+    appendChild(part){this.children.push(part);},
+    append(...parts){this.children.push(...parts);},
+    reportValidity(){return true;}
+  });
+  function get(id){
+    if(!nodes.has(id))nodes.set(id,make());
+    return nodes.get(id);
+  }
+  get('name').value='Bestehender Missionsentwurf';
+  get('height').value='45';
+  get('speed').value='4';
+  get('takeoff').value='30';
+  get('model').value='mavic3m';
+  get('photo-trigger').value='reachPoint';
+  get('latitude').value='49.5';
+  get('longitude').value='8.5';
+  let confirmResult=true,confirmCount=0;
+  const window={
+    SkyHubWpmlPlanner:planner,SkyHubWpmlWaylinesReference:reference,
+    confirm(){confirmCount++;return confirmResult;}
+  };
+  const document={getElementById:get,createElement:make,
+    createTextNode:value=>({textContent:value})};
+  vm.runInNewContext(script,{window,document,console},{timeout:1500});
+  async function load(data,size){
+    const input=get('waylines-reference-file');
+    const content=typeof data==='string'?data:JSON.stringify(data);
+    input.files=[{size:size===undefined?content.length:size,text:async()=>content}];
+    await input.listeners.change({currentTarget:input});
+  }
+  return {get,load,setConfirm(value){confirmResult=value;},
+    confirmations(){return confirmCount;}};
+}
+test('browser import stages preview without changing active route or fields',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+  assert.equal(app.get('model').value,'mavic3m');
+  assert.equal(app.get('waypoints').children.length,0);
+  assert.equal(app.get('waylines-reference-apply').disabled,false);
+  assert.equal(app.get('waylines-reference-discard').disabled,false);
+  assert.match(app.get('waylines-reference-preview').textContent,/2 Wegpunkte, 1 Fotoaktionen/);
+  assert.match(app.get('waylines-reference-preview').textContent,/nicht semantisch äquivalent/);
+  assert.doesNotMatch(app.get('waylines-reference-preview').textContent,/49\.1|8\.6/);
+  assert.match(app.get('message').textContent,/unverändert/);
+});
+test('explicit apply replaces previewed draft but never enables dispatch',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  app.get('waylines-reference-apply').listeners.click();
+  assert.equal(app.get('name').value,'Externer Referenzentwurf');
+  assert.equal(app.get('model').value,'mavic3e');
+  assert.equal(app.get('speed').value,'5');
+  assert.equal(app.get('waypoints').children.length,2);
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('message').textContent,/Kein Flugauftrag/);
+});
+test('discard and malformed or oversized imports leave existing mission unchanged',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  app.get('waylines-reference-discard').listeners.click();
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  app.get('waylines-reference-apply').listeners.click();
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+  await app.load('{not valid json');
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('message').textContent,/Ungültiges Waylines-JSON/);
+  await app.load(sample(),128*1024+1);
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('message').textContent,/128 KiB/);
+  assert.equal(app.get('waypoints').children.length,0);
+  assert.equal(app.get('model').value,'mavic3m');
+});
+test('active route overwrite requires explicit confirmation',async()=>{
+  const app=makeHarness();
+  // Add an existing local point before importing an unrelated external mission.
+  app.get('add').listeners.click();
+  assert.equal(app.get('waypoints').children.length,1);
+  await app.load(sample());
+  app.setConfirm(false);
+  app.get('waylines-reference-apply').listeners.click();
+  assert.equal(app.confirmations(),1);
+  assert.equal(app.get('waypoints').children.length,1);
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+  assert.equal(app.get('waylines-reference-apply').disabled,false);
+  app.setConfirm(true);
+  app.get('waylines-reference-apply').listeners.click();
+  assert.equal(app.confirmations(),2);
+  assert.equal(app.get('waypoints').children.length,2);
+  assert.equal(app.get('name').value,'Externer Referenzentwurf');
+});
+test('invalid Waylines schema never replaces an active draft',async()=>{
+  const app=makeHarness();
+  app.get('add').listeners.click();
+  const unsupported=sample();
+  unsupported.global_rth_height=120;
+  await app.load(unsupported);
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('waylines-reference-preview').textContent,/nicht unterstütztes Feld/);
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+  assert.equal(app.get('waypoints').children.length,1);
+});
