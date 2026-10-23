@@ -53,13 +53,18 @@ def build_video(*, chunks=(28, 76), rows=((1, 2, 1),), bits=32,
               stsc(rows) + chunk_offsets(chunks, bits=bits) + extra)
     track = videotrack(sample_count=sample_count, extra_stbl=tables)
     if sample_sizes is not None:
-        old = atom(b"stsz", fullbox() + u32(24) + u32(sample_count))
+        # Rebuild *all* parent atom lengths; a raw byte replacement inside
+        # an existing moov would produce an invalid ISO-BMFF container.
         replacement = atom(b"stsz", fullbox() + u32(0) +
                            u32(len(sample_sizes)) +
                            b"".join(u32(n) for n in sample_sizes))
-        if old not in track:
-            raise AssertionError("unexpected synthetic stsz layout")
-        track = track.replace(old, replacement, 1)
+        stts = atom(b"stts", fullbox() + u32(1) + u32(4) + u32(100))
+        stbl = atom(b"stbl", stts + replacement + tables)
+        mdhd = atom(b"mdhd", fullbox() + bytes(8) + u32(1000) +
+                    u32(400) + bytes(4))
+        hdlr = atom(b"hdlr", fullbox() + bytes(4) + b"vide" + bytes(8))
+        track = atom(b"trak", atom(b"mdia", mdhd + hdlr +
+                                  atom(b"minf", stbl)))
     return movie(tracks=0, extras=track + extra_movie, mdat=media)
 
 
