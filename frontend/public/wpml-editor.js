@@ -30,13 +30,25 @@
       return;
     }
     try{
+      // Match the exporter's decimal-only camera cadence parser, rather than
+      // accepting JS number syntax (e.g. 1e2 / hex) that WPML refuses.
+      const decimalField=id=>{
+        const raw=$(''+id).value.trim();
+        return /^(?:\\d+(?:\\.\\d*)?|\\.\\d+)$/.test(raw)?Number(raw):NaN;
+      };
+      const cameraRaw=$('photo-camera-min').value.trim();
       const output=reviewCore.analyze({
+        name:$('name').value,
         waypoints:points,
         model:$('model').value,
-        speed:$('speed').value.trim()===''?NaN:Number($('speed').value),
-        globalHeight:$('height').value.trim()===''?NaN:Number($('height').value),
+        speed:decimalField('speed'),
+        globalHeight:decimalField('height'),
+        takeoffHeight:decimalField('takeoff'),
+        finishAction:$('finish').value,
         localHeights:$('local-heights').checked,
-        photoTrigger:$('photo-trigger').value
+        photoTrigger:$('photo-trigger').value,
+        photoInterval:$('photo-trigger').value==='reachPoint'?null:decimalField('photo-interval'),
+        cameraMinIntervalSeconds:cameraRaw===''?null:decimalField('photo-camera-min')
       });
       const status=output.status==='incomplete'?'UNVOLLSTÄNDIG':
         output.status==='invalid'?'EINGABEN PRÜFEN':'ENTWURF – SICHTPRÜFUNG NÖTIG';
