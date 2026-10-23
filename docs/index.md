@@ -9,6 +9,8 @@
 3. [Architektur, Datenwege und API](architecture.md)
 4. [Sicherheitsmodell, Authentifizierung und LAN/TLS](security.md)
 5. [Betrieb, Checks und kontrolliertes Backend-Update](ops.md)
+6. [Konfigurationsreferenz: Compose, Env und Feature-Flags](config-reference.md)
+7. [API-Referenz: HTTP, Socket.IO, MQTT, Autorisierung](api-reference.md)
 
 ## Technische Referenz des Hauptbranches
 
