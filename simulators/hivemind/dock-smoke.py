@@ -23,8 +23,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
 def verify_hms_and_mission(token: str, dock_sn: str) -> None:
-    require(dock_sn == "SKYHUB_LAB_DOCK_01",
-            "Refusing mission probe for a non-synthetic Dock identity")
+    require(isinstance(dock_sn, str) and
+            re.fullmatch(r"7UUXN[A-Z0-9]{9}", dock_sn) is not None,
+            "Refusing probe without simulator-generated Dock3 SN")
     result = request(SIM, "/api/hms/trigger", method="POST",
                      body={"types": ["WIND_HIGH"]})
     require(isinstance(result, dict) and result.get("success") is True
@@ -51,7 +52,7 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
         "-f", "docker-compose.yml",
         "-f", "simulators/hivemind/compose.lab.yml",
         "--profile", "dock-rpc",
-        "exec", "-T", "dock-mock", "node", "/app/mission-probe.js"
+        "exec", "-T", "dock-mock", "node", "/app/mission-probe.js", dock_sn
     ]
     try:
         completed = subprocess.run(args, cwd=ROOT, timeout=45,
@@ -88,8 +89,6 @@ def run() -> None:
         config = request(SIM, "/api/connect", method="POST", body={
             "mqtt_host": "hivemind-broker", "mqtt_port": 1884,
             "device_mode": "DOCK", "dock_type": "DOCK3",
-            "dock_sn": "SKYHUB_LAB_DOCK_01",
-            "drone_sn": "SKYHUB_LAB_DRONE_01",
             "organization_id": "skyhub-lab-org",
             "device_binding_code": "skyhub-lab-code",
             "app_license": ""
@@ -99,7 +98,9 @@ def run() -> None:
         opened = True
 
         identity = request(SIM, "/api/device-info")
-        require(isinstance(identity, dict) and identity.get("deviceMode") == "DOCK",
+        require(isinstance(identity, dict) and identity.get("deviceMode") == "DOCK" and
+                identity.get("dockSnOverride") is None and
+                identity.get("droneSnOverride") is None,
                 "Simulator is not in Dock mode")
         dock_sn = identity.get("dockSn")
         aircraft_sn = identity.get("droneSn")
