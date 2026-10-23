@@ -5,6 +5,9 @@
 const ORG = 'skyhub-lab-org';
 const CODE = 'skyhub-lab-code';
 const MAX_BYTES = 8192;
+const MEDIA_FLIGHT = 'skyhub-lab-media-01';
+const MEDIA_COUNT = 2;
+const MEDIA_EVENTS = Object.freeze(['highest_priority_upload_flighttask_media','file_upload_callback']);
 const METHODS = Object.freeze([
   'config', 'airport_bind_status', 'airport_organization_get', 'airport_organization_bind'
 ]);
@@ -23,7 +26,7 @@ function parseRequest(topic, raw, now = Date.now()) {
   let request;
   try { request = JSON.parse(raw.toString('utf8')); } catch { return null; }
   if (!isObject(request) || !isObject(request.data) ||
-      !METHODS.includes(request.method) || !UUID.test(request.tid) ||
+      !(METHODS.includes(request.method) || request.method === 'storage_config_get') || !UUID.test(request.tid) ||
       !UUID.test(request.bid) || request.gateway !== match[1] ||
       !Number.isSafeInteger(request.timestamp) ||
       Math.abs(now - request.timestamp) > 60000) return null;
@@ -52,11 +55,29 @@ function validRequest(method, data, gateway) {
 function createResponder(clock = Date.now) {
   const stages = new Map();
   const counters = { config: 0, airport_bind_status: 0,
-    airport_organization_get: 0, airport_organization_bind: 0, update_topo: 0 };
+    airport_organization_get: 0, airport_organization_bind: 0, update_topo: 0,
+    storage_config_get: 0, highest_priority_upload_flighttask_media: 0,
+    file_upload_callback: 0 };
+  const acknowledged = new Set();
+  const eventStages = new Map();
   function reply(topic, payload) {
     const event = parseRequest(topic, payload, clock());
     if (!event) return null;
     const {gateway, request} = event;
+    if (request.method === 'storage_config_get') {
+      // Explicit NO-CREDENTIAL response. The simulator must remain on its
+      // metadata-only fallback path; no bucket, endpoint, STS or S3 access.
+      if (stages.get(gateway) !== 4 || request.data.module !== 0 ||
+          counters.storage_config_get >= 2) return null;
+      counters.storage_config_get++;
+      return {
+        topic: 'thing/product/' + gateway + '/requests_reply',
+        payload: JSON.stringify({
+          tid: request.tid, bid: request.bid, method: request.method,
+          timestamp: clock(), data: {result: 1}
+        })
+      };
+    }
     if (!validRequest(request.method, request.data, gateway)) return null;
     const index = METHODS.indexOf(request.method);
     const current = stages.get(gateway) ?? 0;
@@ -101,8 +122,46 @@ function createResponder(clock = Date.now) {
       })
     };
   }
+  function eventReply(topic, raw) {
+    const match = /^thing\/product\/([A-Za-z0-9_.-]{1,100})\/events$/.exec(topic);
+    if (!match || stages.get(match[1]) !== 4 || !Buffer.isBuffer(raw) ||
+        raw.length < 2 || raw.length > MAX_BYTES) return null;
+    let msg;
+    try { msg = JSON.parse(raw.toString('utf8')); } catch { return null; }
+    if (!isObject(msg) || !isObject(msg.data) || !MEDIA_EVENTS.includes(msg.method) ||
+        msg.gateway !== match[1] || !UUID.test(msg.tid) || !UUID.test(msg.bid) ||
+        !Number.isSafeInteger(msg.timestamp) ||
+        Math.abs(clock() - msg.timestamp) > 60000 ||
+        acknowledged.has(msg.tid) || acknowledged.size >= MEDIA_COUNT + 1)
+      return null;
+    const current = eventStages.get(match[1]) ?? 0;
+    if (msg.method === 'highest_priority_upload_flighttask_media') {
+      if (current !== 0 || counters.storage_config_get !== 1 ||
+          msg.data.flight_id !== MEDIA_FLIGHT) return null;
+      eventStages.set(match[1], 1);
+    } else {
+      const file = msg.data.file;
+      const next = current;
+      const name = 'SIM_' + MEDIA_FLIGHT + '_' + next + '.jpg';
+      if (current < 1 || current > MEDIA_COUNT || !isObject(file) ||
+          !isObject(file.ext) || file.ext.flight_id !== MEDIA_FLIGHT ||
+          file.name !== name ||
+          file.object_key !== 'sim/' + MEDIA_FLIGHT + '/' + name ||
+          file.path !== MEDIA_FLIGHT) return null;
+      eventStages.set(match[1], current + 1);
+    }
+    acknowledged.add(msg.tid);
+    counters[msg.method]++;
+    return {
+      topic: 'thing/product/' + match[1] + '/events_reply',
+      payload: JSON.stringify({
+        tid: msg.tid, bid: msg.bid, timestamp: clock(),
+        method: msg.method, data: {result: 0}
+      })
+    };
+  }
   function snapshot() { return {...counters}; }
-  return {reply, topologyReply, snapshot};
+  return {reply, topologyReply, eventReply, snapshot};
 }
 
 function start() {
@@ -115,7 +174,7 @@ function start() {
   });
   const service = createResponder();
   client.on('connect', () => {
-    client.subscribe(['thing/product/+/requests', 'sys/product/+/status'], {qos: 0},
+    client.subscribe(['thing/product/+/requests', 'sys/product/+/status', 'thing/product/+/events'], {qos: 0},
       (error) => {
         if (error) console.error('[dock lab mock] subscription failed');
         else console.log('[dock lab mock] ready');
@@ -123,8 +182,9 @@ function start() {
   });
   client.on('message', (topic, payload, packet) => {
     if (packet?.retain) return;
-    const response = topic.endsWith('/requests') ?
-      service.reply(topic, payload) : service.topologyReply(topic, payload);
+    const response = topic.endsWith('/requests') ? service.reply(topic, payload) :
+      topic.endsWith('/status') ? service.topologyReply(topic, payload) :
+      service.eventReply(topic, payload);
     if (response) client.publish(response.topic, response.payload, {qos: 0, retain: false});
   });
   client.on('error', () => console.error('[dock lab mock] MQTT error'));
@@ -134,4 +194,5 @@ function start() {
 }
 
 if (require.main === module) start();
-module.exports = {parseRequest, validRequest, createResponder, METHODS, ORG, CODE};
+module.exports = {parseRequest, validRequest, createResponder, METHODS, ORG, CODE,
+  MEDIA_FLIGHT, MEDIA_COUNT, MEDIA_EVENTS};
