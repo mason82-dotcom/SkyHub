@@ -67,7 +67,7 @@ def _digest_path(path, maximum):
                     raise geo.InvalidInput("invalid_integrity_file")
                 digest.update(chunk)
             after = os.fstat(handle.fileno())
-            current = path.stat(follow_symlinks=False)
+            current = path.lstat()
             if (not stat.S_ISREG(current.st_mode) or
                     (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) !=
                     (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) or
