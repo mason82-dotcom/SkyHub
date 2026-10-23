@@ -73,7 +73,7 @@ jobs:
             if(b.environment.SKYHUB_PILOT_ENABLED!=="false" || b.environment.SKYHUB_TRACK_RECORDING_ENABLED!=="false") throw Error("unsafe flags");
             if(b.ports.length!==1 || Number(b.ports[0].published)!==14001 || b.ports[0].host_ip!=="127.0.0.1") throw Error("backend host port");
             if((m.ports||[]).length || s.ports.length!==1 || Number(s.ports[0].published)!==19090 || s.ports[0].host_ip!=="127.0.0.1") throw Error("simulator exposure");
-            if(!Object.values(c.networks).some(n=>n.internal===true)) throw Error("lab network must be internal");
+            if(!Object.values(c.networks).some(n=>n.driver==="bridge" && n.name==="skyhub-hivemind-lab_default")) throw Error("dedicated lab bridge required");
           '
 
       - name: Validate explicit ARM64 PostGIS overlay
