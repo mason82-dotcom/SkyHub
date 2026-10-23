@@ -17,6 +17,8 @@
 
 ## Technische Referenz des Hauptbranches
 
+**DJI-Missionsbeobachtung seit Merge von #74/#78/#83:** [Statusautomat](dji-rpc-lifecycle-observation.md), [read-only Reply-Adapter](dji-flighttask-rpc-integration.md) und [isoliertes CAS-Journal](dji-flighttask-durable-journal.md). Die Module sind **in `main`, aber nicht in die aktive DJI-Laufzeit eingebunden**; kein produktives SQL-Deployment.
+
 | Bereich | Dokumente |
 | --- | --- |
 | DJI MQTT, OSD, Pilot-2-Handshake | [MQTT/OSD](mqtt-osd-integration.md), [DJI Cloud API](dji-cloud-api-compatibility.md) |

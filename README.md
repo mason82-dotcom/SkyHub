@@ -9,6 +9,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 ## Aktueller Projektstand (23.10.2026)
 
+**Integrationsnachtrag 23.10.2026:** Die drei read-only DJI-Lebenszyklus-PRs [#74](https://github.com/mason82-dotcom/SkyHub-Next/pull/74), [#78](https://github.com/mason82-dotcom/SkyHub-Next/pull/78) und [#83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) sind in dieser Reihenfolge nach `main` gemergt. Enthalten sind ausschließlich die **nicht am Server verdrahtete** Missionsbeobachtung, die strikte `services_reply`-Korrelation und das isolierte PostgreSQL-CAS-Journal einschließlich Offline-/CI-Tests. **Kein Missionsversand, keine produktive Journalmigration, keine Pi-Installation und keine Hardwarefreigabe.** Siehe [Beobachtungslebenszyklus](docs/dji-rpc-lifecycle-observation.md), [RPC-Vertrag](docs/dji-flighttask-rpc-integration.md) und [Persistenzgrenzen](docs/dji-flighttask-durable-journal.md).
+
 **Verbindliche Bestandsaufnahme:** [Projektstand, offene Entwicklungszweige und Integrationsgates](docs/projektstand-2026-10-23.md).
 Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub-Next/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub-Next/pull/66) (rein lesende Hardwarediagnostik) ist Commit
 [`64e427c3d9488da80a391cd43d0308771f480955`](https://github.com/mason82-dotcom/SkyHub-Next/commit/64e427c3d9488da80a391cd43d0308771f480955)
