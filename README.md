@@ -8,7 +8,7 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 **Verbindliche Bestandsaufnahme:** [Projektstand, offene Entwicklungszweige und Integrationsgates](docs/projektstand-2026-10-23.md).
 Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (rein lesende Hardwarediagnostik) ist Commit
-[`399e18900db11d976b61cc59a5cd8b081b6570e1`](https://github.com/mason82-dotcom/SkyHub/commit/399e18900db11d976b61cc59a5cd8b081b6570e1)
+[`e5d1ae114ff934c0d78d44742339d22d2b2fe7f5`](https://github.com/mason82-dotcom/SkyHub/commit/e5d1ae114ff934c0d78d44742339d22d2b2fe7f5)
 (vom 23.10.2026). Der nachfolgende Stand unterscheidet ausdrücklich **Main**,
 **offene/gestapelte Pull Requests**, **in den Integrationsbranch gemergte PRs**,
 **CI-Nachweise** und **Hardwarebeobachtungen**.
@@ -20,6 +20,7 @@ Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTT
   Zusätzlich **isolierte Offline-Hardwareprüfer** für RC Pro/M3M und RC Plus 2/M4T,
   M3M-Feldlücken-Klassifikation und synthetische Regressionen; die reale
   RC-Plus-2/M4T-Hardwareabnahme ist weiterhin ausstehend.
+  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Keine S3-/MinIO- oder DJI-Pilot-2-Medien-API.
   Flugspuraufzeichnung bleibt standardmäßig aus.
 - **Noch nicht in Main:** das neue Command Center, MinIO-Medienleser, Pilot-2-Medien-HTTPS/STS,
   sichere XMP-Proben, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,

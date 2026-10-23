@@ -1,6 +1,6 @@
 # Projektstand und Integrationsregister – 23.10.2026
 
-> **Aktualisiert:** 23.10.2026. **Verifizierte Main-Basis:** [`399e18900db11d976b61cc59a5cd8b081b6570e1`](https://github.com/mason82-dotcom/SkyHub/commit/399e18900db11d976b61cc59a5cd8b081b6570e1), mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (DJI-HTTP-Modellvalidierung), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetischer Protokoll-Paritätsaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (isolierte RC-Pro/M3M- und RC-Plus-2/M4T-Diagnostik). Diese GitHub-Basis ist **keine Pi-Laufzeitabnahme**; gestapelte offene Feature-Branches bleiben getrennt.
+> **Aktualisiert:** 23.10.2026. **Verifizierte Main-Basis:** [`e5d1ae114ff934c0d78d44742339d22d2b2fe7f5`](https://github.com/mason82-dotcom/SkyHub/commit/e5d1ae114ff934c0d78d44742339d22d2b2fe7f5), mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (DJI-HTTP-Modellvalidierung), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetischer Protokoll-Paritätsaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (isolierte RC-Pro/M3M- und RC-Plus-2/M4T-Diagnostik). Diese GitHub-Basis ist **keine Pi-Laufzeitabnahme**; gestapelte offene Feature-Branches bleiben getrennt.
 
 ## Statusbegriffe (verbindlich)
 
@@ -22,6 +22,7 @@
 | REST / Socket.IO | Health; geschützte Geräte, Topologie, Ereignisse, MQTT-/Feld-Diagnose und Telemetrie; historische Tracks; geschützter Pilot-Bootstrap und Pairing; `snapshot` / `device_update` / `device_event` | `POST /api/mission/create` antwortet **501**; keine live gemountete WPML-/Medien-/STS-/KI-API |
 | PostGIS | Lesende Track-Historie und schema-gebundene Map-Element-Modelle; isolierte SQL- und Migrations-/Mutations-Tests | Neue Track-Punkte **aus** per `SKYHUB_TRACK_RECORDING_ENABLED=false`; interne Kartenmutationsengine **nicht** gemountet |
 | MinIO | Optionales Compose-Profil `media` und persistentes Datenvolumen | In Main **kein** MinIO-Client, keine Medien-HTTP-Endpunkte, kein Pilot-2-Medienupload |
+| M3M-Dateinamen-Inventur | [#68](https://github.com/mason82-dotcom/SkyHub/pull/68) **in Main**: lokaler RGB/G/R/RE/NIR-Namenszähler und opt-in CLI; keine Bild-, Metadaten- oder S3-Abfrage | Nur Filename-Heuristik und synthetische Tests; `ndviReady=false`, `reflectanceReady=false`, keine reale Medien- oder Hardwarefreigabe |
 | Python-Worker | Beispiel-/Demonstrationsdateien für Thermal, M3M und M3E | Keine validierte Radiometrie, Orthomosaikberechnung, Vegetationsindexpipeline oder operative Bildanalyse |
 
 **Wichtige Konfigurationsfalle:** `.env.example` nennt `SKYHUB_DJI_MAP_ELEMENTS_ENABLED=false` und `backend/server.js` besitzt eine optional gemountete GET-Route. `docker-compose.yml` auf dieser Main-Basis reicht die Variable **nicht** an den Backend-Container weiter. Ein bloßes Ändern von `.env` aktiviert die Route daher im Root-Compose **nicht**. Keine produktive Freischaltung ohne eigene überprüfte Konfigurationsänderung, erforderliche Datenbankmigration und Autorisierungsprüfung.
@@ -49,6 +50,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 
 | PR | Stand / technische Aussage |
 | --- | --- |
+| [#68](https://github.com/mason82-dotcom/SkyHub/pull/68) | **In Main**: die isolierte, nur lokale M3M-Dateinamen-Inventur aus #23; kein vollständiger Medien-/S3-Reader und keine Bildinhaltsprüfung |
 | [#19](https://github.com/mason82-dotcom/SkyHub/pull/19), [#23](https://github.com/mason82-dotcom/SkyHub/pull/23), [#25](https://github.com/mason82-dotcom/SkyHub/pull/25) | Offene, teilweise überlappende MinIO-/M3M-/Backup-Themen. Vor Integration Duplikate gegen #24 und #29 abgleichen |
 | [#33](https://github.com/mason82-dotcom/SkyHub/pull/33) | Geprüfter passiver `services_reply`-Vertrag im Entwicklungsbranch; nicht Main |
 | [#34](https://github.com/mason82-dotcom/SkyHub/pull/34) → [#36](https://github.com/mason82-dotcom/SkyHub/pull/36) → [#37](https://github.com/mason82-dotcom/SkyHub/pull/37) → [#38](https://github.com/mason82-dotcom/SkyHub/pull/38) | Gestapelte **Drafts**: HTTPS-Pilot-STS-Vertrag, begrenzter MinIO-STS-Issuer, HEAD-geprüfte Registrierung und getrennte Pilot-2-HTTPS-Medien-API. Keine produktive Router-Montage/Deployment-Freigabe |
