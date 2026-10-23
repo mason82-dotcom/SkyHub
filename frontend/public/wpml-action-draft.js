@@ -103,7 +103,16 @@
        !Array.isArray(plan.waypoints)||plan.waypoints.length<2||
        plan.waypoints.length>500)bad();
     const count=plan.waypoints.length;
+    keys(plan,['name','model','speed','transitionSpeed','takeoffHeight',
+      'finishAction','timestamp','waypoints','actionGroups']);
     if(plan.intervalPhotos||plan.waypoints.some(p=>p.photo===true))bad();
+    for(const p of plan.waypoints){
+      keys(p,['lat','lon','height','photo']);
+      if(!Number.isFinite(p.lat)||p.lat< -90||p.lat>90||
+         !Number.isFinite(p.lon)||p.lon< -180||p.lon>180||
+         !Number.isFinite(p.height)||p.height<2||p.height>120)bad();
+    }
+    if(plan.waypoints.some(p=>p.height!==plan.waypoints[0].height))bad();
     const groups=normalize(plan.actionGroups||[],count);
     // Reversing stop/start video semantics safely requires DJI/Pilot 2
     // behavioral evidence. Do not infer equivalent recording behavior.
