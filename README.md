@@ -52,6 +52,7 @@ Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTT
 - [Priorisierter Integrationsplan: PR-Basisgraph, Reihenfolge und Prüfbedingungen](docs/integration-priorities-2026-10-23.md)
 - [Gemeinsame Offline-Hardwarediagnostik: RC Pro/M3M, RC Plus 2/M4T](docs/hardware-diagnostics-consolidation.md)
 - [M3M-Kamerafeldlücken ohne Thermografie-Fehlschluss](docs/m3m-camera-gap-analysis.md)
+- [M3M-Medieninventur Phase 1: rein lokale Dateinamen- und Bandzähler](docs/m3m-offline-media-inventory.md)
 - [RC Plus 2/Matrice 4T: read-only Hardware-Prüfverfahren](docs/hardware-rc-plus2-m4t.md)
 - [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
