@@ -159,7 +159,9 @@
     try{
       if(!reference)throw new TypeError('Referenzimport nicht verfügbar.');
       if(file.size>128*1024)throw new TypeError('JSON-Datei überschreitet 128 KiB.');
-      const payload=JSON.parse(await file.text());
+      let payload;
+      try{payload=JSON.parse(await file.text());}
+      catch{throw new TypeError('Ungültiges Waylines-JSON.');}
       const mapped=reference.convert(payload);
       // Validate fully before mutating any visible editor state.
       core.normalize(mapped.plan);
@@ -176,8 +178,8 @@
       hasFit=false;
       render();
       renderMessage('Waylines-Referenzentwurf lokal importiert ('+points.length+
-        ' Wegpunkte). Unbekannte Missionsfunktionen werden nicht übernommen. '+
-        'Kein hardwarevalidierter Flugauftrag.');
+        ' Wegpunkte). Nicht unterstützte Funktionen werden abgewiesen. '+
+        'SkyHub verwendet eigene RC-Verlustregeln. Kein hardwarevalidierter Flugauftrag.');
     }catch(error){
       renderMessage(error instanceof Error?error.message:'Waylines-Import fehlgeschlagen.',true);
     }finally{
