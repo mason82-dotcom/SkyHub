@@ -80,3 +80,35 @@ node --test backend/test/wpml-editor.test.js backend/test/wpml-compare.test.js
 ```
 
 Die neue Änderung ist isoliert im Entwicklungsbranch; kein Pi-Deployment. Als nächste **separate** Schritte: Lizenz/Go-Modulpfad upstream klären, die synthetische JSON-/KMZ-Parität anhand anonymisierter DJI-Pilot-2-Exporte testen, Submodelle und RC-Loss-Verhalten pro Firmware verifizieren und erst danach mögliche Mapping-, Trigger- oder Multispektral-Erweiterungen prüfen. Hardware-Validierungsstatus muss bis dahin `false` bleiben.
+
+## Offline-Referenz-Risikoaudit für vorhandene KMZ (Phase 4)
+
+`backend/wpml-reference-audit.js` stellt `auditReferenceKmz(buffer)` bereit. Die CLI
+`scripts/wpml-reference-audit.js` liest eine KMZ **rein lokal und nur lesend**:
+
+```bash
+node scripts/wpml-reference-audit.js /pfad/zu/einer-lokalen-mission.kmz
+```
+
+**Rückgabecodes:** `0` bedeutet *keine der explizit bekannten Referenz-Divergenzen gefunden*, **nicht** flugtauglich; `1` bedeutet Review notwendig; `2` bedeutet blockiert/ungültige Datei/Einlesefehler. Der JSON-Report enthält ausschließlich feste Fehlerkennungen und Statuswerte, **niemals XML-Werte, GPS-Koordinaten, Dateipfade, Missionsnamen oder einzelne Höhenwerte**. Die Funktion ist kein DJI-Importvalidator und kein tatsächlicher Lauf des Go-SDK.
+
+Referenz auf Upstream-Commit `dd9b12d...` und die DJI-Dokumentation:
+- [DJI `template.kml` / Sicherheits- und Höhenfelder](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/template-kml.html)
+- [DJI `waylines.wpml` / Flugkommandos und Verlust der RC-Verbindung](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/waylines-wpml.html)
+
+Erkannte Abweichungen, die **nur eine fachliche Warnung**, keine automatisierte Korrektur auslösen:
+
+| Risikocode | Bedeutung |
+|---|---|
+| `RC_LOSS_POLICY_DIFFERS_FROM_SKYHUB_EDITOR` | Vorgabe bei RC-Signalverlust weicht von SkyHubs aktuellem Offline-Editor ab; die DJI-Feldwerte sind nicht grundsätzlich verboten |
+| `TAKEOFF_REFERENCE_REQUIRES_INDEPENDENT_PROVENANCE` | `takeOffRefPoint` vorhanden; die Quelle und die tatsächliche WGS84-Ellipsoidhöhe des Referenzpunkts sind gesondert zu prüfen |
+| `TAKEOFF_AGL_ZERO_REQUIRES_REVIEW` | SDK-Konverter erzeugt für die automatisch angenommene Referenz ggf. AGL-Höhe `0`; nicht als verifizierter Bodenabstand behandeln |
+| `ELLIPSOID_HEIGHT_PROVENANCE_UNVERIFIED` | Ein `ellipsoidHeight`-Feld existiert; der Höhenbezug ist nicht extern verifiziert |
+| `ELLIPSOID_EQUALS_OTHER_HEIGHT_REQUIRES_REVIEW` | Numerisch gleiche Höhen in zwei Referenzsystemen; das ist **nicht zwangsläufig falsch**, verlangt aber bei der SDK-Konvertierung einen Herkunftsnachweis |
+| `WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED` | `distance`/`duration` im KMZ; die Upstream-Schätzung rechnet mit ca. 111.000 m je Breiten- **und** Längengrad, was von der geografischen Breite und Route abhängige Fehler auslösen kann |
+
+Blockierende Befunde sind u. a. `AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT`, `AIRCRAFT_SUBTYPE_UNRECOGNIZED`, `WPML_OFFLINE_VALIDATION_FAILED` und `WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB`. Insbesondere verwendet der Upstream `NewDocument()` den Namespace `1.0.6`, während der aktuell gepinnte SkyHub-WPML-Parser nur `1.0.2` prüft. **Der Audit erkennt `1.0.6`, normalisiert ihn aber nicht heimlich auf `1.0.2` und erhebt keine Aussage zur realen DJI-Pilot-2-Akzeptanz.** Unbekannte oder gemischte Namespaces werden ebenfalls blockiert.
+
+Geprüft werden beide XML-Dokumente innerhalb einer durch SkyHub größen- und CRC-begrenzten KMZ. Das Tool erzeugt **keine** Flugroute, sendet **keine** DJI-Kommandos und liest keine Kamera-/Ressourceninhalte. Auch ein unauffälliger Audit besitzt `flightReady:false`, `pilot2HardwareVerified:false` und `sdkOutputVerified:false`.
+
+Tests: `node --test backend/test/wpml-reference-audit.test.js`.
