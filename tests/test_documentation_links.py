@@ -72,7 +72,7 @@ class DocumentationLinkTest(unittest.TestCase):
     def test_heading_slug_examples(self):
         self.assertEqual(heading_slug("Pilot 2 connection sequence (handshake)"),
                          "pilot-2-connection-sequence-handshake")
-        self.assertEqual(heading_slug("Separate P1 / P2: Map API"), "separate-p1--p2-map-api")
+        self.assertEqual(heading_slug("Separate P1 / P2: Map API"), "separate-p1-p2-map-api")
 
     def test_documentation_navigation_targets(self):
         index = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
