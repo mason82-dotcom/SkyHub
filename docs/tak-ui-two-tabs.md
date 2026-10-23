@@ -48,3 +48,47 @@ Hinweis auf den weiterhin nötigen Freigabetest: Der angepasste Backend-Hook dar
 ## Zusätzliche Landmark-Abnahme
 
 Mit dem korrigierten `<main>`-Layout wurde die isolierte Chromium/Playwright-Fixture erneut bei 320, 390, 834 und 1440 px ausgeführt. Alle vier Bildschirmgrößen: **kein horizontaler Überlauf**, Tabwechsel und Tastatur-Rückkehr erfolgreich. Ein zusätzlicher Node-Test erzwingt genau ein `<main>` mit beiden Tabpanels. Dies bleibt eine **synthetische Browserprüfung**; ein vollständiger SkyHub-Staginglauf mit Leaflet und Pilot-2-WebView ist weiterhin offen.
+
+## Browser-Integration mit tatsächlichem Frontend (23.10.2026)
+
+Abseits der zuvor dokumentierten, nachgebauten UI-Fixture gibt es jetzt den dedizierten Workflow
+[`SkyHub TAK UI browser acceptance`](../.github/workflows/tak-ui-browser.yml).
+
+- Führt die **unveränderte** `frontend/public/index.html` und die tatsächlichen
+  `telemetry-freshness.js`/`workspace-tabs.js` aus.
+- Verwendet echtes **Leaflet 1.9.4**, einen echten **Socket.IO 4.8.1** Testserver und
+  **Playwright Chromium 1.56.1**. Browser-Abhängigkeiten werden nur im temporären
+  GitHub-Runner-Verzeichnis installiert; `backend/package.json` bleibt unverändert.
+- HTTP-API, Gerätedaten und WebSocket-Snapshot sind **synthetisch** und laufen
+  ausschließlich über `127.0.0.1`. CDN-Dateien und Kartenkacheln werden
+  lokal abgefangen; der Browser baut keine DJI-, Pi-, CloudTAK- oder
+  externen OSM-Verbindungen auf.
+- Prüft bei 320, 390, 834 und 1440 px: Navigation, Sichtbarkeit, dynamisches
+  Leaflet-Layout, kein horizontaler Overflow und sichere TAK-Statusanzeige.
+- Prüft die Tastaturbedienung, den Fortbestand des Geräteeintrags und der Leaflet-Panes,
+  unveränderte Socket.IO-Sitzung beim Tabwechsel, abgetrennte Socket-Verbindung,
+  abgelehnten API-Zugriff und das Ausbleiben von TAK-API-Aufrufen.
+- Der Workflow speichert ein maschinenlesbares `report.json` und Screenshots
+  als 14 Tage aufbewahrtes GitHub-Actions-Artefakt. Diese enthalten
+  ausschließlich synthetische Daten und keine echten Gerätekennungen.
+
+**Erster vollständig grüner Browser-Test:**
+[GitHub Actions Lauf 39915332639](https://github.com/mason82-dotcom/SkyHub/actions/runs/39915332639).
+Das aktuell erweiterte Testszenario muss nach jedem neuen Commit erneut grün laufen.
+
+**Nicht durch diesen Test belegt:** Start der vollständigen Backend-/Redis-/PostGIS-
+Anwendung, DJI-MQTT-Hardwareverkehr, realer Pilot-2-WebView-Test,
+manueller Screenreader-Test, Hardwareautorisierung und CloudTAK-Kompatibilität.
+Diese bleiben separate Freigabesperren. **Kein automatischer Merge oder Pi-Rollout.**
+
+Lokale Ausführung mit separatem Dependency-Verzeichnis und Chromium:
+
+```sh
+mkdir -p /tmp/skyhub-browser-deps
+npm install --prefix /tmp/skyhub-browser-deps --ignore-scripts --no-save \
+  playwright@1.56.1 leaflet@1.9.4 socket.io@4.8.1
+/tmp/skyhub-browser-deps/node_modules/.bin/playwright install chromium
+SKYHUB_BROWSER_DEPS=/tmp/skyhub-browser-deps/node_modules \
+  SKYHUB_BROWSER_ARTIFACTS=/tmp/skyhub-browser-report \
+  node scripts/tak-ui-browser-ci.js
+```
