@@ -144,3 +144,7 @@ Der konsolidierte Root-Stack enthält die isoliert getesteten PostGIS- und Backu
 - [Entwicklungsplan und Fortschritt](docs/entwicklungsplan-2026-10-20.md)
 
 **Pi-Update:** Ein Git-Merge ist kein Deployment. Vor einem Update auf dem Pi lokale `.env`, Overrides und persistente PostGIS-Daten sichern, nur das bestehende Backend aktualisieren und danach über `/api/health` prüfen. Keine Compose-Volumes löschen, keine Legacy-Dienste starten und keine offenen DJI-Feature-Flags ungeprüft aktivieren.
+
+## Zusätzliche Waylines-SDK-Referenz für Offline-Missionsplanung
+
+Der WPML-Wegpunkteditor kann jetzt das **stark eingeschränkte, numerische Waylines-JSON-Teilformat** aus der Motecshine-Go-SDK-Referenz als lokale Datei importieren. Eine unveränderte Übernahme von SDK-KMZ oder Drittquellcode findet nicht statt; der DJI-Cloud-API-Missionsversand bleibt deaktiviert. Herkunft, Feldgrenzen, Validierung und offene Lizenzklärung: [Waylines-SDK-Referenz](docs/dji-waylines-sdk-reference.md).
