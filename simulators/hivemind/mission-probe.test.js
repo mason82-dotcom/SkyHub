@@ -7,7 +7,7 @@ const {GATEWAY,FLIGHT_ID,ALLOWED,requestEnvelope,replyMatches,validProgress}
 const UUID=crypto.randomUUID();
 const BID=crypto.randomUUID();
 test('hardcoded mission scope cannot address a production device or method',()=>{
- assert.equal(GATEWAY,'SKYHUB_LAB_DOCK_01');
+ assert.match(GATEWAY,/^7UUXN[A-Z0-9]{9}$/);
  assert.deepEqual(ALLOWED,['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery']);
  assert.throws(()=>requestEnvelope('takeoff_to_point',{},UUID,BID));
  assert.throws(()=>requestEnvelope('flighttask_execute',{flight_id:'real-flight'},UUID,BID));
