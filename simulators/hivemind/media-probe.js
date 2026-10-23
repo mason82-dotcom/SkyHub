@@ -45,8 +45,9 @@ async function run(){
   const sn=process.argv[2];
   const base='http://hivemind-simulator:9090/api/media';
   const files=await getJson(base+'/files');
-  if(files.success!==true || !Array.isArray(files.mediaFiles) ||
-      files.mediaFiles.length!==0)throw Error('Refusing nonempty media directory');
+  if(files.success!==true || !Array.isArray(files.mediaFiles))
+    throw Error('Unexpected media file listing response');
+  if(files.mediaFiles.length!==0)throw Error('Refusing nonempty media directory');
   const old=await getJson(base);
   if(!Array.isArray(old) || old.length!==0)throw Error('Refusing reused media session');
 
