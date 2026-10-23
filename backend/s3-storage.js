@@ -80,7 +80,7 @@ function createS3Storage(env=process.env,client){
          (typeof result.NextContinuationToken!=='string'||
           !result.NextContinuationToken||
           result.NextContinuationToken.length>4096||
-          /[\\x00-\\x1f\\x7f]/.test(result.NextContinuationToken)))||
+          /[\x00-\x1f\x7f]/.test(result.NextContinuationToken)))||
        (!result.IsTruncated&&Boolean(result.NextContinuationToken))){
       throw new Error('Invalid S3 listing response');
     }
@@ -88,7 +88,7 @@ function createS3Storage(env=process.env,client){
     const objects=entries.map(item=>{
       const key=item?.Key;
       if(typeof key!=='string'||key.length>1024||
-         !key.startsWith(prefix)||/[\\x00-\\x1f\\x7f]/.test(key)||
+         !key.startsWith(prefix)||/[\x00-\x1f\x7f]/.test(key)||
          seen.has(key)||
          (item.Size!==undefined&&
            (!Number.isSafeInteger(item.Size)||item.Size<0))){
