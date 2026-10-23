@@ -15,7 +15,7 @@ input,button,select{padding:9px 11px;border:1px solid #40576d;border-radius:8px;
 button{background:#087d96;font-weight:700;cursor:pointer}button:hover{background:#099ab8}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #85e3fa;outline-offset:2px}
 button:disabled{cursor:not-allowed;opacity:.6}
-main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 118px)}
+main#skyhubMain{display:block;min-height:0}#operationsPanel{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 118px)}
 #map{width:100%;height:100%;min-height:350px}
 .map-shell{position:relative;min-width:0;min-height:350px}
 .map-tools{position:absolute;z-index:500;top:12px;right:12px;display:grid;gap:7px;max-width:min(290px,calc(100% - 24px))}
@@ -79,7 +79,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 .events-list small{font-size:10px;white-space:nowrap}
 .events-note{margin:0;color:var(--muted);font-size:11px}
 .events-panel button{margin-top:8px;padding:4px 8px;font-size:11px;background:#203c50}
-@media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}main{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
+@media(max-width:850px){header{height:auto;flex-direction:column;align-items:flex-start}#operationsPanel{grid-template-columns:1fr;height:auto}#map{height:clamp(300px,38vh,420px);min-height:300px}aside{border-left:0}.map-shell{min-height:300px}}
 
 /* Main tabs mirror the design reference; TAK remains a read-only, offline placeholder. */
 .workspace-tabs{display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 18px;background:var(--bg);border-bottom:1px solid var(--edge)}
@@ -115,7 +115,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
   <button id="tabOperations" class="workspace-tab" type="button" role="tab" aria-controls="operationsPanel" aria-selected="true" tabindex="0">01 · Operations</button>
   <button id="tabTak" class="workspace-tab" type="button" role="tab" aria-controls="takPanel" aria-selected="false" tabindex="-1">02 · TAK / CoT</button>
 </nav>
-<main id="operationsPanel" role="tabpanel" aria-labelledby="tabOperations">
+<main id="skyhubMain">
+<div id="operationsPanel" role="tabpanel" aria-labelledby="tabOperations">
   <section class="map-shell" aria-label="Drohnenkarte">
     <div id="map" aria-label="Karte mit zuletzt gemeldeten Gerätepositionen"></div>
     <div class="map-tools">
@@ -167,7 +168,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
     <p id="resultCount" class="result-count" role="status">0 Geräte</p>
     <div id="devices"><p class="muted">Mit Zugriffstoken verbinden.</p></div>
   </aside>
-</main>
+</div>
 <section id="takPanel" role="tabpanel" aria-labelledby="tabTak" tabindex="0" hidden>
   <div class="tak-layout">
     <div class="tak-heading">
@@ -193,6 +194,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
     <p class="tak-note">Vor einer Aktivierung erforderlich: geprüfte DJI-Gerätebindung, rollenbasierte Workspace-Freigabe, abgesicherter HTTPS-Transport, externe Audit-Sicherung und CloudTAK-Kompatibilitätstest. Keine DJI-Befehle oder automatischen Standortübertragungen aus dieser Ansicht.</p>
   </div>
 </section>
+</main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/telemetry-freshness.js"></script>
