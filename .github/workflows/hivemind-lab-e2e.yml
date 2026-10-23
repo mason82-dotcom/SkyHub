@@ -34,8 +34,9 @@ jobs:
           bash -n simulators/hivemind/prepare.sh
           python3 -m unittest discover -s tests -p 'test_hivemind*.py'
           node --check simulators/hivemind/dock-mock.js
-          node --test simulators/hivemind/dock-mock.test.js simulators/hivemind/mission-probe.test.js
+          node --test simulators/hivemind/dock-mock.test.js simulators/hivemind/mission-probe.test.js simulators/hivemind/media-probe.test.js
           node --check simulators/hivemind/mission-probe.js
+          node --check simulators/hivemind/media-probe.js
 
       - name: Provision distinct lab credentials and fetch/build pinned AGPL upstream
         run: |
