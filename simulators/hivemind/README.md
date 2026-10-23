@@ -47,7 +47,22 @@ bash simulators/hivemind/lab.sh prepare    # fetch pinned upstream, build jar
 bash simulators/hivemind/lab.sh config     # Compose validation only
 bash simulators/hivemind/lab.sh up         # STARTS a separate lab stack
 bash simulators/hivemind/lab.sh ps
+bash simulators/hivemind/lab.sh smoke       # bounded REST→MQTT→SkyHub E2E validation
 ```
+
+The automated `smoke` command uses only the two loopback APIs and the private
+`lab.env` view token; it refuses to connect if the SkyHub backend is not the
+expected read-only, non-recording test instance. It connects the simulator in
+**Pilot / RC Plus 2** mode to the private broker, brings synthetic devices
+online, changes simulated battery state, and checks that SkyHub's observed OSD,
+accepted OSD and valid telemetry counters all increase and that matching
+synthetic controller/aircraft records appear. It finally requests simulated
+device shutdown. No DJI serial numbers, coordinates, passwords or tokens are
+printed. **Run `smoke` only when the test simulator is offline**; if it is
+already online the check fails rather than disrupting an existing session.
+The result is a software-level regression check, not a hardware acceptance
+test. The simulator may wait approximately 10 seconds for a missing
+`status_reply`; the Pilot-mode timeout is intentional in this phase.
 
 Open the simulator at `http://127.0.0.1:19090` and SkyHub at
 `http://127.0.0.1:14001`. Choose **Pilot** mode, use test-only device identities,
@@ -71,6 +86,11 @@ bash simulators/hivemind/lab.sh logs
 bash simulators/hivemind/lab.sh down  # only lab; keeps its data volumes
 ```
 
+For a quick **offline-only** verification of the orchestration and smoke-test
+contract, run `python3 -m unittest discover -s tests -p 'test_hivemind*.py'`.
+The standard GitHub CI executes these tests automatically but does **not**
+build, start or network-test the externally licensed simulator.
+
 To clean the lab data, examine project-specific volumes manually first.
 **Never run `docker compose down -v` or prune volumes blindly.**
 To use the lab on a remote Pi, keep ports loopback-only and use SSH port
@@ -84,7 +104,7 @@ changes to the existing EMQX ACL, Caddy, legacy Docker Compose or Pi `.env`.
 | Reproducible simulator source | Exact pinned upstream Git SHA | Build may fail if Maven dependencies are unavailable |
 | Isolation | Lab project/network/volumes; no host MQTT port | Verify Compose output before running |
 | Pilot topology | SkyHub sees `sys/product/+/status` | No physical onboarding verification |
-| OSD/State | SkyHub counts and parses simulated messages | Live dashboard requires its view token |
+| OSD/State | `lab.sh smoke` checks new OSD and normalized telemetry | Synthetic only; no genuine DJI 1.18 confirmation |
 | Dock registration | **Not implemented by SkyHub** | Requires explicit mock/adapter before E2E testing |
 | Flight commands, DRC, stream, media | Reference only | SkyHub has no general active command execution path |
 | DJI Cloud API 1.18 / aircraft coverage | **Not proven** | Upstream bundles SDK 1.16.1.3; hardware tests remain necessary |
