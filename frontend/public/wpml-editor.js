@@ -36,14 +36,18 @@
         const raw=$(id).value.trim();
         return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)?Number(raw):NaN;
       };
+      const numericField=id=>{
+        const raw=$(id).value.trim();
+        return raw===''?NaN:Number(raw);
+      };
       const cameraRaw=$('photo-camera-min').value.trim();
       const output=reviewCore.analyze({
         name:$('name').value,
         waypoints:points,
         model:$('model').value,
-        speed:decimalField('speed'),
-        globalHeight:decimalField('height'),
-        takeoffHeight:decimalField('takeoff'),
+        speed:numericField('speed'),
+        globalHeight:numericField('height'),
+        takeoffHeight:numericField('takeoff'),
         finishAction:$('finish').value,
         localHeights:$('local-heights').checked,
         photoTrigger:$('photo-trigger').value,
