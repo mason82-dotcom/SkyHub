@@ -41,7 +41,10 @@ def request(base: str, path: str, *, method: str = "GET",
         headers["Content-Type"] = "application/json"
     req = Request(base + path, data=data, headers=headers, method=method)
     try:
-        with OPENER.open(req, timeout=TIMEOUT) as response:
+        # Upstream Pilot online waits up to 10 seconds for status_reply before
+        # continuing without an acknowledgement. Do not mistake this for a hang.
+        timeout = 40 if base == SIM and path == "/api/online" else TIMEOUT
+        with OPENER.open(req, timeout=timeout) as response:
             if response.status != 200:
                 raise SmokeFailure("Unexpected response status")
             raw = response.read(1024 * 1024 + 1)
