@@ -4,7 +4,7 @@
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
-RUN mkdir -p /app/config /app/media /app/videos \
+RUN mkdir -p /app/config /app/media /app/media-empty /app/videos \
     && chown -R 1000:1000 /app
 
 # The exact JAR name is checked by prepare.sh before docker compose build.
