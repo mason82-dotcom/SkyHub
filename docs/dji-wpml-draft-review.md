@@ -1,6 +1,6 @@
 # FlightHub-inspirierte Missionsprüfung – reiner Offline-Entwurf
 
-**Stand 23.10.2026. Entwicklungszweig:** `feature/wpml-mission-draft-review-20261023`, gestapelt auf [Waylines-Referenz #57](https://github.com/mason82-dotcom/SkyHub/pull/57), die auf dem noch nicht in Main gemergten [WPML-Editor #16](https://github.com/mason82-dotcom/SkyHub/pull/16) basiert.
+**Stand 23.10.2026. Entwicklungszweig:** `feature/wpml-mission-draft-review-20261023`, gestapelt auf [Waylines-Referenz #57](https://github.com/mason82-dotcom/SkyHub-Next/pull/57), die auf dem noch nicht in Main gemergten [WPML-Editor #16](https://github.com/mason82-dotcom/SkyHub-Next/pull/16) basiert.
 
 ## Umfang
 
