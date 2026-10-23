@@ -29,6 +29,15 @@ test('conservative four-index view model accepts only experimental metadata',()=
   assert.equal(JSON.stringify(data).includes('private'),false);
   assert.equal(JSON.stringify(data).includes('example.invalid'),false);
 });
+test('float32 nearly constant means tolerate bounded numerical rounding only',()=>{
+  const r=base();
+  r.candidates[0].indices[0].min=0.25;
+  r.candidates[0].indices[0].max=0.25;
+  r.candidates[0].indices[0].mean=0.24999996;
+  assert.equal(normalizeCatalog(r).length,1);
+  r.candidates[0].indices[0].mean=0.249;
+  assert.throws(()=>normalizeCatalog(r),/INVALID_CATALOG/);
+});
 test('empty experimental catalog is permitted',()=>{
   const doc=base();doc.candidates=[];doc.count=0;
   assert.deepEqual(normalizeCatalog(doc),[]);
