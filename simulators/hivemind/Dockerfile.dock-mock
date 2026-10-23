@@ -6,5 +6,6 @@ COPY backend/package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY simulators/hivemind/dock-mock.js ./dock-mock.js
 COPY simulators/hivemind/mission-probe.js ./mission-probe.js
+COPY simulators/hivemind/media-probe.js ./media-probe.js
 USER node
 CMD ["node","dock-mock.js"]
