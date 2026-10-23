@@ -70,6 +70,20 @@ and the exact disposable organization `skyhub-lab-org` with binding code
 The simulator `dock-smoke` uses the regular `/api/online` method without
 `skip_register`, waits for successful registration and verifies fresh
 topology and OSD reception in SkyHub before calling `/api/offline`.
+The Dock E2E acceptance additionally triggers a synthetic `WIND_HIGH` HMS
+event (expected code `0x160900BF`), verifies SkyHub's normalized alert
+snapshot, and runs the separate one-shot `mission-probe.js` inside the
+`dock-mock` container. That probe uses the simulator-generated Dock3 SN
+(no SN override, which would desynchronize upstream MQTT subscriptions),
+publishes ONLY `flighttask_prepare`, `flighttask_execute`,
+`flighttask_pause`, and `flighttask_recovery` on the lab broker, correlates
+`services_reply` to the exact `tid`/`bid`, and verifies
+`flighttask_progress` in both MQTT and SkyHub `/api/events`. It never
+publishes to the Pi broker or creates a real DJI flight.
+The `mission-probe.js` is an inert file until `dock-smoke` explicitly
+executes it. Its generated Dock3 SN is checked against the known synthetic
+model format, and no host port is exposed for MQTT.
+
 Run the Pilot smoke first; it is intentionally unaffected by this new
 Dock-only profile. For clean sequential tests, keep the lab simulator offline
 before each smoke command.
@@ -122,7 +136,8 @@ changes to the existing EMQX ACL, Caddy, legacy Docker Compose or Pi `.env`.
 | Pilot topology | SkyHub sees `sys/product/+/status` | No physical onboarding verification |
 | OSD/State | `lab.sh smoke` checks new OSD and normalized telemetry | Synthetic only; no genuine DJI 1.18 confirmation |
 | Dock registration | `dock-rpc` opt-in mock: four sequential requests + topology reply | Synthetic success only; SkyHub production RPCs still unimplemented |
-| Flight commands, DRC, stream, media | Reference only | SkyHub has no general active command execution path |
+| Synthetic Wayline + HMS | `dock-smoke` verifies HMS code, four mission services and progress | Test-only MQTT publisher; no production command API or real flight |
+| Media uploads / DRC / streams | Reference only | Not yet end-to-end verified; no real object-storage uploads |
 | DJI Cloud API 1.18 / aircraft coverage | **Not proven** | Upstream bundles SDK 1.16.1.3; hardware tests remain necessary |
 
 ## Security and licensing
