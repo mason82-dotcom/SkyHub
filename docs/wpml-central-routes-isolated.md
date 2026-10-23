@@ -13,10 +13,13 @@ DJI-Pilot-2-Pairing dürfen keine Schreibrechte begründen.
 
 Die bestehende Datenbankdatei
 `backend/db/migrations/003_wpml_route_library_draft.sql` legt nur ein
-**nicht automatisch installiertes** Default-Deny-Schema fest:
-`FORCE ROW LEVEL SECURITY`, keine erlaubenden RLS-Policies, keine
-DB-Grants für einen WPML-Runtime-User. Die neue Implementierung
-ändert diese Sicherheitsgrenze **nicht**.
+**nicht automatisch installiertes** Default-Deny-Schema fest. Ein
+separater ebenfalls **nicht automatisch installierter**
+`backend/db/migrations/004_wpml_route_audit_draft.sql` ergänzt das
+append-only-Audit. Beide verwenden `FORCE ROW LEVEL SECURITY`,
+keine erlaubenden RLS-Policies und keine Grants für einen
+WPML-Runtime-User. Die neue Implementierung ändert diese
+Sicherheitsgrenze **nicht**.
 
 ## Isolierte Module
 
@@ -61,8 +64,15 @@ HTTP-Request-Body, Query, Cookies ohne Verifikation oder DJI-Token
   erneut normalisiert und gegen die gespeicherte Prüfsumme verglichen.
   `flightReady:false`, `dispatchAllowed:false` und
   `previewOnly:true` werden erzwungen.
-- **Transaktion:** Jede Änderung ist `BEGIN`/`COMMIT`; bei Fehler
-  erfolgt `ROLLBACK`.
+- **Transaktion und Audit:** Jede Änderung ist `BEGIN`/`COMMIT`;
+  bei Fehler erfolgt `ROLLBACK`. Jeder erfolgreiche Create-/Append-Aufruf
+  fügt **in derselben Transaktion** genau einen unveränderlichen
+  `skyhub_wpml_route_audit`-Eintrag hinzu. Gespeichert werden ausschließlich
+  Workspace-, Routen-, Revisions- und Operator-UUID, fester Ereignistyp
+  und Erstellzeit – **niemals GPS-Koordinaten, Missionspläne oder Tokens**.
+  Der Audit-Entwurf ist Default-Deny, eine sichere Lese-/Exportschnittstelle
+  und eine unabhängige Audit-Retention fehlen weiterhin. Ein fehlgeschlagener
+  Audit-Insert **muss** die Route-/Revisionsänderung zurückrollen.
 
 Keine Rollenverwaltung, Folder-CRUD, Team-Sharing, produktiver
 Task-Snapshot- oder DJI-Upload-Endpunkt.
@@ -77,8 +87,11 @@ SKYHUB_TEST_DATABASE_URL=postgresql://...@127.0.0.1:55432/skyhub_test \
 ```
 
 Die Integrationstests verwenden ein **temporäres separates Schema**
-in der explizit erlaubten `skyhub_test`-Datenbank. Dort werden
-SQL-Transaktionen mit dem administrativen CI-Nutzer nachgewiesen;
+in der explizit erlaubten `skyhub_test`-Datenbank und wenden
+`003` sowie `004` ausschließlich dort an. Sie prüfen unveränderliche
+Audit-Einträge, Default-Deny-RLS-Metadaten, Audit-/Routentransaktionskopplung
+sowie einen gezielt fehlgeschlagenen Audit-Insert samt vollständigem Rollback.
+Dort werden SQL-Transaktionen mit dem administrativen CI-Nutzer nachgewiesen;
 **dies ist kein Beweis für produktive RLS-Rollenrechte**.
 
 Vor einer Serverfreigabe sind zwingend:
