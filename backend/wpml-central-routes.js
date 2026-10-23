@@ -65,6 +65,10 @@ function createWpmlRouteStore(pool){
       requireId(workspaceId);requireId(actorId);requireId(routeId);
       const normalized=validatePlan(name,plan);
       return transaction(async client=>{
+        // Serialize new-route creation within each workspace so the
+        // 32-route limit cannot be bypassed by concurrent transactions.
+        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
+          [workspaceId]);
         const existing=await client.query(
           'SELECT COUNT(*)::int AS count FROM skyhub_wpml_routes '+
           'WHERE workspace_id=$1 AND archived_at IS NULL',[workspaceId]);
