@@ -1,11 +1,11 @@
 # WPML-Integration auf aktueller SkyHub-Next-Main-Basis
 
-**Stand:** 23.10.2026 · **Integrations-PR:** [#89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) · **Status:** Draft / nicht produktiv freigegeben.
+**Integrationsstand:** 24.10.2026 · [PR #89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) **nach `main` gemergt** (Commit [`1a2a01cf`](https://github.com/mason82-dotcom/SkyHub-Next/commit/1a2a01cf6331256697e27c1e8846f0746bf90f01)). **Laufzeit weiterhin offline und nicht produktiv freigegeben.**
 
 ## Herkunft, Mergegrenze und Architektur
 
 - Geprüfter Quellstand: `feature/dji-wpml-offline-20261021` nach dem Merge von [PR #57](https://github.com/mason82-dotcom/SkyHub-Next/pull/57), Head `a3a92b7e19874f06ccabd37627d8888746afc79e`.
-- Neuer Branch: `feature/wpml-main-integration-20261023`, abzweigend von `main` `aa459bf6b558c84d106c64a5bf819cb9059c071b`.
+- Historischer Integrationsbranch: `feature/wpml-main-integration-20261023`, erstellt von `main` `aa459bf6b558c84d106c64a5bf819cb9059c071b`; dessen geprüfte Änderungen wurden über PR #89 übernommen.
 - `main` und der alte WPML-Branch hatten zum Zeitpunkt der Vorprüfung divergierende Historien (304 Commits voraus, 158 Commits zurück). Der frühere WPML-Branch erbt darüber hinaus den separaten DJI-Cloud-API-Feldkatalog. **Diesen alten Branch deshalb nicht direkt nach `main` mergen.**
 - Nur die 61 eigenständigen WPML-Dateien (Module, UI, Testprogramme, reine WPML-Dokumentation, Offline-KMZ-CLI, gesonderter Browser-CI-Workflow und unangewendete SQL-Migration) wurden **blobidentisch** auf eine neue Main-Basis übertragen. Der aktuelle Server `backend/server.js` und seine separate Authentifizierung, MQTT-Topologie und DJI-Pilot-2-/S3-/MinIO-Komponenten bleiben unverändert.
 - Kleine nachfolgende Main-kompatible Integrationsänderungen: README, Datenschutz-Ausschlüsse in `.gitignore` sowie separater PostgreSQL-Integrationstest. Bestehende `main`-Regressionschecks werden nicht durch ältere WPML-CI-Varianten ersetzt.
@@ -19,7 +19,9 @@
 | `/wpml-survey-preview.html` | Synthetische 2D-Vermessungsgeometrie/Schätzungen | Kein flugtauglicher Mapping-Generator |
 | `backend/wpml*.js` | KMZ-Parsing, begrenzte Validierung, Referenzanalyse | Semantische Offline-Teilprüfung, keine Gerätezertifizierung |
 | `scripts/wpml-*.js` | Lokale CLI-Audits, synthetische Matrix, Vergleich | Keine DJI-/Netzwerk-Schreibzugriffe |
-| `backend/db/migrations/003_wpml_route_library_draft.sql` | Vorschlag für Mandanten-/Revisionstabellen | **Nicht installiert, keine Lesefreigabe-, Schreib- oder RLS-Policies** |
+| `backend/db/migrations/003_wpml_route_library_draft.sql` | Vorschlag für Mandanten-/Revisionstabellen | **Nicht installiert; RLS aktiviert mit `FORCE`, aber ohne erlaubende Policies oder Datenzugriffsfreigaben (Default Deny)** |
+
+**Abnahme des Codes:** Der Main-basierte Merge von PR #89 wurde als Offline-Codeintegration abgeschlossen; das ist ausdrücklich **keine Hardware-, Pilot-2- oder Produktionsabnahme**. Die anschließend auf `main` ausgeführten GitHub-Checks sind von der Freigabe für einen Pi-Rollout zu unterscheiden.
 
 Die Offline-Validatoren vergeben keine Hardware-/Flugfreigabe. `flightReady:false`, `pilot2HardwareVerified:false` und `dispatchAllowed:false` werden nicht durch erfolgreiche synthetische Tests aufgehoben.
 
@@ -45,4 +47,4 @@ Für den SQL-Integrationstest darf ausschließlich die dedizierte, temporäre `s
 ## Repository- und Legacy-Namen
 
 Kanonisch: https://github.com/mason82-dotcom/SkyHub-Next.
-`~/Projekte/SkyHub` bleibt der **separate Legacy-Pfad**; seine Daten und Dienste werden durch diese Integrations-PR nicht verändert.
+`~/Projekte/SkyHub` bleibt der **separate Legacy-Pfad**; seine Daten und Dienste wurden durch diesen Merge nicht verändert. Auch die neue Pi-Brokeroption Mosquitto/1883 wird nicht allein durch einen Git-Merge aktiviert.

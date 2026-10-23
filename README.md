@@ -46,7 +46,7 @@ Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61)
 
 ## WPML-Routenbibliothek (noch **nicht** produktiv freigegeben)
 
-Der Main-basierte [WPML-Integrationsentwurf](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) stellt ausschließlich **Offline-Komponenten** unter `/wpml-editor.html`, `/wpml-route-library.html` und `/wpml-survey-preview.html` bereit. Dazu gehören strikt validierte KMZ/WPML-Inspektion, lokale Routenrevisionen, Action Groups sowie explizites **unverschlüsseltes** Browser-Backup. WPML wird nicht als DJI-Flugauftrag versendet.
+Die über [PR #89](https://github.com/mason82-dotcom/SkyHub-Next/pull/89) in `main` integrierte WPML-Bibliothek stellt ausschließlich **Offline-Komponenten** unter `/wpml-editor.html`, `/wpml-route-library.html` und `/wpml-survey-preview.html` bereit. Dazu gehören strikt validierte KMZ/WPML-Inspektion, lokale Routenrevisionen, Action Groups sowie explizites **unverschlüsseltes** Browser-Backup. WPML wird nicht als DJI-Flugauftrag versendet.
 
 Der zentrale PostgreSQL-Routenentwurf `backend/db/migrations/003_wpml_route_library_draft.sql` bleibt deaktiviert (Default-Deny-RLS). Keine automatische Migration, kein MQTT-Publish, keine DJI-/Pilot-2-Hardwarefreigabe und keine Änderung an produktiven Raspberry-Pi-Diensten. [WPML-Integrationsgates](docs/wpml-main-integration.md) und [technische WPML-Referenz](docs/dji-waylines-sdk-reference.md).
 
