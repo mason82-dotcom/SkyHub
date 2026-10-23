@@ -15,7 +15,7 @@ try:
 except ImportError:
     np = rasterio = None
 
-MODULE = Path(__file__).with_name('m3m_raster_bundle_verify.py')
+MODULE = Path(__file__).resolve().parents[1] / 'backend/workers/m3m_raster_bundle_verify.py'
 spec = importlib.util.spec_from_file_location('m3m_raster_bundle_verify', MODULE)
 worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
