@@ -103,7 +103,7 @@ function createFlighttaskJournal(db){
       [workspaceId,observationId,JSON.stringify(snapshot)]);
     if(rows.length===1)return {created:true,revision:1,state:snapshot};
     const existing=await read({workspaceId,observationId});
-    if(!existing||JSON.stringify(existing.state.request)!==JSON.stringify(snapshot.request))
+    if(!existing||Object.keys(snapshot.request).some(k=>existing.state.request[k]!==snapshot.request[k]))
       throw new Error('Flighttask journal identity collision');
     return {...existing,created:false};
   }
