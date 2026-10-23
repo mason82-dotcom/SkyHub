@@ -40,7 +40,9 @@ Der hier dokumentierte Root-Code von `main` entspricht Commit
 
 ## Dokumentation
 
-- [Dokumentationswegweiser](docs/index.md)\n- [Projektstand 23.10.2026: Main, PR-Ketten, Test-/Hardware-Evidenz](docs/projektstand-2026-10-23.md)\n- [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
+- [Dokumentationswegweiser](docs/index.md)
+- [Projektstand 23.10.2026: Main, PR-Ketten, Test-/Hardware-Evidenz](docs/projektstand-2026-10-23.md)
+- [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
 - [Trennung vom Legacy-Stack und Migrationsübersicht](docs/legacy-migration.md)
