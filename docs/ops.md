@@ -12,11 +12,16 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-    git clone --branch main https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+    # Nur bei einer echten Neuinstallation; vorhandenes Projekt NICHT überschreiben.
+    test ! -e ~/Projekte/SkyHub-Next &&
+      git clone --branch main https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
-    cp .env.example .env
+    # Nur falls .env noch nicht existiert:
+    test -e .env || cp -n .env.example .env
 
-Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
+**Vorhandene Installationen:** kein neues Clone, kein `cp` über bestehende `.env`, keinen lokalen Branch ohne sauberen Arbeitsbaum wechseln. Für ein bestehendes Pi-System zunächst nur `git status --short --branch`, `docker compose -p skyhub-next ps` und [Preflight](scripts.md) lesen; neue Funktionen werden nicht automatisch deployed.
+
+Die Datei `.env` bei erstmaliger Inbetriebnahme lokal bearbeiten. Alle `REPLACE_*`-Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
 
 **Nur nach eigener, aktueller Prüfung** von SSD/NVMe-Gesundheit, Ressourcen, Sicherungen, Portbelegung, Git-Arbeitsbaum und Compose-Konfiguration (die älteren NVMe-Befunde sind keine Aussage über den Zustand am 23.10.2026):
 
@@ -99,10 +104,16 @@ Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token v
 
 ## Tests
 
+Der Backend-Testlauf benötigt installierte Abhängigkeiten. `npm ci` schreibt
+**nur** in `backend/node_modules/` und darf ausschließlich im dafür vorgesehenen
+Entwicklungscheckout ausgeführt werden (nicht als angeblich rein lesende Diagnose).
+Die folgenden Tests starten keine produktiven Container oder DJI-Kommandos.
+
+    npm ci --prefix backend --ignore-scripts --no-audit --no-fund
     node --check backend/server.js
     node --check backend/dji.js
     node --check backend/mqtt-metrics.js
-    node --test backend/test/*.test.js
+    npm test --prefix backend
     python3 -m unittest discover -s tests -p 'test_*.py'
     docker compose --env-file .env.example config --quiet
 
