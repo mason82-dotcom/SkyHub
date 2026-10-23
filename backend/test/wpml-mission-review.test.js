@@ -1,0 +1,111 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const review=require('../../frontend/public/wpml-mission-review');
+
+const p=(lat,lon,other={})=>({lat,lon,height:50,...other});
+const draft=(waypoints=[p(49,8),p(49.0009,8.0009)],other={})=>({
+  model:'mavic3e',speed:5,globalHeight:50,localHeights:false,
+  photoTrigger:'reachPoint',waypoints,...other
+});
+test('valid nominal draft is only a review, never ready or dispatchable',()=>{
+  const result=review.analyze(draft());
+  assert.equal(result.status,'review-only');
+  assert.equal(result.waypointCount,2);
+  assert.ok(result.horizontalDistanceMeters>0);
+  assert.ok(result.nominalStraightTravelSeconds>0);
+  assert.equal(result.flightReady,false);
+  assert.equal(result.hardwareVerified,false);
+  assert.equal(result.flightTimeEstimated,false);
+  assert.equal(result.missionDispatchEnabled,false);
+  assert.equal(Object.isFrozen(result),true);
+  assert.equal(Object.isFrozen(result.issueCodes),true);
+  assert.throws(()=>{result.flightReady=true},TypeError);
+});
+test('empty and single waypoint drafts remain explicitly incomplete',()=>{
+  for(const points of [[],[p(49,8)]]){
+    const r=review.analyze(draft(points));
+    assert.equal(r.status,'incomplete');
+    assert.ok(r.issueCodes.includes('insufficient-waypoints'));
+  }
+});
+test('all common invalid coordinates, speed, model and duplicates are flagged',()=>{
+  for(const data of [
+    draft([p(91,8),p(49,8)]),
+    draft([p(49,8),p(49,8)]),
+    draft(undefined,{speed:0}),
+    draft(undefined,{model:'mavic99'}),
+    draft(undefined,{photoTrigger:'takeoff'})
+  ]) {
+    const r=review.analyze(data);
+    assert.equal(r.status,'invalid');
+    assert.equal(r.flightReady,false);
+  }
+  assert.equal(review.analyze(draft([p(91,8),p(49,8)])).horizontalDistanceMeters,null);
+});
+test('local heights require supplied WGS84 values, not derived guesses',()=>{
+  const bad=review.analyze(draft([p(49,8,{height:48}),p(49.001,8.001,{height:55,ellipsoidHeight:200})],
+    {localHeights:true}));
+  assert.equal(bad.status,'invalid');
+  assert.ok(bad.issueCodes.includes('missing-ellipsoid'));
+  const good=review.analyze(draft([
+    p(49,8,{height:48,ellipsoidHeight:198}),
+    p(49.001,8.001,{height:55,ellipsoidHeight:200})
+  ],{localHeights:true}));
+  assert.equal(good.status,'review-only');
+  assert.equal(good.flightReady,false);
+});
+test('antimeridian uses the short great-circle arc and warns about map display',()=>{
+  const r=review.analyze(draft([p(10,179.9),p(10,-179.9)]));
+  assert.ok(r.horizontalDistanceMeters>21000 && r.horizontalDistanceMeters<23000);
+  assert.ok(r.issueCodes.includes('antimeridian'));
+  assert.ok(r.issueCodes.includes('long-segment'));
+});
+test('2 km segment review warning is not treated as an aircraft restriction',()=>{
+  const r=review.analyze(draft([p(49,8),p(49.025,8)]));
+  assert.equal(r.status,'review-only');
+  assert.ok(r.issueCodes.includes('long-segment'));
+  assert.match(review.issueLabel('long-segment'),/kein DJI-Limit/);
+});
+test('periodic photo count is never fabricated from route distance',()=>{
+  const r=review.analyze(draft([p(49,8,{photo:true}),p(49.0009,8.0009,{photo:true})],
+    {photoTrigger:'multipleDistance'}));
+  assert.equal(r.periodicPhotoMode,true);
+  assert.equal(r.waypointPhotoCount,0);
+  assert.equal(r.flightReady,false);
+});
+test('review returns aggregates only, not raw positions, keys or import payloads',()=>{
+  const input=draft([p(49.1234567,8.9876543,{projectToken:'SENSITIVE'}),
+    p(49.1239999,8.9879999)],{projectToken:'SENSITIVE'});
+  const r=review.analyze(input);
+  const serialized=JSON.stringify(r);
+  for(const secret of ['49.1234567','8.9876543','SENSITIVE','projectToken'])
+    assert.ok(!serialized.includes(secret),secret);
+  assert.equal(review.issueLabel('constructor'),null);
+  assert.equal(review.issueLabel('__proto__'),null);
+});
+test('fail closed for oversized, malformed and non-finite inputs',()=>{
+  for (const x of [null,[],42,{waypoints:new Array(501).fill(p(49,8))},
+     {waypoints:'not an array'}])
+    assert.throws(()=>review.analyze(x),TypeError);
+  const bad=review.analyze(draft([p(49,8),p(NaN,Infinity)]));
+  assert.equal(bad.status,'invalid');
+  assert.equal(bad.horizontalDistanceMeters,null);
+});
+test('editor page and controller present a local-only review, without flight API calls',()=>{
+  const root=path.resolve(__dirname,'../../frontend/public');
+  const html=fs.readFileSync(path.join(root,'wpml-editor.html'),'utf8');
+  const app=fs.readFileSync(path.join(root,'wpml-editor.js'),'utf8');
+  const code=fs.readFileSync(path.join(root,'wpml-mission-review.js'),'utf8');
+  assert.match(html,/id="mission-review"/);
+  assert.match(html,/src="\/wpml-mission-review\.js"/);
+  assert.ok(html.indexOf('/wpml-mission-review.js')<html.indexOf('/wpml-editor.js'));
+  assert.match(app,/reviewCore\.analyze/);
+  assert.match(app,/mission-review/);
+  assert.match(app,/reviewCore\.issueLabel/);
+  assert.doesNotMatch(code,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bpostMessage\s*\(|\bMQTT\b/i);
+  assert.doesNotMatch(app,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bpostMessage\s*\(|\bMQTT\b/i);
+  assert.doesNotMatch(html,/paas\.js|window\.FH2/);
+});
