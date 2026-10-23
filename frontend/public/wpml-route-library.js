@@ -4,9 +4,10 @@
 (function(){
   const core=window.SkyHubWpmlPlanner,lib=window.SkyHubWpmlRouteLibrary;
   const actionDraft=window.SkyHubWpmlActionDraft;
+  const backup=window.SkyHubWpmlRouteBackup;
   const $=id=>document.getElementById(id);
   const STORAGE='skyhub.wpml.local-route-library.v1';
-  if(!core||!lib||!actionDraft){
+  if(!core||!lib||!actionDraft||!backup){
     $('status').textContent='Routenbibliothek konnte nicht geladen werden.';return;
   }
   let library=lib.blank(),selected=null,activeRouteId=null,points=[],groups=[],dirty=false;
@@ -360,6 +361,76 @@
       renderRoutes();
       libraryMessage('Route lokal gelöscht; geöffneter Entwurf bleibt unverändert.');
     }catch{libraryMessage('Route konnte nicht entfernt werden.');}
+  });
+  let pendingBackup=null,backupReadGeneration=0;
+  const backupPreview=$('backup-preview');
+  function resetBackup(message,error=false){
+    pendingBackup=null;
+    $('backup-apply').disabled=true;
+    $('backup-discard').disabled=true;
+    backupPreview.textContent=message;
+    backupPreview.style.color=error?'#ffca8c':'#adcadb';
+  }
+  $('backup-export').addEventListener('click',()=>{
+    if(!window.confirm('Sicherung enthält GPS-Koordinaten und Missionsdaten UNVERSCHLÜSSELT. JSON-Datei jetzt lokal exportieren?'))return;
+    try{
+      const output=backup.exportBackup(library);
+      const blob=new Blob([output.content],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const link=make('a');
+      link.href=url;link.download='skyhub-local-routes-'+Date.now()+'.json';
+      document.body.appendChild(link);link.click();link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+      libraryMessage('Lokale Klartext-Sicherung erzeugt: '+
+        output.preview.routeCount+' Routen, '+output.preview.revisionCount+
+        ' Revisionen. Nicht weitergeben oder öffentlich hochladen.');
+    }catch{libraryMessage('Sicherung abgelehnt: Daten ungültig, zu groß oder Dateidownload fehlgeschlagen.');}
+  });
+  $('backup-file').addEventListener('change',async event=>{
+    const input=event.currentTarget;
+    const file=input.files&&input.files[0];
+    const generation=++backupReadGeneration;
+    resetBackup('Keine Sicherung zum Import vorgemerkt.');
+    if(!file)return;
+    try{
+      if(file.size>backup.MAX_SIZE||file.size<2)
+        throw Error('file size');
+      const contents=await file.text();
+      if(generation!==backupReadGeneration)return;
+      const inspected=backup.inspectBackup(contents);
+      if(generation!==backupReadGeneration)return;
+      pendingBackup=inspected.library;
+      $('backup-apply').disabled=false;
+      $('backup-discard').disabled=false;
+      backupPreview.textContent='Lokale Sicherung geprüft: '+
+        inspected.preview.routeCount+' Routen, '+
+        inspected.preview.revisionCount+' Revisionen, '+
+        inspected.preview.waypointOccurrences+' gespeicherte Wegpunkt-Vorkommen. '+
+        'Bei Übernahme wird die aktuelle Browserbibliothek VOLLSTÄNDIG ersetzt. '+
+        'Inhalte sind unverschlüsselt; kein DJI-Flugauftrag.';
+    }catch{
+      if(generation!==backupReadGeneration)return;
+      resetBackup('Sicherung abgelehnt: Datei, Schema, Duplikatschlüssel oder Missionen ungültig.',true);
+    }finally{input.value='';}
+  });
+  $('backup-discard').addEventListener('click',()=>{
+    ++backupReadGeneration;
+    resetBackup('Sicherungsimport verworfen. Bibliothek unverändert.');
+  });
+  $('backup-apply').addEventListener('click',()=>{
+    if(!pendingBackup)return;
+    if(!window.confirm('ACHTUNG: Die gesamte bisherige lokale Routenbibliothek wird ersetzt. Vorherige Daten nur mit eigener Sicherung wiederherstellbar. Jetzt überschreiben?'))return;
+    try{
+      const next=lib.check(pendingBackup);
+      persist(next); // Atomically replace localStorage before changing UI state.
+      ++backupReadGeneration;
+      resetBackup('Sicherung übernommen. Routen müssen vor Bearbeitung neu geladen werden.');
+      selected=null;activeRouteId=null;
+      // A possibly unrelated working draft stays untouched and unsaved.
+      renderRoutes();
+      libraryMessage('Lokale Routenbibliothek nach ausdrücklicher Bestätigung ersetzt. '+
+        'Der derzeitige Editorentwurf bleibt unverändert; kein Flugauftrag.');
+    }catch{resetBackup('Übernahme fehlgeschlagen. Aktuelle Browserbibliothek nicht absichtlich verändert.',true);}
   });
   $('clear-storage').addEventListener('click',()=>{
     if(!window.confirm('ALLE lokal gespeicherten Routen und Revisionen löschen?'))return;
