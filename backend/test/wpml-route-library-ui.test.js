@@ -70,7 +70,7 @@ test('selection alone cannot turn an unrelated current draft into selected route
   app.get('save').click();
   assert.equal(app.writes(),0);
   assert.equal(app.current().routes[0].revisions.length,1);
-  assert.match(app.get('library-status').textContent,/ausgewählte Route zuerst/);
+  assert.match(app.get('library-status').textContent,/Ausgewählte Route zuerst/);
 });
 test('batch templates require explicit save, emit ordered groups, and keep revision 1 immutable',()=>{
   const app=harness();app.selectedRoute();app.get('load').click();
