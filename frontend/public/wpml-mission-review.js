@@ -20,6 +20,14 @@
     'invalid-height':'Relative Höhenangabe fehlt oder ist ungültig.',
     'missing-ellipsoid':'Bei individuellen Höhen fehlt eine gültige WGS84-Ellipsoidhöhe.',
     'unknown-photo-trigger':'Unbekannter Kamera-Auslösetyp.',
+    'invalid-name':'Missionsname fehlt oder enthält ungültige Zeichen.',
+    'invalid-takeoff-height':'Sicherheitssteighöhe außerhalb des Entwurfsbereichs.',
+    'invalid-finish-action':'Abschlussaktion nicht unterstützt.',
+    'invalid-photo-interval':'Fotointervall außerhalb des Entwurfsbereichs.',
+    'invalid-camera-min-interval':'Angegebenes minimales Kameraaufnahmeintervall ist ungültig.',
+    'camera-interval-too-short':'Fotoauslöseintervall unterschreitet das angegebene Kameraminimum.',
+    'camera-interval-unverified':'Kein Kamera-Minimalintervall angegeben; reale Aufnahmefrequenz ungeprüft.',
+    'photo-mode-conflict':'Periodische Fotos dürfen nicht mit Wegpunkt-Einzelbildern kombiniert werden.',
     'long-segment':'Mindestens ein Segment ist über 2 km lang (nur Prüfhinweis, kein DJI-Limit).',
     'antimeridian':'Datumslinie berührt: Kartenlinie könnte den kürzesten Weg falsch darstellen.',
     'high-latitude':'Hohe Breite: Kartendarstellung und Geometrie gesondert prüfen.'
@@ -44,6 +52,12 @@
     const issues = new Set();
     const points = input.waypoints;
     if (points.length<2) issues.add('insufficient-waypoints');
+    if (typeof input.name!=='string' || input.name.trim().length===0 ||
+        input.name.length>70 || /[\u0000-\u001f\u007f]/.test(input.name))
+      issues.add('invalid-name');
+    if (!inRange(input.takeoffHeight,1.2,120)) issues.add('invalid-takeoff-height');
+    if (input.finishAction!=='goHome' && input.finishAction!=='noAction')
+      issues.add('invalid-finish-action');
     if (!allowedModels.has(input.model)) issues.add('unsupported-model');
     if (!inRange(input.speed,0.2,15)) issues.add('invalid-speed');
     if (!allowedTriggers.has(input.photoTrigger)) issues.add('unknown-photo-trigger');
@@ -77,13 +91,34 @@
       }
       previous=valid?{lat:point.lat,lon:point.lon}:null;
     }
+    const periodic=input.photoTrigger==='multipleDistance' ||
+      input.photoTrigger==='multipleTiming';
+    if (periodic) {
+      const maxInterval=input.photoTrigger==='multipleDistance'?1000:60;
+      if (!inRange(input.photoInterval,1,maxInterval))
+        issues.add('invalid-photo-interval');
+      if (photoCount>0) issues.add('photo-mode-conflict');
+      if (input.cameraMinIntervalSeconds===null) {
+        issues.add('camera-interval-unverified');
+      } else if (!inRange(input.cameraMinIntervalSeconds,0.1,60)) {
+        issues.add('invalid-camera-min-interval');
+      } else if (inRange(input.photoInterval,1,maxInterval) &&
+        inRange(input.speed,0.2,15)) {
+        const seconds=input.photoTrigger==='multipleTiming'?
+          input.photoInterval:input.photoInterval/input.speed;
+        if (seconds<input.cameraMinIntervalSeconds)
+          issues.add('camera-interval-too-short');
+      }
+    }
     if (!allCoordinatesValid || !heightsValid || issues.has('invalid-speed'))
       total=NaN; // no plausible calculation from incomplete/invalid input
     const issueCodes=Object.freeze([...issues]);
     const errorCodes=new Set([
       'insufficient-waypoints','unsupported-model','invalid-speed',
       'invalid-coordinate','duplicate-neighbors','invalid-height',
-      'missing-ellipsoid','unknown-photo-trigger'
+      'missing-ellipsoid','unknown-photo-trigger','invalid-name',
+      'invalid-takeoff-height','invalid-finish-action','invalid-photo-interval',
+      'invalid-camera-min-interval','camera-interval-too-short','photo-mode-conflict'
     ]);
     const hasErrors=issueCodes.some(c=>errorCodes.has(c));
     const result={
