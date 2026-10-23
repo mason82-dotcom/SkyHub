@@ -103,7 +103,9 @@ async function run() {
     undoBid=crypto.randomUUID();
     await command('flighttask_undo',{flight_ids:[FLIGHT_ID]},undoBid);
     phase='await_cancel_event';
-    const canceledUntil=Date.now()+4000;
+    // MQTT QoS 0 progress delivery can lag behind services_reply during
+    // GitHub runner startup; keep a bounded observation window, fail closed.
+    const canceledUntil=Date.now()+10000;
     while(cancellation.length===0 && Date.now()<canceledUntil)
       await new Promise(resolve=>setTimeout(resolve,100));
     if(cancellation.length===0)throw Error('Ground cancellation event not confirmed');
