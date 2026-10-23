@@ -308,6 +308,41 @@
       if(applyRevision(version))$('route-folder').value=version.folder;
     }catch{message('Revision konnte nicht geladen werden.',true);}
   });
+  $('compare-revision').addEventListener('click',()=>{
+    try{
+      if(selected==null)throw Error('no selection');
+      const chosen=Number($('revision-select').value);
+      const latest=lib.list(library).find(x=>x.id===selected);
+      if(!latest)throw Error('missing route');
+      const diff=lib.compareRevisions(library,selected,chosen,latest.latestRevision);
+      const message='Revision '+diff.leftRevision+' gegen '+diff.rightRevision+
+        ': Wegpunkte '+diff.leftWaypointCount+'/'+diff.rightWaypointCount+
+        ', Positionsänderungen '+diff.positionChanges+
+        ', Höhenänderungen '+diff.heightChanges+
+        ', Fotoänderungen '+diff.photoChanges+
+        ', Aktionsgruppen geändert: '+(diff.actionGroupsChanged?'ja':'nein')+
+        ', Profilfelder geändert: '+diff.flightProfileFieldsChanged.length+
+        '. Nur Offline-Vergleich, keine Flugfreigabe.';
+      $('revision-diff').textContent=message;
+    }catch{$('revision-diff').textContent='Revisionsvergleich nicht möglich.';}
+  });
+  $('restore-revision').addEventListener('click',()=>{
+    try{
+      if(selected==null)throw Error('no selection');
+      const revision=Number($('revision-select').value);
+      const ref=lib.find(library,selected,revision);
+      if(!window.confirm('Revision '+ref.revision+
+          ' als NEUE Revision speichern? Vorhandene Historie bleibt unverändert.'))return;
+      const restored=lib.restoreRevision(library,selected,revision);
+      persist(restored.library);
+      // Never pretend the old editor draft now matches the restored revision.
+      activeRouteId=null;
+      renderRoutes();
+      libraryMessage('Revision '+revision+' als neue Revision '+
+        restored.revision+' gesichert. Entwurf unverändert; neue Revision erneut laden.');
+      $('revision-diff').textContent='Wiederherstellung angelegt. Vor Flugplanung erneut prüfen.';
+    }catch{libraryMessage('Wiederherstellung nicht möglich. Revision oder Speicher prüfen.');}
+  });
   $('clone').addEventListener('click',()=>{
     try{
       if(selected==null)throw Error('no selection');
