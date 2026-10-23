@@ -77,6 +77,10 @@ test('create validates canonical offline plans and produces no flight-ready arti
   assert.equal(insert.params[2].includes('49.12345'),true);
   assert.equal(insert.params[4],HUMAN);
   assert.equal(Buffer.isBuffer(insert.params[3]),true);
+  const audit=db.sql.find(x=>x.text.includes('INSERT INTO skyhub_wpml_route_audit'));
+  assert.deepEqual(audit.params,[A,result.routeId,HUMAN]);
+  assert.doesNotMatch(audit.text+/JSON.stringify(audit.params),
+    /49\.12345|8\.56789|Private survey route/);
   const db2=pool(),s2=createWpmlRouteService({pool:db2,authorize:async()=>actor});
   await assert.rejects(s2.createRoute({workspaceId:A,name:'Private survey route',
     plan:{...plan(),dispatchAllowed:true}}),{code:'invalid'});
