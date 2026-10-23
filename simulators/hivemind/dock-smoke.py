@@ -92,6 +92,7 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
     if media.returncode != 0 or "PASS: STS denied" not in media.stdout:
         safe_reasons = (
             "Refusing nonempty media directory",
+            "Unexpected media file listing response",
             "Refusing reused media session",
             "Invalid synthetic Dock3 SN",
             "Media MQTT subscription refused",
