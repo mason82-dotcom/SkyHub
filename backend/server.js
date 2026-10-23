@@ -35,7 +35,7 @@ if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
 }
 let broker;
 try {
-  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT);
+  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT,process.env.SKYHUB_MQTT_BROKER_KIND);
 } catch(err) {
   console.error('[mqtt config]',err.message);
   process.exit(1);
@@ -157,9 +157,8 @@ app.get('/api/health',(req,res)=>res.json({
 }));
 app.use('/api',auth);
 
-// M3M experimental aggregate catalog is disabled by default. No routes for
-// file downloads, tiles, mission planning or production prescription export.
-// Main HTTP Bearer authorization is required even on token-free LAN read views.
+// Experimental M3M aggregate catalog. Explicit flag, pinned manifest and Bearer
+// authentication; no tiles, prescription export, mission path or free-form URLs.
 if(process.env.SKYHUB_M3M_CATALOG_ENABLED==='true'){
   app.use('/api/smart-farming/candidates',createSmartFarmingCatalogRouter({
     express,auth,root:process.env.SKYHUB_M3M_CATALOG_ROOT,
