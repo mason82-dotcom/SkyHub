@@ -27,6 +27,8 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertIn('127.0.0.1:19090:9090', overlay)
         self.assertIn('dockerfile: ../Dockerfile.lab', overlay)
         self.assertIn('SKYHUB_TRACK_RECORDING_ENABLED: "false"', overlay)
+        # Upstream MediaSampleInitializer auto-populates any nonempty media-dir.
+        self.assertIn('SIMULATOR_MEDIA_MEDIADIR: ""', overlay)
         self.assertIn('SKYHUB_PILOT_ENABLED: "false"', overlay)
         self.assertNotRegex(overlay, r'(?m)^\s*-\s*["\x27]?(?:1883|1884|4000|4001):')
         self.assertNotIn("network_mode: host", overlay)
@@ -49,6 +51,7 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertIn("USER 1000:1000", dockerfile)
         self.assertIn("target/dji-dock-simulator-1.4.10.jar", dockerfile)
         self.assertNotIn("apt-get", dockerfile)
+        self.assertNotIn("SIMULATOR_MEDIA_MEDIADIR", dockerfile)
         self.assertNotIn("ffmpeg", dockerfile.lower().split("from eclipse-temurin")[1])
 
     def test_dock_mock_explicit_profile_and_no_exposed_ports(self):
