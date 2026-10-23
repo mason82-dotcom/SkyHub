@@ -36,7 +36,7 @@ def videotrack(*, stts=((4, 100),), ctts=None, ctts_version=0,
         mdhd = fullbox() + bytes(8) + timescale.to_bytes(4, "big") + (
             400).to_bytes(4, "big") + bytes(4)
     else:
-        mdhd = fullbox(1) + bytes(16) + timescale.to_bytes(4, "big") + (
+        mdhd = fullbox(mdhd_version) + bytes(16) + timescale.to_bytes(4, "big") + (
             400).to_bytes(8, "big") + bytes(4)
     stsz = (fullbox(stsz_version) + (24).to_bytes(4, "big") +
             sample_count.to_bytes(4, "big"))
