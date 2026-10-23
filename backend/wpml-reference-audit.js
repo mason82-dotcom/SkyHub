@@ -35,20 +35,27 @@ function auditReferenceKmz(buffer){
   let archive;
   try{archive=readKmz(buffer);}catch{rejected();}
   const a=namespace(archive.template),b=namespace(archive.waylines);
-  if(a!==SUPPORTED||b!==SUPPORTED){
-    return {...base(),offlineValid:null,namespaceCheck:
-      a===ALT&&b===ALT?'upstream-alternate-unverified':'unsupported-or-mixed',
+  const alternate=a===ALT&&b===ALT;
+  if(!alternate&&(a!==SUPPORTED||b!==SUPPORTED)){
+    return {...base(),offlineValid:null,namespaceCheck:'unsupported-or-mixed',
+      inspectionMode:'not-inspected',
       reviewStatus:'blocked',
       findings:['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB'],
       findingCount:1};
   }
+  // A namespace shim lets the *read-only* parser inspect 1.0.6 Go-SDK exports.
+  // Neither XML is modified on disk or exported. All such inputs remain blocked,
+  // even when the 1.0.2 validation happens to pass under this narrow shim.
+  const inspectionXml=alternate?
+    [archive.template,archive.waylines].map(xml=>xml.replace(ALT,SUPPORTED)):
+    [archive.template,archive.waylines];
   let template,waylines,validation;
   try {
-    template=parseXml(archive.template);
-    waylines=parseXml(archive.waylines);
-    validation=validateDocuments(archive.template,archive.waylines);
+    template=parseXml(inspectionXml[0]);
+    waylines=parseXml(inspectionXml[1]);
+    validation=validateDocuments(inspectionXml[0],inspectionXml[1]);
   } catch {rejected();}
-  const codes=new Set();
+  const codes=new Set(alternate?['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB']:[]);
   if(!validation.valid)codes.add('WPML_OFFLINE_VALIDATION_FAILED');
   const docs=[template,waylines];
   for(const root of docs){
@@ -91,12 +98,40 @@ function auditReferenceKmz(buffer){
   if(ellipsoidFound)codes.add('ELLIPSOID_HEIGHT_PROVENANCE_UNVERIFIED');
   if(identicalHeightPairs>0)codes.add('ELLIPSOID_EQUALS_OTHER_HEIGHT_REQUIRES_REVIEW');
   for(const folder of children(one(waylines,'Document'),'Folder')){
-    if(field(folder,'distance')!==''||field(folder,'duration')!=='')
+    const declaredDistance=field(folder,'distance');
+    if(declaredDistance!==''||field(folder,'duration')!=='')
       codes.add('WAYLINE_STATS_NOT_INDEPENDENTLY_VERIFIED');
+    if(declaredDistance!==''){
+      const pts=children(folder,'Placemark').map(p=>{
+        const raw=one(one(p,'Point'),'coordinates')?.text.trim()??'';
+        const parts=raw.split(',');
+        if(parts.length!==2)return null;
+        const lon=Number(parts[0]),lat=Number(parts[1]);
+        return Number.isFinite(lat)&&Number.isFinite(lon)&&
+          lat>=-90&&lat<=90&&lon>=-180&&lon<=180?{lat,lon}:null;
+      });
+      const reported=Number(declaredDistance);
+      if(pts.length>=2&&pts.every(Boolean)&&
+         /^\\d+(?:\\.\\d+)?$/.test(declaredDistance)&&Number.isFinite(reported)){
+        const rad=x=>x*Math.PI/180;
+        let calculated=0;
+        for(let i=1;i<pts.length;i++){
+          const p=pts[i-1],q=pts[i];
+          const dlat=rad(q.lat-p.lat),dlon=rad(q.lon-p.lon);
+          const h=Math.sin(dlat/2)**2+Math.cos(rad(p.lat))*
+            Math.cos(rad(q.lat))*Math.sin(dlon/2)**2;
+          calculated+=2*6371008.8*Math.asin(Math.sqrt(Math.max(0,Math.min(1,h))));
+        }
+        // Coarse red-flag threshold, not a validated aircraft distance model.
+        if(calculated>0&&Math.abs(reported-calculated)>Math.max(50,calculated*0.15))
+          codes.add('WAYLINE_DISTANCE_DIFFERS_FROM_SPHERICAL_APPROXIMATION');
+      }
+    }
   }
-  return {...base(),offlineValid:validation.valid,
-    namespaceCheck:'skyhub-recognized-1.0.2',
-    reviewStatus:!validation.valid?'blocked':codes.size?'review-required':'no-listed-divergence-observed',
+  return {...base(),offlineValid:alternate?null:validation.valid,
+    namespaceCheck:alternate?'upstream-alternate-unverified':'skyhub-recognized-1.0.2',
+    inspectionMode:alternate?'namespace-relabel-in-memory-only':'native-skyhub',
+    reviewStatus:alternate||!validation.valid?'blocked':codes.size?'review-required':'no-listed-divergence-observed',
     findings:[...codes].sort(),findingCount:codes.size};
 }
 module.exports={auditReferenceKmz};
