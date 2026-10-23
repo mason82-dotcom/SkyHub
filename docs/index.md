@@ -32,6 +32,10 @@
 | Frontend-Kontrakte | [UX-CONTRACT](../UX-CONTRACT.md), [DESIGN](../DESIGN.md) |
 | FlightHub 2 Frontend – optionale Herstellerkomponenten, nur Referenz | [FH2-On-Premises-Komponenten und Sicherheitsgates](dji-flighthub2-frontend-components.md) |
 
+## Passiver DJI Flight-Area-Laborstand
+
+[Event-Inspector](dji-flight-area-integration.md) · [Offline-Zielrevisionsmonitor](dji-flight-area-sync-monitor.md). Ausschließlich gelesene, begrenzte Daten; keine aktiven Fluggebietsänderungen, kein Pi-Hardwarebeleg.
+
 ## Historische Momentaufnahmen – nicht als Live-Betriebszustand verwenden
 
 - [Entwicklungsplan 20.–21.10.2026](entwicklungsplan-2026-10-20.md)
