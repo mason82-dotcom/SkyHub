@@ -4,9 +4,7 @@ Stand: 23.10.2026 · **Nur Offline-/CI-Prototyp. Kein produktiver Missionsstatus
 
 ## Kontext und Abhängigkeiten
 
-Stacked auf [PR #78](https://github.com/mason82-dotcom/SkyHub/pull/78)
-(services_reply -> Flighttask-Beobachtung), welcher wiederum auf
-[PR #74](https://github.com/mason82-dotcom/SkyHub/pull/74) aufsetzt.
+**Integrationsnachtrag 23.10.2026:** [PR #74](https://github.com/mason82-dotcom/SkyHub-Next/pull/74), [PR #78](https://github.com/mason82-dotcom/SkyHub-Next/pull/78) und [PR #83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) wurden nacheinander in `main` gemergt. Die vorherige gestapelte Review-Basis ist historisch.
 Die Entwicklung implementiert **ausschließlich einen isolierten
 PostgreSQL-Persistenzadapter**. Weder `backend/server.js` noch
 `docker-compose.yml`, der Pi oder MQTT-Dienste werden verändert.
