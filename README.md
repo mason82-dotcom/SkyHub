@@ -44,6 +44,7 @@ Der hier dokumentierte Root-Code von `main` entspricht Commit
 - [Konfigurationsreferenz: Env, Compose, Flags und Startgrenzen](docs/config-reference.md)
 - [API-Referenz: HTTP, Socket.IO, MQTT und Zugriffsmatrix](docs/api-reference.md)
 - [Projektstand 23.10.2026: Main, PR-Ketten, Test-/Hardware-Evidenz](docs/projektstand-2026-10-23.md)
+- [Priorisierter Integrationsplan: PR-Basisgraph, Reihenfolge und Prüfbedingungen](docs/integration-priorities-2026-10-23.md)
 - [Architektur, Komponenten, Telemetrie-Integrität und API](docs/architecture.md)
 - [Betrieb, Tests, Pi-Preflight und historische Diagnosebefunde](docs/ops.md)
 - [Sicherheitsmodell, Authentifizierung, TLS und LAN-Zugriff](docs/security.md)
