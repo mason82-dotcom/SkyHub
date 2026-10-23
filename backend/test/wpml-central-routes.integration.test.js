@@ -35,6 +35,21 @@ test('isolated route transaction CAS, immutable snapshots, workspace boundary an
     const sql=fs.readFileSync(path.resolve(__dirname,
       '../db/migrations/003_wpml_route_library_draft.sql'),'utf8');
     await db.query(sql);
+    const auditSql=fs.readFileSync(path.resolve(__dirname,
+      '../db/migrations/004_wpml_route_audit_draft.sql'),'utf8');
+    await db.query(auditSql);
+    await db.query(auditSql); // draft remains idempotent in disposable schemas
+    const auditSecurity=await db.query(
+      "SELECT c.relrowsecurity,c.relforcerowsecurity FROM pg_class c "+
+      "JOIN pg_namespace n ON n.oid=c.relnamespace "+
+      "WHERE n.nspname=current_schema() AND c.relname='skyhub_wpml_route_audit'");
+    assert.equal(auditSecurity.rowCount,1);
+    assert.equal(auditSecurity.rows[0].relrowsecurity,true);
+    assert.equal(auditSecurity.rows[0].relforcerowsecurity,true);
+    const activePolicies=await db.query(
+      "SELECT COUNT(*)::int AS n FROM pg_policies "+
+      "WHERE schemaname=current_schema() AND tablename='skyhub_wpml_route_audit'");
+    assert.equal(activePolicies.rows[0].n,0);
     // Runs only in disposable CI, using the DB administrator to verify SQL
     // transactions and trigger semantics; DOES NOT verify runtime RLS grants.
     const pool={connect:async()=>({query:(...args)=>db.query(...args),
@@ -75,6 +90,47 @@ test('isolated route transaction CAS, immutable snapshots, workspace boundary an
     assert.deepEqual(versions.rows.map(r=>Number(r.revision)),[1,2]);
     assert.ok(versions.rows.every(r=>r.flight_ready===false&&
       r.dispatch_allowed===false));
+    const auditRows=await db.query(
+      'SELECT revision,event_type,actor_id FROM skyhub_wpml_route_audit '+
+      'WHERE workspace_id=$1 AND route_id=$2 ORDER BY revision',
+      [A,createdRoute.routeId]);
+    assert.deepEqual(auditRows.rows.map(r=>r.event_type),
+      ['created','revision_appended']);
+    assert.deepEqual(auditRows.rows.map(r=>Number(r.revision)),[1,2]);
+    assert.ok(auditRows.rows.every(r=>r.actor_id===USER));
+    // Audit entries must be non-rewritable even under this privileged
+    // disposable test connection.
+    await assert.rejects(db.query(
+      'DELETE FROM skyhub_wpml_route_audit WHERE workspace_id=$1',
+      [A]),{code:'42501'});
+    await assert.rejects(db.query('TRUNCATE skyhub_wpml_route_audit'),
+      {code:'42501'});
+
+    // Inject a deterministic failure at audit insertion.  The route CAS
+    // update and immutable revision insertion must roll back together.
+    const badPool={connect:async()=>({
+      query:(statement,...args)=>{
+        if(typeof statement==='string'&&
+           statement.startsWith('INSERT INTO skyhub_wpml_route_audit'))
+          throw Error('synthetic audit sink refusal');
+        return db.query(statement,...args);
+      },
+      release(){}
+    })};
+    const badService=createWpmlRouteService({pool:badPool,
+      authorize:async token=>token==='isolated-operator-session'?operator:null});
+    await assert.rejects(badService.appendRevision({...common,
+      routeId:createdRoute.routeId,expectedRevision:2,plan:plan(7)}),
+      /synthetic audit sink refusal/);
+    assert.equal((await db.query(
+      'SELECT COUNT(*)::int AS n FROM skyhub_wpml_route_revisions '+
+      'WHERE workspace_id=$1 AND route_id=$2',
+      [A,createdRoute.routeId])).rows[0].n,2);
+    assert.equal((await db.query(
+      'SELECT COUNT(*)::int AS n FROM skyhub_wpml_route_audit '+
+      'WHERE workspace_id=$1 AND route_id=$2',
+      [A,createdRoute.routeId])).rows[0].n,2);
+
     const latest=await db.query(
       'SELECT latest_revision FROM skyhub_wpml_routes WHERE workspace_id=$1',
       [A]);
