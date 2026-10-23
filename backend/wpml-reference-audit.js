@@ -96,7 +96,7 @@ function auditReferenceKmz(buffer){
   }
   return {...base(),offlineValid:validation.valid,
     namespaceCheck:'skyhub-recognized-1.0.2',
-    reviewStatus:codes.size?'review-required':'no-listed-divergence-observed',
+    reviewStatus:!validation.valid?'blocked':codes.size?'review-required':'no-listed-divergence-observed',
     findings:[...codes].sort(),findingCount:codes.size};
 }
 module.exports={auditReferenceKmz};
