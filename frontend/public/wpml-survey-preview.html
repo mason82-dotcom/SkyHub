@@ -36,10 +36,14 @@ p{line-height:1.5}.muted{color:#a8bdd0;font-size:12px}
 <main>
 <section class="map-shell" aria-label="2D-Vermessungskarte">
 <div id="map" aria-label="Survey-Grenze und Schätzlinien"></div>
-<div class="instructions">Kartenklick setzt Polygon-Eckpunkte. Die eingezeichneten Linien sind eine <strong>geometrische Vorschau</strong>, keine DJI-Waylines.</div>
+<div class="instructions">Kartenklick setzt Polygon-Eckpunkte. Gelbe Linien sind <strong>geometrische Aufnahmeabschnitte</strong>, rote Striche ausschließlich <strong>ungeplante Lücken</strong>. Keine DJI-Waylines.</div>
 </section>
 <aside>
 <h2>Survey-Fläche</h2>
+<p class="muted">GeoJSON-Import (Polygon/MultiPolygon) erlaubt auch Löcher und getrennte Flächen. Maximal 4 Teilflächen, 8 Ringe je Fläche, insgesamt 160 Eckpunkte und 2 km Ausdehnung. Keine Flugstreckenfreigabe.</p>
+<div><label for="geometry-file">Lokale GeoJSON-Geometrie (maximal 64 KiB)</label><input id="geometry-file" type="file" accept=".geojson,.json,application/geo+json,application/json"></div>
+<div class="actions"><button id="import-geometry" type="button">GeoJSON laden</button></div>
+<p class="muted">Beim Laden wird ein manuell eingezeichnetes Polygon ersetzt. GeoJSON wird nur lokal gelesen; Löcher und getrennte Flächen können nicht punktweise im Editor verändert werden. Rote gestrichelte Linien zeigen ausschließlich ungeplante direkte Übergangslücken, keine sicheren Flugrouten.</p>
 <p class="muted">Nur lokal im Browser. Die Grundkarte benötigt ggf. Internet und übermittelt Kartenausschnitte an den Kacheldienst. Keine Drohnenbefehle, kein Cloud-Upload.</p>
 <div class="row"><div><label for="lat">Breitengrad</label><input type="number" id="lat" step="any" min="-85" max="85" placeholder="48.5"></div>
 <div><label for="lon">Längengrad</label><input type="number" id="lon" step="any" min="-180" max="180" placeholder="8.5"></div></div>
@@ -73,7 +77,7 @@ p{line-height:1.5}.muted{color:#a8bdd0;font-size:12px}
 <p class="muted">Maximal 2.000 Kartenmarkierungen. Bei größeren Schätzungen werden ausschließlich die Endpunkte jedes Streifensegments markiert, niemals versteckte Zwischenbilder als vollständig dargestellt.</p>
 <div class="actions"><button id="preview" type="button">2D-Vorschau berechnen</button><button id="fit" type="button">Fläche einpassen</button><button id="geojson" type="button" disabled>Vorschau als GeoJSON exportieren</button></div>
 <div id="status" role="status" aria-live="polite">Mindestens drei Polygonpunkte setzen.</div>
-<p class="warning"><strong>Keine Flugplanung:</strong> Die Approximation gilt nur für kleine, einfache Survey-Polygone (höchstens 2 km Ausdehnung). Optionale GSD-/Überlappungsschätzungen nur mit manuell bestätigten Kameradaten; nur geometrisch geschätzte Foto-Mittelpunkte, keine echte Bildauslösung, Geländegeometrie, Wendemanöver, Flugbeschränkungen oder DJI-Pilot-2-Prüfung. Kein KMZ-/WPML-Wayline-Export aus dieser Vorschau.</p>
+<p class="warning"><strong>Keine Flugplanung:</strong> Die Approximation gilt nur für kleine, streng geprüfte Survey-Flächen (höchstens 2 km Ausdehnung); Polygonlöcher und getrennte Teilflächen werden nur geometrisch berücksichtigt. Optionale GSD-/Überlappungsschätzungen nur mit manuell bestätigten Kameradaten; nur geometrisch geschätzte Foto-Mittelpunkte, keine echte Bildauslösung, Geländegeometrie, Wendemanöver, Flugbeschränkungen oder DJI-Pilot-2-Prüfung. Kein KMZ-/WPML-Wayline-Export aus dieser Vorschau.</p>
 </aside>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
