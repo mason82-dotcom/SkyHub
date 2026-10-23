@@ -100,7 +100,7 @@ Dies ist keine Sandbox für feindliche Dateisystem- oder ZIP-Inhalte.
 
 ## Tests
 
-`tests/test_m3m_dedal_preflight.py` führt 15 reine Python-Standardbibliothek-
+`tests/test_m3m_dedal_preflight.py` führt 16 reine Python-Standardbibliothek-
 Tests aus (synthetische ZIPs, Dummy-TIFF-Magic und Zertifikate). Die
 Tests decken Checksum-Mismatch, vollständige Vierband-Dateigruppen,
 Panel-/Flug-Trennung, unerwartete TIFFs, widersprüchliche Banddateinamen,
