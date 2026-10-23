@@ -315,3 +315,22 @@ Neue Regressionstests prüfen Revisionsdifferenzen, Historienerhalt,
 Fehlzuordnungs-Sperre und eine Browser-Revisionswiederherstellung. Auch hier
 bleiben `flightReady:false`, `dispatchAllowed:false` und das Erfordernis
 eines eigenständigen DJI-Pilot-2-Hardwaretests unverändert.
+
+## P0 lokale Datensicherung nach der Repository-Umbenennung (Phase 11)
+
+Die Seite `/wpml-route-library.html` unterstützt jetzt eine **explizite lokale JSON-Sicherung** und eine zweistufige Wiederherstellung:
+
+1. `Bibliothek als JSON sichern` zeigt zuerst eine Bestätigung, dass die exportierte Datei **alle Wegpunkt-Koordinaten, Routennamen, Kamera- und Missionsparameter UNVERSCHLÜSSELT** enthält. Ohne Bestätigung wird keine Datei erzeugt. Die Download-Datei bleibt lokal auf dem Benutzergerät.
+2. `Gesicherte lokale JSON-Datei wählen` liest höchstens **512 KiB UTF-8** direkt im Browser. Eine streng geprüfte JSON-/Schema-Validierung mit **doppelter-Schlüssel-Erkennung** lehnt mehrdeutige, unvollständige oder manipulierte Dateien ab. Vor dem Speichern wird nur eine redigierte Vorschau aus **Anzahlen** angezeigt (Routen, Revisionen, Wegpunktvorkommen); niemals GPS, Namen, Pfade oder Rohdaten.
+3. `Geprüfte Sicherung übernehmen` verlangt eine **zweite ausdrückliche Bestätigung** für das vollständige Ersetzen der bisher lokal gespeicherten Bibliothek. Vorher bleibt `localStorage` unverändert. Ein abgebrochener asynchroner Dateilesevorgang kann keine spätere Freigabe reaktivieren.
+4. Nach erfolgreicher Übernahme werden die aktive Routenbindung und die Auswahl aufgehoben. Der aktuell geöffnete Editorentwurf bleibt als **nicht automatisch gespeicherter Entwurf** erhalten. Eine importierte Revision muss ausdrücklich neu geladen werden.
+
+**Wichtige Grenzen:** Eine JSON-Backupdatei ist **keine verschlüsselte Sicherung**, kein geräteunabhängiges Cloud-Backup, keine DJI-WPML-KMZ-Datei und kein Flugauftrag. Die vollständige Bibliothek wird aus technischen Gründen höchstens bis 512 KiB lokal gespeichert; größere Exporte/Importe werden ohne Teilerfolg abgelehnt. Es findet **kein** Dateiupload an SkyHub-, DJI- oder andere Backend-Endpunkte statt. Wer den Browser-Speicher löscht, ohne eine Sicherung anzulegen, verliert die lokalen Bibliotheksdaten.
+
+Sicherheitsregeln für Sicherungen: `schema:skyhub-local-waypoint-backup-v1`, eng begrenzte erlaubte Objektfelder, vollständige Offline-Missionsvalidierung pro Revision, keine implizite Erhöhung von `flightReady` oder `dispatchAllowed`. Alte oder fremde JSON-Formate werden nicht automatisch interpretiert.
+
+```bash
+node --test backend/test/wpml-route-backup.test.js backend/test/wpml-route-library-ui.test.js
+```
+
+Die weiterhin geplante zentrale P0-PostGIS-Bibliothek (Migration `003_wpml_route_library_draft.sql`) bleibt **nicht aktiviert**. Der sichere Browser-Sicherungsprozess ist kein Ersatz für serverseitige Rollenprüfung, Mandantentrennung, Audit-Logging oder Backup-Verschlüsselung.
