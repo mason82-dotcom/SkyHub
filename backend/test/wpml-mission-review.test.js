@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const review=require('../../frontend/public/wpml-mission-review');
+const planner=require('../../frontend/public/wpml-editor-core');
 
 const p=(lat,lon,other={})=>({lat,lon,height:50,...other});
 const draft=(waypoints=[p(49,8),p(49.0009,8.0009)],other={})=>({
@@ -142,6 +143,47 @@ test('periodic and per-waypoint photo actions cannot silently coexist',()=>{
   }));
   assert.equal(r.status,'invalid');
   assert.ok(r.issueCodes.includes('photo-mode-conflict'));
+});
+test('authoritative offline WPML normalizer also rejects inputs flagged by the early review',()=>{
+  const base=draft();
+  const cases=[
+    [{name:''},'invalid-name'],
+    [{speed:16},'invalid-speed'],
+    [{takeoffHeight:0},'invalid-takeoff-height'],
+    [{finishAction:'autoLand'},'invalid-finish-action'],
+    [{waypoints:[p(49,8),p(49,8)]},'duplicate-neighbors']
+  ];
+  for(const [mutation,code] of cases){
+    const input={...base,...mutation};
+    const result=review.analyze(input);
+    assert.equal(result.status,'invalid',code);
+    assert.ok(result.issueCodes.includes(code));
+    assert.throws(()=>planner.normalize(input),TypeError,code);
+  }
+  assert.equal(review.analyze(base).status,'review-only');
+  assert.doesNotThrow(()=>planner.normalize(base));
+});
+test('periodic-photo conflicts and cadence violations mirror actual WPML serializer checks',()=>{
+  const base=draft(undefined,{photoTrigger:'multipleDistance',photoInterval:12,
+    cameraMinIntervalSeconds:4});
+  const early=review.analyze(base);
+  assert.ok(early.issueCodes.includes('camera-interval-too-short'));
+  assert.equal(early.status,'invalid');
+  const buildInput={name:base.name,model:base.model,speed:base.speed,
+    takeoffHeight:base.takeoffHeight,finishAction:base.finishAction,
+    waypoints:base.waypoints,intervalPhotos:{
+      type:base.photoTrigger,interval:base.photoInterval,
+      cameraMinIntervalSeconds:base.cameraMinIntervalSeconds
+    }};
+  assert.throws(()=>planner.build(buildInput),/theoretical trigger interval shorter/);
+  const valid=draft(undefined,{photoTrigger:'multipleDistance',photoInterval:12,
+    cameraMinIntervalSeconds:1});
+  const preview=review.analyze(valid);
+  assert.equal(preview.status,'review-only');
+  assert.equal(preview.flightReady,false);
+  const built=planner.build({...buildInput,
+    intervalPhotos:{...buildInput.intervalPhotos,cameraMinIntervalSeconds:1}});
+  assert.equal(built.flightReady,false);
 });
 test('editor page and controller present a local-only review, without flight API calls',()=>{
   const root=path.resolve(__dirname,'../../frontend/public');
