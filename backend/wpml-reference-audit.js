@@ -18,10 +18,6 @@ function numeric(raw){
   const n=Number(raw);
   return Number.isSafeInteger(n)?n:null;
 }
-function namespace(xml){
-  const match=/<kml\s+[^>]*xmlns:wpml\s*=\s*["']([^"']+)["']/i.exec(xml.slice(0,2048));
-  return match?.[1]??null;
-}
 function base(){
   return {schema:SCHEMA,sourceReference:{
     repository:'motecshine/dji-waylines-sdk',
@@ -34,27 +30,31 @@ function base(){
 function auditReferenceKmz(buffer){
   let archive;
   try{archive=readKmz(buffer);}catch{rejected();}
-  const a=namespace(archive.template),b=namespace(archive.waylines);
-  const alternate=a===ALT&&b===ALT;
-  if(!alternate&&(a!==SUPPORTED||b!==SUPPORTED)){
+  // Try both *literal* namespace profiles without altering XML. The existing
+  // parser enforces literal prefix bindings and rejects nested namespace
+  // rebinding, so comments or arbitrary XML text cannot redirect this gate.
+  let template,waylines,namespaceProfile=null;
+  for(const candidate of [SUPPORTED,ALT]){
+    try{
+      const t=parseXml(archive.template,candidate);
+      const w=parseXml(archive.waylines,candidate);
+      template=t;waylines=w;namespaceProfile=candidate;
+      break;
+    }catch{
+      // Never surface parse error text or raw attacker-controlled XML.
+    }
+  }
+  if(!namespaceProfile){
     return {...base(),offlineValid:null,namespaceCheck:'unsupported-or-mixed',
       inspectionMode:'not-inspected',
       reviewStatus:'blocked',
       findings:['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB'],
       findingCount:1};
   }
-  // A namespace shim lets the *read-only* parser inspect 1.0.6 Go-SDK exports.
-  // Neither XML is modified on disk or exported. All such inputs remain blocked,
-  // even when the 1.0.2 validation happens to pass under this narrow shim.
-  const inspectionXml=alternate?
-    [archive.template,archive.waylines].map(xml=>xml.replace(ALT,SUPPORTED)):
-    [archive.template,archive.waylines];
-  let template,waylines,validation;
-  try {
-    template=parseXml(inspectionXml[0]);
-    waylines=parseXml(inspectionXml[1]);
-    validation=validateDocuments(inspectionXml[0],inspectionXml[1]);
-  } catch {rejected();}
+  const alternate=namespaceProfile===ALT;
+  let validation;
+  try{validation=validateDocuments(archive.template,archive.waylines,namespaceProfile);}
+  catch{rejected();}
   const codes=new Set(alternate?['WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB']:[]);
   if(!validation.valid)codes.add('WPML_OFFLINE_VALIDATION_FAILED');
   const docs=[template,waylines];
@@ -130,7 +130,7 @@ function auditReferenceKmz(buffer){
   }
   return {...base(),offlineValid:alternate?null:validation.valid,
     namespaceCheck:alternate?'upstream-alternate-unverified':'skyhub-recognized-1.0.2',
-    inspectionMode:alternate?'namespace-relabel-in-memory-only':'native-skyhub',
+    inspectionMode:alternate?'explicit-alternate-namespace-read-only':'native-skyhub',
     reviewStatus:alternate||!validation.valid?'blocked':codes.size?'review-required':'no-listed-divergence-observed',
     findings:[...codes].sort(),findingCount:codes.size};
 }
