@@ -9,6 +9,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 
 ## Aktueller Projektstand (23.10.2026)
 
+**Experimentelle M3M-Smart-Farming-Bausteine:** Offline-Worker für begrenzte TIFF-/DEDAL-/Rasterprüfungen, eine separate Oberfläche unter `/smart-farming.html` und ein **standardmäßig deaktivierter**, Bearer-geschützter Katalog mit gehashten Metadaten. Keine bestätigte radiometrische Kalibrierung, keine Kartentiles, Ausbringkarte, Agras-Ansteuerung oder DJI-Flugfreigabe. [Runbook und Abnahmegrenzen](docs/smart-farming-m3m-consolidation-review-2026-10-23.md). Kein Pi-Deployment durch Git-Merge.
+
 **Passiver Flight-Area-Laborbaustein:** Die isolierten Module `backend/dji-flight-area-events.js` und `backend/dji-flight-area-sync-monitor.js` validieren synthetische DJI-Ereignisse, Soll-Hashes und Revisionszustände. Kein Runtime-Import, keine MQTT-Antwort, keine Flight-Area-Updates, keine luftrechtliche oder fliegerische Freigabe. Details: [Offline-Event-Inspector](docs/dji-flight-area-integration.md) und [Revisionsmonitor](docs/dji-flight-area-sync-monitor.md).
 
 **Broker-Integrationsstand:** [Raspberry-Pi-Mosquitto-Migrationsanleitung](docs/pi-mosquitto-migration.md). Der Root-Stack kann optional Mosquitto/1883 statt EMQX/1884 konfigurieren, verlangt jedoch übereinstimmende `SKYHUB_MQTT_BROKER_KIND`-, `SKYHUB_MQTT_REQUIRED_PORT`- und MQTT-URL-Werte. Dies konfiguriert keinen Broker und ist **kein Live-Pi-Update**. Echte MQTT-ACL, Pilot-2-Session und Drohnen-OSD müssen separat überprüft werden.
