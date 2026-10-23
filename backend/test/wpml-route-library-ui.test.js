@@ -7,6 +7,7 @@ const vm=require('node:vm');
 const planner=require('../../frontend/public/wpml-editor-core');
 const library=require('../../frontend/public/wpml-route-library-core');
 const actions=require('../../frontend/public/wpml-action-draft');
+const backup=require('../../frontend/public/wpml-route-library-backup');
 const script=fs.readFileSync(path.join(__dirname,
   '../../frontend/public/wpml-route-library.js'),'utf8');
 const STORAGE='skyhub.wpml.local-route-library.v1';
@@ -48,7 +49,7 @@ function harness(input=plan()){
   get('batch-mode').value='replace';
   const window={
     SkyHubWpmlPlanner:planner,SkyHubWpmlRouteLibrary:library,
-    SkyHubWpmlActionDraft:actions,
+    SkyHubWpmlActionDraft:actions,SkyHubWpmlRouteBackup:backup,
     localStorage:{
       getItem:key=>store.get(key)??null,
       setItem(key,value){writes++;store.set(key,value);},
