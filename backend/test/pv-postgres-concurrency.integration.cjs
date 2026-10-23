@@ -8,6 +8,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const {Pool} = require('pg');
+const fs = require('node:fs');
+const path = require('node:path');
+const {createPvJobStore,JobUnavailable}=require('../experimental/pv_job_store.cjs');
 
 const DSN = process.env.PV_CI_DATABASE_URL;
 const OPT_IN = process.env.PV_CI_DISPOSABLE;
@@ -30,7 +33,12 @@ const pool = new Pool({connectionString: DSN, max: 8, connectionTimeoutMillis: 5
   options: '-c search_path=' + schema + ' -c statement_timeout=12000 -c lock_timeout=5000'});
 let keeper, created = false;
 const uuid = () => crypto.randomUUID();
-const workspace = uuid(), asset = uuid(), otherAsset = uuid();
+const workspace = uuid(), asset = uuid(), otherAsset = uuid(), otherWorkspace=uuid();
+let store;
+const principal=(workspaceId=workspace,subject='pv-test-operator')=>({role:'operator',workspaceId,subject});
+const queue=async({key=uuid(),assetId=asset,workspaceId=workspace,subject}={})=>store.request({workspaceId,assetId,idempotencyKey:key,principal:principal(workspaceId,subject)});
+const auditCount=async(id,action)=>Number((await pool.query('SELECT count(*) AS n FROM skyhub_pv_job_audit WHERE job_id=$1 AND action=$2',[id,action])).rows[0].n);
+const sha='a'.repeat(64);
 const insert = async (key = uuid(), requestedAsset = asset) => {
   const r = await pool.query(
     'INSERT INTO pv_jobs(workspace_id,asset_id,idempotency_key) VALUES($1,$2,$3) RETURNING job_id',
@@ -111,6 +119,11 @@ test.before(async () => {
         ('${workspace}','${otherAsset}');
     `);
     assert.equal((await pool.query('SELECT current_schema() AS s')).rows[0].s,schema);
+    await pool.query('CREATE TABLE dji_pilot_media_verified(workspace_id uuid NOT NULL,asset_id uuid NOT NULL,PRIMARY KEY(workspace_id,asset_id))');
+    await pool.query("CREATE FUNCTION skyhub_dji_pilot_media_audit_immutable() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'Immutable PV audit'; END $");
+    await pool.query(fs.readFileSync(path.join(__dirname,'..','experimental','pv_jobs_isolated.sql'),'utf8'));
+    await pool.query('INSERT INTO dji_pilot_media_verified(workspace_id,asset_id) VALUES($1,$2),($1,$3),($4,$2)',[workspace,asset,otherAsset,otherWorkspace]);
+    store=createPvJobStore({db:pool,authorize:async({operation})=>['pv_job_request','pv_job_read','pv_job_recovery'].includes(operation),auditDenied:async({workspaceId,action})=>{await pool.query('INSERT INTO skyhub_pv_job_denied_audit(workspace_id,action) VALUES($1,$2)',[workspaceId,action]);}});
   } catch (err) {
     throw new Error('Disposable PostgreSQL setup rejected: ' + err.message);
   }
@@ -214,4 +227,107 @@ test('expired claims can be finalized once and cannot finish afterward',async()=
   assert.equal(x.rowCount+y.rowCount,1);
   assert.equal((await pool.query('SELECT state FROM pv_jobs WHERE job_id=$1',[id])).rows[0].state,'failed');
   assert.equal(await finish(token),0);
+});
+
+
+test('real store: two concurrent idempotent requests write one job and two audits',async()=>{
+  const key=uuid();
+  const [a,b]=await Promise.all([queue({key}),queue({key})]);
+  assert.equal(a.jobId,b.jobId);
+  assert.equal(await auditCount(a.jobId,'requested'),1);
+  assert.equal(await auditCount(a.jobId,'replayed'),1);
+  const result=await store.claimNext();
+  assert.equal(result.jobId,a.jobId);
+  assert.equal((await store.finish({claim:result,outcome:'failed'})).state,'failed');
+});
+test('real store: cross-asset replay is rejected and denial audit is appended',async()=>{
+  const key=uuid(),j=await queue({key});
+  const before=Number((await pool.query('SELECT count(*) AS n FROM skyhub_pv_job_denied_audit')).rows[0].n);
+  await assert.rejects(queue({key,assetId:otherAsset}),JobUnavailable);
+  const after=Number((await pool.query('SELECT count(*) AS n FROM skyhub_pv_job_denied_audit')).rows[0].n);
+  assert.equal(after,before+1);
+  const found=await pool.query('SELECT asset_id FROM skyhub_pv_jobs WHERE job_id=$1',[j.jobId]);
+  assert.equal(found.rows[0].asset_id,asset);
+  const claim=await store.claimNext();assert.equal(claim.jobId,j.jobId);
+  await store.finish({claim,outcome:'failed'});
+});
+test('real store: two independent workers skip a locked queued row',async()=>{
+  const a=await queue(),b=await queue();
+  const lock=await pool.connect();
+  try{
+    await lock.query('BEGIN');
+    await lock.query('SELECT job_id FROM skyhub_pv_jobs WHERE job_id=$1 FOR UPDATE',[a.jobId]);
+    const c=await store.claimNext();
+    assert.equal(c.jobId,b.jobId);
+    await store.finish({claim:c,outcome:'failed'});
+  }finally{await lock.query('ROLLBACK');lock.release();}
+  const c=await store.claimNext();assert.equal(c.jobId,a.jobId);
+  await store.finish({claim:c,outcome:'failed'});
+});
+test('real store: parallel claim operations never claim the same job twice',async()=>{
+  const j=await queue();
+  const [a,b]=await Promise.all([store.claimNext(),store.claimNext()]);
+  assert.equal([a,b].filter(Boolean).length,1);
+  assert.equal((a||b).jobId,j.jobId);
+  assert.equal(await auditCount(j.jobId,'claimed'),1);
+  await store.finish({claim:a||b,outcome:'failed'});
+});
+test('real store: audit INSERT error rolls back candidate completion',async()=>{
+  const j=await queue(),claim=await store.claimNext();assert.equal(claim.jobId,j.jobId);
+  await pool.query("CREATE FUNCTION reject_pv_candidate() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='candidate_recorded' THEN RAISE EXCEPTION 'blocked'; END IF; RETURN NEW; END $$");
+  await pool.query('CREATE TRIGGER reject_pv_candidate BEFORE INSERT ON skyhub_pv_job_audit FOR EACH ROW EXECUTE FUNCTION reject_pv_candidate()');
+  try {
+    await assert.rejects(store.finish({claim,outcome:'candidate-ready',sourceSha256:sha}),JobUnavailable);
+    const r=await pool.query('SELECT state,claim_token FROM skyhub_pv_jobs WHERE job_id=$1',[j.jobId]);
+    assert.equal(r.rows[0].state,'running');
+    assert.equal(r.rows[0].claim_token,claim.claimToken);
+    assert.equal(await auditCount(j.jobId,'candidate_recorded'),0);
+  }finally{await pool.query('DROP TRIGGER reject_pv_candidate ON skyhub_pv_job_audit');}
+  const result=await store.finish({claim,outcome:'candidate-ready',sourceSha256:sha});
+  assert.equal(result.state,'candidate-ready');
+  assert.equal(result.radiometryVerified,false);
+  assert.equal(result.hardwareValidated,false);
+  assert.equal(await auditCount(j.jobId,'candidate_recorded'),1);
+});
+test('real store: heartbeat/finish race produces immutable terminal state',async()=>{
+  const j=await queue(),claim=await store.claimNext();assert.equal(claim.jobId,j.jobId);
+  const outcomes=await Promise.allSettled([
+    store.heartbeat({claim}),
+    store.finish({claim,outcome:'candidate-ready',sourceSha256:sha})
+  ]);
+  assert.equal(outcomes[1].status,'fulfilled');
+  assert.ok(['fulfilled','rejected'].includes(outcomes[0].status));
+  const r=await pool.query('SELECT state,claim_token FROM skyhub_pv_jobs WHERE job_id=$1',[j.jobId]);
+  assert.equal(r.rows[0].state,'candidate-ready');
+  assert.equal(r.rows[0].claim_token,null);
+  await assert.rejects(store.heartbeat({claim}),JobUnavailable);
+  await assert.rejects(store.finish({claim,outcome:'failed'}),JobUnavailable);
+});
+test('real store: expired claims cannot finish; two recovery workers log one expiration',async()=>{
+  const j=await queue(),claim=await store.claimNext();assert.equal(claim.jobId,j.jobId);
+  await pool.query("UPDATE skyhub_pv_jobs SET heartbeat_at=clock_timestamp()-interval '2 hours',lease_expires_at=clock_timestamp()-interval '1 hour' WHERE job_id=$1",[j.jobId]);
+  await assert.rejects(store.heartbeat({claim}),JobUnavailable);
+  await assert.rejects(store.finish({claim,outcome:'candidate-ready',sourceSha256:sha}),JobUnavailable);
+  const [a,b]=await Promise.all([
+    store.expireStale({workspaceId:workspace,principal:principal()}),
+    store.expireStale({workspaceId:workspace,principal:principal()})
+  ]);
+  assert.equal(a.expiredCount+b.expiredCount,1);
+  assert.equal(await auditCount(j.jobId,'lease_expired'),1);
+  assert.equal((await pool.query('SELECT state FROM skyhub_pv_jobs WHERE job_id=$1',[j.jobId])).rows[0].state,'failed');
+});
+test('real store: workspace and asset FK prevent unauthorized scheduling',async()=>{
+  const key=uuid();
+  await assert.rejects(queue({key,assetId:uuid()}),JobUnavailable);
+  assert.equal(Number((await pool.query('SELECT count(*) AS n FROM skyhub_pv_jobs WHERE idempotency_key=$1',[key])).rows[0].n),0);
+  const j=await queue();
+  await assert.rejects(store.lookup({workspaceId:otherWorkspace,jobId:j.jobId,principal:principal(otherWorkspace)}),JobUnavailable);
+  const result=await store.lookup({workspaceId:workspace,jobId:j.jobId,principal:principal()});
+  assert.equal(result.jobId,j.jobId);
+  const claim=await store.claimNext();await store.finish({claim,outcome:'failed'});
+});
+test('real store: job audit and denied audit are append-only',async()=>{
+  await assert.rejects(pool.query("DELETE FROM skyhub_pv_job_audit WHERE action='claimed'"));
+  await assert.rejects(pool.query('TRUNCATE skyhub_pv_job_audit'));
+  await assert.rejects(pool.query('TRUNCATE skyhub_pv_job_denied_audit'));
 });
