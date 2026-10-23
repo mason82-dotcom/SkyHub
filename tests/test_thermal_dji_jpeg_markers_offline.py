@@ -134,6 +134,7 @@ class MarkerProbeTest(CaptureCalibrationTest):
             segment(0xFE, b"y" * 65500),
             segment(0xFE, b"z" * 65500),
             segment(0xFE, b"w" * 65500),
+            segment(0xFE, b"v" * 65500),
         ))
         with self.assertRaisesRegex(probe.geo.InvalidInput, "jpeg_scan_budget_exceeded"):
             self.summary()
