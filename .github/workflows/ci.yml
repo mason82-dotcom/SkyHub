@@ -43,7 +43,8 @@ jobs:
       - name: Check lab-only DJI Dock mock contract without MQTT
         run: |
           node --check simulators/hivemind/dock-mock.js
-          node --test simulators/hivemind/dock-mock.test.js
+          node --test simulators/hivemind/dock-mock.test.js simulators/hivemind/mission-probe.test.js
+          node --check simulators/hivemind/mission-probe.js
           python3 -m py_compile simulators/hivemind/dock-smoke.py
 
       - name: Validate staging helper and Python tests
