@@ -21,6 +21,31 @@ function canonical(value){
   return JSON.stringify(value);
 }
 function validatePlan(name,plan){
+  // Reject unknown fields BEFORE the normalizer could discard them. This is
+  // critical for untrusted API input with forged dispatch/security fields.
+  const allowed=['name','model','speed','transitionSpeed','takeoffHeight',
+    'finishAction','timestamp','waypoints','intervalPhotos','actionGroups'];
+  const keys=(v,whitelist)=>{
+    if(!v||typeof v!=='object'||Array.isArray(v)||
+       Object.getPrototypeOf(v)!==Object.prototype||
+       Object.keys(v).some(k=>!whitelist.includes(k)))
+      throw new RouteError('invalid');
+  };
+  keys(plan,allowed);
+  if(!Array.isArray(plan.waypoints))throw new RouteError('invalid');
+  for(const waypoint of plan.waypoints)
+    keys(waypoint,['lat','lon','height','photo','ellipsoidHeight']);
+  if(plan.intervalPhotos!==undefined)keys(plan.intervalPhotos,
+    ['type','interval','cameraMinIntervalSeconds']);
+  if(plan.actionGroups!==undefined){
+    if(!Array.isArray(plan.actionGroups))throw new RouteError('invalid');
+    for(const group of plan.actionGroups){
+      keys(group,['index','actions']);
+      if(!Array.isArray(group.actions))throw new RouteError('invalid');
+      for(const action of group.actions)
+        keys(action,['type','seconds','degrees']);
+    }
+  }
   // Reuse the exact offline allowlist and bounded waypoint/action model.
   try{
     const a=local.save(local.blank(),{name,plan,savedAt:1});
@@ -30,7 +55,8 @@ function validatePlan(name,plan){
 function hash(plan){return crypto.createHash('sha256').update(canonical(plan)).digest();}
 function verifyPlan(name,plan,digest){
   const checked=validatePlan(name,plan);
-  if(!Buffer.isBuffer(digest)||!crypto.timingSafeEqual(hash(checked),digest))
+  if(!Buffer.isBuffer(digest)||digest.length!==32||
+     !crypto.timingSafeEqual(hash(checked),digest))
     throw new RouteError('unavailable');
   return checked;
 }
@@ -64,6 +90,7 @@ function createWpmlRouteStore(pool){
     async create({workspaceId,actorId,routeId,name,plan}){
       requireId(workspaceId);requireId(actorId);requireId(routeId);
       const normalized=validatePlan(name,plan);
+      name=normalized.name;
       return transaction(async client=>{
         // Serialize new-route creation within each workspace so the
         // 32-route limit cannot be bypassed by concurrent transactions.
