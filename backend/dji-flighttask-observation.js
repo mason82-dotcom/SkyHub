@@ -11,7 +11,8 @@ const MAX_BYTES=131072;
 const MAX_AGE_MS=300000;
 const MAX_SKEW_MS=30000;
 const STATUSES=new Set(['sent','in_progress','paused','ok','failed','canceled']);
-const FINAL=new Set(['reported_ok','reported_failed','reported_canceled','conflicting_reports','reply_rejected','expired_unverified']);
+const FINAL=new Set(['conflicting_reports','reply_rejected','expired_unverified']);
+const TERMINAL_REPORTS=new Set(['reported_ok','reported_failed','reported_canceled']);
 
 const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const id=x=>typeof x==='string'&&ID.test(x);
@@ -76,6 +77,8 @@ function advanceFlighttaskObservation(current,observation,{now=Date.now()}={}){
   if(FINAL.has(current.phase))return {state:current,applied:false,reason:'finalized'};
   if(now<r.sentAt)return {state:current,applied:false,reason:'clock-before-request'};
   if(now>r.expiresAt){
+    if(TERMINAL_REPORTS.has(current.phase))
+      return {state:current,applied:false,reason:'terminal-report-recorded'};
     const state=seal({...current,phase:'expired_unverified'});
     return {state,applied:true,reason:'observation-expired'};
   }
@@ -123,6 +126,13 @@ function advanceFlighttaskObservation(current,observation,{now=Date.now()}={}){
     const phase=p.result!==0||p.status==='failed'?'reported_failed':
       p.status==='canceled'?'reported_canceled':
       p.status==='ok'?'reported_ok':'reported_'+p.status;
+    if(TERMINAL_REPORTS.has(current.phase)){
+      if(phase!==current.phase){
+        const state=seal({...current,phase:'conflicting_reports'});
+        return {state,applied:true,reason:'contradictory-terminal-report'};
+      }
+      return {state:current,applied:false,reason:'duplicate-terminal-report'};
+    }
     const state=seal({
       ...current,phase,
       progress:{status:p.status,result:p.result,timestamp:p.timestamp}
