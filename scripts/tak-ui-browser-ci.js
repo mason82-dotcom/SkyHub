@@ -94,7 +94,7 @@ async function run(){
   await context.route('**/*',route=>{
     const url=new URL(route.request().url());
     if(url.hostname==='127.0.0.1'||url.hostname==='unpkg.com'||url.hostname==='tile.openstreetmap.org')
-      return route.continue();
+      return route.fallback();
     return route.abort('blockedbyclient');
   });
   const page=await context.newPage();
@@ -149,7 +149,7 @@ async function run(){
   await guest.getByRole('tab',{name:/TAK/}).click();
   assert.ok((await guest.locator('#takPanel').innerText()).includes('nicht integriert'));
   assert.equal(await guest.locator('#takPanel button').count(),0);
-  assertNoOverflow(guest);
+  await assertNoOverflow(guest);
   await guest.close();
   if(errors.length)throw new Error('browser exceptions: '+errors.join('; '));
   const unexpectedWrites=requests.filter(x=>x.method!=='GET');
