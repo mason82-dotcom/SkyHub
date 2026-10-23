@@ -55,6 +55,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 | [#39](https://github.com/mason82-dotcom/SkyHub/pull/39) | Draft auf #38: workspacegebundene, auditierbare lesende Medienbibliothek; Dateinamen-Gruppierung ≠ radiometrischer Nachweis |
 | [#40](https://github.com/mason82-dotcom/SkyHub/pull/40) | Draft auf #39: eng begrenzte bedingte TIFF-/XMP-Range-Leseproben. XMP-Werte sind **nicht** durch Kalibrierung bestätigt; keine sichere allgemeine Bildparser-Sandbox |
 | [#48](https://github.com/mason82-dotcom/SkyHub/pull/48) | Draft auf #40: experimentelle **offline**-Rasterindizes (NDVI, NDRE, GNDVI, OSAVI) aus **bereits extern kalibrierten und exakt registrierten** Float-Reflexionsrastern; kein DN→Reflexion, keine freigegebene M3M-Produktionspipeline |
+| [#51](https://github.com/mason82-dotcom/SkyHub/pull/51) | Draft auf #48: streng begrenzter **offline**-TIFF-Pixel-/XMP-Capture-Audit an lokalen uint16-Bildern; nur aggregierte Zähler, keine echte M3M-Datei geprüft, keine Bandkalibrierung/Registrierung oder Indexbereitschaft |
 
 **DJI-Mediendatenfluss:** Pilot 2 verwendet die **HTTPS-/STS- und S3-Speicherstrecke**, nicht die MQTT-OSD-Subscription als Dateiübertragungsweg. Kein Entwurf darf Filename-Zählungen, HEAD/ETag, TIFF/XMP-Hinweise oder synthetische Indextests als belegte Reflexionskalibrierung, Bandregistrierung oder realweltlich geprüfte NDVI-/NDRE-Karte ausgeben.
 
@@ -66,6 +67,7 @@ Die Referenzen nennen **PR-Nummern**, nicht Produktreleases. Details/Tests/Lizen
 | [#16](https://github.com/mason82-dotcom/SkyHub/pull/16), [#44](https://github.com/mason82-dotcom/SkyHub/pull/44) | Gestapelte WPML-/KMZ-Offline-Tests und externe DJI-Referenzanalyse; kein produktives Wayline-Deployment |
 | [#43](https://github.com/mason82-dotcom/SkyHub/pull/43) | Draft auf #40: Opt-in-**RGB**-YOLO11-Worker für lokale Bilder und kontrollierte Modelle; kein Livestream, keine DJI-Cloud-API-Integration |
 | [#45](https://github.com/mason82-dotcom/SkyHub/pull/45) → [#49](https://github.com/mason82-dotcom/SkyHub/pull/49) | Gestapelte Drafts auf #43: Offline-Thermal-Pixel→GPS-*Kandidaten* und lokale HMAC-Provenienz; ohne verifizierte Kamera-/Geländekalibrierung, Personenbestätigung oder SAR-Einsatzfreigabe |
+| [#50](https://github.com/mason82-dotcom/SkyHub/pull/50) → [#52](https://github.com/mason82-dotcom/SkyHub/pull/52) | Drafts auf #49: manuell gepinntes M3T/M4T-Kalibrierungsprofil und zweifach HMAC-gebundene Offline-Quellmedien; nur begrenzte **JPEG/XMP-Feldpräsenz**, keine Metadatenwerte, DJI-Sensorherkunft, Gimbal-/AGL-Verifikation oder GPS-Eignung |
 | [#46](https://github.com/mason82-dotcom/SkyHub/pull/46) | Draft direkt auf Main: getrenntes HiveMind-Simulationslabor; Upstream SDK 1.16.1.3, daher **kein** Beweis für DJI Cloud API 1.18 |
 | [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) | Draft direkt auf Main: rein synthetischer Offline-Protokoll-Paritätsaudit gegen gepinnte SDK-1.18-Referenz; kein realer Geräte-/Dock-Test |
 
