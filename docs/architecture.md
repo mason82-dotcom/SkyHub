@@ -1,5 +1,16 @@
 # Architektur und Datenmodell – SkyHub Next
 
+**Repository-Identität (23.10.2026):** `mason82-dotcom/SkyHub-Next`,
+https://github.com/mason82-dotcom/SkyHub-Next.
+Frühere URLs `mason82-dotcom/SkyHub` sind historische Bezeichnungen und
+sollen für neue Git-Remotes, CI, Issue-/PR-Links und Anleitungen nicht mehr verwendet werden.
+Siehe [Umbenennung und Entwicklungsgrenzen](repository-rename-2026-10-23.md).
+**Smart-Farming-Sonderstand:** Der experimentelle API-Katalog und die
+dedizierte Metadaten-Seite liegen ausschließlich in gestapelten
+Entwicklungsbranches. Ohne explizite Freigabe ist keine Produktionseinbindung
+und keine GIS-/Kalibrierungsfähigkeit gegeben.
+
+
 **Geltungsbereich:** Aktiver Entwicklungsstand im Repository-Root (Version 0.1.0), nicht der archivierte Stack.
 
 ## Komponenten
