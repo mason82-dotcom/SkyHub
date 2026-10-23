@@ -4,7 +4,9 @@
 
 **Repository-Stichtag:** [Projektstand 23.10.2026](projektstand-2026-10-23.md), Main-Commit `496a1f84f22b15f85ad5442965b2cd218a93969a`. Die bis dahin hinzugekommenen Feature-PRs und in den Integrationsbranch übernommenen UI-PRs sind **kein** automatisches Upgrade dieser Root-Compose-Installation. Die folgenden historischen Hardwareangaben behalten ihr jeweiliges Datum.
 
-**Betriebsgrenzen:** Das Root-Compose ist `skyhub-next` mit Backend-Hostport `127.0.0.1:4001`; der vorhandene Broker ist auf Hostport `1884`. Der bisherige produktive Backend-Hostport `4000` darf nicht ungeprüft übernommen werden. Das Compose im Legacy-Snapshot darf nicht gestartet werden.
+**Betriebsgrenzen:****Aktualisierungswarnung 23.10.2026:** Nach dem zuletzt vom Betreiber gemeldeten Stand wurde EMQX auf dem Raspberry Pi entfernt; Mosquitto lauscht auf Port 1883. Das vorliegende `main` verlangt dagegen weiterhin EMQX auf 1884: `scripts/pi-preflight.sh` prüft zusätzlich den Containernamen `skyhub_emqx`, und `scripts/pi-update-backend.sh --apply` ruft diesen Preflight auf. Dieser Konflikt ist durch die GitHub-Merges #89/#65 **nicht** behoben. Vor einem Live-Backend-Rebuild Broker-/Topic-/ACL-Vertrag und tatsächliche Pi-Listener erneut prüfen; bei Fehlschlag nur Git und nichtschreibende Tests aktualisieren. Nicht durch Starten des archivierten EMQX oder ungetestetes Umschalten der Ports umgehen.
+
+ Das Root-Compose ist `skyhub-next` mit Backend-Hostport `127.0.0.1:4001`; der vorhandene Broker ist auf Hostport `1884`. Der bisherige produktive Backend-Hostport `4000` darf nicht ungeprüft übernommen werden. Das Compose im Legacy-Snapshot darf nicht gestartet werden.
 
 **Wirkung von Pi-Skripten und Freigaben:** [Betriebswerkzeuge](scripts.md). `apply`-, `rollback`- und Kopplungsaufrufe nicht mit lesenden Diagnosen verwechseln.
 
