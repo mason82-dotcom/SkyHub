@@ -24,6 +24,7 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertIn('internal: true', overlay)
         self.assertIn('MQTT_BROKER_URL: mqtt://hivemind-broker:1884', overlay)
         self.assertIn('127.0.0.1:19090:9090', overlay)
+        self.assertIn('dockerfile: ../Dockerfile.lab', overlay)
         self.assertIn('SKYHUB_TRACK_RECORDING_ENABLED: "false"', overlay)
         self.assertIn('SKYHUB_PILOT_ENABLED: "false"', overlay)
         self.assertNotRegex(overlay, r'(?m)^\s*-\s*["\x27]?(?:1883|1884|4000|4001):')
@@ -40,6 +41,14 @@ class HivemindReferenceLabTest(unittest.TestCase):
         self.assertIn('if [[ -e "$ENV_FILE" ]]', wrapper)
         self.assertIn("openssl rand -hex 32", wrapper)
         self.assertNotIn("down -v", wrapper)
+
+    def test_minimal_lab_runtime_is_unprivileged_and_no_ffmpeg(self):
+        dockerfile = (LAB / "Dockerfile.lab").read_text()
+        self.assertIn("FROM eclipse-temurin:21-jre", dockerfile)
+        self.assertIn("USER 1000:1000", dockerfile)
+        self.assertIn("target/dji-dock-simulator-1.4.10.jar", dockerfile)
+        self.assertNotIn("apt-get", dockerfile)
+        self.assertNotIn("ffmpeg", dockerfile.lower().split("from eclipse-temurin")[1])
 
     def test_lab_broker_anonymous_only_inside_lab(self):
         conf = (LAB / "mosquitto.conf").read_text()
