@@ -13,7 +13,14 @@ const METHODS=new Set(['flight_areas_sync_progress','flight_areas_drone_location
 const validObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const invalid=reason=>({accepted:false,reason});
 
-function inspectFlightAreaEvent({topic,payload,packet={},expectedGatewaySn,now=Date.now()}={}){
+function inspectFlightAreaEvent({topic,payload,packet={},expectedGatewaySn,
+  expectedFileChecksum=null,now=Date.now()}={}){
+  // Optional trusted target hash supports a boolean comparison only.
+  // Never return the device-reported checksum or target digest.
+  if(expectedFileChecksum!==null &&
+      (typeof expectedFileChecksum!=='string' ||
+       !/^[0-9a-f]{64}$/i.test(expectedFileChecksum)))
+    return invalid('invalid_target_checksum');
   // expectedGatewaySn MUST come from a separate authenticated workspace/device
   // resolver. Supplying the untrusted MQTT envelope value is not authorization.
   if(!serial(expectedGatewaySn))return invalid('unbound_gateway');
@@ -49,6 +56,10 @@ function inspectFlightAreaEvent({topic,payload,packet={},expectedGatewaySn,now=D
       accepted:true,schema:SCHEMA,kind:'sync_progress',
       status:data.status,reasonCode:data.reason,
       fileReferencePresent:validObject(data.file),
+      ...(expectedFileChecksum===null?{}:{
+        reportedTargetChecksumMatch:validObject(data.file) &&
+          data.file.checksum.toLowerCase()===expectedFileChecksum.toLowerCase()
+      }),
       // Device-reported status != an attested object checksum, revision and gateway.
       deviceReportedSynchronized:data.status==='synchronized'&&data.reason===0,
       syncVerified:false,flightReady:false,hardwareVerified:false,
