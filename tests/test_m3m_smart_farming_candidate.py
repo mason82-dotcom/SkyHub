@@ -109,6 +109,15 @@ class CandidateTests(unittest.TestCase):
         self._save_report()
         with self.assertRaises(worker.CandidateError): self._run()
 
+    def test_float32_mean_raster_rounding_within_epsilon_is_accepted(self):
+        self.report['outputs']['ndvi'].update(min=0.25, max=0.25, mean=0.24999996)
+        cards = worker._validated_indices(self.report)
+        self.assertEqual(len(cards), 4)
+        self.assertAlmostEqual(cards[0]['mean'], 0.24999996)
+        self.report['outputs']['ndvi']['mean'] = 0.249
+        with self.assertRaises(worker.CandidateError):
+            worker._validated_indices(self.report)
+
     def test_nonfinite_mean_rejected(self):
         self.report['outputs']['ndvi']['mean'] = float('nan')
         self._save_report()
