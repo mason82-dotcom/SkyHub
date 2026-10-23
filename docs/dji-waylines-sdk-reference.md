@@ -241,3 +241,39 @@ node --test backend/test/wpml-library-actions.test.js
 ```
 
 **Grenze P0:** Es handelt sich bewusst um eine browserlokale MVP-Bibliothek, **nicht** um die spätere zentrale, serverseitige Routenverwaltung mit projektweiten Ordnern, Berechtigungen, Team-Synchronisation und transaktionalen Datenbanksnapshots. Diese Funktionen verlangen vor einem Server-Rollout eine eigenständige Authentifizierungs-, Datenmodell- und Migrationsprüfung.
+
+## P0-Weiterentwicklung: Zentrales Schema (Phase 9, noch deaktiviert)
+
+`backend/db/migrations/003_wpml_route_library_draft.sql` ist ein **nicht aktiviertes Entwurfsschema** für eine zukünftige zentrale SkyHub-Next-Routenbibliothek. Der laufende Server installiert dieses Schema **nicht automatisch**, die Browserbibliothek wurde **nicht** auf serverseitiges Speichern umgestellt, und es wurden **keine** Routen-CRUD- oder Dispatch-Endpunkte eingebaut.
+
+Das Schema ist für die spätere Mehrmandantenverwaltung ausgelegt:
+- `skyhub_wpml_folders` – Ordner je `workspace_id`;
+- `skyhub_wpml_routes` – Routen und aktuelle Revision, mit arbeitsbereichsgebundenen Fremdschlüsseln;
+- `skyhub_wpml_route_revisions` – vollständige JSON-Snapshots plus SHA-256-Fingerprint und Unveränderlichkeits-Trigger;
+- `skyhub_wpml_task_snapshots` – nicht ausführbare, unveränderliche Referenzen auf eine konkrete Routenrevision.
+
+**Sicherheitsstatus:** Auf allen vier Tabellen ist PostgreSQL Row-Level Security mit `FORCE` aktiviert. **Es gibt absichtlich keinerlei Freigabepolicy oder automatisch vergebene SQL-Berechtigung.** Das führt zu *Default Deny*, bis unabhängige Operator-/Admin-Identitäten, Workspace-Bindung und Zugriffstests nachgewiesen sind. Es wird bewusst **kein** Operator-Zugriff aus einem DJI-Pilot-2-Pairing-Token oder dem globalen Dashboard-View-Token abgeleitet. Privilegierte PostgreSQL-Superuser und Tabellenbesitzer können unter Umständen trotz Schutzmaßnahmen ein Schema ändern; separate Datenbankrollen, Migration-ACLs, Verschlüsselung/Backups und Betriebskontrollen sind vor einer Aktivierung erforderlich.
+
+CI führt die Datei ausschließlich in einer **temporären PostGIS-Testdatenbank** aus, inklusive Mandanten-Fremdschlüsseln, `flight_ready=false`, `dispatch_allowed=false`, unveränderlicher Revisionen und `TRUNCATE`-Schutz. Dazu:
+```bash
+# Nur in der dedizierten CI-Datenbank mit SKYHUB_TEST_DATABASE_URL
+node --test backend/test/wpml-route-schema.integration.test.js
+```
+
+## P1-Weiterentwicklung: Aktionsvorlagen, Batch-Editing und Routenumkehr
+
+Die Action-Draft-API `frontend/public/wpml-action-draft.js` stellt nun `applyTemplate()` und `reverseRoute()` bereit. Die separate Oberfläche `/wpml-route-library.html` bietet passende Bedienelemente.
+
+- Vorlagen: `photo`, `hoverPhoto` (2 s Schweben + Foto) und `yawPhoto` (Yaw 0° + Foto).
+- Batch-Auswahl: `alle`, einzelne Wegpunktnummern oder Bereiche wie `1,3-5`. Doppelte und ungültige Auswahl, überschrittene Acht-Aktionen-Grenze sowie unausgewogene Video-Start-/Stop-Zustände führen **ohne Teiländerung** zum Abbruch.
+- Vorhandene Aktionen können pro Wegpunkt **ersetzt oder ergänzt** werden; die aktionsinterne Reihenfolge bleibt erhalten. Alle neuen Daten werden vor dem KMZ-Export nochmals normalisiert.
+- Routenumkehr: Wegpunkte und ihre `reachPoint`-Aktionsgruppen werden konsistent umnummeriert. Die Umkehr wird ausdrücklich bestätigt, ist für Video-Start/Stopp, Intervallaktionen, Legacy-Fotos, variable/ungeklärte Höhenbezüge und unbekannte Felder jedoch **gesperrt**.
+- Nach einer Umkehr muss die Route erneut hinsichtlich Heading, Gimbal, Kamerablickrichtung, Gelände, Hindernissen, Flugrichtung und RTH geprüft werden. `requiresReview:true`, `headingAndRthRevalidationRequired:true` und `flightReady:false` bleiben bindend.
+
+Zusätzlicher P0-Schutz: Die Bibliothek unterscheidet zwischen einer **nur ausgewählten** Route und dem tatsächlich **in den Editor geladenen** Routenentwurf. Ein Klick auf „Revision speichern“ darf keine nur ausgewählte fremde Route mit einem nicht zugeordneten Entwurf überschreiben. Neue Tests simulieren dafür die Browseroberfläche direkt.
+
+```bash
+node --test backend/test/wpml-action-batch.test.js backend/test/wpml-route-library-ui.test.js
+```
+
+**Grenze:** Das sind weiterhin Offline-Planungs- und Vorschaufunktionen. Es gibt keine DJI-FlightHub-2-Aktionsparität, keine automatisch validierte Richtungsumkehr bei Video und keinen in SkyHub freigegebenen autonomen Flug.
