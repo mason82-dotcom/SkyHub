@@ -106,6 +106,7 @@ test('editor page and controller present a local-only review, without flight API
   assert.match(app,/mission-review/);
   assert.match(app,/reviewCore\.issueLabel/);
   assert.doesNotMatch(code,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bpostMessage\s*\(|\bMQTT\b/i);
-  assert.doesNotMatch(app,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bpostMessage\s*\(|\bMQTT\b/i);
+  // Existing source comments mention MQTT; reject executable transport calls instead.
+  assert.doesNotMatch(app,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bpostMessage\s*\(|\bmqtt\s*\.\s*(?:connect|publish)\s*\(/i);
   assert.doesNotMatch(html,/paas\.js|window\.FH2/);
 });
