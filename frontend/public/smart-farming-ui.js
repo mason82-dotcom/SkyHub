@@ -6,6 +6,20 @@
   const CATALOG = '/api/smart-farming/candidates/';
   const ID = /^m3m-exp-[a-f0-9]{24}$/;
 
+  // Bearer credentials must not traverse the Pi LAN in plaintext. Loopback
+  // HTTP is allowed for SSH-tunnel diagnostics only; no HTTP on LAN IPs.
+  function allowsBearerOrigin(raw) {
+    try {
+      if(typeof raw!=='string')return false;
+      const origin=new URL(raw);
+      if(origin.username||origin.password||origin.pathname!=='/'||
+         origin.search||origin.hash)return false;
+      return origin.protocol==='https:' ||
+        (origin.protocol==='http:' &&
+         ['localhost','127.0.0.1','[::1]'].includes(origin.hostname));
+    } catch(_) {return false;}
+  }
+
   function assert(ok) { if (!ok) throw new Error('INVALID_CATALOG'); }
   function normalizeCatalog(raw) {
     assert(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -132,6 +146,11 @@
         setStatus(doc,'Bitte zuerst den Zugriffstoken eingeben.',true);
         return;
       }
+      if(!allowsBearerOrigin(global?.location?.origin)) {
+        token.value='';
+        setStatus(doc,'Katalog-Token nur über HTTPS oder einen lokalen SSH-Loopback-Zugang senden.',true);
+        return;
+      }
       generation++;
       const myGeneration=generation;
       if(active)active.abort();
@@ -179,7 +198,7 @@
     });
     reset();
   }
-  const api={normalizeCatalog,format,mount};
+  const api={normalizeCatalog,format,mount,allowsBearerOrigin};
   if(typeof module!=='undefined' && module.exports)module.exports=api;
   if(global)global.SkyHubSmartFarming=api;
 })(typeof window==='undefined'?null:window);
