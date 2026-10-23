@@ -197,6 +197,18 @@ class VideoTimebaseTest(CaptureCalibrationTest):
         with self.assertRaises(timing.geo.InvalidInput):
             self.inspect(srt=True)
 
+    def test_source_and_derivative_must_be_distinct_files(self):
+        # Override the inherited JPEG-specific fixture: the current source
+        # is an MP4, which cannot itself be supplied as a decoded JPEG.
+        jpeg_source = self.root / "single-source.jpg"
+        jpeg_source.write_bytes(b"synthetic JPEG fixture, not decoded")
+        with self.assertRaisesRegex(timing.geo.InvalidInput,
+                                    "source_and_frame_must_be_distinct"):
+            timing.capture.seal_capture(
+                str(jpeg_source), str(jpeg_source), self.registry,
+                self.profile["profileId"], self.profile_sha,
+                self.capture_review, str(self.capture_key), accept_capture=True)
+
     def test_private_cli_and_exclusive_result_file(self):
         registry = self.root / "registry.json"
         capture_file = self.root / "capture.json"
