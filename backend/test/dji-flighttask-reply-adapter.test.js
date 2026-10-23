@@ -104,16 +104,16 @@ test('a flat result=nonzero is a rejected request, not flight success',()=>{
 
 test('require explicit flighttask_execute method even though generic RPC parser permits omission',()=>{
   const cases=[
-    envelope({result:0},{method:undefined}),
-    envelope({result:0},{method:null}),
-    envelope({result:0},{method:'flighttask_prepare'}),
-    envelope({result:0},{method:'fly_to_point'})
+    [envelope({result:0},{method:undefined}),'method-not-correlated'],
+    [envelope({result:0},{method:null}),'invalid-service-reply'],
+    [envelope({result:0},{method:'flighttask_prepare'}),'method-not-correlated'],
+    [envelope({result:0},{method:'fly_to_point'}),'method-not-correlated']
   ];
-  for(const e of cases){
+  for(const [e,reason] of cases){
     const out=service(state(),e);
     assert.equal(out.applied,false);
     assert.equal(out.state.phase,'awaiting_reply');
-    assert.equal(out.reason,'method-not-correlated',JSON.stringify(e));
+    assert.equal(out.reason,reason,JSON.stringify(e));
   }
 });
 
