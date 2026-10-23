@@ -2,6 +2,7 @@
 // Client-only waypoint editor; never calls DJI/MQTT/SkyHub write endpoints.
 (function () {
   const core=window.SkyHubWpmlPlanner;
+  const reference=window.SkyHubWpmlWaylinesReference;
   const $=id=>document.getElementById(id);
   if(!core){$('message').textContent='WPML-Modul nicht geladen – kein Export möglich.';return;}
   const points=[];
@@ -151,6 +152,38 @@
     points.length=0;hasFit=false;render();
   });
   $('fit').addEventListener('click',fitRoute);
+  $('waylines-reference-file').addEventListener('change',async event=>{
+    const input=event.currentTarget;
+    const file=input.files&&input.files[0];
+    if(!file)return;
+    try{
+      if(!reference)throw new TypeError('Referenzimport nicht verfügbar.');
+      if(file.size>128*1024)throw new TypeError('JSON-Datei überschreitet 128 KiB.');
+      const payload=JSON.parse(await file.text());
+      const mapped=reference.convert(payload);
+      // Validate fully before mutating any visible editor state.
+      core.normalize(mapped.plan);
+      $('name').value=mapped.plan.name;
+      $('model').value=mapped.plan.model;
+      $('height').value=String(mapped.plan.waypoints[0].height);
+      $('speed').value=String(mapped.plan.speed);
+      $('takeoff').value=String(mapped.plan.takeoffHeight);
+      $('finish').value=mapped.plan.finishAction;
+      $('local-heights').checked=false;
+      $('photo-trigger').value='reachPoint';
+      $('photo-interval-fields').hidden=true;
+      points.splice(0,points.length,...mapped.plan.waypoints.map(p=>({...p})));
+      hasFit=false;
+      render();
+      renderMessage('Waylines-Referenzentwurf lokal importiert ('+points.length+
+        ' Wegpunkte). Unbekannte Missionsfunktionen werden nicht übernommen. '+
+        'Kein hardwarevalidierter Flugauftrag.');
+    }catch(error){
+      renderMessage(error instanceof Error?error.message:'Waylines-Import fehlgeschlagen.',true);
+    }finally{
+      input.value='';
+    }
+  });
   $('local-heights').addEventListener('change',render);
   function photoModeUpdate(){
     const mode=$('photo-trigger').value,interval=mode!=='reachPoint';
