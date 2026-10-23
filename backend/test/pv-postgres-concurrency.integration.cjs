@@ -156,9 +156,11 @@ test('parallel claims never hand the same job to two workers',async()=>{
   assert.equal(await finish(a||b),1);
 });
 test('idempotent media job and verified-asset foreign key constraints',async()=>{
-  const key=uuid();await insert(key);
+  const key=uuid(), id=await insert(key);
   await assert.rejects(insert(key),e=>e.code==='23505');
   await assert.rejects(insert(uuid(),uuid()),e=>e.code==='23503');
+  const active=await claim();assert.equal(active.job_id,id);
+  assert.equal(await finish(active),1);
 });
 test('audit failure rolls back an attempted job transition',async()=>{
   const id=await insert(), running=await claim();assert.equal(running.job_id,id);
