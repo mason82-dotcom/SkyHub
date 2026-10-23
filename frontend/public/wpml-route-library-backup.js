@@ -36,15 +36,16 @@
       storageImpact:'replace-all-local-routes-after-explicit-confirmation'
     });
   }
+  function byteLength(raw){return new TextEncoder().encode(raw).byteLength;}
   function exportBackup(db){
     const validated=library.check(db);
     const data=JSON.stringify({schema:SCHEMA,library:validated});
-    // Avoid a backup that our own bounded import cannot restore.
-    if(data.length>MAX_SIZE)invalid();
+    // Guard UTF-8 file size, not just JS UTF-16 code unit length.
+    if(byteLength(data)>MAX_SIZE)invalid();
     return {content:data,preview:preview(validated)};
   }
   function inspectBackup(raw){
-    if(typeof raw!=='string'||raw.length>MAX_SIZE||!jsonParser||
+    if(typeof raw!=='string'||byteLength(raw)>MAX_SIZE||!jsonParser||
        typeof jsonParser.parseJson!=='function')invalid();
     let parsed;
     try{parsed=jsonParser.parseJson(raw,MAX_SIZE);}catch{invalid();}
