@@ -91,6 +91,22 @@ test('missing file or wrong SHA256 can never count as a target match',()=>{
   }
 });
 
+test('matching checksum during waiting, syncing or failure is not completed target evidence',()=>{
+  const m=monitor();
+  target(m);
+  const waiting=send(m,sync('wait_sync',BASE+1),BASE+1).state;
+  assert.equal(waiting.deviceReportedTargetMatch,false);
+  const syncing=send(m,sync('synchronizing',BASE+2),BASE+2).state;
+  assert.equal(syncing.deviceReportedTargetMatch,false);
+  const failed=send(m,sync('fail',BASE+3,DIGEST,12),BASE+3).state;
+  assert.equal(failed.phase,'device_failed');
+  assert.equal(failed.deviceReportedTargetMatch,false);
+  const other=monitor();target(other);
+  const nonzero=send(other,sync('synchronized',BASE+1,DIGEST,13),BASE+1).state;
+  assert.equal(nonzero.phase,'device_failed');
+  assert.equal(nonzero.deviceReportedTargetMatch,false);
+});
+
 test('bad status and every documented nonzero reason are terminal failures',()=>{
   for(const status of ['fail','switch_fail']){
     const m=monitor();target(m);
