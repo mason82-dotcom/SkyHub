@@ -35,6 +35,9 @@ function makeHarness(){
   get('speed').value='4';
   get('takeoff').value='30';
   get('model').value='mavic3m';
+  get('finish').value='goHome';
+  get('photo-interval').value='12';
+  get('photo-camera-min').value='';
   get('photo-trigger').value='reachPoint';
   get('latitude').value='49.5';
   get('longitude').value='8.5';
@@ -174,4 +177,41 @@ test('local-height input changes invalidate preview when measured ellipsoid is a
   assert.match(app.get('mission-review').textContent,/EINGABEN PRÜFEN/);
   assert.match(app.get('mission-review').textContent,/WGS84-Ellipsoidhöhe/);
   assert.match(app.get('mission-review').textContent,/KEINE Flugfreigabe/);
+});
+
+test('live review catches unsafe takeoff and finish action changes',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  app.get('waylines-reference-apply').listeners.click();
+  assert.match(app.get('mission-review').textContent,/ENTWURF/);
+  app.get('takeoff').value='0';
+  app.get('takeoff').listeners.input();
+  assert.match(app.get('mission-review').textContent,/EINGABEN PRÜFEN/);
+  assert.match(app.get('mission-review').textContent,/Sicherheitssteighöhe/);
+  app.get('takeoff').value='30';
+  app.get('takeoff').listeners.input();
+  app.get('finish').value='autoLand';
+  app.get('finish').listeners.change();
+  assert.match(app.get('mission-review').textContent,/Abschlussaktion nicht unterstützt/);
+  assert.match(app.get('mission-review').textContent,/KEINE Flugfreigabe/);
+});
+test('live review shows camera timing mismatch and unknown camera minimum',async()=>{
+  const app=makeHarness();
+  await app.load(sample());
+  app.get('waylines-reference-apply').listeners.click();
+  // Replacing per-point photo actions with periodic mode also clears photo flags.
+  app.get('photo-trigger').value='multipleDistance';
+  app.get('photo-trigger').listeners.change();
+  assert.match(app.get('mission-review').textContent,/Kamera-Minimalintervall/);
+  assert.match(app.get('mission-review').textContent,/ENTWURF/);
+  app.get('photo-camera-min').value='4';
+  app.get('photo-camera-min').listeners.input();
+  assert.match(app.get('mission-review').textContent,/EINGABEN PRÜFEN/);
+  assert.match(app.get('mission-review').textContent,/Fotoauslöseintervall/);
+  app.get('photo-camera-min').value='1';
+  app.get('photo-camera-min').listeners.input();
+  assert.match(app.get('mission-review').textContent,/ENTWURF/);
+  app.get('photo-interval').value='1e2';
+  app.get('photo-interval').listeners.input();
+  assert.match(app.get('mission-review').textContent,/Fotointervall außerhalb/);
 });
