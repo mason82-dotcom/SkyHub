@@ -21,7 +21,8 @@ class HivemindReferenceLabTest(unittest.TestCase):
 
     def test_overlay_no_host_broker_or_prod_mounts(self):
         overlay = (LAB / "compose.lab.yml").read_text()
-        self.assertIn('internal: true', overlay)
+        self.assertIn('driver: bridge', overlay)
+        self.assertIn('com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"', overlay)
         self.assertIn('MQTT_BROKER_URL: mqtt://hivemind-broker:1884', overlay)
         self.assertIn('127.0.0.1:19090:9090', overlay)
         self.assertIn('dockerfile: ../Dockerfile.lab', overlay)
