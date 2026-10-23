@@ -238,7 +238,7 @@
     if(typeof raw!=='string'||raw.length>120||!/^[0-9, -]+$/.test(raw))throw Error('syntax');
     const values=new Set();
     for(const token of raw.split(',')){
-      const match=/^\\s*([1-9]\\d{0,2})(?:\\s*-\\s*([1-9]\\d{0,2}))?\\s*$/.exec(token);
+      const match=/^\s*([1-9]\d{0,2})(?:\s*-\s*([1-9]\d{0,2}))?\s*$/.exec(token);
       if(!match)throw Error('syntax');
       const start=Number(match[1]),end=Number(match[2]||match[1]);
       if(start<1||end>count||end<start)throw Error('range');
