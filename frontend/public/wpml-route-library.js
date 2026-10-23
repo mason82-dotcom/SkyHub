@@ -9,7 +9,7 @@
   if(!core||!lib||!actionDraft){
     $('status').textContent='Routenbibliothek konnte nicht geladen werden.';return;
   }
-  let library=lib.blank(),selected=null,points=[],groups=[],dirty=false;
+  let library=lib.blank(),selected=null,activeRouteId=null,points=[],groups=[],dirty=false;
   const message=(text,error=false)=>{
     $('status').textContent=text;
     $('status').style.color=error?'#ffca8c':'#c4e8fa';
@@ -215,6 +215,7 @@
     groups=(p.actionGroups||[]).map(g=>({
       index:g.index,actions:g.actions.map(a=>({...a}))
     }));
+    activeRouteId=version.id;
     dirty=false;renderEditor();
     message('Revision '+version.revision+' übernommen – nur lokaler Entwurf, keine Flugfreigabe.');
     return true;
@@ -283,16 +284,19 @@
   }});
   $('save').addEventListener('click',()=>{
     try{
-      const next=lib.save(library,{routeId:selected,
+      // Selecting a route in the sidebar does NOT authorize appending the
+      // current, potentially unrelated draft as its new revision.
+      if(selected!==activeRouteId)throw Error('route selection is not loaded');
+      const next=lib.save(library,{routeId:activeRouteId,
         name:$('route-name').value,folder:$('route-folder').value,plan:makePlan()});
       persist(next.library);
-      selected=next.routeId;dirty=false;renderRoutes();
+      selected=next.routeId;activeRouteId=next.routeId;dirty=false;renderRoutes();
       libraryMessage('Revision '+next.revision+' ausschließlich in diesem Browser gespeichert.');
-    }catch{libraryMessage('Speichern fehlgeschlagen. Speicherplatz oder Entwurf prüfen; keine Daten überschrieben.');}
+    }catch{libraryMessage('Speichern abgelehnt. Ausgewählte Route zuerst ausdrücklich laden oder neuen Entwurf anlegen; Speicherplatz und Eingaben prüfen.');}
   });
   $('new').addEventListener('click',()=>{
     if((points.length||dirty)&&!window.confirm('Neuen Entwurf beginnen?'))return;
-    points=[];groups=[];selected=null;dirty=false;
+    points=[];groups=[];selected=null;activeRouteId=null;dirty=false;
     $('route-name').value='Neue WPML-Mission';
     $('route-folder').value='Allgemein';renderEditor();renderRoutes();
     message('Neuer leerer Entwurf. Frühere Revisionen bleiben erhalten.');
@@ -303,6 +307,41 @@
       const version=lib.find(library,selected,Number($('revision-select').value));
       if(applyRevision(version))$('route-folder').value=version.folder;
     }catch{message('Revision konnte nicht geladen werden.',true);}
+  });
+  $('compare-revision').addEventListener('click',()=>{
+    try{
+      if(selected==null)throw Error('no selection');
+      const chosen=Number($('revision-select').value);
+      const latest=lib.list(library).find(x=>x.id===selected);
+      if(!latest)throw Error('missing route');
+      const diff=lib.compareRevisions(library,selected,chosen,latest.latestRevision);
+      const message='Revision '+diff.leftRevision+' gegen '+diff.rightRevision+
+        ': Wegpunkte '+diff.leftWaypointCount+'/'+diff.rightWaypointCount+
+        ', Positionsänderungen '+diff.positionChanges+
+        ', Höhenänderungen '+diff.heightChanges+
+        ', Fotoänderungen '+diff.photoChanges+
+        ', Aktionsgruppen geändert: '+(diff.actionGroupsChanged?'ja':'nein')+
+        ', Profilfelder geändert: '+diff.flightProfileFieldsChanged.length+
+        '. Nur Offline-Vergleich, keine Flugfreigabe.';
+      $('revision-diff').textContent=message;
+    }catch{$('revision-diff').textContent='Revisionsvergleich nicht möglich.';}
+  });
+  $('restore-revision').addEventListener('click',()=>{
+    try{
+      if(selected==null)throw Error('no selection');
+      const revision=Number($('revision-select').value);
+      const ref=lib.find(library,selected,revision);
+      if(!window.confirm('Revision '+ref.revision+
+          ' als NEUE Revision speichern? Vorhandene Historie bleibt unverändert.'))return;
+      const restored=lib.restoreRevision(library,selected,revision);
+      persist(restored.library);
+      // Never pretend the old editor draft now matches the restored revision.
+      activeRouteId=null;
+      renderRoutes();
+      libraryMessage('Revision '+revision+' als neue Revision '+
+        restored.revision+' gesichert. Entwurf unverändert; neue Revision erneut laden.');
+      $('revision-diff').textContent='Wiederherstellung angelegt. Vor Flugplanung erneut prüfen.';
+    }catch{libraryMessage('Wiederherstellung nicht möglich. Revision oder Speicher prüfen.');}
   });
   $('clone').addEventListener('click',()=>{
     try{
@@ -315,7 +354,10 @@
   $('delete').addEventListener('click',()=>{
     if(selected==null||!window.confirm('Gesamte Route mit allen Revisionen lokal löschen?'))return;
     try{
-      persist(lib.remove(library,selected));selected=null;renderRoutes();
+      const deleted=selected;
+      persist(lib.remove(library,selected));selected=null;
+      if(activeRouteId===deleted)activeRouteId=null;
+      renderRoutes();
       libraryMessage('Route lokal gelöscht; geöffneter Entwurf bleibt unverändert.');
     }catch{libraryMessage('Route konnte nicht entfernt werden.');}
   });
@@ -323,7 +365,7 @@
     if(!window.confirm('ALLE lokal gespeicherten Routen und Revisionen löschen?'))return;
     try{
       window.localStorage.removeItem(STORAGE);
-      library=lib.blank();selected=null;renderRoutes();
+      library=lib.blank();selected=null;activeRouteId=null;renderRoutes();
       libraryMessage('Lokaler Bibliotheksspeicher gelöscht. Aktueller Entwurf bleibt geöffnet.');
     }catch{libraryMessage('Löschen fehlgeschlagen.');}
   });

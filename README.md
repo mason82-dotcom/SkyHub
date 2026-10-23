@@ -1,4 +1,6 @@
-# SkyHub Next
+# SkyHub-Next
+
+**Kanonisches Repository:** [mason82-dotcom/SkyHub-Next](https://github.com/mason82-dotcom/SkyHub-Next) · [Repository-Umbenennung und sichere lokale Remote-Umstellung](docs/repository-identity.md).
 
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
@@ -28,6 +30,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 - [DJI MQTT-/OSD-Integration](docs/mqtt-osd-integration.md)
 - [DJI Cloud-API-Kompatibilität](docs/dji-cloud-api-compatibility.md)
 - [DJI WPML 1.18: KMZ-Inspektion, Feldabgleich und Einschränkungen](docs/dji-wpml-integration.md)
+- [Flight-Route-Library: WPML-Referenz-Audit, P0-Revisionsbibliothek und P1-Aktionsmodell](docs/dji-waylines-sdk-reference.md)
+- [Repository-Adresse, lokale Git-Remotes und Trennung zum Legacy-System](docs/repository-identity.md)
 
 ### WPML-Wegpunkteditor (noch nicht produktiv ausgerollt)
 

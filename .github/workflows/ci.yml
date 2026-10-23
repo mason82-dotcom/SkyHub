@@ -35,6 +35,8 @@ jobs:
           done
       - name: Install locked backend test dependencies
         run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Reject obsolete GitHub repository links
+        run: node scripts/check-repository-identity.js
       - name: Validate delivered inline dashboard scripts
         run: node scripts/check-dashboard-inline.js
       - name: Backend unit tests (no broker or DJI hardware)

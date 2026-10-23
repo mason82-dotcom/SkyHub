@@ -68,8 +68,12 @@ test('draft WPML route schema: workspace FKs, immutable revisions, no dispatch a
       [A]),{code:'42501'});
     await assert.rejects(c.query(
       'DELETE FROM skyhub_wpml_route_revisions WHERE workspace_id=$1',[A]),{code:'42501'});
+    // PostgreSQL first blocks a parent-only TRUNCATE because task snapshots
+    // reference it; CASCADE must also fail at the append-only trigger.
     await assert.rejects(c.query(
-      'TRUNCATE skyhub_wpml_route_revisions'),{code:'42501'});
+      'TRUNCATE skyhub_wpml_route_revisions'),{code:'0A000'});
+    await assert.rejects(c.query(
+      'TRUNCATE skyhub_wpml_route_revisions CASCADE'),{code:'42501'});
     await assert.rejects(c.query(
       'INSERT INTO skyhub_wpml_route_revisions '+
       '(workspace_id,route_id,revision,plan,plan_sha256,author_id,flight_ready) '+

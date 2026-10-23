@@ -161,3 +161,45 @@ test('UI entrypoint and local-only module links exist, no mission writes or exte
   assert.match(browser,/localStorage\.setItem\(STORAGE/);
   assert.match(browser,/window\.confirm\('Gesamte Route/);
 });
+
+test('P0 revision comparisons only reveal aggregate changes and fixed public field names',()=>{
+  const a=library.save(library.blank(),{name:'Sensitive field',plan:plan(),savedAt:100});
+  const newPlan=plan();
+  newPlan.waypoints[1].lat=48.123456;
+  newPlan.waypoints[2].height=60;
+  // Explicit provenance markers are required at every waypoint for local heights.
+  newPlan.waypoints.forEach((p,i)=>{p.ellipsoidHeight=170+i;});
+  newPlan.speed=7;
+  newPlan.actionGroups=[{index:0,actions:[{type:'takePhoto'}]}];
+  const b=library.save(a.library,{routeId:a.routeId,name:'Sensitive field',
+    plan:newPlan,savedAt:200});
+  const compare=library.compareRevisions(b.library,a.routeId,1,2);
+  assert.equal(compare.leftRevision,1);
+  assert.equal(compare.rightRevision,2);
+  assert.equal(compare.positionChanges,1);
+  assert.equal(compare.heightChanges,3);
+  assert.equal(compare.photoChanges,0);
+  assert.equal(compare.actionGroupsChanged,true);
+  assert.deepEqual(compare.flightProfileFieldsChanged,['speed','transitionSpeed']);
+  assert.equal(compare.flightReady,false);
+  assert.equal(compare.dispatchAllowed,false);
+  assert.doesNotMatch(JSON.stringify(compare),/48\.123456|49\.12345|8\.56789|Sensitive field/);
+  assert.ok(Object.isFrozen(compare));
+  assert.throws(()=>library.compareRevisions(b.library,99,1,2),/Routenbibliothek/);
+});
+test('P0 restored revision is appended without rewriting older version history',()=>{
+  const a=library.save(library.blank(),{name:'Route A',folder:'Referenz',plan:plan(),
+    savedAt:100});
+  const amended=plan();amended.speed=8;
+  const b=library.save(a.library,{routeId:a.routeId,name:'Route A',folder:'Referenz',
+    plan:amended,savedAt:200});
+  const restored=library.restoreRevision(b.library,a.routeId,1,300);
+  assert.equal(restored.revision,3);
+  assert.equal(library.find(restored.library,a.routeId,1).plan.speed,5);
+  assert.equal(library.find(restored.library,a.routeId,2).plan.speed,8);
+  assert.equal(library.find(restored.library,a.routeId,3).plan.speed,5);
+  assert.equal(library.list(b.library)[0].latestRevision,2);
+  assert.equal(library.list(restored.library)[0].latestRevision,3);
+  assert.equal(library.taskSnapshot(restored.library,a.routeId,3).flightReady,false);
+  assert.throws(()=>library.restoreRevision(b.library,a.routeId,44,300),/Routenbibliothek/);
+});
