@@ -180,7 +180,7 @@ test('P0 revision comparisons only reveal aggregate changes and fixed public fie
   assert.equal(compare.heightChanges,3);
   assert.equal(compare.photoChanges,0);
   assert.equal(compare.actionGroupsChanged,true);
-  assert.deepEqual(compare.flightProfileFieldsChanged,['speed']);
+  assert.deepEqual(compare.flightProfileFieldsChanged,['speed','transitionSpeed']);
   assert.equal(compare.flightReady,false);
   assert.equal(compare.dispatchAllowed,false);
   assert.doesNotMatch(JSON.stringify(compare),/48\.123456|49\.12345|8\.56789|Sensitive field/);
