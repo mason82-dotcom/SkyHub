@@ -7,6 +7,7 @@ on:
       - "feature/m3m-raw-tiff-payload-audit-*"
       - "feature/m3m-dedal-ortho-handoff-*"
       - "feature/m3m-dedal-preflight-*"
+      - "feature/m3m-dedal-archive-inspection-*"
   pull_request:
     paths:
       - "backend/workers/m3m_reflectance_indices.py"
@@ -18,6 +19,10 @@ on:
       - "tests/test_m3m_dedal_ortho_handoff.py"
       - "backend/workers/m3m_dedal_preflight.py"
       - "tests/test_m3m_dedal_preflight.py"
+      - "backend/workers/m3m_dedal_archive_inspect.py"
+      - "backend/workers/m3m_dedal_manifest_recheck.py"
+      - "tests/test_m3m_dedal_archive_inspect.py"
+      - "tests/test_m3m_dedal_manifest_recheck.py"
       - ".github/workflows/m3m-raster-offline.yml"
 
 permissions:
@@ -36,12 +41,16 @@ jobs:
         run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
       - name: Compile and validate offline M3M worker
         run: |
-          python -m py_compile backend/workers/m3m_reflectance_indices.py backend/workers/m3m_raw_tiff_audit.py backend/workers/m3m_dedal_ortho_handoff.py backend/workers/m3m_dedal_preflight.py
+          python -m py_compile backend/workers/m3m_reflectance_indices.py backend/workers/m3m_raw_tiff_audit.py backend/workers/m3m_dedal_ortho_handoff.py backend/workers/m3m_dedal_preflight.py backend/workers/m3m_dedal_archive_inspect.py backend/workers/m3m_dedal_manifest_recheck.py
           python -m unittest discover -s tests -p 'test_m3m_reflectance_indices.py' -v
           python -m unittest discover -s tests -p 'test_m3m_raw_tiff_audit.py' -v
           python -m unittest discover -s tests -p 'test_m3m_dedal_ortho_handoff.py' -v
           python -m unittest discover -s tests -p 'test_m3m_dedal_preflight.py' -v
+          python -m unittest discover -s tests -p 'test_m3m_dedal_archive_inspect.py' -v
+          python -m unittest discover -s tests -p 'test_m3m_dedal_manifest_recheck.py' -v
           python backend/workers/m3m_reflectance_indices.py --help
           python backend/workers/m3m_raw_tiff_audit.py --help
           python backend/workers/m3m_dedal_ortho_handoff.py --help
           python backend/workers/m3m_dedal_preflight.py --help
+          python backend/workers/m3m_dedal_archive_inspect.py --help
+          python backend/workers/m3m_dedal_manifest_recheck.py --help
