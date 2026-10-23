@@ -8,7 +8,8 @@ Diese Übersicht bezieht sich auf das **aktive SkyHub-Next-Repository-Root**. Ei
 
 | Tool | Aufruf / Modus | Wirkung | Betriebsregel |
 |---|---|---|---|
-| `pi-m3m-media-inventory.js` | `node scripts/pi-m3m-media-inventory.js --directory /absoluter/pfad` | **Lokal lesend, opt-in**: unmittelbare Dateinamen, nur aggregierte RGB/G/R/RE/NIR-Zähler | Kein EXIF/XMP, kein S3/MinIO, keine Bildinhalte oder validierte Reflexionswerte; [Grenzen](m3m-offline-media-inventory.md) |\n| `pi-preflight.sh` | `bash scripts/pi-preflight.sh` | **Lesend**: Zeit, Listener und Docker-Portzuordnung | Geeignet vor Staging; beweist keine DJI-MQTT-Daten |
+| `pi-m3m-media-inventory.js` | `node scripts/pi-m3m-media-inventory.js --directory /absoluter/pfad` | **Lokal lesend, opt-in**: unmittelbare Dateinamen, nur aggregierte RGB/G/R/RE/NIR-Zähler | Kein EXIF/XMP, kein S3/MinIO, keine Bildinhalte oder validierte Reflexionswerte; [Grenzen](m3m-offline-media-inventory.md) |
+| `pi-preflight.sh` | `bash scripts/pi-preflight.sh` | **Lesend**: Zeit, Listener und Docker-Portzuordnung | Geeignet vor Staging; beweist keine DJI-MQTT-Daten |
 | `pi-skyhub-takeover-audit.sh` | `bash scripts/pi-skyhub-takeover-audit.sh` | **Lesend**: Container-, HTTP-, Compose- und Secret-*Status* | Keine Geheimniswerte weitergeben; kein Cutover |
 | `pi-tls-audit.sh` | `bash scripts/pi-tls-audit.sh` | **Lesend**: TLS-Zertifikat und CA-Vertrauen | Pi-CA-Vertrauen beweist kein DJI-Android-Vertrauen |
 | `pi-mqtt-osd-check.js` | `node scripts/pi-mqtt-osd-check.js` | **Lesend**: HTTP-Diagnose, kein MQTT-Publish | Werte/Zeitstempel nicht mit bestätigtem Flugzustand verwechseln |
