@@ -7,8 +7,12 @@ import tempfile
 import unittest
 from uuid import uuid4
 
-import numpy as np
-import tifffile
+try:
+    import numpy as np
+    import tifffile
+except ImportError:  # Main SkyHub CI intentionally has no optional raster packages.
+    np = None
+    tifffile = None
 
 MODULE = Path(__file__).resolve().parents[1] / 'backend/workers/m3m_raw_tiff_audit.py'
 spec = importlib.util.spec_from_file_location('m3m_raw_tiff_audit', MODULE)
@@ -16,6 +20,7 @@ worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
 
 
+@unittest.skipUnless(np is not None and tifffile is not None, 'Install optional M3M raster dependencies')
 class PayloadAuditTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
