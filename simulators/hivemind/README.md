@@ -106,8 +106,10 @@ and *separate* OSD counters, then open the authenticated dashboard using the
 generated lab view token (read it privately from `lab.env`). Expected:
 a synthetic RC topology plus OSD after bringing the simulated Pilot online.
 Test missing/invalid OSD separately; `mqtt: true` does not prove telemetry was
-received. The simulator's Dock mission/media/stream workflows remain **reference
-scenarios, not automated pass criteria**.
+received. The Dock-only acceptance additionally validates **synthetic** ground
+`flighttask_undo` with a canceled progress event, refusal of an in-flight
+`flighttask_stop` with result `326109`, and media metadata callbacks.
+Neither a real flight nor a real S3/MinIO upload is authorized.
 
 ```bash
 bash simulators/hivemind/lab.sh logs
@@ -136,9 +138,27 @@ changes to the existing EMQX ACL, Caddy, legacy Docker Compose or Pi `.env`.
 | Pilot topology | SkyHub sees `sys/product/+/status` | No physical onboarding verification |
 | OSD/State | `lab.sh smoke` checks new OSD and normalized telemetry | Synthetic only; no genuine DJI 1.18 confirmation |
 | Dock registration | `dock-rpc` opt-in mock: four sequential requests + topology reply | Synthetic success only; SkyHub production RPCs still unimplemented |
-| Synthetic Wayline + HMS | `dock-smoke` verifies HMS code, four mission services and progress | Test-only MQTT publisher; no production command API or real flight |
-| Media uploads / DRC / streams | Reference only | Not yet end-to-end verified; no real object-storage uploads |
+| Synthetic Wayline + HMS | `dock-smoke` verifies prepare, ground undo, canceled, execute, rejected in-flight stop, pause/recovery and HMS | No production command API or real flight |
+| Media metadata and acknowledgements | `dock-smoke` verifies denied `storage_config_get`, priority event, 2 `file_upload_callback`, matching `events_reply`, `uploaded: false` | No STS, actual object storage, uploaded image bytes or Media API |
+| Real media transfers / DRC / streams | Not covered | Requires separate integration and device safety tests |
 | DJI Cloud API 1.18 / aircraft coverage | **Not proven** | Upstream bundles SDK 1.16.1.3; hardware tests remain necessary |
+
+## Metadata-only media acceptance
+
+The upstream `MediaSampleInitializer` populates **any non-empty configured
+`media-dir`** with example photos and videos during startup. For this
+test `SIMULATOR_MEDIA_MEDIADIR` is explicitly the empty string (also not
+set by the container image), so the simulator uses its native synthetic
+filename fallback and cannot read test-media files. The opt-in MQTT mock
+answers `storage_config_get` with `result: 1` and no credentials, bucket,
+endpoint or access key. It acknowledges only one priority event and two
+predefined `file_upload_callback` metadata messages for the fixed test
+flight, with matching `tid`/`bid`. The one-shot observer verifies
+`events_reply` and `uploaded: false`, and SkyHub receives the callback.
+No actual image upload, storage authorization or media analysis occurs.
+
+Verified by [CI runtime acceptance #39898622061](https://github.com/mason82-dotcom/SkyHub/actions/runs/39898622061).
+Do not configure a real `media-dir` or real STS credentials in this lab.
 
 ## Security and licensing
 
