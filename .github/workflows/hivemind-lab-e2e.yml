@@ -45,6 +45,13 @@ jobs:
       - name: Verify synthetic Pilot topology and OSD through actual MQTT
         run: bash simulators/hivemind/lab.sh smoke
 
+      - name: Print non-sensitive container statuses on failure
+        if: failure()
+        run: |
+          bash simulators/hivemind/lab.sh ps
+          # No container logs or environment dumps: upstream logs may expose SNs,
+          # configuration values or credentials.
+
       - name: Stop only isolated lab, preserving volumes (always)
         if: always()
         run: |
