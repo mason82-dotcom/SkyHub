@@ -7,12 +7,68 @@ unconnected to production. No real drone credentials or hardware are used.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 import time
+from pathlib import Path
 
 from smoke import (SIM, SKYHUB, POLL_SECONDS, SmokeFailure, assert_lab,
                    await_lab_ready, local_token, request, require, strictly_new)
 
+
+
+# Repository-path command uses the *existing*, explicitly opt-in dock-rpc
+# container only. No host MQTT port, arbitrary broker URL or shell injection.
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+
+def verify_hms_and_mission(token: str, dock_sn: str) -> None:
+    require(dock_sn == "SKYHUB_LAB_DOCK_01",
+            "Refusing mission probe for a non-synthetic Dock identity")
+    result = request(SIM, "/api/hms/trigger", method="POST",
+                     body={"types": ["WIND_HIGH"]})
+    require(isinstance(result, dict) and result.get("success") is True
+            and result.get("count") == 1, "Simulator did not publish synthetic HMS")
+
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        devices = request(SKYHUB, "/api/devices", token=token)
+        dock = next((d for d in devices if isinstance(d, dict)
+                     and d.get("sn") == dock_sn), None)
+        alerts = dock.get("hms", []) if dock else []
+        if any(a.get("code") == "0x160900BF" and a.get("level") == 2
+               for a in alerts if isinstance(a, dict)):
+            break
+        time.sleep(0.5)
+    else:
+        raise SmokeFailure("SkyHub did not parse expected synthetic Dock HMS")
+
+    # The probe connects only to literal hivemind-broker:1884, publishes
+    # four hardcoded lab mission commands and checks actual DJI replies.
+    args = [
+        "docker", "compose", "--project-name", "skyhub-hivemind-lab",
+        "--env-file", str(HERE / "lab.env"),
+        "-f", "docker-compose.yml",
+        "-f", "simulators/hivemind/compose.lab.yml",
+        "--profile", "dock-rpc",
+        "exec", "-T", "dock-mock", "node", "/app/mission-probe.js"
+    ]
+    try:
+        completed = subprocess.run(args, cwd=ROOT, timeout=45,
+                                   capture_output=True, text=True, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        raise SmokeFailure("Private mission probe failed to launch or timed out") from None
+    if completed.returncode != 0 or "PASS: synthetic flighttask_prepare" not in completed.stdout:
+        # Do not echo container logs or uncontrolled stderr; it could contain
+        # IDs, arbitrary upstream telemetry, or secrets.
+        raise SmokeFailure("Synthetic mission MQTT service/progress acceptance failed")
+
+    events = request(SKYHUB, "/api/events", token=token)
+    require(isinstance(events, list) and
+            any(isinstance(e, dict) and e.get("sn") == dock_sn and
+                e.get("method") == "flighttask_progress" for e in events),
+            "Mission progress event not observed by SkyHub")
+    print("PASS: synthetic Dock HMS and prepare/execute/progress/pause/recovery")
 
 def run() -> None:
     token = local_token()
@@ -32,6 +88,8 @@ def run() -> None:
         config = request(SIM, "/api/connect", method="POST", body={
             "mqtt_host": "hivemind-broker", "mqtt_port": 1884,
             "device_mode": "DOCK", "dock_type": "DOCK3",
+            "dock_sn": "SKYHUB_LAB_DOCK_01",
+            "drone_sn": "SKYHUB_LAB_DRONE_01",
             "organization_id": "skyhub-lab-org",
             "device_binding_code": "skyhub-lab-code",
             "app_license": ""
@@ -74,6 +132,7 @@ def run() -> None:
                 strictly_new(health.get("mqttOsdMessages"),
                              before.get("mqttOsdMessages"))):
                 print("PASS: four ordered Dock RPC replies, topology and new Dock OSD confirmed")
+                verify_hms_and_mission(token, dock_sn)
                 print("All identities and simulated organization data suppressed")
                 return
             time.sleep(1)
