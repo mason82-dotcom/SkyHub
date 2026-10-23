@@ -100,7 +100,7 @@ test('1.0.6 reference input remains blocked but reports source-aware risks witho
   fixedFields(report);
   assert.equal(report.offlineValid,null);
   assert.equal(report.namespaceCheck,'upstream-alternate-unverified');
-  assert.equal(report.inspectionMode,'namespace-relabel-in-memory-only');
+  assert.equal(report.inspectionMode,'explicit-alternate-namespace-read-only');
   assert.equal(report.reviewStatus,'blocked');
   assert.ok(report.findings.includes('WPML_NAMESPACE_NOT_VALIDATED_BY_SKYHUB'));
   assert.ok(report.findings.includes('AIRCRAFT_SUBTYPE_PAYLOAD_CONFLICT'));
