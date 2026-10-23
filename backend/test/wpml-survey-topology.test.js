@@ -121,3 +121,68 @@ test('preview cannot become a drone command merely from valid topology',()=>{
   assert.ok(!Object.hasOwn(result,'waylines'));
   assert.ok(!Object.hasOwn(result,'kmz'));
 });
+
+function pointWithinRing(pos,coordinateRing){
+  const x=pos.lon,y=pos.lat;
+  let included=false;
+  for(let i=0,j=coordinateRing.length-1;i<coordinateRing.length;j=i++){
+    const a=coordinateRing[i],b=coordinateRing[j];
+    if((a[1]>y)!==(b[1]>y)&&
+       x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])
+      included=!included;
+  }
+  return included;
+}
+function reverseRing(r){
+  const open=r.slice(0,-1).reverse();
+  return [...open,open[0]];
+}
+
+test('sampling across rotations never places coverage segment interiors inside a hole',()=>{
+  // Fixed geometric fixtures and headings deliberately avoid reliance on DJI data.
+  for(const heading of [0,15,37,45,90,135,225,270,359]){
+    const result=geom([outer,hole],heading,11);
+    assert.ok(result.segmentCount>=3);
+    for(const segment of result.segments){
+      for(const t of [0.07,0.29,0.5,0.71,0.93]){
+        const sample={lat:segment.start.lat*(1-t)+segment.end.lat*t,
+          lon:segment.start.lon*(1-t)+segment.end.lon*t};
+        assert.ok(pointWithinRing(sample,outer),
+          'coverage sample outside outer ring, heading '+heading);
+        assert.equal(pointWithinRing(sample,hole),false,
+          'coverage sample inside exclusion, heading '+heading);
+      }
+      assert.equal(segment.kind,'coverage-only');
+    }
+    assert.equal(result.unplannedTransitions.every(g=>
+      g.planned===false&&g.safetyVerified===false&&g.flyable===false),true);
+    assert.equal(result.flightReady,false);
+    assert.equal(result.exportableAsWaylines,false);
+  }
+});
+
+test('ring winding reversal does not change coverage area or number of segments',()=>{
+  for(const heading of [0,45,90,180]){
+    const normal=geom([outer,hole],heading,13);
+    const reversed=geom([reverseRing(outer),reverseRing(hole)],heading,13);
+    assert.ok(Math.abs(normal.areaSqMeters-reversed.areaSqMeters)<1e-6);
+    assert.equal(normal.segmentCount,reversed.segmentCount);
+    assert.equal(normal.stripeCount,reversed.stripeCount);
+    assert.ok(Math.abs(normal.previewSegmentLengthMeters-
+      reversed.previewSegmentLengthMeters)<1e-6);
+  }
+});
+
+test('hole in one MultiPolygon component does not alter the disjoint component',()=>{
+  const nextOuter=ring([[150,0],[250,0],[250,120],[150,120]]);
+  const geometry={type:'MultiPolygon',coordinates:[[outer,hole],[nextOuter]]};
+  const result=survey.preview(geometry,{heading:90,spacing:17});
+  assert.equal(result.componentCount,2);
+  assert.equal(result.holeCount,1);
+  assert.ok(Math.abs(result.areaSqMeters-(12800+12000))<1);
+  assert.equal(result.outlineGeometry.type,'MultiPolygon');
+  const xs=result.segments.map(s=>((s.start.lon+s.end.lon)/2-LON)*xm);
+  assert.ok(xs.some(x=>x<120));
+  assert.ok(xs.some(x=>x>150));
+  assert.equal(result.flightReady,false);
+});
