@@ -95,6 +95,8 @@ Remote-Tunnel vom PC:
 
 Dann http://127.0.0.1:4001 öffnen, SKYHUB_VIEW_TOKEN aus .env eingeben. Token verbleibt nur im Speicher des Browsers bis zum Neuladen.
 
+**Bekannter Main-Defekt (23.10.2026):** Die Diagnose `GET /api/diagnostics/dji-fields?model=0:77:2` kann mit HTTP 400 antworten, obwohl ein gültiges DJI-Modell angefragt wird. Hintergrund ist ein fehlerhaft maskiertes Regex in `backend/server.js`. [PR #26](https://github.com/mason82-dotcom/SkyHub/pull/26) enthält den noch nicht nach `main` übernommenen Fix. Dies ist **keine** Netzwerk-/DJI-Hardwarestörung.
+
 ## Tests
 
     node --check backend/server.js
