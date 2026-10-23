@@ -10,7 +10,7 @@ Der ursprüngliche isolierte Branch bleibt als Herkunftsnachweis erhalten.
 
 Isolierte Hardware-Abnahme für:
 - **DJI RC Plus 2 Enterprise:** `domain:type:sub_type = 2:174:0`, Gateway, offizielles RC-Plus-2-Webprofil mit **54** statischen Feldpfaden.
-- **DJI Matrice 4T:** `domain:type:sub_type = 0:99:1`, Subdevice, **199 vorläufige** aus den generischen Aircraft-Spezifikationen abgeleitete statische Pfade und **neun** dokumentierte dynamische Gimbal-Feldtypen. Dieses Profil ist **keine** belegte gerätespezifische Vollständigkeitserklärung für DJI 1.18.
+- **DJI Matrice 4T:** `domain:type:sub_type = 0:99:1`, Subdevice, **202 vorläufige** aus den generischen Aircraft-Spezifikationen abgeleitete statische Pfade und **neun** dokumentierte dynamische Gimbal-Feldtypen. Dieses Profil ist **keine** belegte gerätespezifische Vollständigkeitserklärung für DJI 1.18.
 
 DJI bestätigt die Kombination Matrice 4E/4T + RC Plus 2 + DJI Pilot 2 in der [Produktunterstützung](https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-support.html). Die [RC-Plus-2-Property-Tabelle](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/properties.html) beschreibt die gerätespezifischen MQTT-Felder. Die ältere [allgemeine Aircraft-Property-Tabelle](https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/aircraft/properties.html) beweist **nicht**, dass jedes Feld bei der M4T sendbar ist. DJI Cloud API unterstützt Pilot-to-Cloud über Pilot 2; die Drohne ist nicht selbst der Cloud-Gateway.
 

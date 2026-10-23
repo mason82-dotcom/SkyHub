@@ -117,7 +117,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),pairings=n
   const rc=unambiguous?pairs[0].gateway:gateways.length===1?gateways[0]:null;
   const m4t=unambiguous?pairs[0].child:aircraft.length===1?aircraft[0]:null;
   const controller=summarizeDevice(rc,now,'rcPlus2',54);
-  const drone=summarizeDevice(m4t,now,'matrice4T',199);
+  const drone=summarizeDevice(m4t,now,'matrice4T',202);
   const shapeList=Array.isArray(shapes)?shapes:[];
   const shapeKeys=channel=>[...new Set(shapeList.filter(s=>s?.channel===channel)
     .flatMap(s=>Array.isArray(s.dataKeys)?s.dataKeys:[])
@@ -182,7 +182,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),pairings=n
     controller.topologyOnline&&drone.topologyOnline&&
     controller.osdFresh&&drone.osdFresh&&drone.aircraftConnected&&
     controller.fieldInterface&&drone.fieldInterface&&
-    controller.fields.documented===54&&drone.fields.documented===199;
+    controller.fields.documented===54&&drone.fields.documented===202;
   const pairingConfirmed=pairing.available&&pairing.rcPlus2Paired>0&&
     pairing.rcPlus2RecentlyUsed>0;
   const passed=transportPassed&&pairingConfirmed;
@@ -198,7 +198,7 @@ function evaluateHardwareSession(devices,health,shapes,now=Date.now(),pairings=n
       'State wird bei Änderung publiziert und muss am Boden nicht alle 15 Sekunden eintreffen.',
       'MQTT-Zähler und Feldformen sind backendweit; sie belegen keine bestimmte RC.',
       'RC Plus 2: offiziell dokumentiertes Web-Feldprofil mit 54 statischen Pfaden.',
-      'M4T: 199 vorläufige generische Feldpfade plus neun dynamische Gimbal-Feldtypen; keine vollständige gerätespezifische DJI-1.18-Freigabe.',
+      'M4T: 202 vorläufige generische Feldpfade plus neun dynamische Gimbal-Feldtypen; keine vollständige gerätespezifische DJI-1.18-Freigabe.',
       'Nicht beobachtete Felder sind kein Beweis fehlender Hardware-Unterstützung.',
       'Ein registrierter und kürzlich verwendeter Token belegt keine eindeutige physische RC-Identität: DJI Pilot 2 WebView-Modell stammt aus dem User-Agent.',
       'Nur separat gekoppeltes SkyHub-Geräte-Token ist prüfbar; DJI-Benutzerkonten können nicht aus diesem Audit abgeleitet werden.',
