@@ -1,5 +1,8 @@
 # SkyHub Next
 
+**GitHub-Repository:** https://github.com/mason82-dotcom/SkyHub-Next  
+**Hinweis:** Der frühere Repository-Slug `mason82-dotcom/SkyHub` leitet auf `SkyHub-Next` weiter. Das lokale Legacy-Verzeichnis `~/Projekte/SkyHub` ist weiterhin getrennt vom Entwicklungsverzeichnis `~/Projekte/SkyHub-Next` zu behandeln.
+
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
 SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Im Main-Stand sind eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker nicht enthalten; entsprechende Implementierungen in Feature-PRs sind noch nicht freigegeben. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
@@ -7,8 +10,8 @@ SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbe
 ## Aktueller Projektstand (23.10.2026)
 
 **Verbindliche Bestandsaufnahme:** [Projektstand, offene Entwicklungszweige und Integrationsgates](docs/projektstand-2026-10-23.md).
-Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub/pull/66) (rein lesende Hardwarediagnostik) ist Commit
-[`64e427c3d9488da80a391cd43d0308771f480955`](https://github.com/mason82-dotcom/SkyHub/commit/64e427c3d9488da80a391cd43d0308771f480955)
+Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) (HTTP-Fix), [#47](https://github.com/mason82-dotcom/SkyHub-Next/pull/47) (synthetisches Protokollaudit) und [#66](https://github.com/mason82-dotcom/SkyHub-Next/pull/66) (rein lesende Hardwarediagnostik) ist Commit
+[`64e427c3d9488da80a391cd43d0308771f480955`](https://github.com/mason82-dotcom/SkyHub-Next/commit/64e427c3d9488da80a391cd43d0308771f480955)
 (vom 23.10.2026). Der nachfolgende Stand unterscheidet ausdrücklich **Main**,
 **offene/gestapelte Pull Requests**, **in den Integrationsbranch gemergte PRs**,
 **CI-Nachweise** und **Hardwarebeobachtungen**.
@@ -20,8 +23,8 @@ Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub/pull/61) (HTT
   Zusätzlich **isolierte Offline-Hardwareprüfer** für RC Pro/M3M und RC Plus 2/M4T,
   M3M-Feldlücken-Klassifikation und synthetische Regressionen; die reale
   RC-Plus-2/M4T-Hardwareabnahme ist weiterhin ausstehend.
-  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Keine S3-/MinIO- oder DJI-Pilot-2-Medien-API.
-  Ebenfalls integriert: [#73](https://github.com/mason82-dotcom/SkyHub/pull/73), ein **inaktiver, separat zu injizierender S3-ListObjectsV2-Vertrag** mit Prefix-/Cursor-/Mengengrenzen. **Noch kein S3-Client, Bucket-Zugriff oder Media-HTTP-Endpoint.**
+  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub-Next/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Keine S3-/MinIO- oder DJI-Pilot-2-Medien-API.
+  Ebenfalls integriert: [#73](https://github.com/mason82-dotcom/SkyHub-Next/pull/73), ein **inaktiver, separat zu injizierender S3-ListObjectsV2-Vertrag** mit Prefix-/Cursor-/Mengengrenzen. **Noch kein S3-Client, Bucket-Zugriff oder Media-HTTP-Endpoint.**
   Flugspuraufzeichnung bleibt standardmäßig aus.
 - **Noch nicht in Main:** das neue Command Center, MinIO-Medienleser, Pilot-2-Medien-HTTPS/STS,
   sichere XMP-Proben, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,

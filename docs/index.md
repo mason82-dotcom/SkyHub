@@ -1,5 +1,7 @@
 # SkyHub Next – Dokumentationswegweiser
 
+**Repository:** https://github.com/mason82-dotcom/SkyHub-Next. Historische GitHub-Links wurden auf den neuen Slug normalisiert; die lokalen Pi-Verzeichnisse `SkyHub` (Legacy) und `SkyHub-Next` (Entwicklung) bleiben unterschiedlich.
+
 **Aktualisiert am 23.10.2026.** Diese Navigation gilt für den Root-Stack `skyhub-next`. Die wichtigste Unterscheidung ist die zwischen dem **Code auf `main`** und **noch nicht integrierten Entwicklungszweigen**.
 
 ## Zuerst lesen
@@ -18,7 +20,7 @@
 | Bereich | Dokumente |
 | --- | --- |
 | DJI MQTT, OSD, Pilot-2-Handshake | [MQTT/OSD](mqtt-osd-integration.md), [DJI Cloud API](dji-cloud-api-compatibility.md) |
-| DJI Cloud API 1.18 – rein synthetischer Offline-Abgleich | [Paritätsaudit #47](dji-protocol-parity-audit.md), [isolierter Diagnosefix #61](https://github.com/mason82-dotcom/SkyHub/pull/61) |
+| DJI Cloud API 1.18 – rein synthetischer Offline-Abgleich | [Paritätsaudit #47](dji-protocol-parity-audit.md), [isolierter Diagnosefix #61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) |
 | S3-Vertrag (nur isolierte synthetische Leseversuche; kein realer Client) | [M3M-S3-ListObjectsV2-Scopes und Pagination](m3m-s3-read-contract.md) |
 | M3M-Dateinamen-Inventur (nur offline; kein Bild- oder S3-Zugriff) | [Phase 1: Datei-/Band-Namen und Grenzen](m3m-offline-media-inventory.md) |
 | Geräte-/Feldabdeckung | [DJI 1.18-Feldkatalog](dji-118-field-audit.md), [RC Pro + M3M Hardwarebefund](hardware-rc-pro-m3m.md), [M3M-Kamera-/State-Feldlücken](m3m-camera-gap-analysis.md), [RC Plus 2/M4T-Diagnose](hardware-rc-plus2-m4t.md), [gemeinsame Offline-Konsolidierung](hardware-diagnostics-consolidation.md) |

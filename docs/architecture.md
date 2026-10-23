@@ -31,7 +31,7 @@ DJI Cloud API Dokumentation:
 ## Live-API im Main-Stand (23.10.2026)
 
 - `GET /api/health` und `GET /api/pilot/status`: öffentliche, begrenzte Statusantworten.
-- **Behoben mit [#61](https://github.com/mason82-dotcom/SkyHub/pull/61):** `GET /api/diagnostics/dji-fields?model=0:77:2` akzeptiert gültige numerische DJI-Modellkennungen; HTTP-Tests decken alle sechs Profile, unbekannte IDs, ungültige Syntax und LAN-/Token-Abweisungen ab. Der Fix ist im Main-Code, jedoch nicht allein durch Git auf dem Pi installiert.
+- **Behoben mit [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61):** `GET /api/diagnostics/dji-fields?model=0:77:2` akzeptiert gültige numerische DJI-Modellkennungen; HTTP-Tests decken alle sechs Profile, unbekannte IDs, ungültige Syntax und LAN-/Token-Abweisungen ab. Der Fix ist im Main-Code, jedoch nicht allein durch Git auf dem Pi installiert.
 - `GET /api/devices`, `/api/topology`, `/api/events`,
   `/api/diagnostics/mqtt-shapes`, `/api/diagnostics/mqtt-model-shapes`,
   `/api/diagnostics/dji-fields?model=…`,
