@@ -11,6 +11,7 @@ on:
       - "feature/m3m-dedal-offline-pipeline-*"
       - "feature/m3m-raster-bundle-qa-*"
       - "feature/m3m-raster-integrity-seal-*"
+      - "feature/m3m-smart-farming-candidate-*"
   pull_request:
     paths:
       - "backend/workers/m3m_reflectance_indices.py"
@@ -32,6 +33,8 @@ on:
       - "tests/test_m3m_raster_bundle_verify.py"
       - "backend/workers/m3m_raster_bundle_seal.py"
       - "tests/test_m3m_raster_bundle_seal.py"
+      - "backend/workers/m3m_smart_farming_candidate.py"
+      - "tests/test_m3m_smart_farming_candidate.py"
       - ".github/workflows/m3m-raster-offline.yml"
 
 permissions:
@@ -50,7 +53,7 @@ jobs:
         run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
       - name: Compile and validate offline M3M worker
         run: |
-          python -m py_compile backend/workers/m3m_reflectance_indices.py backend/workers/m3m_raw_tiff_audit.py backend/workers/m3m_dedal_ortho_handoff.py backend/workers/m3m_dedal_preflight.py backend/workers/m3m_dedal_archive_inspect.py backend/workers/m3m_dedal_manifest_recheck.py backend/workers/m3m_dedal_offline_pipeline.py backend/workers/m3m_raster_bundle_verify.py backend/workers/m3m_raster_bundle_seal.py
+          python -m py_compile backend/workers/m3m_reflectance_indices.py backend/workers/m3m_raw_tiff_audit.py backend/workers/m3m_dedal_ortho_handoff.py backend/workers/m3m_dedal_preflight.py backend/workers/m3m_dedal_archive_inspect.py backend/workers/m3m_dedal_manifest_recheck.py backend/workers/m3m_dedal_offline_pipeline.py backend/workers/m3m_raster_bundle_verify.py backend/workers/m3m_raster_bundle_seal.py backend/workers/m3m_smart_farming_candidate.py
           python -m unittest discover -s tests -p 'test_m3m_reflectance_indices.py' -v
           python -m unittest discover -s tests -p 'test_m3m_raw_tiff_audit.py' -v
           python -m unittest discover -s tests -p 'test_m3m_dedal_ortho_handoff.py' -v
@@ -60,6 +63,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_m3m_dedal_offline_pipeline.py' -v
           python -m unittest discover -s tests -p 'test_m3m_raster_bundle_verify.py' -v
           python -m unittest discover -s tests -p 'test_m3m_raster_bundle_seal.py' -v
+          python -m unittest discover -s tests -p 'test_m3m_smart_farming_candidate.py' -v
           python backend/workers/m3m_reflectance_indices.py --help
           python backend/workers/m3m_raw_tiff_audit.py --help
           python backend/workers/m3m_dedal_ortho_handoff.py --help
@@ -69,3 +73,4 @@ jobs:
           python backend/workers/m3m_dedal_offline_pipeline.py --help
           python backend/workers/m3m_raster_bundle_verify.py --help
           python backend/workers/m3m_raster_bundle_seal.py --help
+          python backend/workers/m3m_smart_farming_candidate.py --help
