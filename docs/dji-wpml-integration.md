@@ -419,3 +419,9 @@ Mavic 3E, Mavic 3T, Mavic 3M und Matrice 4T einlesen und einzeln
 gegen das DJI-Importverhalten prüfen. Besonderheit M3M:
 visible-/narrow_band-Linsen, Multispektral-Metadaten und Kameraaktionen
 müssen an echten Pilot-2-Exporten getestet werden. Erst danach UI/Dispatch.
+
+## Ergänzende Referenz: motecshine/dji-waylines-sdk
+
+Das Go-SDK ist als **Vergleichsreferenz** und über einen **separaten, strikt geprüften lokalen Waylines-JSON-Import** mit dem bestehenden SkyHub-Editor verknüpft. Es ersetzt weder SkyHubs WPML-Kern noch die DJI-WPML-Dokumentation. Besonders die unvollständige Upstream-Subtyp-Zuordnung und die abweichenden RC-Loss-Defaults verbieten eine Gleichsetzung der generierten Flugmissionen.
+
+Details, erlaubte Felder/Profile, Sicherheitsgrenzen und Tests: [dji-waylines-sdk-reference.md](dji-waylines-sdk-reference.md). Der neue Import ist nur in der isolierten Entwicklungsbranch-Version verfügbar; `flightReady:false` bleibt unverändert.
