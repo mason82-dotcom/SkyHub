@@ -106,6 +106,21 @@ Der Graph bezeichnet **Branch-Bases**, nicht automatisch verschmelzbare Codeänd
 | **G6 – Betrieb** | Separater Pi-Preflight, planbarer Rollback, explizite Freigabe für Dienständerungen; GitHub-Merge **nicht** als Deployment ausgeben |
 | **G7 – Dokumentation** | README, Architektur, API/Compose-Referenz, Funktions-/Modulstatus und PR-Abhängigkeiten auf neuen Main-SHA aktualisieren; historische Evidenz unverändert datieren |
 
+## Integrationszwischenschritt: S3-Lesevertrag (23.10.2026)
+
+Aus PR #24 wurde ein **isolierter, transportinjektierter S3-ListObjectsV2-Vertrag**
+für M3M-Namensinventur vorbereitet. Er erzwingt separaten `allowedPrefix`,
+Bucket `dji-cloud`, höchstens 101 Seiten/20.000 unmittelbare Objektnamen,
+strikte Cursor-/Objektschlüsselregeln und zählt keine Medieninhalte.
+Er montiert **keine** Media-API, installiert **keinen** S3-SDK-Client und
+liest **keinen** realen Pi-/MinIO-Bucket. Details und Abnahmestufen in
+[dem S3-Vertragsdokument](m3m-s3-read-contract.md).
+
+Die nächsten Sicherheitsgates bleiben: eigener S3-List-Only-IAM-Account,
+S3-Client mit geprüfter TLS-/Endpointbindung, isolierter MinIO-Live-Test,
+authentifizierte HTTP-Rolle, Snapshot-/Stabilitätsnachweis und eigener
+expliziter Pi-Deploy-Freigabe.
+
 ## 7. Nächste technisch kleine Arbeitspakete
 
 1. **Erledigt – #61:** Modell-Diagnose-Regex isoliert behoben und real über HTTP-Tests abgesichert. Kein Pi-Update.
