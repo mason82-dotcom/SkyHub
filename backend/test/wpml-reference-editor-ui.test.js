@@ -94,6 +94,28 @@ test('discard and malformed or oversized imports leave existing mission unchange
   assert.equal(app.get('waypoints').children.length,0);
   assert.equal(app.get('model').value,'mavic3m');
 });
+test('duplicate JSON mission fields cannot shadow previously reviewed data',async()=>{
+  const app=makeHarness();
+  const duplicate='{"name":"Draft","name":"Override","drone_model":77}';
+  await app.load(duplicate);
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('waylines-reference-preview').textContent,/doppelter JSON-Schlüssel/);
+  assert.equal(app.get('waypoints').children.length,0);
+});
+test('a pending slow file read cannot reactivate after discard',async()=>{
+  const app=makeHarness();
+  let resolveFile;
+  const fileInput=app.get('waylines-reference-file');
+  fileInput.files=[{size:100,text:()=>new Promise(resolve=>{resolveFile=resolve;})}];
+  const pending=fileInput.listeners.change({currentTarget:fileInput});
+  app.get('waylines-reference-discard').listeners.click();
+  resolveFile(JSON.stringify(sample()));
+  await pending;
+  assert.equal(app.get('waylines-reference-apply').disabled,true);
+  assert.match(app.get('waylines-reference-preview').textContent,/Import verworfen/);
+  assert.equal(app.get('name').value,'Bestehender Missionsentwurf');
+});
 test('active route overwrite requires explicit confirmation',async()=>{
   const app=makeHarness();
   // Add an existing local point before importing an unrelated external mission.
