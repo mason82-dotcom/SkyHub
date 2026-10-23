@@ -34,7 +34,7 @@ if(!secret || secret.length<24 || secret.startsWith('REPLACE_')){
 }
 let broker;
 try {
-  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT);
+  broker=validateBrokerConfig(process.env.MQTT_BROKER_URL,process.env.SKYHUB_MQTT_REQUIRED_PORT,process.env.SKYHUB_MQTT_BROKER_KIND);
 } catch(err) {
   console.error('[mqtt config]',err.message);
   process.exit(1);
