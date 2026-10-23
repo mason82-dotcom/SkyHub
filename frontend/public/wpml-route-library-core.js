@@ -15,12 +15,18 @@
     return v.trim();
   }
   function blank(){return {schema:SCHEMA,nextId:1,routes:[]};}
+  function onlyKeys(value,allowed){
+    if(!value||typeof value!=='object'||Array.isArray(value)||
+       Object.keys(value).some(k=>!allowed.includes(k)))invalid();
+  }
   function check(db){
+    onlyKeys(db,['schema','nextId','routes']);
     if(!db||typeof db!=='object'||Array.isArray(db)||
        db.schema!==SCHEMA||!Number.isSafeInteger(db.nextId)||db.nextId<1||
        !Array.isArray(db.routes)||db.routes.length>MAX_ROUTES)invalid();
     const ids=new Set();
     for(const route of db.routes){
+      onlyKeys(route,['id','name','folder','revisions']);
       if(!route||typeof route!=='object'||!Number.isSafeInteger(route.id)||
          route.id<1||route.id>=db.nextId||ids.has(route.id))invalid();
       ids.add(route.id);
@@ -29,6 +35,16 @@
          route.revisions.length>MAX_REVISIONS)invalid();
       for(let i=0;i<route.revisions.length;i++){
         const v=route.revisions[i];
+        onlyKeys(v,['revision','savedAt','plan','flightReady']);
+        onlyKeys(v.plan,['name','model','speed','transitionSpeed',
+          'takeoffHeight','finishAction','timestamp','waypoints',
+          'intervalPhotos','actionGroups']);
+        if(!Array.isArray(v.plan.waypoints))invalid();
+        for(const p of v.plan.waypoints)
+          onlyKeys(p,['lat','lon','height','photo','ellipsoidHeight']);
+        if(v.plan.intervalPhotos!==undefined)
+          onlyKeys(v.plan.intervalPhotos,
+            ['type','interval','cameraMinIntervalSeconds']);
         if(!v||v.revision!==i+1||!Number.isSafeInteger(v.savedAt)||
            v.savedAt<0||v.flightReady!==false)invalid();
         try{planner.normalize(v.plan);}catch{invalid();}
