@@ -21,7 +21,7 @@
 
 | Bereich | Dokumente |
 | --- | --- |
-| DJI MQTT, OSD, Pilot-2-Handshake | [MQTT/OSD](mqtt-osd-integration.md), [DJI Cloud API](dji-cloud-api-compatibility.md) |
+| DJI MQTT, OSD, Pilot-2-Handshake | [MQTT/OSD](mqtt-osd-integration.md), [Mosquitto/1883-Opt-in](pi-mosquitto-migration.md), [DJI Cloud API](dji-cloud-api-compatibility.md) |
 | DJI Cloud API 1.18 – rein synthetischer Offline-Abgleich | [Paritätsaudit #47](dji-protocol-parity-audit.md), [isolierter Diagnosefix #61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61) |
 | S3-Vertrag (nur isolierte synthetische Leseversuche; kein realer Client) | [M3M-S3-ListObjectsV2-Scopes und Pagination](m3m-s3-read-contract.md) |
 | M3M-Dateinamen-Inventur (nur offline; kein Bild- oder S3-Zugriff) | [Phase 1: Datei-/Band-Namen und Grenzen](m3m-offline-media-inventory.md) |
@@ -31,6 +31,10 @@
 | Betriebssicherheit und Migration | [Skriptwirkung](scripts.md), [Legacy-Migration](legacy-migration.md), [Legacy-Dependency-Audit](legacy-dependency-audit.md), [Takeover/Rollback](skyhub-legacy-takeover.md) |
 | Frontend-Kontrakte | [UX-CONTRACT](../UX-CONTRACT.md), [DESIGN](../DESIGN.md) |
 | FlightHub 2 Frontend – optionale Herstellerkomponenten, nur Referenz | [FH2-On-Premises-Komponenten und Sicherheitsgates](dji-flighthub2-frontend-components.md) |
+
+## Experimentelle Smart-Farming-Komponenten
+
+[Main-basierte M3M-Konsolidierung und Freigabegrenzen](smart-farming-m3m-consolidation-review-2026-10-23.md) · [Katalog/Bearer/Pinning](smart-farming-m3m-auth-readonly-catalog.md) · [Experimentelle UI](smart-farming-m3m-ui.md). **Keine** operationalen Vegetationskarten oder Agrarexporte durch das Zusammenführen der Offlinemodule.
 
 ## Historische Momentaufnahmen – nicht als Live-Betriebszustand verwenden
 
