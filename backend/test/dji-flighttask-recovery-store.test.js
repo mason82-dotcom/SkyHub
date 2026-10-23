@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const crypto=require('node:crypto');
+const {execFileSync}=require('node:child_process');
 const {beginFlighttaskObservation}=require('../dji-flighttask-observation');
 const {createOfflineFlighttaskRecoveryStore,STORE_SCHEMA}=
   require('../dji-flighttask-recovery-store');
@@ -77,6 +78,31 @@ test('restart recovers accepted service reply without resending or declaring fli
   assert.equal(completion.revision,2);
   assert.equal(completion.summary.missionReportedComplete,true);
   assert.equal(completion.summary.operationVerified,false);
+});
+
+test('a separate Node.js process reopens ciphertext with the caller-supplied key',t=>{
+  const {dir,key,store}=setup(t);
+  store.initialize(beginFlighttaskObservation(request));
+  store.observeServiceReply(replyTopic,reply(),{now});
+  // Key and directory travel via ephemeral stdin, not argv, stdout or disk.
+  const child=String.raw`const fs=require('node:fs');
+const {createOfflineFlighttaskRecoveryStore}=require(process.argv[1]);
+const input=JSON.parse(fs.readFileSync(0,'utf8'));
+const store=createOfflineFlighttaskRecoveryStore({
+  directory:input.directory,key:Buffer.from(input.keyHex,'hex')
+});
+process.stdout.write(JSON.stringify(store.inspect()));`;
+  const output=execFileSync(process.execPath,[
+    '-e',child,require.resolve('../dji-flighttask-recovery-store')
+  ],{
+    input:JSON.stringify({directory:dir,keyHex:key.toString('hex')}),
+    encoding:'utf8',timeout:5000,env:{NODE_ENV:'test'}
+  });
+  const observed=JSON.parse(output);
+  assert.equal(observed.revision,1);
+  assert.equal(observed.summary.phase,'reply_accepted');
+  assert.equal(observed.summary.flightReady,false);
+  assert.doesNotMatch(output,/GATEWAY_FAKE|MISSION_FAKE|11111111/);
 });
 
 test('replayed MQTT reply and progress are deduplicated across restarts',t=>{
