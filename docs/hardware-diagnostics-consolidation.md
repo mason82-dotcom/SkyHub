@@ -56,7 +56,7 @@ MQTT-Metriken und beide Hardware-Evaluatoren. Geprüft werden:
 - Zwei unabhängige Gateway-/Fluggerätepaare in derselben Registry, ohne
   Vermischung der Modelle und ihrer Feldkataloge.
 - Sechs gültige M3M-Erweiterungspfade und unveränderte Modellumfänge von
-  RC Pro 48, M3M 150, RC Plus 2 54 und M4T 199 statischen Feldpfaden.
+  RC Pro 48, M3M 150, RC Plus 2 54 und M4T 202 statischen Feldpfaden.
 - Empfangsbestätigung älterer ereignisgesteuerter State-Meldungen bei weiterhin
   unabhängig berechneter OSD-/Feldfrische.
 - Keine flüchtigen OSD-Feldzeitkarten in den Redis-Cacheprojektionen.

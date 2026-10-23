@@ -29,6 +29,16 @@ function propertyPaths(obj,prefix='',out=new Set()) {
   return out;
 }
 
+// Periodic repeats of the complete HMS list and of AirSense warnings are state, not events.
+// An event is recorded only when the set of alerts or the AirSense danger level changes.
+function hmsSignature(list) {
+  return list.map(a=>[a.code,a.level,a.componentIndex,a.sensorIndex].join(':')).sort().join(',');
+}
+function airsenseLevel(summary) {
+  return summary && summary.count > 0 && summary.maxWarningLevel !== null ? summary.maxWarningLevel : -1;
+}
+const PERIODIC_EVENT_METHODS = new Set(['hms','airsense_warning']);
+
 function createRegistry(limit = 200) {
   const devices = new Map();
   const events = [];
@@ -66,6 +76,8 @@ function createRegistry(limit = 200) {
       telemetryFieldTimeVerified: {...d.telemetryFieldTimeVerified},
       hms: d.hms.map(alert => ({...alert,
         text: describeHms(alert, {domain: d.model.domain, modeCode: d.modeCode})})),
+      // Aggregate of nearby manned aircraft (AirSense/ADS-B); no ICAO, position or heading.
+      airsense: d.airsense ? {...d.airsense, fresh: fresh(d.airsense.observedAt, now)} : null,
       lastHmsAt: d.lastHmsAt, hmsTimeVerified: d.hmsTimeVerified,
       hmsFresh: Number.isFinite(d.lastHmsAt) && d.lastHmsAt <= now && now - d.lastHmsAt < HMS_FRESH_MS
     };
@@ -85,7 +97,7 @@ function createRegistry(limit = 200) {
       positionUnavailable: false,
       telemetryFieldAt: Object.create(null),
       telemetryFieldTimeVerified: Object.create(null),
-      hms: [], lastHmsAt: null, hmsTimeVerified: null,
+      hms: [], hmsSignature: '', airsense: null, lastHmsAt: null, hmsTimeVerified: null,
       deviceProperties: {osd: Object.create(null),state: Object.create(null)},
       propertyObservedAt: {osd:null,state:null},
       propertyFieldObservedAt: {osd:Object.create(null),state:Object.create(null)},
@@ -208,10 +220,18 @@ function createRegistry(limit = 200) {
       }
     }
     // Each HMS message carries the complete list of currently active alerts.
+    let hmsChanged = false, airsenseChanged = false;
     if (Array.isArray(message.hms)) {
+      const signature = hmsSignature(message.hms);
+      hmsChanged = signature !== d.hmsSignature;
+      d.hmsSignature = signature;
       d.hms = message.hms.map(alert => ({...alert}));
       d.lastHmsAt = observedAt;
       d.hmsTimeVerified = message.timestamp !== null;
+    }
+    if (message.airsense) {
+      airsenseChanged = airsenseLevel(d.airsense) !== airsenseLevel(message.airsense);
+      d.airsense = {...message.airsense, observedAt, timeVerified: message.timestamp !== null};
     }
     if (message.state) {
       if (message.state.modeCode !== null) d.modeCode = message.state.modeCode;
@@ -267,9 +287,13 @@ function createRegistry(limit = 200) {
     updates.set(d.sn, d);
     let event = null;
     if (['events','status','services_reply'].includes(message.channel)) {
-      event = {sn:d.sn,channel:message.channel,method:message.method,at:now};
-      events.unshift(event);
-      if (events.length > 100) events.pop();
+      const periodic = message.channel === 'events' && PERIODIC_EVENT_METHODS.has(message.method);
+      const changed = (Array.isArray(message.hms) && hmsChanged) || (message.airsense && airsenseChanged);
+      if (!periodic || changed) {
+        event = {sn:d.sn,channel:message.channel,method:message.method,at:now};
+        events.unshift(event);
+        if (events.length > 100) events.pop();
+      }
     }
     return {updates:[...updates.values()].map(device => safeDevice(device,now)),event,point,
       topologyChanged:Boolean(message.topology)};

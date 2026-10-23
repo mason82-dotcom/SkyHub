@@ -2,8 +2,6 @@
 
 **Geltungsbereich:** Aktiver Entwicklungsstand im Repository-Root (Version 0.1.0), nicht der archivierte Stack.
 
-**Standprüfung 23.10.2026:** Dieser Text beschreibt `main` auf Commit `496a1f84f22b15f85ad5442965b2cd218a93969a`; [offene Feature- und Integrations-PRs](projektstand-2026-10-23.md) sind davon getrennt. Insbesondere gehören Command Center, MinIO-Medien-API, WPML-Inspektion und experimentelle Analyse-Worker nicht zur Main-Runtime.
-
 ## Komponenten
 
 - `backend/server.js`: Node.js-/Express-Server, API, Socket.IO und MQTT-Verarbeitung.
@@ -20,7 +18,7 @@ SkyHub Next nutzt den vorhandenen MQTT-Broker (Pi-Hostport 1884), einen separate
 
 ## Aktueller Funktionsumfang und Grenzen
 
-OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. PostGIS dient zur historischen Track-Ablage; **neue** GPS-Spuren werden nur bei `SKYHUB_TRACK_RECORDING_ENABLED=true` aufgezeichnet. Redis hält Geräte-/Topologiezustand getrennt vom flüchtigen Live-Feldzeitmodell. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Grundlegende Gateway-/Subgerätezuordnung ist vorhanden; dauerhafter Geräte-Online-Status und zuverlässige Modellzuordnung aus allen Firmwarevarianten sind noch nicht abschließend validiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
+OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Grundlegende Gateway-/Subgerätezuordnung ist vorhanden; dauerhafter Geräte-Online-Status und zuverlässige Modellzuordnung aus allen Firmwarevarianten sind noch nicht abschließend validiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
 
 Das Frontend benötigt Leaflet/OpenStreetMap über CDN und Internetzugang. MinIO ist eine isolierte Speichergrundlage für zukünftige Medien; eine Medien-API gibt es noch nicht. Die vorhandenen M3E-/M3T-/M3M-Python-Worker sind Demonstrationscode und dürfen nicht als reale Messergebnisse verwendet werden. WPML-Missionseditor, Radiometrie und Photogrammetrie stehen noch aus.
 
@@ -28,36 +26,13 @@ DJI Cloud API Dokumentation:
 - https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-plus/properties.html
 - https://github.com/dji-sdk/Cloud-API-Doc
 
-## Live-API im Main-Stand (23.10.2026)
+## Live-API
 
-- `GET /api/health` und `GET /api/pilot/status`: öffentliche, begrenzte Statusantworten.
-- **Behoben mit [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61):** `GET /api/diagnostics/dji-fields?model=0:77:2` akzeptiert gültige numerische DJI-Modellkennungen; HTTP-Tests decken alle sechs Profile, unbekannte IDs, ungültige Syntax und LAN-/Token-Abweisungen ab. Der Fix ist im Main-Code, jedoch nicht allein durch Git auf dem Pi installiert.
-- `GET /api/devices`, `/api/topology`, `/api/events`,
-  `/api/diagnostics/mqtt-shapes`, `/api/diagnostics/mqtt-model-shapes`,
-  `/api/diagnostics/dji-fields?model=…`,
-  `/api/drone/:sn/telemetry` und `/api/drone/:sn/track?minutes=60`:
-  standardmäßig Bearer-View-Token; **nur bestimmte GET-Routen** sind bei
-  ausdrücklich gesetzter privater `SKYHUB_LAN_VIEW_CIDR` tokenfrei, siehe [Sicherheit](security.md).
-- `POST /api/pilot/bootstrap`, `POST /api/pilot/pair`,
-  `GET /api/pilot/pair/:id`, `GET /api/pilot/session`:
-  separate HTTPS-, Pilot-Konfigurations-, Pairing- und Tokenprüfungen;
-  der Pairing-Start und -Poll sind keine öffentlich freigeschaltete Administration.
-- `GET /api/pilot-admin/pairings`, `POST /api/pilot-admin/approve`
-  und `DELETE /api/pilot-admin/devices/:id`: geschützte Verwaltungsrouten,
-  über den Heimnetz-Read-only-Pfad **nicht** erreichbar.
-- `GET /map/api/v1/workspaces/:workspaceId/element-groups`:
-  optionale, gesondert autorisierte **nur lesende** DJI-Kartengruppenroute.
-  `.env.example` führt zwar `SKYHUB_DJI_MAP_ELEMENTS_ENABLED` auf,
-  `docker-compose.yml` reicht die Variable auf Main **nicht** an das Backend
-  weiter; eine Änderung der lokalen `.env` reicht für die Freischaltung nicht.
-- `POST /api/mission/create`: absichtlich **HTTP 501** (Flugsteuerung deaktiviert).
-- Socket.IO `snapshot`, `device_update`, `device_event` mit Zugriffsschutz
-  (View-Token bzw. ausdrücklich konfigurierte LAN-Ausnahme).
-
-**Auf Main nicht gemountet:** `/api/media/*`, Pilot-Medien-STS,
-Medien-Callbacks, `/api/wpml/inspect`, DJI-Karten-Schreib-APIs,
-YOLO-/Thermal-/Smart-Farming-Worker-Endpunkte. Entsprechende PRs sind
-[separat katalogisiert](projektstand-2026-10-23.md).
+- GET /api/health – Brokerstatus ohne Token
+- GET /api/devices – authentifiziert; aktuelle Geräte und Telemetrie
+- GET /api/events – authentifiziert; die letzten Ereignisse (höchstens 100). Periodische Wiederholungen von `hms` und `airsense_warning` sind keine Ereignisse, sondern Zustand: ein Ereignis entsteht nur, wenn sich die Menge der HMS-Meldungen ändert oder die AirSense-Warnstufe wechselt
+- GET /api/drone/:sn/telemetry – authentifiziert; eine Gerätekennung
+- Socket.IO: snapshot, device_update, device_event – authentifiziert mit auth.token
 
 ## Positionsintegrität
 
@@ -73,7 +48,7 @@ Ein GPS-Punkt wird ausschließlich gebildet, wenn `latitude` und `longitude` im 
 
 `positionFresh` besagt nur, dass beide numerisch plausiblen Koordinaten kürzlich zusammen empfangen wurden. Es ist **kein** Nachweis eines GNSS-/RTK-Fix, einer bestimmten Positionsgenauigkeit oder einer plausiblen Einsatzposition. Auch ein Paar `(0, 0)` bleibt daher als gemeldeter Gerätewert erhalten und wird nicht als bestätigter Standort interpretiert.
 
-Die Positionsintegritätsprüfung ist im referenzierten Main-Stand enthalten, ohne Port- oder Brokeränderung. Zusätzliche Tests: `node --test backend/test/position-integrity.test.js`.
+Die Änderung ist auf dem separaten Branch `develop/skyhub-next-position-integrity-v2` isoliert, ohne Port- oder Brokeränderung. Zusätzliche Tests: `node --test backend/test/position-integrity.test.js`.
 
 ## MQTT-Nachrichtenintegrität
 
@@ -121,7 +96,7 @@ Für alle Regressionstests: `node --test backend/test/*.test.js`.
 
 ## DJI Cloud API 1.18: optionale Topologie-Bestätigung
 
-Die Main-Basis enthält ausschließlich den optionalen DJI-Pilot-to-Cloud-Antwortkanal
+Dieser Branch ergänzt ausschließlich den DJI-Pilot-to-Cloud-Antwortkanal
 `sys/product/{gateway_sn}/status_reply` für gültige `update_topo`-Nachrichten.
 Er ist **standardmäßig deaktiviert** (`SKYHUB_TOPOLOGY_ACK_ENABLED=false`).
 Der bisherige, schreibgeschützte DJI-MQTT-Subscriber und seine ACL bleiben unverändert.
@@ -181,14 +156,14 @@ Cloud-API-Demo (MIT, siehe `backend/data/HMS-LICENSE.txt`). Im Flug
 
 ## Flugspur und Speicherung (PostGIS)
 
-**Nur wenn `SKYHUB_TRACK_RECORDING_ENABLED=true`** und eine Datenbank bereitsteht, werden validierte GPS-Punkte gespeichert, wenn sich das Gerät um ≥ 2 m
+Validierte GPS-Punkte werden nur gespeichert, wenn sich das Gerät um ≥ 2 m
 horizontal oder vertikal bewegt hat, sonst höchstens einmal pro Minute.
 Punkte bei 0/0 (DJI ohne Positions-Fix) werden nie gespeichert; die
 Live-Anzeige zeigt sie weiter wie gemeldet. Vorher wurde jedes OSD-Paket
 geschrieben (am 20.10.2026 rund 170.000 Zeilen/Tag, die Hälfte bei 0/0).
 Neue Spalten (`source_ts`, `time_verified`, Satelliten, RTK-Status) werden beim
 Start ergänzt, ohne Daten zu löschen. Aufbewahrung: `SKYHUB_TRACK_RETENTION_DAYS`
-(Standard 30); die Bereinigung ist bei ausgeschalteter Spuraufzeichnung ebenfalls pausiert. `GET /api/drone/:sn/track?minutes=60`
+(Standard 30), stündlich bereinigt. `GET /api/drone/:sn/track?minutes=60`
 (1–1440, max. 5000 Punkte) liefert die Spur; die Karte zeigt sie (abschaltbar)
 und zoomt ohne gültige Live-Position einmal darauf. Health:
 `trackPointsStored`, `trackPointsSkipped`, `trackRetentionDays`.
@@ -201,3 +176,8 @@ Fluggerät mit den zuletzt bekannten Werten und `mode_code = 14`
 Position noch Flugspur; das Gerät erhält `aircraftConnected: false` und die
 Karte zeigt „Fluggerät nicht verbunden“. Das nächste OSD mit anderem
 `mode_code` hebt den Zustand auf.
+
+
+## Integrationsnotiz PR #24 (23.10.2026)
+
+Mit der Integration der Feature-Historie ändert sich der optionale Funktionsumfang: Nur bei aktivem `SKYHUB_MEDIA_ENABLED=true` ist eine authentifizierte, rein lesende MinIO-API vorhanden. Die S3-Objektinventur klassifiziert Dateinamen, die optionalen TIFF-Range- und XMP-Prüfer liefern anonymisierte Hinweise. Dies ist **kein** produktiver Medienupload und keine Freigabe von NDVI/NDRE, Reflexionskalibrierung oder Georeferenzierung. Der separate `backend/m3m-s3-read-contract.js` bleibt als expliziter, restriktiver List-only-Vertrag aus `main` erhalten. Kein Merge in GitHub startet Container oder DJI-Aktionen.

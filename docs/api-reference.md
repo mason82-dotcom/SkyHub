@@ -67,7 +67,7 @@ Optionale **separate** Publisher-Verbindung für `sys/product/{gateway_sn}/statu
 
 | Bereich | Nicht gemountet / nicht freigeschaltet |
 | --- | --- |
-| DJI-Medien | `/api/media/*`; Pilot-2-Media-HTTPS/STS, S3-Upload-Callbacks und HEAD-verifizierte Bibliothek ausschließlich in offenen Entwicklungs-PRs |
+| DJI-Medien | Im Integrationsstand optional `GET /api/media/{status,buckets,objects,m3m/inventory}` hinter View-Token; im Standard-Compose deaktiviert. Pilot-2-Media-HTTPS/STS, Schreib-Callbacks, STS-Credentials und HEAD-verifizierte Bibliothek sind **nicht produktiv integriert** |
 | DJI Waylines | `/api/wpml/inspect` sowie reale Flugplan-Uploads/-Starts nicht in Main |
 | DJI-Kartenmutationen | Create/Update/Delete der Karte ausschließlich isolierter Vertrags-/Transaktionsentwurf |
 | Vision/Thermal | Kein HTTP-Endpoint für YOLO11, thermische Personendetektion oder Pixel→GPS |

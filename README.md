@@ -5,7 +5,7 @@
 
 **Version 0.1.0 – Entwicklungsstand.** Die Branch-Suffixe v1/v2/v3/v4 sind keine Produktversionen.
 
-SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Im Main-Stand sind eine Medien-API, ein produktionsreifer Missionseditor und echte Analyse-Worker nicht enthalten; entsprechende Implementierungen in Feature-PRs sind noch nicht freigegeben. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
+SkyHub Next ist die **aktive Entwicklungsbasis im Repository-Root**. Sie verarbeitet DJI-Cloud-API-Telemetrie mit Node.js/Express, Socket.IO, MQTT, Redis und PostGIS und stellt ein kompaktes statisches Live-Dashboard bereit. Der Integrationsstand enthält eine **optional aktivierbare, authentifizierte und nur lesende Medien-API**; sie ist im Standard-Compose nicht mit MinIO-Zugangsdaten verdrahtet. Ein produktionsreifer Missionseditor und echte Analyse-Worker sind nicht freigegeben. Der Root-Code ist **nicht automatisch identisch** mit dem aktuell auf dem Raspberry Pi betriebenen alten Dienst.
 
 ## Aktueller Projektstand (23.10.2026)
 
@@ -25,11 +25,11 @@ Die Main-Basis nach [#61](https://github.com/mason82-dotcom/SkyHub-Next/pull/61)
   Zusätzlich **isolierte Offline-Hardwareprüfer** für RC Pro/M3M und RC Plus 2/M4T,
   M3M-Feldlücken-Klassifikation und synthetische Regressionen; die reale
   RC-Plus-2/M4T-Hardwareabnahme ist weiterhin ausstehend.
-  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub-Next/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Keine S3-/MinIO- oder DJI-Pilot-2-Medien-API.
-  Ebenfalls integriert: [#73](https://github.com/mason82-dotcom/SkyHub-Next/pull/73), ein **inaktiver, separat zu injizierender S3-ListObjectsV2-Vertrag** mit Prefix-/Cursor-/Mengengrenzen. **Noch kein S3-Client, Bucket-Zugriff oder Media-HTTP-Endpoint.**
-  Flugspuraufzeichnung bleibt standardmäßig aus.
-- **Noch nicht in Main:** das neue Command Center, MinIO-Medienleser, Pilot-2-Medien-HTTPS/STS,
-  sichere XMP-Proben, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,
+  Hinzugekommen ist die **nur lokal aufrufbare M3M-Dateinamen-Inventur aus [#68](https://github.com/mason82-dotcom/SkyHub-Next/pull/68)** (RGB/G/R/RE/NIR-Gruppenzähler, alle Reflexions-/NDVI-Flags `false`). Der gesondert geprüfte PR-#24-Integrationsstand enthält zusätzlich optionale, authentifizierte MinIO-Leseendpunkte; **kein** Pilot-2-Medienupload.
+  Ebenfalls integriert: [#73](https://github.com/mason82-dotcom/SkyHub-Next/pull/73), ein **inaktiver, separat zu injizierender S3-ListObjectsV2-Vertrag** mit Prefix-/Cursor-/Mengengrenzen. Der im Integrationsstand hinzugekommene S3-Reader ist separat vom strikt scoped List-only-Vertrag; er bleibt standardmäßig deaktiviert und benötigt eigenständig geprüfte Reader-Credentials.
+  Flugspuraufzeichnung und Medien-API bleiben standardmäßig aus.
+- **Nicht produktiv freigegeben:** das neue Command Center, Pilot-2-Medien-HTTPS/STS,
+  Live-XMP-/Band-Kalibrierung, WPML-/KMZ-Offline-Inspektion, NDVI-/NDRE-Rasterexperimente,
   YOLO11, Thermal-Geolokalisierung und HiveMind-Simulationslabor.
   Teilkomponenten sind in offenen PRs beziehungsweise im separaten Integrationszweig.
 - **Abgrenzung:** Ein Merge in `develop/skyhub-integrated-readonly-20261022`

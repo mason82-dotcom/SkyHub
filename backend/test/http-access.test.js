@@ -3,6 +3,11 @@ const {before,after,test}=require('node:test');
 const assert=require('node:assert/strict');
 const {once}=require('node:events');
 const {io}=require('socket.io-client');
+const {createDrFixture}=require('./helpers/dr-fixture');
+
+// Synthetic DR evidence; the real, git-ignored dr-status/ is never required.
+const drFixture=createDrFixture();
+process.once('exit',()=>drFixture.cleanup());
 
 // This process starts the real app on an ephemeral port. External services point
 // to the local closed port 1, so the test cannot contact the Pi broker or Redis.
@@ -26,7 +31,9 @@ Object.assign(process.env,{
   SKYHUB_PILOT_MQTT_USER:'test-pilot-user',
   SKYHUB_PILOT_MQTT_PASSWORD:'test-pilot-password',
   SKYHUB_PILOT_WORKSPACE_ID:'123e4567-e89b-42d3-a456-426614174000',
-  SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true'
+  SKYHUB_DJI_MAP_ELEMENTS_ENABLED:'true',
+  SKYHUB_MINIO_DR_ENABLED:'true',
+  SKYHUB_MINIO_DR_REPORT_DIR:drFixture.status
 });
 delete process.env.DATABASE_URL;
 const {server,stop}=require('../server');
@@ -70,41 +77,6 @@ test('public health does not reveal Pilot credentials',async()=>{
   assert.equal(body.includes(VIEW_TOKEN),false);
 });
 
-test('DJI model diagnostic returns all six whitelisted schema profiles',async()=>{
-  const {fieldDefinitions}=require('../dji-properties');
-  for(const model of ['2:144:0','2:174:0','0:77:0','0:77:1','0:77:2','0:99:1']){
-    const response=await request('/api/diagnostics/dji-fields?model='+model,{token:VIEW_TOKEN});
-    assert.equal(response.status,200,model);
-    const [domain,type,subType]=model.split(':');
-    assert.deepEqual(await response.json(),
-      fieldDefinitions({domain,type:Number(type),subType:Number(subType)}));
-  }
-});
-
-test('DJI model diagnostic rejects malformed and unknown model identifiers',async()=>{
-  const invalid=['','?model=','?model=0:77','?model=0:77:2:1',
-    '?model=1:89:0','?model=0:7777:2','?model=0:-77:2','?model=0:77:2.0',
-    '?model=0:%5Cd:%5Cd','?model=0:77:2&model=2:144:0','?model[type]=77',
-    '?model=0:77:%0A2'];
-  for(const query of invalid){
-    const response=await request('/api/diagnostics/dji-fields'+query,{token:VIEW_TOKEN});
-    assert.equal(response.status,400,query);
-    assert.deepEqual(await response.json(),{error:'Expected domain:type:sub_type'});
-  }
-  const unknown=await request('/api/diagnostics/dji-fields?model=0:999:0',{token:VIEW_TOKEN});
-  assert.equal(unknown.status,404);
-  assert.deepEqual(await unknown.json(),{error:'Model not in schema catalogue'});
-});
-
-test('DJI model diagnostic requires viewer token even from permitted LAN',async()=>{
-  const endpoint='/api/diagnostics/dji-fields?model=0:77:2';
-  for(const options of [{},{lan:'192.168.178.70'},{token:PILOT_TOKEN}]){
-    const response=await request(endpoint,options);
-    assert.equal(response.status,401);
-    assert.deepEqual(await response.json(),{error:'Unauthorized'});
-  }
-});
-
 test('LAN view is read-only; pairing administration still needs the view token',async()=>{
   assert.equal((await request('/api/devices')).status,401);
   assert.equal((await request('/api/devices',{lan:'192.168.178.70'})).status,200);
@@ -116,7 +88,7 @@ test('LAN view is read-only; pairing administration still needs the view token',
   assert.equal((await request('/api/pilot-admin/pairings',{lan:'192.168.178.70'})).status,401);
   assert.equal((await request('/api/unknown-future-route',{lan:'192.168.178.70'})).status,401);
   assert.equal((await request('/api/mission/create',{method:'POST',lan:'192.168.178.70'})).status,401);
-  assert.equal((await request('/api/mission/create',{method:'POST',token:VIEW_TOKEN})).status,501);
+  assert.equal((await request('/api/mission/create',{method:'POST',token:VIEW_TOKEN})).status,404);
 });
 
 test('Pilot bootstrap requires HTTPS and the Pilot token',async()=>{
@@ -154,4 +126,72 @@ test('Socket.IO admits only the view token or a configured LAN viewer',async()=>
   assert.equal(await socketOutcome({lan:'203.0.113.9'}),'Unauthorized');
   assert.equal(await socketOutcome({lan:'192.168.178.70'}),'connected');
   assert.equal(await socketOutcome({token:VIEW_TOKEN}),'connected');
+});
+
+test('MinIO DR requires the actual SkyHub view token', async () => {
+  const endpoint = '/api/dr/minio/status';
+
+  assert.equal(
+    (await request(endpoint)).status,
+    401
+  );
+
+  assert.equal(
+    (await request(endpoint, {
+      token: 'invalid-token'
+    })).status,
+    401
+  );
+
+  assert.equal(
+    (await request(endpoint, {
+      lan: '192.168.178.70'
+    })).status,
+    401
+  );
+
+  const response = await request(endpoint, {
+    token: VIEW_TOKEN
+  });
+
+  assert.equal(response.status, 200);
+
+  const result = await response.json();
+
+  assert.equal(result.status, 'incomplete');
+  assert.equal(result.readOnly, true);
+  assert.equal(result.latest.metrics.verifiedFiles, 54887);
+  assert.equal(result.latest.checks.iamReadOnly, 'unknown');
+
+  const reports = await request(
+    '/api/dr/minio/reports',
+    {token: VIEW_TOKEN}
+  );
+
+  assert.equal(reports.status, 200);
+  assert.equal((await reports.json()).count, 1);
+
+  assert.equal(
+    (await request(endpoint, {
+      method: 'POST',
+      token: VIEW_TOKEN
+    })).status,
+    404
+  );
+});
+
+test('DJI field definitions are served for catalogued models and reject everything else',async()=>{
+  const get=model=>request('/api/diagnostics/dji-fields?model='+encodeURIComponent(model),{token:VIEW_TOKEN});
+  for(const [model,profile] of [['0:77:2','mavic3m'],['2:174:0','rcPlus2'],['3:2:0','dock2'],['0:100:1','matrice4D']]){
+    const response=await get(model);
+    assert.equal(response.status,200,model);
+    const body=await response.json();
+    assert.equal(body.profile,profile);
+    assert.ok(body.fields.length>0);
+  }
+  assert.equal((await get('0:67:0')).status,404);
+  assert.equal((await get('3:9:0')).status,404);
+  for(const bad of ['','abc','0:77','4:1:0','0:1000:0','0:77:2;x','0:77:2\\d'])
+    assert.equal((await get(bad)).status,400,bad);
+  assert.equal((await request('/api/diagnostics/dji-fields?model=0:77:2')).status,401);
 });

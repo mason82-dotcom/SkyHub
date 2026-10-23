@@ -30,6 +30,8 @@
 - Die eingeklappte Ereignisliste nutzt `GET /api/events` nach erfolgreicher Verbindung und ergänzt den Verlauf über `device_event`. Sie zeigt höchstens acht der letzten Ereignisse mit Kennung, verständlicher Kategorie und Empfangsalter; Rohmeldungen und Payloads bleiben verborgen.
 - Erlaubte Kanäle sind `events`, `status` und `services_reply`. Doppelte Ereignisse werden zusammengeführt, der Seitenspeicher bleibt bei höchstens 100 Einträgen. Verbindungswechsel leeren den Verlauf; ein fehlgeschlagener Aktualisierungsabruf löscht bereits sichtbare Ereignisse nicht und kennzeichnet den Fehler.
 - HMS- und Topologie-Ereignisse sind Hinweise auf gemeldete Zustandsänderungen. Sie ersetzen nicht den separat angezeigten Telemetrie- oder Positionszeitpunkt.
+- DJI sendet die vollständige HMS-Liste etwa alle zwei Sekunden und AirSense-Warnungen etwa jede Sekunde. Das Backend erzeugt daraus nur dann ein Ereignis, wenn sich die Menge der Meldungen (Code, Stufe, Komponenten- und Sensorindex) ändert oder die höchste AirSense-Warnstufe wechselt (auch beim Wegfall des Verkehrs). Sonst würden die 100 Speicherplätze nach rund einer Minute nur noch Wiederholungen enthalten und echte Ereignisse verdrängen.
+- AirSense (ADS-B-Warnung vor bemannten Luftfahrzeugen) erscheint in der Gerätekarte als Zusammenfassung: Anzahl, höchste Stufe und kleinster Abstand, ab Stufe 3 mit dem Hinweis „Ausweichen empfohlen“ (DJI empfiehlt ab Stufe 3 auszuweichen). Kennung (ICAO), Position und Kurs fremder Luftfahrzeuge werden weder gespeichert noch an den Browser gesendet. Die Anzeige verschwindet, wenn die letzte Meldung älter als 15 Sekunden ist.
 
 ## Geräteliste
 

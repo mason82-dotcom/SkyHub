@@ -18,3 +18,9 @@ frontend/public/*.before-*
 **/*.pfx
 
 **/.skyhub-env-backups/
+
+# Local disaster-recovery evidence (may contain internal infrastructure details)
+/dr-reports/
+
+# Generated, validated MinIO DR status reports
+/dr-status/
