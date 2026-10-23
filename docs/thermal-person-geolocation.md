@@ -95,6 +95,26 @@ python3 backend/workers/thermal_person_batch_offline.py --input /ABSOLUTE/PRIVAT
 
 **Hard limitation:** This is the offline **synchronizer and geometry half only**, not a complete thermal computer-vision pipeline. The YOLOv8x trained weights from the reference repository are not integrated; no conversion/normalization of raw DJI thermal video, SRT metadata, M3T/M4T runtime sensor payload mapping or hardware-based accuracy test has been done. Default deny/no deployment remains mandatory.
 
+## Optional 8-bit thermal person detector (new, NOT deployed)
+
+`backend/workers/thermal_person_detector_offline.py` provides a **manual local-only YOLO inference stage** for 8-bit rendered JPEG/PNG thermal frames. This is not a raw radiometric decoder, DJI live image adapter, or a guarantee that the image was genuinely recorded by a thermal sensor. It requires separately reviewed local model weights, plus the optional Ultralytics/Pillow runtime installed outside the standard SkyHub backend. Neither dependencies nor weights are installed by Compose/CI.
+
+**Security:** `--trust-local-model` is required even for ONNX, and PyTorch `.pt` additionally requires `--allow-trusted-pt`; PT deserialization can execute code, so use only audited local model weights, never arbitrary downloads. No automatic weights or frame downloads. There is a 30 MiB image cap, 512 MiB model cap, 8192 px axis/12 Mpixel bound, 64 result cap, exact model-reported image size validation, and metadata-bearing EXIF/XMP input rejection. The worker fails closed and does not log paths or raw image content. Local output JSON must be a **new** absolute private path; it is created with `0600` and never overwritten.
+
+```bash
+# Only after manually installing reviewed Pillow/Ultralytics runtime and obtaining
+# model weights with checked origin, license, training data and format:
+python3 backend/workers/thermal_person_detector_offline.py \
+  --image /ABSOLUTE/PRIVATE/8bit-thermal-frame.png \
+  --model /ABSOLUTE/REVIEWED/person-model.onnx \
+  --output /ABSOLUTE/PRIVATE/new-detection-result.json \
+  --trust-local-model
+# A reviewed .pt model needs --allow-trusted-pt too.
+python3 -m unittest discover -s tests -p 'test_thermal_person_detector_offline.py'
+```
+
+Only the literal model label `person` is accepted. Reported `detectionIndex` is a **single-frame index, not a persistent trackId**. `coordinateSpace=decoded_image_unverified` deliberately prevents direct ingestion into the calibrated geolocation batch contract; before that is possible, a separately authenticated, reviewed adapter must establish corrected pixel geometry and stable track IDs. All readiness, presence, geolocation and radiometric verification flags remain false. Without a trained thermal person model, no real detection functionality can be validated.
+
 ## Necessary future gates (NOT implemented)
 
 1. Use the existing read-only SkyHub DJI telemetry path with verified **source** clock, per-field age and camera payload mapping; never add a second unbounded broker subscription.
