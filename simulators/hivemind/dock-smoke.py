@@ -90,7 +90,19 @@ def verify_hms_and_mission(token: str, dock_sn: str) -> None:
     except (OSError, subprocess.TimeoutExpired):
         raise SmokeFailure("Metadata-only media probe failed to launch") from None
     if media.returncode != 0 or "PASS: STS denied" not in media.stdout:
-        raise SmokeFailure("Metadata-only media MQTT acknowledgement failed")
+        safe_reasons = (
+            "Refusing nonempty media directory",
+            "Refusing reused media session",
+            "Invalid synthetic Dock3 SN",
+            "Media MQTT subscription refused",
+            "Metadata-only trigger refused",
+            "Incomplete synthetic media acknowledgement sequence",
+            "Simulator did not confirm metadata-only upload",
+            "Lab simulator media API failed",
+            "fetch failed",
+        )
+        reason = next((x for x in safe_reasons if x in media.stderr), "unknown")
+        raise SmokeFailure("Metadata-only media probe failed: " + reason)
     events_after = request(SKYHUB, "/api/events", token=token)
     require(isinstance(events_after, list) and
             any(isinstance(e, dict) and e.get("sn") == dock_sn and
