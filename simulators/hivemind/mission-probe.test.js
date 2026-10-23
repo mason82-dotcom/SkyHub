@@ -8,7 +8,9 @@ const UUID=crypto.randomUUID();
 const BID=crypto.randomUUID();
 test('hardcoded mission scope cannot address a production device or method',()=>{
  assert.match(GATEWAY,/^7UUXN[A-Z0-9]{9}$/);
- assert.deepEqual(ALLOWED,['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery']);
+ assert.deepEqual(ALLOWED,['flighttask_prepare','flighttask_execute','flighttask_pause','flighttask_recovery','flighttask_undo','flighttask_stop']);
+ assert.throws(()=>requestEnvelope('flighttask_undo',{flight_ids:['real-mission']},UUID,BID));
+ assert.throws(()=>requestEnvelope('flighttask_stop',{flight_id:FLIGHT_ID,reason:1},UUID,BID));
  assert.throws(()=>requestEnvelope('takeoff_to_point',{},UUID,BID));
  assert.throws(()=>requestEnvelope('flighttask_execute',{flight_id:'real-flight'},UUID,BID));
  assert.throws(()=>requestEnvelope('flighttask_prepare',{},UUID,BID));
@@ -22,6 +24,8 @@ test('strict request/reply tid/bid/method correlation',()=>{
  const response={tid:UUID,bid:BID,method:'flighttask_pause',gateway:GATEWAY,
    timestamp:1790000000001,data:{result:0}};
  assert.equal(replyMatches(response,req),true);
+ assert.equal(replyMatches({...response,data:{result:326109}},req,326109),true);
+ assert.equal(replyMatches({...response,data:{result:0}},req,326109),false);
  for(const bad of [
    {...response,tid:crypto.randomUUID()},
    {...response,bid:crypto.randomUUID()},
