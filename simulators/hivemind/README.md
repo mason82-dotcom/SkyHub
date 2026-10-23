@@ -75,8 +75,9 @@ event (expected code `0x160900BF`), verifies SkyHub's normalized alert
 snapshot, and runs the separate one-shot `mission-probe.js` inside the
 `dock-mock` container. That probe uses the simulator-generated Dock3 SN
 (no SN override, which would desynchronize upstream MQTT subscriptions),
-publishes ONLY `flighttask_prepare`, `flighttask_execute`,
-`flighttask_pause`, and `flighttask_recovery` on the lab broker, correlates
+publishes ONLY `flighttask_prepare`, `flighttask_undo`,
+`flighttask_execute`, `flighttask_stop`, `flighttask_pause`, and
+`flighttask_recovery` on the lab broker, correlates
 `services_reply` to the exact `tid`/`bid`, and verifies
 `flighttask_progress` in both MQTT and SkyHub `/api/events`. It never
 publishes to the Pi broker or creates a real DJI flight.
@@ -157,7 +158,7 @@ flight, with matching `tid`/`bid`. The one-shot observer verifies
 `events_reply` and `uploaded: false`, and SkyHub receives the callback.
 No actual image upload, storage authorization or media analysis occurs.
 
-Verified by [CI runtime acceptance #39898622061](https://github.com/mason82-dotcom/SkyHub/actions/runs/39898622061).
+Verified by [CI runtime acceptance #39914157508](https://github.com/mason82-dotcom/SkyHub/actions/runs/39914157508), including Pilot, Dock, HMS, mission negative tests, and the metadata-only media handshake. A successful software test is not a hardware certification.
 Do not configure a real `media-dir` or real STS credentials in this lab.
 
 ## Security and licensing
