@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#09111b"><title>SkyHub NEXT · Drone Intelligence</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="media-live.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><script defer src="vendor/leaflet/leaflet.js"></script><script defer src="/socket.io/socket.io.js"></script><script defer src="/telemetry-freshness.js"></script><script defer src="live-model.js"></script><script defer src="live.js"></script><script defer src="media-live-model.js"></script><script defer src="media-live.js"></script><script defer src="app.js"></script></head>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#09111b"><title>SkyHub NEXT · Drone Intelligence</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="media-live.css"><link rel="stylesheet" href="verified-media.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><script defer src="vendor/leaflet/leaflet.js"></script><script defer src="/socket.io/socket.io.js"></script><script defer src="/telemetry-freshness.js"></script><script defer src="live-model.js"></script><script defer src="live.js"></script><script defer src="media-live-model.js"></script><script defer src="media-live.js"></script><script defer src="verified-media-model.js"></script><script defer src="verified-media.js"></script><script defer src="app.js"></script></head>
 <body>
 <div class="shell">
  <aside class="rail" aria-label="Hauptnavigation"><div class="brand-logo">S<span>·</span></div><nav id="nav">
@@ -27,6 +27,26 @@
      <aside class="panel editor-right"><div class="panel-heading"><strong>Wegpunkte</strong><span class="micro" id="wp-count">0 PUNKTE</span></div><div id="waypoints"></div><div class="panel-heading sub"><strong>Flugfreigabe & Validierung</strong></div><div class="validation-box" id="validation-box"><b>Ungeprüfter Entwurf</b><p>Vor Export Eingaben auf Plausibilität prüfen.</p></div><div class="checklist"><div><span>WPML-Struktur</span><b id="check-schema">nicht geprüft</b></div><div><span>Geofence / Luftraum</span><b class="bad">NICHT GEPRÜFT</b></div><div><span>Hindernisse / AGL</span><b class="bad">NICHT GEPRÜFT</b></div><div><span>DJI Pilot 2 Import</span><b class="bad">NICHT GETESTET</b></div><div><span>Realer Flugtest</span><b class="bad">NICHT GETESTET</b></div></div><div class="warning">Der KMZ-Export ist ein technischer <b>Entwurf</b>, kein Nachweis von Flugtauglichkeit. Nur nach Geräte-, Firmware- und Pilottests einsetzen.</div></aside></div>
    </section>
    <section id="media" class="view"><div class="screenbar"><div><h1>Media Intelligence</h1><p>Georeferenzierte Assets · EXIF/XMP · Sensor- und QA-Metadaten</p></div><div class="screen-actions"><span class="pill soft">BEISPIELMEDIEN</span><button class="button ghost" id="metadata-json">⇩ Metadaten JSON</button><button class="button" id="media-import" disabled title="Im SkyHub-Backend noch nicht umgesetzt">↑ Original prüfen</button><input id="media-file" type="file" accept=".jpg,.jpeg,.tif,.tiff" hidden></div></div>
+
+<div id="verified-library" class="panel" aria-label="Registrierte Pilot-2-Medien">
+  <div class="panel-heading"><strong>Pilot 2 · verifizierte Medienregistrierung</strong><span class="micro" id="verified-state">NICHT VERBUNDEN</span></div>
+  <p class="verified-help">Optionaler, separat geschützter Workspace-Katalog aus PR #39. Ein Listeneintrag bestätigt lediglich die S3-HEAD-Prüfung <b>zum Registrierungszeitpunkt</b>. Beim Öffnen wird die Objektidentität erneut geprüft. Keine Bilddaten, EXIF/XMP, RTK-Fixes oder radiometrische Messwerte.</p>
+  <div class="verified-controls">
+    <label>DJI Workspace-UUID<input id="verified-workspace" type="text" placeholder="xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false" maxlength="36"></label>
+    <label>Pilot-2-API-Token<input id="verified-token" type="password" autocomplete="off" placeholder="Workspaceberechtigter Pilot/Operator" aria-label="Pilot-2-API-Token"></label>
+    <button id="verified-connect" class="button ghost" type="button">Bibliothek lesen</button>
+  </div>
+  <p id="verified-message" class="verified-message" role="status" aria-live="polite">Die isolierte Medienbibliothek ist noch nicht produktiv aktiviert. Zugriff nur über HTTPS und die eigene Pilot-2-Authentifizierung; ein Dashboard-View-Token reicht nicht.</p>
+  <div class="verified-results">
+    <ul class="verified-list" id="verified-list" aria-label="Registrierte Pilot-2-Assets"></ul>
+    <div class="verified-detail" id="verified-detail" aria-label="HEAD-Verifikation und Metadatenstatus">Noch kein Asset zur aktuellen S3-HEAD-Verifikation ausgewählt.</div>
+  </div>
+  <div class="verified-footer">
+    <span id="verified-page">Keine Seite geladen</span>
+    <button id="verified-group" class="button ghost" type="button" disabled>M3M-Gruppenhinweise</button>
+    <button id="verified-next" class="button ghost" type="button" disabled hidden>Nächste Seite (20)</button>
+  </div>
+</div>
 <div id="storage-inspector" class="panel" aria-label="Echte MinIO-Objektübersicht">
   <div class="panel-heading"><strong>MinIO · gespeicherte Objekte (nur lesen)</strong><span class="micro" id="storage-state">NICHT VERBUNDEN</span></div>
   <p class="storage-help">Echte Daten aus der geschützten SkyHub-Medien-API, strikt getrennt von den <b>synthetischen Beispielassets darunter</b>. Objektnamen, Größen und Änderungszeiten sind keine verifizierten EXIF-/XMP-Metadaten, Spektralbänder oder Aufnahmegruppen. Es werden keine Medieninhalte geladen.</p>
