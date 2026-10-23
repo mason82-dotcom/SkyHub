@@ -80,8 +80,8 @@ test('create validates canonical offline plans and produces no flight-ready arti
   const db2=pool(),s2=createWpmlRouteService({pool:db2,authorize:async()=>actor});
   await assert.rejects(s2.createRoute({workspaceId:A,name:'Private survey route',
     plan:{...plan(),dispatchAllowed:true}}),{code:'invalid'});
-  assert.ok(db2.sql.some(x=>x.text==='ROLLBACK'));
-  assert.ok(!db2.sql.some(x=>x.text.startsWith('INSERT')));
+  // Invalid payloads are rejected before acquiring a database client.
+  assert.equal(db2.sql.length,0);
 });
 test('tampered plan attributes or unsupported fields reject without revealing GPS in errors',()=>{
   for(const input of [
