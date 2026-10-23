@@ -56,7 +56,8 @@ const server=http.createServer((request,response)=>{
   response.writeHead(404);response.end('not found');
 });
 const io=new Server(server,{serveClient:true,transports:['websocket','polling']});
-io.on('connection',socket=>{socket.emit('snapshot',[marker()]);});
+let socketConnections=0;
+io.on('connection',socket=>{socketConnections++;socket.emit('snapshot',[marker()]);});
 const sizeChecks=[320,390,834,1440];
 const assertNoOverflow=async page=>{
  const dimensions=await page.evaluate(()=>({
@@ -122,9 +123,12 @@ async function run(){
     await assertNoOverflow(page);
     if(width===320||width===1440)
       await page.screenshot({path:path.join(output,'tak-'+width+'.png'),fullPage:true});
+    const beforeInvalidate=await page.evaluate(()=>window.__invalidationCount);
     await page.getByRole('tab',{name:/Operations/}).click();
     assert.equal(await page.locator('#operationsPanel').isVisible(),true);
-    await page.waitForFunction(()=>window.__invalidationCount>0);
+    await page.waitForFunction(previous=>window.__invalidationCount>previous,beforeInvalidate);
+    assert.equal(await page.locator('.device').count(),1,'device list survives tab switches');
+    assert.equal(await page.locator('.leaflet-pane').count()>0,true,'Leaflet panes survive tab switches');
     await assertNoOverflow(page);
     if(width===320||width===1440)
       await page.screenshot({path:path.join(output,'operations-'+width+'.png'),fullPage:true});
@@ -136,7 +140,9 @@ async function run(){
   await page.keyboard.press('Home');
   assert.equal(await page.locator('#tabOperations').getAttribute('aria-selected'),'true');
   // Disconnect a real socket: read-only tab navigation must stay functional.
+  assert.equal(socketConnections,1,'tab switching must not reconnect Socket.IO');
   io.disconnectSockets(true);
+  await page.waitForFunction(()=>document.querySelector('#message')?.textContent==='Verbindung getrennt');
   await page.getByRole('tab',{name:/TAK/}).click();
   assert.equal(await page.locator('#takPanel').isVisible(),true);
   assert.equal(requests.filter(x=>x.path.startsWith('/api/tak')).length,0);
@@ -158,7 +164,8 @@ async function run(){
     clientLibraries:'real Leaflet 1.9.4 / Socket.IO 4.8.1',
     backend:'SYNTHETIC LOOPBACK ONLY; no full SkyHub server, no Pi, no DJI',
     screenWidths:sizeChecks,authenticated:true,unauthorized:true,socketDisconnected:true,
-    noExportRequests:true,noHttpMutation:true,noPageErrors:true};
+    noExportRequests:true,noHttpMutation:true,noPageErrors:true,
+    singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
   process.stdout.write(JSON.stringify(results,null,2)+'\n');
   await context.close();
