@@ -91,8 +91,8 @@ test('TAK placeholder has no export control, access tokens or service calls',()=
 
 test('Exactly one semantic main landmark contains both tab panels',()=>{
   const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
-  const mainOpens=[...html.matchAll(/<main(?:\\s|>)/g)];
-  const mainCloses=[...html.matchAll(/<\\/main>/g)];
+  const mainOpens=[...html.matchAll(/<main(?:\s|>)/g)];
+  const mainCloses=[...html.matchAll(/<\/main>/g)];
   assert.equal(mainOpens.length,1);
   assert.equal(mainCloses.length,1);
   const start=html.indexOf('<main id="skyhubMain">');
@@ -103,6 +103,6 @@ test('Exactly one semantic main landmark contains both tab panels',()=>{
   assert.ok(body.includes('id="operationsPanel"'),'Operations belongs inside main');
   assert.ok(body.includes('id="takPanel"'),'TAK belongs inside main');
   assert.ok(!html.slice(end).includes('id="takPanel"'),'TAK must not be outside main');
-  assert.match(html,/#operationsPanel\\{display:grid;grid-template-columns/);
-  assert.match(html,/@media\\(max-width:850px\\)[^\\n]+#operationsPanel\\{grid-template-columns:1fr;height:auto\\}/);
+  assert.match(html,/#operationsPanel\{display:grid;grid-template-columns/);
+  assert.match(html,/@media\(max-width:850px\)[^\n]+#operationsPanel\{grid-template-columns:1fr;height:auto\}/);
 });
