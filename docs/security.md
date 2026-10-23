@@ -15,6 +15,16 @@ freigegebenen Runtime und erhalten durch ein grünes CI-Ergebnis keine automatis
 Produktivberechtigung. In Main ist die Spuraufzeichnung standardmäßig deaktiviert.
 Das optionale MinIO-Compose-Profil veröffentlicht keine Hostports.
 
+**Proxy-/LAN-Vertrauensgrenze:** Der Main-HTTP-Code aktiviert Proxy-Vertrauen
+bei Loopback-Bindung; die LAN-Ausnahme liest einen weitergereichten
+`X-Forwarded-For`-Header für lokale/private Peers. Daher ist eine **strikt
+kontrollierte Reverse-Proxy-Konfiguration** erforderlich: Backend nur auf
+Loopback veröffentlichen, keinen alternativen ungefilterten Proxy bzw.
+direkten Fernzugang bereitstellen und den Client-IP-Header durch den
+vertrauenswürdigen Proxy korrekt neu setzen. Die LAN-Option niemals als
+vollwertige Benutzer-Authentifizierung oder als allgemeine VPN-Freigabe
+verstehen. Bis zur gesonderten Abnahme `SKYHUB_LAN_VIEW_CIDR` leer lassen.
+
 ## Sicherheitsmodell
 
 - `SKYHUB_VIEW_TOKEN` schützt reguläre `/api`-Telemetrie- und Diagnose-Routen sowie Socket.IO. **Ausnahmen:** `/api/health` und `/api/pilot/status` sind öffentliche aggregierte Statusrouten; bei expliziter `SKYHUB_LAN_VIEW_CIDR` gibt es eine eng begrenzte **nur lesende** LAN-Ausnahme für benannte Geräte-/Ereignis-/Track-Routen und Socket.IO. Pilot-HTTPS/Pairing sowie Karten-Gruppen verwenden eigene Guards; die Pilot-Administration bleibt von der LAN-Ausnahme ausgeschlossen.
