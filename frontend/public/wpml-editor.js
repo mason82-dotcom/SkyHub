@@ -152,9 +152,23 @@
     points.length=0;hasFit=false;render();
   });
   $('fit').addEventListener('click',fitRoute);
+  let pendingReference=null;
+  let importGeneration=0;
+  const referenceApply=$('waylines-reference-apply');
+  const referenceDiscard=$('waylines-reference-discard');
+  const referencePreview=$('waylines-reference-preview');
+  function resetReferencePreview(message,error=false){
+    pendingReference=null;
+    referenceApply.disabled=true;
+    referenceDiscard.disabled=true;
+    referencePreview.textContent=message;
+    referencePreview.style.color=error?'#ffcb7d':'#a8bdd0';
+  }
   $('waylines-reference-file').addEventListener('change',async event=>{
     const input=event.currentTarget;
     const file=input.files&&input.files[0];
+    const generation=++importGeneration;
+    resetReferencePreview('Keine geprüfte Referenzdatei vorgemerkt.');
     if(!file)return;
     try{
       if(!reference)throw new TypeError('Referenzimport nicht verfügbar.');
@@ -162,29 +176,59 @@
       let payload;
       try{payload=JSON.parse(await file.text());}
       catch{throw new TypeError('Ungültiges Waylines-JSON.');}
+      if(generation!==importGeneration)return;
       const mapped=reference.convert(payload);
-      // Validate fully before mutating any visible editor state.
+      // Dry-run the SkyHub model validator before staging; no UI mutation yet.
       core.normalize(mapped.plan);
-      $('name').value=mapped.plan.name;
-      $('model').value=mapped.plan.model;
-      $('height').value=String(mapped.plan.waypoints[0].height);
-      $('speed').value=String(mapped.plan.speed);
-      $('takeoff').value=String(mapped.plan.takeoffHeight);
-      $('finish').value=mapped.plan.finishAction;
-      $('local-heights').checked=false;
-      $('photo-trigger').value='reachPoint';
-      $('photo-interval-fields').hidden=true;
-      points.splice(0,points.length,...mapped.plan.waypoints.map(p=>({...p})));
-      hasFit=false;
-      render();
-      renderMessage('Waylines-Referenzentwurf lokal importiert ('+points.length+
-        ' Wegpunkte). Nicht unterstützte Funktionen werden abgewiesen. '+
-        'SkyHub verwendet eigene RC-Verlustregeln. Kein hardwarevalidierter Flugauftrag.');
+      pendingReference=mapped;
+      referenceApply.disabled=false;
+      referenceDiscard.disabled=false;
+      const review=mapped.review;
+      referencePreview.textContent='Geprüfter Import: '+mapped.plan.model+
+        ', '+review.waypointCount+' Wegpunkte, '+review.photoActionCount+
+        ' Fotoaktionen. Horizontale Luftlinien-Segmentstrecke ca. '+
+        (review.horizontalRouteMeters/1000).toFixed(2)+' km; reine Strecke / Sollgeschwindigkeit ca. '+
+        Math.ceil(review.nominalStraightCruiseSeconds/60)+
+        ' min. Keine vollständige Flugzeit- oder Energieberechnung. '+
+        'RC-Verlustverhalten und DJI-Subtyp können gegenüber dem Go-SDK abweichen; '+
+        'nicht semantisch äquivalent. DJI Pilot 2 nicht geprüft.';
+      renderMessage('Referenzdatei lokal geprüft. Bestehende Mission unverändert; '+
+        'für Übernahme den gesonderten Button benutzen.');
     }catch(error){
-      renderMessage(error instanceof Error?error.message:'Waylines-Import fehlgeschlagen.',true);
+      if(generation!==importGeneration)return;
+      const message=error instanceof Error?error.message:'Waylines-Import fehlgeschlagen.';
+      resetReferencePreview(message,true);
+      renderMessage(message,true);
     }finally{
       input.value='';
     }
+  });
+  referenceDiscard.addEventListener('click',()=>{
+    ++importGeneration;
+    resetReferencePreview('Import verworfen. Bestehender Entwurf unverändert.');
+  });
+  referenceApply.addEventListener('click',()=>{
+    if(!pendingReference)return;
+    if(points.length>0&&!window.confirm('Vorhandene Wegpunkte durch den geprüften Referenzentwurf ersetzen?'))return;
+    const mapped=pendingReference;
+    // This point is the first operation that changes the active mission draft.
+    $('name').value=mapped.plan.name;
+    $('model').value=mapped.plan.model;
+    $('height').value=String(mapped.plan.waypoints[0].height);
+    $('speed').value=String(mapped.plan.speed);
+    $('takeoff').value=String(mapped.plan.takeoffHeight);
+    $('finish').value=mapped.plan.finishAction;
+    $('local-heights').checked=false;
+    $('photo-trigger').value='reachPoint';
+    $('photo-interval-fields').hidden=true;
+    points.splice(0,points.length,...mapped.plan.waypoints.map(p=>({...p})));
+    hasFit=false;
+    render();
+    ++importGeneration;
+    resetReferencePreview('Referenzentwurf übernommen; kein DJI-Hardwaretest.');
+    renderMessage('Waylines-Referenzentwurf lokal übernommen ('+points.length+
+      ' Wegpunkte). SkyHub verwendet eigene RC-Verlustregeln. '+
+      'Keine semantische Gleichsetzung mit dem Go-SDK. Kein Flugauftrag.');
   });
   $('local-heights').addEventListener('change',render);
   function photoModeUpdate(){
