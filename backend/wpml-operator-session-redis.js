@@ -25,13 +25,18 @@ function validClaim(x){
     ['operator','admin'].includes(x.role)&&
     Number.isSafeInteger(x.expiresAt)&&x.expiresAt>0;
 }
-function createWpmlRedisSessionCheck({redis,keySecret,clock=()=>Date.now()}={}){
+function createWpmlRedisSessionCheck({
+  redis,keySecret,clock=()=>Date.now(),lookupTimeoutMs=300
+}={}){
   if(!redis||typeof redis.get!=='function')
     throw new TypeError('A read-only Redis GET adapter is required');
   if(!(Buffer.isBuffer(keySecret)||typeof keySecret==='string')||
      Buffer.byteLength(keySecret)<32)
     throw new TypeError('Dedicated 32+ byte operator session key secret required');
   if(typeof clock!=='function')throw new TypeError('Clock required');
+  if(!Number.isSafeInteger(lookupTimeoutMs)||lookupTimeoutMs<25||
+     lookupTimeoutMs>2000)
+    throw new TypeError('Bounded Redis lookup timeout (25-2000 ms) required');
   const key=Buffer.from(keySecret); // Never reuse a mutable caller buffer.
   function lookupKey(sessionId){
     return KEY_PREFIX+crypto.createHmac('sha256',key)
@@ -43,10 +48,19 @@ function createWpmlRedisSessionCheck({redis,keySecret,clock=()=>Date.now()}={}){
     if(!Number.isSafeInteger(now)||now<1||assertion.expiresAt<=now)return false;
     // Only a verified JWT assertion is suitable input. The Redis key
     // intentionally contains no raw UUID, user name, GPS or bearer token.
-    let value;
-    try{value=await redis.get(lookupKey(assertion.sessionId));}
-    catch{return false;}
-    if(typeof value!=='string'||value.length>2048)return false;
+    let value,timeout;
+    try{
+      // A missing or stuck Redis response MUST NOT leave operator requests
+      // pending indefinitely. No fallback token/session is permitted.
+      value=await Promise.race([
+        Promise.resolve().then(()=>redis.get(lookupKey(assertion.sessionId))),
+        new Promise(resolve=>{
+          timeout=setTimeout(()=>resolve(null),lookupTimeoutMs);
+        })
+      ]);
+    }catch{return false;}
+    finally{if(timeout!==undefined)clearTimeout(timeout);}
+    if(typeof value!=='string'||Buffer.byteLength(value,'utf8')>2048)return false;
     let record;
     try{record=parseJson(value,2048);}catch{return false;}
     if(!strictObject(record)||record.schema!==SESSION_SCHEMA||
