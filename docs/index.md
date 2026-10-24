@@ -36,6 +36,10 @@
 
 [Event-Inspector](dji-flight-area-integration.md) · [Offline-Zielrevisionsmonitor](dji-flight-area-sync-monitor.md). Ausschließlich gelesene, begrenzte Daten; keine aktiven Fluggebietsänderungen, kein Pi-Hardwarebeleg.
 
+## Experimentelle M3M-Smart-Farming-Komponenten
+
+[Konsolidierung und Freigabegrenzen](smart-farming-m3m-consolidation-review-2026-10-23.md) · [geschützter Kandidatenkatalog](smart-farming-m3m-auth-readonly-catalog.md) · [UI-Status](smart-farming-m3m-ui.md). Keine operative Vegetationskarte oder Flugfreigabe.
+
 ## Historische Momentaufnahmen – nicht als Live-Betriebszustand verwenden
 
 - [Entwicklungsplan 20.–21.10.2026](entwicklungsplan-2026-10-20.md)
