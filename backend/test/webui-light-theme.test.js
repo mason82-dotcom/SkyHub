@@ -177,3 +177,12 @@ test('system high-contrast and reduced-motion modes use visible nonchromatic sta
   assert.match(pilot, /class="pilot-brand-accent"/);
   assert.doesNotMatch(pilot, /style="color:#38bdf8"/);
 });
+
+test('native form errors use interaction-aware styling without initial required-field warning', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  assert.match(css, /:user-invalid/);
+  assert.match(css, /\[aria-invalid="true"\]/);
+  assert.match(css, /border: 2px solid var\(--sky-danger\)/);
+  assert.match(css, /box-shadow: inset 3px 0 0 var\(--sky-danger\)/);
+  assert.doesNotMatch(css, /(^|[,\\s])input:invalid\s*[,\\{]/m);
+});

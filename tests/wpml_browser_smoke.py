@@ -317,7 +317,20 @@ def main() -> None:
                     page.locator("#takeoff").fill("0")
                     check("Sicherheitssteighöhe" in review(page),
                           "Invalid takeoff height not flagged")
+                    page.locator("#speed").focus()
+                    invalid_style = page.locator("#takeoff").evaluate("""el => ({
+                        invalid: el.matches(':user-invalid'),
+                        border: getComputedStyle(el).borderTopColor,
+                        inset: getComputedStyle(el).boxShadow
+                    })""")
+                    check(invalid_style["invalid"], "Edited invalid number must be identified")
+                    check(invalid_style["border"] == "rgb(180, 35, 40)" and
+                          "inset" in invalid_style["inset"],
+                          "Light theme native-invalid field styling is missing")
                     page.locator("#takeoff").fill("30")
+                    page.locator("#speed").focus()
+                    check(not page.locator("#takeoff").evaluate("el => el.matches(':user-invalid')"),
+                          "Corrected number must clear the native-invalid state")
                     page.screenshot(path=str(ARTIFACT_DIR / "desktop-review.png"),
                                     full_page=True)
                     check(not unexpected, "Nonlocal network access or write attempted")

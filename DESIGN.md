@@ -79,6 +79,10 @@ Alle sechs ausgelieferten Ansichten besitzen als **erstes fokussierbares Element
 
 Die Light-UI bleibt der reguläre Darstellungsmodus. Für `(forced-colors: active)` werden Flächen, Texte und Links über die Systemfarben `Canvas`, `CanvasText`, `LinkText` und `Highlight` dargestellt. Der aktive Operatorbereich sowie der ausgewählte Workspace-Tab erhalten eine sichtbare Kontur; die Darstellung basiert nicht nur auf einem Farbhintergrund. Für `(prefers-reduced-motion: reduce)` werden CSS-Übergänge und Animationen deaktiviert. Die kompakte Pilot-2-Brandmarkierung bezieht ihre Akzentfarbe aus dem gemeinsamen Theme statt aus einem Inline-Attribut. Automatisierte Chromium-Suites emulieren beide Systemmodi ohne DJI-Verbindung.
 
+## Formulare und Fehlerrückmeldung
+
+Die gemeinsamen Formularfelder erhalten erst **nach einer ungültigen Benutzerinteraktion** über `:user-invalid` eine sichtbare Fehlerkontur mit inset-Markierung. Eine bereits vom Anwendungscode gesetzte `aria-invalid="true"`-Kennzeichnung nutzt denselben Stil. Unberührte Pflichtfelder sollen nicht beim Laden pauschal rot hervorgehoben werden. Die bestehende JS-Validierung von DJI-/WPML-Fachgrenzen und ihre textlichen Statusmeldungen bleiben die fachliche Quelle; CSS allein ist keine Freigabeprüfung. Ein Chromium-Test schreibt eine ungültige WPML-Steighöhe, prüft die sichtbare Kontur und bestätigt, dass die Markierung nach Korrektur verschwindet.
+
 ## Barrierefreiheit und technische Überprüfung
 
 Kontraste der semantischen Textfarben auf weißen Flächen werden automatisiert gegen **WCAG AA (4,5:1)** geprüft. Tastaturfokus, reduzierte Bewegung und native Formelemente sind beizubehalten. Daneben sind sichtbare Browserprüfungen von horizontalem Overflow, Tabs, Suchformular, Karteninteraktionen, Responsivität und DJI-Pilot-2-Webview erforderlich.

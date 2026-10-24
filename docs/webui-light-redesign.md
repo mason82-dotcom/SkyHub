@@ -33,3 +33,7 @@ All six static pages expose a first-tab, visually-on-focus `Zum Inhalt springen`
 ## System accessibility modes
 
 The shared CSS now honors `forced-colors: active` through system palette tokens and a high-contrast outline for the current module/workspace selection. `prefers-reduced-motion: reduce` disables CSS animations and transitions. The DJI Pilot 2 brand accent no longer relies on a legacy inline color override. Browser tests emulate both OS modes in the synthetic loopback environment, then restore the normal light view; real Pilot 2 hardware remains a separate acceptance gate.
+
+## Interaction-aware native form validation
+
+Constraint-validated inputs and selects use `:user-invalid` for a distinct bordered error state **only after interaction**, not on initial page load. Fields marked by application code with `aria-invalid="true"` use the same visual treatment. A real offline Chromium WPML test checks that an invalid takeoff-height value receives the danger border and inset marker, and that a corrected value clears the invalid state. Field color is not a substitute for the existing textual review messages or WPML safety restrictions.

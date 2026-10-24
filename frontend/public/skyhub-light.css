@@ -83,6 +83,14 @@ input:not([type=checkbox]):not([type=radio]), select, textarea {
 }
 input::placeholder, textarea::placeholder { color: #586b84; opacity: 1; }
 input:focus, select:focus, textarea:focus { border-color: var(--sky-primary); }
+/* Native constraint validation: do not flag untouched required fields on load.
+   The inset rule stays perceivable without relying on error color alone. */
+input:not([type=checkbox]):not([type=radio]):user-invalid,
+select:user-invalid, textarea:user-invalid, [aria-invalid="true"] {
+  border: 2px solid var(--sky-danger);
+  background: var(--sky-danger-soft);
+  box-shadow: inset 3px 0 0 var(--sky-danger);
+}
 input[type=checkbox], input[type=radio] { accent-color: var(--sky-primary); }
 input[type=file] { max-width: 100%; }
 button {
