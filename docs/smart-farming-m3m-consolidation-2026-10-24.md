@@ -103,3 +103,54 @@ technischen Abnahme und Querverweiskorrektur offen.
 Dieser konsolidierte Branch benötigt beim späteren Review
 **nur einen** Merge nach `main`, nicht elf gestapelte Merges.
 Kein automatischer Merge wird vorgenommen.
+
+## CI-Diagnose nach PR #104
+
+Für den konsolidierten Integrationsbranch ist [Draft-PR #104](https://github.com/mason82-dotcom/SkyHub-Next/pull/104) gegen `main` eröffnet.
+Am 24.10.2026 ergab die GitHub-Actions-Abfrage Folgendes:
+
+- Die fehlgeschlagenen Push-Runs [#40043496658](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40043496658)
+  und [#40043679645](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40043679645)
+  der CI meldeten **0 ausgeführte Jobs**. Sie sind somit **kein**
+  Ergebnis ausgeführter M3M-Testfälle.
+- Die ursprüngliche CI-Branch-Liste enthielt kein `integrate/**`.
+  Diese wurde um `integrate/**` ergänzt; das allein beseitigte die
+  joblosen Fehlermeldungen nicht.
+- Auf dem **unveränderten damaligen Main** traten für
+  `.github/workflows/m3m-offline-acceptance.yml` ebenfalls
+  joblose Fehler auf (unter anderem [#40043353205](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40043353205)).
+  Damit ist ein von dieser Konsolidierung unabhängiger CI-Gate-Blocker
+  nachgewiesen; die exakte Ursache auf GitHub-Workflow-Ebene bleibt offen.
+- Ein gelaufener TAK-UI-Workflow ist **nicht** gleichbedeutend mit
+  einer erfolgreich absolvierten Raster-/Katalog-Testkette.
+
+### Ausweichprüfung ausschließlich in einem getrennten Worktree
+
+Der neue `scripts/m3m-offline-verify.sh` erfordert bewusst
+`SKYHUB_M3M_OFFLINE_LAB=1` und installiert selbst keinerlei Pakete.
+Er ruft nur synthetische Unit- und Offline-HTTP-Tests auf, ohne Docker,
+MQTT, Kamera, S3/MinIO oder PostGIS zu kontaktieren.
+
+```bash
+cd ~/Projekte/SkyHub-Next
+git fetch origin
+git worktree add ~/Projekte/SkyHub-M3M-Review \
+  origin/integrate/m3m-smart-farming-20261024
+cd ~/Projekte/SkyHub-M3M-Review
+python3 -m venv .venv-m3m
+. .venv-m3m/bin/activate
+python -m pip install --only-binary=:all: \
+  -r backend/workers/m3m_requirements.txt
+npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+SKYHUB_M3M_OFFLINE_LAB=1 bash scripts/m3m-offline-verify.sh
+```
+
+Diese Kommandos sind zur **gezielten lokalen Ausführung** dokumentiert;
+sie wurden nicht auf dem Raspberry Pi ausgeführt.
+Der Worktree darf nicht mit der laufenden Pi-Installation
+oder einer produktiven `.env` verwechselt werden. Erst eine erfolgreiche
+Testausgabe ist ein lokaler Nachweis; CI bleibt zusätzlich verpflichtend.
+
+Der neue Main-basierte Branch kann zudem gegenüber späteren Main-Commits
+zurückliegen. Vor jedem Merge daher erneut `git fetch`, aktuellen
+Branchvergleich und eventuelle Konflikte prüfen.
