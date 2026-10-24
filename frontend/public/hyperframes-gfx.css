@@ -420,3 +420,36 @@ body.skyhub-gfx.gfx-page-survey .map-shell {min-height:530px}
   body.skyhub-gfx.gfx-page-dashboard main#skyhubMain {min-height:480px}
   body.skyhub-gfx.gfx-page-dashboard #operationsPanel {min-height:480px}
 }
+
+
+/* Phase 2 module surfaces: keep warning and form semantics intact. */
+body.skyhub-gfx:not(.gfx-page-dashboard) .panel,
+body.skyhub-gfx.gfx-page-library main > section {
+  position:relative;border-top-color:#5a879e;
+}
+body.skyhub-gfx:not(.gfx-page-dashboard) .panel::before,
+body.skyhub-gfx.gfx-page-library main > section::before {
+  content:"";position:absolute;pointer-events:none;
+  top:-1px;left:18px;width:70px;height:2px;background:#67e8f9;
+}
+body.skyhub-gfx.gfx-page-farming .metric-card {
+  border-left:3px solid #67e8f9;border-radius:6px 12px 12px 6px;
+}
+body.skyhub-gfx.gfx-page-farming .metric-card h3 {
+  color:#c9fa79;letter-spacing:.055em;
+}
+body.skyhub-gfx.gfx-page-editor .map-overlay,
+body.skyhub-gfx.gfx-page-survey .instructions {
+  background:rgba(8,22,36,.95);
+  border:1px solid #6191aa;border-left:3px solid #c9fa79;
+  box-shadow:0 16px 32px rgba(0,0,0,.2);
+}
+body.skyhub-gfx.gfx-page-library :is(.item,.waypoint):focus-within,
+body.skyhub-gfx.gfx-page-editor .waypoint:focus-within {
+  border-color:#c9fa79;box-shadow:0 0 0 1px rgba(201,250,121,.35);
+}
+body.skyhub-gfx.gfx-page-survey #status,
+body.skyhub-gfx.gfx-page-editor #message,
+body.skyhub-gfx.gfx-page-library #status {
+  border-left:3px solid #67e8f9;overflow-wrap:anywhere;
+}
