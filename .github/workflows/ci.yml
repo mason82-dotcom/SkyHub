@@ -148,20 +148,12 @@ jobs:
           node-version: "22"
       - name: Install isolated optional raster libraries
         run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
-      - name: Run complete synthetic M3M offline suites (no DJI, storage or broker)
+      - name: Install locked backend test dependencies without scripts
+        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
+      - name: Run isolated M3M synthetic acceptance script (no DJI or services)
+        env:
+          SKYHUB_M3M_OFFLINE_LAB: "1"
         run: |
+          bash -n scripts/m3m-offline-verify.sh
           python -m compileall -q backend/workers
-          python -m unittest discover -s tests -p 'test_m3m_*.py' -v
-      - name: Verify authenticated catalog, token guards and standalone UI
-        run: |
-          npm ci --prefix backend --ignore-scripts --no-audit --no-fund
-          node --check backend/server.js
-          node --check backend/smart-farming-catalog.js
-          node --check frontend/public/smart-farming-ui.js
-          node --test backend/test/smart-farming-catalog.test.js backend/test/smart-farming-catalog-http.test.js frontend/test/smart-farming-ui.test.js
-      - name: Assert fail-closed production flags
-        run: |
-          grep -Fq "process.env.SKYHUB_M3M_CATALOG_ENABLED==='true'" backend/server.js
-          grep -Fq "'operationalUseAllowed': False" backend/workers/m3m_smart_farming_candidate.py
-          grep -Fq "'prescriptionExportAllowed': False" backend/workers/m3m_smart_farming_candidate.py
-          grep -Fq "'flightMissionAllowed': False" backend/workers/m3m_smart_farming_candidate.py
+          bash scripts/m3m-offline-verify.sh
