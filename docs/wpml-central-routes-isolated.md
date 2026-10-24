@@ -208,9 +208,14 @@ Schreiben, Verlängern, Ausstellen oder Widerrufen von Sitzungen.
   begrenztes `lookupTimeoutMs` (Standard: 300 ms, erlaubt: 25–2000 ms)
   lässt auch bei dauerhaft hängenden Redis-Anfragen die Prüfung
   **fail-closed** enden. `maxConcurrentLookups` (Standard: 32,
-  erlaubt: 1–128) limitiert die Zahl der gleichzeitig aktiven
-  Auth-Prüfungen pro Adapter-Instanz; bei Sättigung wird sofort
-  verweigert. Ein nach dem Redis-Lookup **erneut geprüfter Ablaufzeitpunkt**
+  erlaubt: 1–128) limitiert die Zahl noch tatsächlich laufender
+  Redis-GET-Operationen pro Adapter-Instanz. **Ein bereits abgelaufener
+  Request gibt seinen Platz nicht frei, solange die zugrunde liegende
+  Redis-Operation noch aussteht.** Bei Sättigung wird sofort verweigert;
+  dauerhaft hängendes Redis führt damit bis zur Treibererholung oder
+  einem Neustart bewusst zum Authentifizierungsstillstand statt zu
+  unbegrenzt anwachsenden Netzwerkoperationen. Ein nach dem
+  Redis-Lookup **erneut geprüfter Ablaufzeitpunkt**
   verhindert, dass eine zu Beginn gültige Sitzung nach Wartezeit
   noch akzeptiert wird. Späte Antworten erteilen **keine**
   nachträgliche Berechtigung. Die Größe der gelesenen Sitzungsdaten
