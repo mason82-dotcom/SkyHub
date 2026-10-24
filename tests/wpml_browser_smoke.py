@@ -415,8 +415,8 @@ def main() -> None:
                     check(survey.locator("#dual-optics-fields").is_visible(),
                           "Independent RGB optics inputs should be visible")
                     survey.locator("#preview").click()
-                    check("physical optics" in survey.locator("#status").inner_text() or
-                          "outside accepted range" in survey.locator("#status").inner_text(),
+                    check("Photogrammetry estimate invalid" in
+                          survey.locator("#status").inner_text(),
                           "Missing RGB physical optics must fail closed")
                     check(survey.locator("#geojson").is_disabled(),
                           "Missing RGB optics must block GeoJSON download")
