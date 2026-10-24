@@ -64,3 +64,48 @@ test('experimental Smart Farming and offline WPML disclaimers remain visible', (
   assert.match(html('wpml-route-library.html'), /lokalen Browser-Speicher im Klartext/);
   assert.match(html('wpml-survey-preview.html'), /Keine Flugplanung/);
 });
+
+test('light-theme semantic text colors meet WCAG AA contrast on white', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  function hexToken(name) {
+    const match = css.match(new RegExp('--sky-' + name + ':\\s*(#[0-9a-fA-F]{6})'));
+    assert.ok(match, 'missing --sky-' + name);
+    return match[1];
+  }
+  function luminance(hex) {
+    const rgb = [1,3,5].map(i => parseInt(hex.slice(i,i+2), 16) / 255);
+    const linear = rgb.map(value => value <= 0.04045 ?
+      value/12.92 : ((value+0.055)/1.055)**2.4);
+    return 0.2126*linear[0]+0.7152*linear[1]+0.0722*linear[2];
+  }
+  const white = luminance(hexToken('white'));
+  for (const token of ['ink','muted','primary','primary-hover',
+    'teal','success','warning','danger']) {
+    const dark = luminance(hexToken(token));
+    assert.ok((white+0.05)/(dark+0.05)>=4.5, token+' must meet 4.5:1');
+  }
+});
+
+test('each operator page marks only its own module as active', () => {
+  const expected = new Map([
+    ['index.html','/'], ['smart-farming.html','/smart-farming.html'],
+    ['wpml-editor.html','/wpml-editor.html'],
+    ['wpml-route-library.html','/wpml-route-library.html'],
+    ['wpml-survey-preview.html','/wpml-survey-preview.html']
+  ]);
+  for (const [name,active] of expected) {
+    const nav = html(name).match(/<nav class="skyhub-global-nav"[^>]*>([\\s\\S]*?)<\\/nav>/);
+    assert.ok(nav, name);
+    const links = [...nav[1].matchAll(/<a href="([^"]+)"([^>]*)>/g)];
+    assert.deepEqual(links.map(link=>link[1]),globalLinks, name);
+    assert.deepEqual(links.filter(link=>/aria-current="page"/.test(link[2]))
+      .map(link=>link[1]),[active],name);
+  }
+});
+
+test('survey optics dropdown uses the common light skin rather than hard-coded dark styles', () => {
+  const control = html('wpml-survey-preview.html')
+    .match(/<select\\s+id="camera-mode"([^>]*)>/);
+  assert.ok(control);
+  assert.doesNotMatch(control[1],/background:|color:/i);
+});
