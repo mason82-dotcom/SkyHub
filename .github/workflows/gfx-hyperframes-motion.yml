@@ -1,0 +1,78 @@
+name: SKY//PULSE HyperFrames motion acceptance
+
+on:
+  pull_request:
+    paths:
+      - "motion/hyperframes/skyhub-gfx/**"
+      - "docs/hyperframes-gfx-ui.md"
+      - ".github/workflows/gfx-hyperframes-motion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gfx-hyperframes-motion-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  hyperframes-motion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      HYPERFRAMES_NO_UPDATE_CHECK: "1"
+      NO_COLOR: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install FFmpeg on runner
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
+      - name: Check host prerequisites
+        run: |
+          node --version
+          command -v ffmpeg
+          ffmpeg -version | head -n 1
+      - name: Ensure pinned HyperFrames browser
+        run: npx --yes hyperframes@0.8.192 browser ensure
+      - name: Lint and run browser, layout, motion, contrast acceptance
+        run: |
+          mkdir -p artifacts/hyperframes-motion
+          set -o pipefail
+          npx --yes hyperframes@0.8.192 check motion/hyperframes/skyhub-gfx --json --snapshots --strict > artifacts/hyperframes-motion/check.json
+          node -e '
+          const fs=require("fs");
+          const result=JSON.parse(fs.readFileSync("artifacts/hyperframes-motion/check.json","utf8"));
+          const ok=result.ok===true&&result.browserSkipped===false&&
+            result._meta?.version==="0.8.192"&&
+            result.lint?.ok===true&&result.lint?.filesScanned>=2&&
+            result.lint?.errorCount===0&&result.lint?.warningCount===0&&
+            result.runtime?.ok===true&&result.layout?.ok===true&&
+            result.motion?.enabled===true&&result.motion?.ok===true&&
+            result.motion?.samples>0&&
+            result.motion?.specPath?.endsWith("/index.motion.json")&&
+            result.contrast?.ok===true&&result.contrast?.checked>0&&
+            result.contrast?.checked===result.contrast?.passed&&
+            result.snapshots?.enabled===true&&result.snapshots?.files?.length>=5;
+          console.log("HyperFrames strict motion gate:",ok?"PASS":"FAIL",
+            "cli:",result._meta?.version||"missing",
+            "lint:",result.lint?.errorCount+"/"+result.lint?.warningCount,
+            "motion assertions enabled:",result.motion?.enabled===true,
+            "sampled:",result.motion?.samples||0,
+            "snapshots:",result.snapshots?.files?.length||0);
+          if(!ok)process.exitCode=1;
+          '
+      - name: Upload synthetic concept acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gfx-hyperframes-motion-check
+          path: |
+            artifacts/hyperframes-motion/check.json
+            motion/hyperframes/skyhub-gfx/.hyperframes/artifacts/snapshots/**/*.png
+          if-no-files-found: warn
+          retention-days: 7

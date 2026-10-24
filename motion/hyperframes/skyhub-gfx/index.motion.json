@@ -1,0 +1,39 @@
+{
+  "duration": 8,
+  "assertions": [
+    {
+      "kind": "appearsBy",
+      "selector": "h1",
+      "bySec": 0.5
+    },
+    {
+      "kind": "appearsBy",
+      "selector": ".eyebrow",
+      "bySec": 1
+    },
+    {
+      "kind": "appearsBy",
+      "selector": ".lede",
+      "bySec": 1.8
+    },
+    {
+      "kind": "appearsBy",
+      "selector": ".disclaimer",
+      "bySec": 2.6
+    },
+    {
+      "kind": "before",
+      "a": ".eyebrow",
+      "b": ".disclaimer"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": ".instrument"
+    },
+    {
+      "kind": "keepsMoving",
+      "withinSelector": ".radar-sweep",
+      "maxStaticSec": 2.7
+    }
+  ]
+}
