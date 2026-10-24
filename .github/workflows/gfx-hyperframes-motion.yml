@@ -43,13 +43,27 @@ jobs:
         run: |
           mkdir -p artifacts/hyperframes-motion
           set -o pipefail
-          npx --yes hyperframes@0.8.192 check motion/hyperframes/skyhub-gfx --json --snapshots > artifacts/hyperframes-motion/check.json
+          npx --yes hyperframes@0.8.192 check motion/hyperframes/skyhub-gfx --json --snapshots --strict > artifacts/hyperframes-motion/check.json
           node -e '
           const fs=require("fs");
           const result=JSON.parse(fs.readFileSync("artifacts/hyperframes-motion/check.json","utf8"));
-          const ok=result.ok===true;
-          console.log("HyperFrames gate:",ok?"PASS":"FAIL",
-            "cli:",result._meta?.version||"version not reported");
+          const ok=result.ok===true&&result.browserSkipped===false&&
+            result._meta?.version==="0.8.192"&&
+            result.lint?.ok===true&&result.lint?.filesScanned>=2&&
+            result.lint?.errorCount===0&&result.lint?.warningCount===0&&
+            result.runtime?.ok===true&&result.layout?.ok===true&&
+            result.motion?.enabled===true&&result.motion?.ok===true&&
+            result.motion?.samples>0&&
+            result.motion?.specPath?.endsWith("/index.motion.json")&&
+            result.contrast?.ok===true&&result.contrast?.checked>0&&
+            result.contrast?.checked===result.contrast?.passed&&
+            result.snapshots?.enabled===true&&result.snapshots?.files?.length>=5;
+          console.log("HyperFrames strict motion gate:",ok?"PASS":"FAIL",
+            "cli:",result._meta?.version||"missing",
+            "lint:",result.lint?.errorCount+"/"+result.lint?.warningCount,
+            "motion assertions enabled:",result.motion?.enabled===true,
+            "sampled:",result.motion?.samples||0,
+            "snapshots:",result.snapshots?.files?.length||0);
           if(!ok)process.exitCode=1;
           '
       - name: Upload synthetic concept acceptance evidence

@@ -213,4 +213,17 @@ test('HyperFrames root motion assertions cover timeline and remain finite/read-o
   }
   assert.ok(sidecar.assertions.some(a=>a.kind==='before'));
   assert.ok(sidecar.assertions.some(a=>a.kind==='staysInFrame'));
+  assert.ok(sidecar.assertions.some(a=>a.kind==='keepsMoving'&&a.withinSelector==='.radar-sweep'));
+});
+
+test('Motion CI contract must require executed motion assertions, lint-clean nested scene and real screenshots',()=>{
+  const workflow=fs.readFileSync(path.resolve(__dirname,
+    '../../.github/workflows/gfx-hyperframes-motion.yml'),'utf8');
+  assert.match(workflow,/check motion\/hyperframes\/skyhub-gfx --json --snapshots --strict/);
+  assert.match(workflow,/result\.motion\?\.enabled===true/);
+  assert.match(workflow,/result\.motion\?\.samples>0/);
+  assert.match(workflow,/result\.lint\?\.warningCount===0/);
+  assert.match(workflow,/result\.lint\?\.filesScanned>=2/);
+  assert.match(workflow,/result\.snapshots\?\.files\?\.length>=5/);
+  assert.match(workflow,/result\.contrast\?\.checked===result\.contrast\?\.passed/);
 });

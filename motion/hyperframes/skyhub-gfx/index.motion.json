@@ -29,6 +29,11 @@
     {
       "kind": "staysInFrame",
       "selector": ".instrument"
+    },
+    {
+      "kind": "keepsMoving",
+      "withinSelector": ".radar-sweep",
+      "maxStaticSec": 2.7
     }
   ]
 }
