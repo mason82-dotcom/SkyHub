@@ -46,6 +46,18 @@ const server=http.createServer((request,response)=>{
   if(url.pathname==='/skyhub-light.css'){
     response.writeHead(200,{'Content-Type':'text/css; charset=utf-8'});response.end(get('skyhub-light.css'));return;
   }
+  if(['/smart-farming.html','/pilot-login.html'].includes(url.pathname)){
+    response.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+    response.end(get(url.pathname.slice(1)));return;
+  }
+  if(['/smart-farming-ui.js','/pilot-login.js'].includes(url.pathname)){
+    response.writeHead(200,{'Content-Type':'application/javascript'});
+    response.end(get(url.pathname.slice(1)));return;
+  }
+  if(url.pathname==='/api/pilot/status'){
+    json(response,{configured:false,missing:['offline-test'],requiresHttps:true});
+    return;
+  }
   if(url.pathname==='/api/health'){
     json(response,{status:'degraded',mqtt:false,subscribed:false,trackRecordingEnabled:false,
       mqttLastObservedOsdAt:null,mqttLastTelemetryAt:null,postgresConfigured:false});
@@ -174,6 +186,51 @@ async function run(){
   assert.equal(await guest.locator('#takPanel button').count(),0);
   await assertNoOverflow(guest);
   await guest.close();
+
+  // Inspect the TWO remaining operationally different light pages with real Chromium:
+  // Smart Farming has no imagery; Pilot 2 has no JSBridge or live MQTT connection.
+  // Both use the actual shared CSS and synthetic loopback HTTP only.
+  for(const [filename,pageType] of [
+    ['smart-farming.html','smart-farming'],['pilot-login.html','pilot']
+  ]){
+    const screen=await context.newPage();
+    screen.on('pageerror',error=>errors.push(filename+': '+error.message));
+    await screen.goto(url+filename,{waitUntil:'load'});
+    if(pageType==='pilot')
+      await screen.waitForFunction(()=>document.querySelector('#headline')?.textContent
+        .includes('Onboarding noch deaktiviert'));
+    for(const width of sizeChecks){
+      await screen.setViewportSize({width,height:880});
+      const visual=await screen.evaluate(()=>{
+        const panel=document.querySelector('.panel');
+        return {
+          lightCss:[...document.styleSheets].some(sheet=>sheet.href?.endsWith('/skyhub-light.css')),
+          bg:getComputedStyle(document.body).backgroundColor,
+          panelBg:panel?getComputedStyle(panel).backgroundColor:null,
+          scheme:getComputedStyle(document.documentElement).colorScheme,
+          scrollWidth:document.documentElement.scrollWidth,
+          width:window.innerWidth,
+          menuLinks:document.querySelectorAll('.skyhub-global-nav a').length,
+          pilotBridge:typeof window.djiBridge!=='undefined'
+        };
+      });
+      assert.equal(visual.lightCss,true,filename+' missing shared CSS');
+      assert.equal(visual.bg,'rgb(243, 246, 251)',filename+' light canvas');
+      assert.equal(visual.panelBg,'rgb(255, 255, 255)',filename+' white panel');
+      assert.equal(visual.scheme,'light',filename+' color scheme');
+      assert.ok(visual.scrollWidth<=visual.width+1,filename+' overflow: '+JSON.stringify(visual));
+      assert.equal(visual.menuLinks,pageType==='pilot'?0:5,filename+' operator navigation');
+      if(pageType==='pilot'){
+        assert.equal(visual.pilotBridge,false,'synthetic Pilot 2 has no device bridge');
+        assert.match(await screen.locator('#result').innerText(),/JSBridge nicht verfügbar/);
+      }else{
+        assert.match(await screen.locator('.warning').innerText(),/Keine kalibrierte Vegetationskarte/);
+      }
+      if(width===320||width===1440)
+        await screen.screenshot({path:path.join(output,pageType+'-'+width+'.png'),fullPage:true});
+    }
+    await screen.close();
+  }
   if(errors.length)throw new Error('browser exceptions: '+errors.join('; '));
   const unexpectedWrites=requests.filter(x=>x.method!=='GET');
   assert.equal(unexpectedWrites.length,0,'no API mutations (Socket.IO may use WS)');
@@ -183,6 +240,7 @@ async function run(){
     screenWidths:sizeChecks,authenticated:true,unauthorized:true,socketDisconnected:true,
     noExportRequests:true,noHttpMutation:true,noPageErrors:true,
     sharedLightCssServed:true,computedLightPaletteChecked:true,
+    smartFarmingAndPilotLightScreensChecked:true,
     singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
   process.stdout.write(JSON.stringify(results,null,2)+'\n');
