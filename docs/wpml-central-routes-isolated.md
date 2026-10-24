@@ -205,11 +205,17 @@ Schreiben, Verlängern, Ausstellen oder Widerrufen von Sitzungen.
 - Ein Redis-Ausfall verweigert jeden Zugriff. Ein zusätzliches
   begrenztes `lookupTimeoutMs` (Standard: 300 ms, erlaubt: 25–2000 ms)
   lässt auch bei dauerhaft hängenden Redis-Anfragen die Prüfung
-  **fail-closed** enden. Spät eintreffende Antworten erteilen **keine**
+  **fail-closed** enden. `maxConcurrentLookups` (Standard: 32,
+  erlaubt: 1–128) limitiert die Zahl der gleichzeitig aktiven
+  Auth-Prüfungen pro Adapter-Instanz; bei Sättigung wird sofort
+  verweigert. Ein nach dem Redis-Lookup **erneut geprüfter Ablaufzeitpunkt**
+  verhindert, dass eine zu Beginn gültige Sitzung nach Wartezeit
+  noch akzeptiert wird. Späte Antworten erteilen **keine**
   nachträgliche Berechtigung. Die Größe der gelesenen Sitzungsdaten
-  ist auf 2048 UTF-8-Bytes begrenzt. Im späteren Betrieb benötigt der
-  Redis-Treiber ebenfalls kontrollierte Netzwerk-/Retry-Timeouts und
-  Request-Concurrency-Limits.
+  ist auf 2048 UTF-8-Bytes begrenzt. **Die Promise-Zeitbegrenzung
+  bricht eine bereits gestartete Redis-Netzwerkoperation nicht ab**;
+  im späteren Betrieb bleiben verbindliche Socket-/Retry-Timeouts,
+  Redis-Treiberlimits und globale Request-Concurrency-Limits erforderlich.
   **Keine** Dashboard-/DJI-/MQTT-Identität wird dadurch automatisch
   zum Operator.
 - Der kombinierte Unit-Test
