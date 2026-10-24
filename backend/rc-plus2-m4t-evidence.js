@@ -90,4 +90,66 @@ function makeLiveEvidence(report,date=new Date()){
     aircraft:summarizeDevice(report.aircraft,true)
   };
 }
-module.exports={makePreflightEvidence,makeLiveEvidence};
+// The host prints *only* structurally verified evidence from docker exec.
+// Reject arbitrary extra fields or raw device snapshots at the process boundary.
+function keysExactly(value,keys){
+  return value!==null&&typeof value==='object'&&!Array.isArray(value)&&
+    Object.keys(value).length===keys.length&&
+    keys.every(key=>Object.hasOwn(value,key));
+}
+function isCountOrNull(value){
+  return value===null||boundedCount(value)===value;
+}
+function isDeviceReceipt(value,aircraft){
+  const base=['seen','topologyOnline','osdFresh','osdAgeSeconds',
+    'stateObserved','fieldInterface','staticFieldsDocumented',
+    'staticFieldsObserved','staticFieldsFresh'];
+  const fields=aircraft?[...base,'aircraftConnected','dynamicGimbalTypesObserved']:base;
+  if(!keysExactly(value,fields))return false;
+  if(['seen','topologyOnline','osdFresh','stateObserved','fieldInterface',
+    ...(aircraft?['aircraftConnected']:[])].some(key=>typeof value[key]!=='boolean')){
+    return false;
+  }
+  return ['osdAgeSeconds','staticFieldsDocumented','staticFieldsObserved',
+    'staticFieldsFresh',...(aircraft?['dynamicGimbalTypesObserved']:[])]
+    .every(key=>isCountOrNull(value[key]));
+}
+function validateLiveEvidenceReceipt(value){
+  const base=['schema','mode','measuredAt','measurementClock','classification',
+    'hardwareAcceptanceComplete','flightReady','dispatchAllowed','result',
+    'transport','pairing','linkedPairs','controller','aircraft'];
+  if(!keysExactly(value,base)||
+      value.schema!==SCHEMA||value.mode!=='live-transport-smoke'||
+      value.measurementClock!=='diagnostic-host'||
+      value.classification!=='read-only-diagnostic-not-hardware-certification'||
+      value.hardwareAcceptanceComplete!==false||value.flightReady!==false||
+      value.dispatchAllowed!==false||
+      !['TRANSPORT_SMOKE_OK','INCOMPLETE'].includes(value.result)||
+      typeof value.measuredAt!=='string'||value.measuredAt.length!==24||
+      !Number.isFinite(Date.parse(value.measuredAt))||
+      new Date(value.measuredAt).toISOString()!==value.measuredAt){
+    return false;
+  }
+  const transportKeys=['mqttConnected','subscribed','topologyAckEnabled',
+    'topologyAckConnected','transportPassed'];
+  const pairingKeys=['listingAvailable','rcPlus2Registered',
+    'rcPlus2RecentlyUsed','independentlyConfirmed'];
+  if(!keysExactly(value.transport,transportKeys)||
+      !transportKeys.every(key=>typeof value.transport[key]==='boolean')||
+      !keysExactly(value.pairing,pairingKeys)||
+      !pairingKeys.every(key=>typeof value.pairing[key]==='boolean')||
+      !isCountOrNull(value.linkedPairs)||
+      !isDeviceReceipt(value.controller,false)||
+      !isDeviceReceipt(value.aircraft,true)){
+    return false;
+  }
+  if(value.result==='TRANSPORT_SMOKE_OK'&&(
+      !value.transport.transportPassed||!value.pairing.independentlyConfirmed||
+      value.linkedPairs!==1||
+      !value.controller.osdFresh||!value.aircraft.osdFresh||
+      !value.aircraft.aircraftConnected)){
+    return false;
+  }
+  return true;
+}
+module.exports={makePreflightEvidence,makeLiveEvidence,validateLiveEvidenceReceipt};
