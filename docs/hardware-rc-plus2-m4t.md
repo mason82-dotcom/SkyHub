@@ -62,6 +62,32 @@ Nur acht festgelegte **Boolesche Statuswerte** verlassen bei `--preflight` den B
 
 Bei einem bestehenden Checkout, der die Option nicht kennt, zuerst nur im **isolierten** Worktree den Quellstand kontrollieren; keinesfalls den Pi-Backend-Container für das Preflight-Skript automatisch neu deployen. Der reguläre Aufruf **ohne** `--preflight` bleibt der eigentliche Live-Smoke in Abschnitt 3.
 
+## 1b. Laufendes Backend-Image auf Live-JSON-Bereitschaft prüfen (24.10.2026)
+
+Der **reale Pi-Preflight vom 24.10.2026, 13:30 MESZ** hat alle acht API-/MQTT-/Topologie-ACK-Voraussetzungen mit Exit 0 erfüllt; zuvor bestanden 13/13 Offline-Sicherheitstests im isolierten Test-Worktree. [Datiertes Pi-Evidence-Protokoll](hardware-acceptance-status-2026-10-24.md#nachtrag-24102026-tatsächlicher-raspberry-pi-backend-preflight). Das bedeutet **nicht**, dass die RC Plus 2 oder Matrice 4T schon online gewesen wären oder dass das laufende Backend-Image die erst später ergänzten Live-JSON-Module bereits enthält.
+
+Vor der echten Live-JSON-Abnahme den **bereits laufenden** Container ohne Neustart, Umkonfiguration oder Ausgabe von Zugangsdaten prüfen:
+
+```bash
+cd ~/Projekte/SkyHub-Next || exit 1
+docker compose -p skyhub-next exec -T backend node -e '
+for (const moduleName of [
+  "./rc-plus2-m4t-hardware-validation",
+  "./rc-plus2-m4t-evidence"
+]) {
+  try {
+    require(moduleName);
+    console.log(moduleName + ": LADBAR");
+  } catch (_) {
+    console.log(moduleName + ": FEHLT ODER NICHT LADBAR");
+    process.exitCode = 3;
+  }
+}'
+printf 'Modul-Exitstatus: %s\n' "$?"
+```
+
+Nur Modulnamen und `LADBAR`/`FEHLT ODER NICHT LADBAR` werden ausgegeben. Werden Module nicht geladen, bleibt die neue Live-JSON-Abnahme **blockiert**; das ist kein Nachweis eines DJI-Gerätefehlers. Der Pi-Quellstand im getrennten Worktree darf **nicht** mit dem tatsächlich laufenden Container-Image gleichgesetzt werden. Keine `docker compose up`-, Build-, Broker-, Neustart- oder Pairing-Kommandos als automatische Folge.
+
 ## 2. Einmalige Kopplung der **neuen** RC Plus 2
 
 **Getrennter optionaler Freigabeschritt:** Nur falls noch keine unabhängige SkyHub-Kopplung besteht und der Betreiber die Einrichtung ausdrücklich bestätigt. `scripts/pi-pilot-pair.js` listet bei leerem Aufruf potenziell **private Kopplungscodes und Gerätekennungen**. Mit einem Code schreibt der Befehl die Autorisierung (`POST /api/pilot-admin/approve`). Das ist **kein read-only Hardwarecheck**; Ausgabe niemals in Chat/GitHub kopieren, niemals `--revoke` im Test benutzen.
