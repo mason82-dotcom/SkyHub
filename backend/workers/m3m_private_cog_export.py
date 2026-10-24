@@ -199,7 +199,7 @@ def convert_and_check(source, output, *, expected_crs, expected_dims,
                     compress='DEFLATE', blocksize=256,
                     overview_resampling='NEAREST', resampling='NEAREST',
                     predictor=3, bigtiff='IF_SAFER',
-                    overviews='IGNORE_EXISTING', overview_count=0)
+                    overviews='IGNORE_EXISTING')
         # Readback deliberately checks exact Float32 bits, not RGB images,
         # palette values or approximate index formulas.
         with rasterio.open(output) as generated:
@@ -215,6 +215,8 @@ def convert_and_check(source, output, *, expected_crs, expected_dims,
                     np.array_equal(generated.read(1), arr),
                     'COG structural/GeoTIFF/numerical GDAL readback failed')
             levels = generated.overviews(1)
+            if max(expected_dims) > overview_min_dim:
+                require(bool(levels), 'Large COG needs an overview pyramid')
         # Independently parse the TIFF hierarchy and reconstruct source bits.
         with tifffile.TiffFile(output) as dataset:
             page = dataset.pages[0]
