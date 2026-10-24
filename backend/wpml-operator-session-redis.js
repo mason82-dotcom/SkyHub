@@ -41,6 +41,10 @@ function createWpmlRedisSessionCheck({
   if(!Number.isSafeInteger(maxConcurrentLookups)||maxConcurrentLookups<1||
      maxConcurrentLookups>128)
     throw new TypeError('Bounded Redis session concurrency (1-128) required');
+  // Count live Redis I/O, not only callers still awaiting a result.
+  // A timed-out lookup can continue inside the Redis driver; releasing
+  // its slot immediately would let an attacker accumulate unbounded
+  // background GET operations during an outage.
   let inFlight=0;
   const key=Buffer.from(keySecret); // Never reuse a mutable caller buffer.
   function lookupKey(sessionId){
@@ -57,12 +61,18 @@ function createWpmlRedisSessionCheck({
     inFlight++;
     // Only a verified JWT assertion is suitable input. The Redis key
     // intentionally contains no raw UUID, user name, GPS or bearer token.
+    // The I/O slot is released only once Redis actually settles, not when
+    // a caller deadline expires. A permanently stuck Redis pool leaves
+    // authentication unavailable (fail closed) until recovery/restart.
     let value,timeout;
+    const lookup=Promise.resolve().then(()=>
+      redis.get(lookupKey(assertion.sessionId)));
+    lookup.then(()=>{inFlight--;},()=>{inFlight--;});
     try{
       // A missing or stuck Redis response MUST NOT leave operator requests
       // pending indefinitely. No fallback token/session is permitted.
       value=await Promise.race([
-        Promise.resolve().then(()=>redis.get(lookupKey(assertion.sessionId))),
+        lookup,
         new Promise(resolve=>{
           timeout=setTimeout(()=>resolve(null),lookupTimeoutMs);
         })
@@ -70,7 +80,6 @@ function createWpmlRedisSessionCheck({
     }catch{return false;}
     finally{
       if(timeout!==undefined)clearTimeout(timeout);
-      inFlight--;
     }
     // A lookup may cross the JWT expiry boundary even if it started before
     // expiry. Re-check against the clock after I/O, never trust only 'now'
