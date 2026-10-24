@@ -50,28 +50,3 @@ jobs:
           path: browser-evidence/
           if-no-files-found: warn
           retention-days: 14
-
-  # Temporary, PR-scoped fallback: the main CI and M3M acceptance workflows
-  # currently report zero-job failures before executing tests. Revisit/remove
-  # this guard once the dedicated workflow scheduler is operational.
-  m3m-synthetic-fallback:
-    name: M3M offline raster, auth catalog and UI tests (fallback)
-    if: github.event_name == 'pull_request' && github.head_ref == 'integrate/m3m-smart-farming-20261024'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install optional raster wheels in disposable runner
-        run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
-      - name: Install locked backend test dependencies (no scripts)
-        run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
-      - name: Validate synthetics, raster QA, tokens and fail-closed flags
-        env:
-          SKYHUB_M3M_OFFLINE_LAB: "1"
-        run: bash scripts/m3m-offline-verify.sh
