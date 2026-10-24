@@ -4,9 +4,11 @@
 // executable WPML, camera RPC, navigation, coverage guarantee or safe route.
 (function(root,factory){
   if(typeof module==='object'&&module.exports)
-    module.exports=factory(require('./wpml-camera-reference-core'));
-  else root.SkyHubM3MDualOptics=factory(root.SkyHubCameraReference);
-})(typeof globalThis==='object'?globalThis:this,function(reference){
+    module.exports=factory(require('./wpml-camera-reference-core'),
+      require('./wpml-survey-preview-core'));
+  else root.SkyHubM3MDualOptics=factory(root.SkyHubCameraReference,
+    root.SkyHubSurveyPreview);
+})(typeof globalThis==='object'?globalThis:this,function(reference,survey){
   const ERR='M3M dual-optics comparison invalid: ';
   const fail=s=>{throw new TypeError(ERR+s);};
   const allowed=Object.freeze(['sensorWidthMm','sensorHeightMm','focalLengthMm',
@@ -97,6 +99,47 @@
        !Number.isFinite(geometry.lineSpacingMeters)||
        Math.abs(geometry.lineSpacingMeters-result.nominalStripSpacingM)>1e-6)
       fail('matching offline bounded survey geometry required');
+    // A preview flag or a claimed length alone is not proof of the geometry.
+    // Reconstruct the bounded survey from its declared outline and compare every
+    // capture segment before computing counts. Excluded rings remain excluded.
+    if(!survey||typeof survey.preview!=='function'||
+       !geometry.outlineGeometry||
+       !Number.isFinite(geometry.headingDegrees)||
+       !Number.isInteger(geometry.segmentCount)||
+       !Number.isInteger(geometry.stripeCount)||
+       !Number.isFinite(geometry.areaSqMeters)||
+       !Number.isFinite(geometry.previewSegmentLengthMeters))
+      fail('replayable verified geometry required');
+    let replay;
+    try {
+      replay=survey.preview(geometry.outlineGeometry,{
+        spacing:geometry.lineSpacingMeters,heading:geometry.headingDegrees
+      });
+    }catch(_error){fail('outline geometry validation failed');}
+    if(replay.segmentCount!==geometry.segments.length||
+       replay.segmentCount!==geometry.segmentCount||
+       replay.stripeCount!==geometry.stripeCount||
+       Math.abs(replay.areaSqMeters-geometry.areaSqMeters)>0.01||
+       Math.abs(replay.previewSegmentLengthMeters-
+         geometry.previewSegmentLengthMeters)>0.01)
+      fail('survey geometry totals disagree with bounded replay');
+    for(let i=0;i<replay.segments.length;i++){
+      const expected=replay.segments[i],actual=geometry.segments[i];
+      if(!actual||actual.stripeIndex!==expected.stripeIndex||
+         actual.kind!==expected.kind||
+         !Number.isFinite(actual.lengthMeters)||
+         Math.abs(actual.lengthMeters-expected.lengthMeters)>0.01||
+         !actual.start||!actual.end||
+         !Number.isFinite(actual.start.lat)||
+         !Number.isFinite(actual.start.lon)||
+         !Number.isFinite(actual.end.lat)||
+         !Number.isFinite(actual.end.lon)||
+         Math.abs(actual.start.lat-expected.start.lat)>1e-8||
+         Math.abs(actual.start.lon-expected.start.lon)>1e-8||
+         Math.abs(actual.end.lat-expected.end.lat)>1e-8||
+         Math.abs(actual.end.lon-expected.end.lon)>1e-8)
+        fail('coverage segments differ from bounded outline replay');
+    }
     let events=0;
     for(const s of geometry.segments){
       if(!s||!Number.isFinite(s.lengthMeters)||s.lengthMeters<0.5||
