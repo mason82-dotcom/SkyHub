@@ -47,6 +47,21 @@ node scripts/pi-rc-plus2-m4t-check.js --help
 
 Bei bereits vorhandenem Worktree zuerst `git worktree list` und `git status` im betreffenden Test-Worktree prüfen, **nicht** mit `git worktree add` überschreiben. Die obigen Befehle nutzen den aktuellen Quellstand von `origin/main` für die Offlineprüfer, installieren aber **keine** neue Pi-Backend-Version und starten keinen Dienst. Fehlt dem aktiven Container eine neuere Diagnose-API, gilt `NICHT PRÜFBAR`, nicht `BESTANDEN`.
 
+## 1a. Vorabprüfung ohne DJI-Hardware (`--preflight`)
+
+Ab dem zusätzlichen Preflight-Zweig wird zuerst geprüft, ob der **laufende** Pi-Backend-Container die erforderlichen vier lesenden GET-APIs bereitstellt und ob MQTT-/Topologie-ACK-Grundvoraussetzungen erfüllt sind. Die Drohnen dürfen dafür ausgeschaltet bleiben; dieser Modus verlangt **keine** frische OSD-Sitzung, kein neues RC-Pairing und keinen Flug.
+
+```bash
+cd ~/Projekte/SkyHub-RCPlus2-M4T-Test || exit 1
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-plus2-m4t-check.js --preflight
+printf 'Exitstatus: %s\n' "$?"
+```
+
+Nur acht festgelegte **Boolesche Statuswerte** verlassen bei `--preflight` den Backend-Container: GET-Health, GET-Devices, GET-MQTT-Shapes und GET-Pairings erreichbar, MQTT verbunden/subscribed und Topologie-ACK aktiviert/Publisher verbunden. Geräte-Snapshots, private Pairing-Einträge und MQTT-Rohwerte werden in diesem Modus **nicht** an die Host-Pipe weitergegeben. `0` = diese Pi-Backend-Voraussetzungen vorhanden; `3` = unvollständig (etwa lesende Pairing-API fehlt, MQTT nicht verbunden); `1` = Docker/API unerreichbar oder fehlerhafte Antwort; `2` = ungültiger Aufruf. **Ein Preflight mit Exit 0 ist ausdrücklich kein Live-Hardware-, DJI-Pilot-2-, M4T-Feld- oder Flugnachweis.**
+
+Bei einem bestehenden Checkout, der die Option nicht kennt, zuerst nur im **isolierten** Worktree den Quellstand kontrollieren; keinesfalls den Pi-Backend-Container für das Preflight-Skript automatisch neu deployen. Der reguläre Aufruf **ohne** `--preflight` bleibt der eigentliche Live-Smoke in Abschnitt 3.
+
 ## 2. Einmalige Kopplung der **neuen** RC Plus 2
 
 **Getrennter optionaler Freigabeschritt:** Nur falls noch keine unabhängige SkyHub-Kopplung besteht und der Betreiber die Einrichtung ausdrücklich bestätigt. `scripts/pi-pilot-pair.js` listet bei leerem Aufruf potenziell **private Kopplungscodes und Gerätekennungen**. Mit einem Code schreibt der Befehl die Autorisierung (`POST /api/pilot-admin/approve`). Das ist **kein read-only Hardwarecheck**; Ausgabe niemals in Chat/GitHub kopieren, niemals `--revoke` im Test benutzen.
