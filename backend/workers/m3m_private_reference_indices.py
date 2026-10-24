@@ -56,7 +56,7 @@ def _verify_inputs(reference, bundle, seal, pin, ref_dir, ref_pin):
             check.get('sha256OfSeal') == pin and
             check.get('calibrationVerified') is False and
             check.get('operationalUseAllowed') is False,
-            'Source's full pinned bundle check failed')
+            'Full source bundle pin verification failed')
     reference._check_reference(ref_dir, ref_pin)
 
 
