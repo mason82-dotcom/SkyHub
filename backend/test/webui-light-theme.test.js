@@ -147,3 +147,18 @@ test('mobile operator navigation wraps rather than hiding the active section', (
   assert.match(mobile, /\.skyhub-global-nav\s*\{\s*flex-wrap:\s*wrap;/);
   assert.match(mobile, /overflow-x:\s*visible;/);
 });
+
+test('six delivered views support keyboard bypass to a single focusable main landmark', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  assert.match(css, /\.skyhub-skip-link:focus[^\{]*\{\s*transform: translateY\(0\)/);
+  for (const [name] of pages) {
+    const source = html(name);
+    assert.equal((source.match(/class="skyhub-skip-link"/g) || []).length, 1, name);
+    assert.equal((source.match(/href="#skyhubMain"/g) || []).length, 1, name);
+    assert.equal((source.match(/<main\b/g) || []).length, 1, name);
+    assert.match(source, /<main id="skyhubMain" tabindex="-1">/, name);
+    const skipAt = source.indexOf('class="skyhub-skip-link"');
+    const mainAt = source.indexOf('<main id="skyhubMain"');
+    assert.ok(skipAt >= 0 && mainAt > skipAt, name + ' skip target must follow link');
+  }
+});

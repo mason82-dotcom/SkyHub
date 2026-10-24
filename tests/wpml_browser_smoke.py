@@ -138,6 +138,27 @@ def assert_light_theme(page, active_href: str, name: str) -> None:
           == [active_href], name + ": active module mismatch")
 
 
+def assert_skip_link(page, name: str) -> None:
+    """The first keyboard tab can skip the module header to the main landmark."""
+    page.keyboard.press("Tab")
+    focused = page.evaluate("""() => ({
+        skip: document.activeElement.classList.contains('skyhub-skip-link'),
+        top: document.activeElement.getBoundingClientRect().top,
+        bottom: document.activeElement.getBoundingClientRect().bottom,
+        view: window.innerHeight
+    })""")
+    check(focused["skip"] and focused["top"] >= 0 and
+          focused["bottom"] <= focused["view"],
+          name + ": skip link not keyboard-visible")
+    page.keyboard.press("Enter")
+    state = page.evaluate("""() => ({
+        hash: location.hash,
+        target: document.activeElement.id
+    })""")
+    check(state == {"hash": "#skyhubMain", "target": "skyhubMain"},
+          name + ": skip navigation failed")
+
+
 def assert_map_help_clear(page, selector: str, name: str) -> None:
     """Instruction text must not be obscured by Leaflet zoom buttons."""
     state = page.evaluate("""selector => {
@@ -192,6 +213,7 @@ def main() -> None:
                     page.goto(base + "/wpml-editor.html", wait_until="load")
                     page.locator(".leaflet-container").wait_for()
                     assert_light_theme(page, "/wpml-editor.html", "WPML editor desktop")
+                    assert_skip_link(page, "WPML editor desktop")
                     assert_map_help_clear(page, ".map-overlay", "WPML editor desktop")
                     check(page.locator('a[href="/wpml-route-library.html"]').count() == 1,
                           "Parent-branch route-library navigation must survive merge")
@@ -291,6 +313,7 @@ def main() -> None:
                     guard(phone, base, real_map=False, unexpected=unexpected_mobile)
                     phone.goto(base + "/wpml-editor.html", wait_until="load")
                     assert_light_theme(phone, "/wpml-editor.html", "WPML editor 390px")
+                    assert_skip_link(phone, "WPML editor 390px")
                     check("manuell" in phone.locator("#map").inner_text(),
                           "Map outage fallback message missing")
                     width = phone.evaluate("""() => ({
@@ -327,6 +350,7 @@ def main() -> None:
                     route_page.goto(base + "/wpml-route-library.html", wait_until="load")
                     assert_light_theme(route_page, "/wpml-route-library.html",
                                        "Route library desktop")
+                    assert_skip_link(route_page, "Route library desktop")
                     route_page.locator("#route-name").fill("Synthetic browser-only route")
                     for idx, (lat, lon) in enumerate([("49.12345", "8.56789"),
                                                        ("49.12445", "8.56889")]):
@@ -403,6 +427,7 @@ def main() -> None:
                     survey.locator(".leaflet-container").wait_for()
                     assert_light_theme(survey, "/wpml-survey-preview.html",
                                        "Survey desktop")
+                    assert_skip_link(survey, "Survey desktop")
                     assert_map_help_clear(survey, ".instructions", "Survey desktop")
                     outer = [[8, 49], [8.0018, 49], [8.0018, 49.0011],
                              [8, 49.0011], [8, 49]]

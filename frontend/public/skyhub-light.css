@@ -58,6 +58,20 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible {
   outline: 3px solid var(--sky-primary);
   outline-offset: 3px;
 }
+/* Keyboard bypass: accessible first tab-stop without obstructing the Pilot 2 WebView. */
+.skyhub-skip-link {
+  position: fixed; z-index: 10000; top: 8px; left: 12px;
+  display: inline-flex; align-items: center; min-height: 44px;
+  padding: 9px 15px; border-radius: 10px;
+  border: 2px solid var(--sky-primary);
+  background: var(--sky-white); color: var(--sky-primary-hover);
+  box-shadow: var(--sky-shadow-hover); font-weight: 750;
+  text-decoration: none; transform: translateY(-160%);
+}
+.skyhub-skip-link:focus, .skyhub-skip-link:focus-visible {
+  transform: translateY(0);
+}
+main#skyhubMain:focus { outline: none; }
 ::selection { background: #cfdaff; color: #142b61; }
 input:not([type=checkbox]):not([type=radio]), select, textarea {
   background: var(--sky-white);

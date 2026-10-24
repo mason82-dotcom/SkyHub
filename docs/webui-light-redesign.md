@@ -25,3 +25,7 @@ Verify manually on 390px, 768px and desktop widths, both tabs, disconnected and 
 
 ## Rollout and compatibility
 This is a separate presentation-only branch; merge only after functional and hardware-independent UI review. The old inline per-page CSS can be retired in a later controlled refactor after checking all dynamically rendered HTML. The HTML pages continue to load locally served assets through the existing Express static serving path; no new build step is needed.
+
+## Keyboard accessibility gate
+
+All six static pages expose a first-tab, visually-on-focus `Zum Inhalt springen` link to the unique `<main id="skyhubMain" tabindex="-1">` landmark. The control is hidden above the viewport until focused; the shared CSS reveals it without JavaScript. Offline Chromium acceptance checks actual keyboard Tab → Enter, visibility and main focus on Operations, WPML, Route Library, Survey, Smart Farming and Pilot 2. The skip target contains no credentials and does not trigger DJI calls.

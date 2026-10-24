@@ -148,6 +148,17 @@ async function run(){
   assert.equal(requests.some(x=>x.path==='/skyhub-light.css'),true,
     'browser must request the real shared CSS asset');
   assert.ok(await page.locator('.device').count()>0,'synthetic live snapshot appears in device list');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(()=>document.activeElement.classList.contains('skyhub-skip-link')),
+    true,'first keyboard tab must find the skip-to-content link');
+  assert.ok(await page.locator('.skyhub-skip-link').evaluate(el=>{
+    const r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=window.innerHeight;
+  }),'focused skip link must appear within the viewport');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(()=>location.hash),'#skyhubMain',
+    'keyboard skip must target the main landmark');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'skyhubMain',
+    'keyboard skip must move focus to main content');
   await page.evaluate(()=>{
     window.__invalidationCount=0;
     const original=window.L.Map.prototype.invalidateSize;
@@ -213,6 +224,12 @@ async function run(){
     if(pageType==='pilot')
       await screen.waitForFunction(()=>document.querySelector('#headline')?.textContent
         .includes('Onboarding noch deaktiviert'));
+    await screen.keyboard.press('Tab');
+    assert.equal(await screen.evaluate(()=>document.activeElement.classList.contains('skyhub-skip-link')),
+      true,filename+' first tab focuses skip link');
+    await screen.keyboard.press('Enter');
+    assert.equal(await screen.evaluate(()=>document.activeElement.id),'skyhubMain',
+      filename+' main receives keyboard focus');
     for(const width of sizeChecks){
       await screen.setViewportSize({width,height:880});
       const visual=await screen.evaluate(()=>{

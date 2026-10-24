@@ -71,6 +71,10 @@ Leaflet nutzt weiterhin das bestehende externe Kartenmaterial. Falls Kartenkache
 
 Wegpunkteditor und Survey sind Offline-Vorschauen, keine Flugfreigabe. Die Routenbibliothek speichert nur nach expliziter Bestätigung lokale Daten. Smart Farming stellt ausschließlich experimentelle M3M-Metadaten ohne kalibrierte Vegetationskarten oder Ausbringempfehlungen dar. TAK bleibt ein nicht integrierter, schreibgeschützter Platzhalter.
 
+## Direkte Tastaturnavigation
+
+Alle sechs ausgelieferten Ansichten besitzen als **erstes fokussierbares Element** einen nur bei Tastaturfokus eingeblendeten Link „Zum Inhalt springen“. Er verweist auf das eindeutige `main#skyhubMain` mit `tabindex="-1"`. Das ermöglicht die direkte Bedienung ohne wiederholtes Tabben durch die fünf globalen Modul-Links, die Operations-Tabs oder die kompakten Pilot-2-Header-Elemente. Der Link nutzt den kontrastreichen gemeinsamen Light-Stil und benötigt weder JavaScript noch zusätzliche API-Rechte. Chromium testet Fokus, Sichtbarkeit und tatsächliche Ziel-Fokussierung.
+
 ## Barrierefreiheit und technische Überprüfung
 
 Kontraste der semantischen Textfarben auf weißen Flächen werden automatisiert gegen **WCAG AA (4,5:1)** geprüft. Tastaturfokus, reduzierte Bewegung und native Formelemente sind beizubehalten. Daneben sind sichtbare Browserprüfungen von horizontalem Overflow, Tabs, Suchformular, Karteninteraktionen, Responsivität und DJI-Pilot-2-Webview erforderlich.
