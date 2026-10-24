@@ -101,6 +101,26 @@ test('rejects stale, expired, mismatched, non-human and ambiguous signed claims'
   assert.equal(await verify(signed),null);
   assert.equal(calls,0);
 });
+test('slow independent session approval cannot resurrect an expired signed JWT',async()=>{
+  let now=NOW;
+  let approve;
+  const gate=new Promise(resolve=>{approve=resolve;});
+  const verify=createWpmlOperatorVerifier({
+    issuer:ISSUER,publicKeys:{keyA:publicKey},
+    isActiveSession:()=>gate,clock:()=>now*1000
+  });
+  const pending=verify(token());
+  now=NOW+301; // expires while the remote revocation lookup is pending
+  approve(true);
+  assert.equal(await pending,null);
+  const instant=createWpmlOperatorVerifier({
+    issuer:ISSUER,publicKeys:{keyA:publicKey},
+    isActiveSession:async()=>{now=NOW+301;return true;},
+    clock:()=>now*1000
+  });
+  now=NOW;
+  assert.equal(await instant(token()),null);
+});
 test('revoked sessions, session outage and unknown-session results fail closed',async()=>{
   for(const session of [async()=>false,async()=>null,async()=>({active:true}),
     async()=>{throw Error('private session-store failure');}]){
