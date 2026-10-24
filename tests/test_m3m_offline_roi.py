@@ -84,8 +84,9 @@ class OfflineRoiTests(unittest.TestCase):
         self.assertFalse(report['prescriptionExportAllowed'])
         serialized = str(report)
         self.assertNotIn(str(self.bundle), serialized)
-        self.assertNotIn('500000', serialized)
-        self.assertNotIn('5400000', serialized)
+        self.assertNotIn('EPSG:32632', serialized)
+        self.assertNotIn('geoTransform', serialized)
+        self.assertNotIn('utmEasting', serialized)
 
     def test_one_pixel_and_masked_pixel(self):
         value, _ = self.inspect(rect=(0, 0, 1, 1))
