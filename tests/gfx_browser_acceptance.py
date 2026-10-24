@@ -139,6 +139,9 @@ def main():
                 check(page.locator("#gfxCockpitNeedle").evaluate(
                     "el => el.style.transform") == "rotate(270deg)",
                     "Heading compass bearing does not match DJI fixture")
+                # Preserve a verified/fresh attitude screenshot before introducing stale values.
+                watermark(page)
+                page.screenshot(path=str(ARTIFACTS/"gfx-1365-attitude-fresh-synthetic.png"),full_page=True)
                 page.locator("#gfxCockpitDevice").select_option("SYN-B2")
                 check(page.locator("#gfxCockpitAltitude").inner_text()=="0,0 m","Real zero missing")
                 page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
@@ -218,14 +221,26 @@ def main():
                 page.keyboard.press("/")
                 check(page.locator("#deviceSearch").evaluate("el=>document.activeElement===el"),
                       "Keyboard slash shortcut broken")
-                watermark(page)
                 page.screenshot(path=str(ARTIFACTS/"gfx-1365-synthetic.png"),full_page=True)
                 for width,height in ((375,812),(320,640)):
                     page.set_viewport_size({"width":width,"height":height})
+                    check(page.evaluate("""() => {
+                      const zoom=document.querySelector('.leaflet-control-zoom')?.getBoundingClientRect();
+                      const tools=document.querySelector('.map-tools')?.getBoundingClientRect();
+                      if(!zoom||!tools)return false;
+                      return zoom.bottom <= tools.top || tools.bottom <= zoom.top ||
+                             zoom.right <= tools.left || tools.right <= zoom.left;
+                    }"""),"Leaflet zoom button overlaps map toolbar at "+str(width))
                     check(page.locator("#gfxCockpit").is_visible(),"Cockpit absent on mobile")
                     check(page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 2"),
                           "Horizontal document overflow at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-synthetic.png"),full_page=True)
+                    page.locator("#gfxCockpitDevice").select_option("SYN-A1")
+                    check(page.locator("#gfxCockpitAttitude").is_visible(),
+                          "Fresh, verified artificial horizon must be visible at "+str(width))
+                    page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-attitude-fresh-synthetic.png"),
+                                    full_page=True)
+                    page.locator("#gfxCockpitDevice").select_option("SYN-B2")
                 check(not errors,"Browser JS errors: "+repr(errors))
                 check(not unexpected,"Unexpected traffic: "+repr(unexpected))
                 context.close()

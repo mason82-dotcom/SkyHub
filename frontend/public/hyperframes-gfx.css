@@ -628,3 +628,9 @@ body.skyhub-gfx .gfx-attitude-note{
   body.skyhub-gfx .gfx-attitude-fixed-wing::before,
   body.skyhub-gfx .gfx-attitude-fixed-wing::after{background:CanvasText;border-color:CanvasText}
 }
+
+
+/* Keep mobile Leaflet zoom separate from the overlay action toolbar. */
+@media(max-width:640px){
+  body.skyhub-gfx.gfx-page-dashboard .map-tools { top: 70px; }
+}
