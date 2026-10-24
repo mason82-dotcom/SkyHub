@@ -101,6 +101,12 @@ printf 'Modul-Exitstatus: %s\n' "$?"
 
 Nur Modulnamen und `LADBAR`/`FEHLT ODER NICHT LADBAR` werden ausgegeben. Werden Module nicht geladen, bleibt die neue Live-JSON-Abnahme **blockiert**; das ist kein Nachweis eines DJI-Gerätefehlers. Der Pi-Quellstand im getrennten Worktree darf **nicht** mit dem tatsächlich laufenden Container-Image gleichgesetzt werden. Keine `docker compose up`-, Build-, Broker-, Neustart- oder Pairing-Kommandos als automatische Folge.
 
+### Pilot-2-Modellbezeichnung auf realer RC Plus 2 (24.10.2026)
+
+Ein vom Betreiber am 24.10.2026 übermittelter, anonymisierter Pi-Backend-Readout zeigte **drei registrierte Tokens mit Modellbezeichnung `DJI RC PLUS 2`**, davon zwei innerhalb von 30 Minuten angelegt und alle drei innerhalb dieser Zeit benutzt, sowie ein älteres `DJI RC Pro Enterprise`-Token. Die Autorisierung wurde also auf SkyHub-Seite abgeholt, **aber** der vorherige Hardwareprüfer erkannte die RC-Plus-2-Kopplungen nicht, weil er nur `DJI RC Plus 2` und `DJI RC Plus 2 Enterprise` akzeptierte. Die Fall-Schreibweise des von Pilot 2 übernommenen WebView-User-Agents ist damit ein nachgewiesener Diagnose-Sonderfall.
+
+Der Hardwareprüfer akzeptiert zusätzlich **exakt** `DJI RC PLUS 2` (Allowlist; keine unkontrollierte Teilstring-Suche, keine Änderung vorhandener Tokens). Dass mehrere Tokens registriert sind, beweist **nicht**, welches Token zu einer bestimmten physischen RC gehört; weder automatische Deregistrierung noch erneutes Pairing durchführen. **Neue Quelldatei/CI sind kein Pi-Deployment.** Auch bei korrekter Token-Erkennung bleiben frisches RC-/M4T-OSD, eindeutige Gateway-Kind-Zuordnung und `aircraftConnected=true` Pflicht für den Live-Transport-Smoke.
+
 ## 2. Einmalige Kopplung der **neuen** RC Plus 2
 
 **Getrennter optionaler Freigabeschritt:** Nur falls noch keine unabhängige SkyHub-Kopplung besteht und der Betreiber die Einrichtung ausdrücklich bestätigt. `scripts/pi-pilot-pair.js` listet bei leerem Aufruf potenziell **private Kopplungscodes und Gerätekennungen**. Mit einem Code schreibt der Befehl die Autorisierung (`POST /api/pilot-admin/approve`). Das ist **kein read-only Hardwarecheck**; Ausgabe niemals in Chat/GitHub kopieren, niemals `--revoke` im Test benutzen.
