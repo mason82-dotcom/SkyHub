@@ -173,7 +173,44 @@ def main():
                       "Reduced motion not respected")
                 check(not errors and not unexpected,"Reduced-motion browser errors/traffic")
                 ctx.close()
-                print("GFX isolated Chromium: PASS (desktop, 375px, 320px, reduced motion)")
+                # No JavaScript: the legacy header module navigation remains
+                # available while purely interactive GFX buttons stay hidden.
+                no_js=browser.new_context(viewport={"width":375,"height":780},
+                                          java_script_enabled=False)
+                static_page=no_js.new_page();errors=[];unexpected=[]
+                static_page.on("pageerror",lambda error:errors.append(str(error)))
+                guard(static_page,base,fixture,unexpected)
+                static_page.goto(base+"/",wait_until="load")
+                check(static_page.locator('header a[href="/wpml-editor.html"]').is_visible(),
+                      "Module navigation fallback missing without JavaScript")
+                check(static_page.locator("#gfxMotionToggle").is_hidden(),
+                      "Inert motion button shown without JavaScript")
+                check(static_page.locator('.gfx-module-rail').count()==0,
+                      "Script-added module rail must not exist without JS")
+                check(not errors and not unexpected,"No-JS browser errors/traffic")
+                no_js.close()
+
+                # Forced-colors must override decorative animations and retain
+                # keyboard focus / readable labels without changing telemetry.
+                high_contrast=browser.new_context(viewport={"width":390,"height":780},
+                                                  forced_colors="active")
+                hc=high_contrast.new_page();errors=[];unexpected=[]
+                hc.on("pageerror",lambda error:errors.append(str(error)))
+                guard(hc,base,fixture,unexpected)
+                hc.goto(base+"/",wait_until="load")
+                hc.locator("#gfxMotionToggle").wait_for(state="visible")
+                check(hc.locator("#gfxMotionToggle").is_disabled(),
+                      "Forced colors must block GFX animations")
+                check(hc.locator("body").get_attribute("data-gfx-motion")=="off",
+                      "Forced-colors preference ignored")
+                hc.wait_for_function(
+                    "() => document.querySelector('#gfxCockpitDevice').options.length===2"
+                )
+                check(hc.locator("#gfxCockpitBattery").inner_text()=="74 %",
+                      "Forced-colors mode lost instrument text")
+                check(not errors and not unexpected,"Forced-colors browser errors/traffic")
+                high_contrast.close()
+                print("GFX isolated Chromium: PASS (desktop, 375px, 320px, reduced motion, no-JS, forced-colors)")
             finally: browser.close()
 
 if __name__=="__main__":
