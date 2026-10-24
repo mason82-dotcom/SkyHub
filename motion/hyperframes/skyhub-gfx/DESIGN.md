@@ -24,3 +24,7 @@ Instrumenten-Opener für die hypothetische SkyHub-Leitstellenoberfläche: geomet
 ## Render-Schrift (reproduzierbarer Fallback)
 
 Für die isolierte HyperFrames-Videokomposition ist die Hauptschrift bewusst auf das allgemeine `Arial, sans-serif`-Fallback reduziert, statt auf nicht eingebettete Bahnschrift-/Arial-Narrow-Installationen zu vertrauen. Dadurch wird kein Nutzer-/CI-Font installiert oder mit ausgeliefert. Die produktive WebUI bleibt typografisch unverändert.
+
+## Gate-Findings und Desktop-Thumbnail
+
+Der erste echte HyperFrames-Check meldete zwei Design-Hinweise: Ein komplett leeres Startbild und bei fünf informativen Textelementen weniger als 28px. Der Titel ist nun ab Sekunde 0 statisch lesbar, während Copy/Radar/Übergang weiterhin animiert bleiben. Die betroffenen informativen Hilfstexte verwenden mindestens 28px. Der zeitlich definierte Hero trägt eine echte `clip`-Klasse; die Subcomposition-Empfehlung des CLI-Linters wird gesondert geprüft und nicht stillschweigend unterdrückt.

@@ -18,13 +18,13 @@
     h1{font-size:142px;line-height:.92;letter-spacing:.025em;margin:0;max-width:1000px}
     h1 span{color:#67e8f9}
     .lede{font-size:38px;line-height:1.32;max-width:840px;color:#c0d6e5;margin:0}
-    .disclaimer{margin-top:30px;font:600 24px/1.35 Consolas,monospace;color:#ffc37c}
+    .disclaimer{margin-top:30px;font:600 28px/1.35 Consolas,monospace;color:#ffc37c}
     .instrument{position:relative;flex:.88;min-width:0;border:2px solid #386b82;border-radius:34px;overflow:hidden;
       background:linear-gradient(145deg,#12334a,#0b1b2e);display:flex;flex-direction:column;justify-content:space-between;padding:44px}
     .instrument::before{content:"";position:absolute;inset:0;pointer-events:none;
       background:linear-gradient(90deg,#67e8f91c 1px,transparent 1px),linear-gradient(0deg,#67e8f91c 1px,transparent 1px);
       background-size:60px 60px}
-    .instrument-top{z-index:1;display:flex;justify-content:space-between;font:700 24px Consolas,monospace;color:#bcd8e4}
+    .instrument-top{z-index:1;display:flex;justify-content:space-between;font:700 28px Consolas,monospace;color:#bcd8e4}
     .instrument-center{z-index:1;display:flex;align-items:center;justify-content:center;flex:1}
     .radar{width:460px;height:460px;border-radius:50%;border:3px solid #67e8f9;
       box-shadow:0 0 0 44px #67e8f915,0 0 0 92px #67e8f90c,0 0 90px #67e8f926;position:relative}
@@ -34,7 +34,7 @@
     .radar-sweep{position:absolute;inset:0;border-radius:50%;
       background:conic-gradient(from 0deg,#67e8f90d 0deg,#67e8f947 50deg,#67e8f900 78deg,#67e8f900 360deg)}
     .target{position:absolute;width:28px;height:28px;border-radius:50%;background:#c9fa79;left:68%;top:30%;box-shadow:0 0 24px #c9fa79}
-    .instrument-bottom{z-index:1;display:flex;justify-content:space-between;gap:20px;font:700 25px Consolas,monospace;color:#67e8f9}
+    .instrument-bottom{z-index:1;display:flex;justify-content:space-between;gap:20px;font:700 28px Consolas,monospace;color:#67e8f9}
     .bar{height:5px;background:#c9fa79;width:210px}
     .tag{color:#ffc37c}
   </style>
@@ -42,7 +42,7 @@
 </head>
 <body>
   <div id="gfx-root" data-composition-id="skyhub-gfx-intro" data-start="0" data-duration="8" data-width="1920" data-height="1080" data-track-index="0">
-    <div id="gfx-hero" data-start="0" data-duration="8" data-track-index="1">
+    <div id="gfx-hero" class="clip" data-start="0" data-duration="8" data-track-index="1">
       <div class="copy">
         <div class="eyebrow">SKYHUB-NEXT / MOTION STUDY</div>
         <h1>SKY<span>//</span>PULSE</h1>
@@ -61,7 +61,7 @@
     window.__timelines = window.__timelines || {};
     const timeline = gsap.timeline({paused:true});
     timeline.from('.eyebrow',{opacity:0,y:26,duration:.55,ease:'power2.out'},.22)
-      .from('h1',{opacity:0,x:-90,duration:.9,ease:'expo.out'},.37)
+      // The key title remains readable on frame zero and video thumbnails.
       .from('.lede',{opacity:0,y:44,duration:.72,ease:'power3.out'},.72)
       .from('.bar',{scaleX:0,transformOrigin:'left center',duration:.8,ease:'power4.out'},1.02)
       .from('.disclaimer',{opacity:0,y:20,duration:.52,ease:'sine.out'},1.3)
