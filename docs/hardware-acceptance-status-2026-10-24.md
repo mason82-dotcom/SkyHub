@@ -2,6 +2,21 @@
 
 **Geprüfte GitHub-Basis:** `543a05ca308071a850f43a153abf464c45e13738` · **Typ:** datierter Evidence-Index, **keine neue Pi-Messung**. GitHub-Commits, synthetische Tests, reale Messungen aus früheren Pi-Sitzungen und tatsächliche Bereitstellung sind getrennte Aussagen. Ein neuer Commit verschiebt nicht das Datum oder den Umfang früherer Messungen.
 
+## Nachtrag 24.10.2026, 19:12–19:14 MESZ: Laufzeitmodule bereit, RC-Plus-2/M4T-Smoke unvollständig
+
+**Evidenz:** Vom Betreiber übermittelte, anonymisierte Terminalausgabe des real laufenden Raspberry Pi 5. **Nicht selbst per SSH reproduziert.** Isoliertes Test-Worktree: `~/Projekte/SkyHub-RCPlus2-M4T-Test`, Checkout `57a8908`; produktive Compose-Laufzeit: `~/Projekte/SkyHub-Next`. Der Betreiber hat zuvor gezielt nur den Backend-Container neu erstellt und die alte Image-Version als Rückfalloption markiert; PostgreSQL und Redis meldeten sich weiter als healthy. **Image-Digest und vollständiger Laufzeit-Commit nicht gemessen.**
+
+- `--runtime-check --json` um `2026-10-24T17:12:39.928Z`: `result=READY`, `evaluatorAvailable=true`, `evidenceAvailable=true`, **Exit 0**. Das vorher fehlende JSON-Evidence-Modul ist somit im *laufenden* Backend ladbar. Kein DJI-Gerätenachweis.
+- `--preflight --json` um `2026-10-24T17:14:09.629Z`: **Exit 0**, `result=READY`; **8/8 true**: `healthApi`, `devicesApi`, `shapesApi`, `pairingsApi`, `mqttConnected`, `subscribed`, `topologyAckEnabled`, `topologyAckConnected`.
+- `--json` (live-transport-smoke) um `2026-10-24T17:14:17.959Z`: **Exit 3**, `result=INCOMPLETE`, `transportPassed=false`. Allgemeiner MQTT-/ACK-Status true, aber **`linkedPairs=0`**. `rcPlus2Registered=false`, `rcPlus2RecentlyUsed=false`, `independentlyConfirmed=false`; Pairing-Übersicht selbst ist erreichbar.
+- RC Plus 2: `seen=true`, `topologyOnline=true`, aber `osdFresh=false`, `osdAgeSeconds=null`, `staticFieldsObserved=0`, `staticFieldsFresh=0`. **Nicht als aktive RC-Sitzung interpretieren**: gespeicherte Topologie ist möglich.
+- Matrice 4T: `seen=true`, `topologyOnline=false`, `aircraftConnected=false`, `osdFresh=false`, `osdAgeSeconds=null`, `staticFieldsObserved=0`, `dynamicGimbalTypesObserved=0`. Der Parser meldet 202 **vorläufig katalogisierte**, nicht 202 real beobachtete M4T-Felder; RC-Plus-2-Katalog 54, ebenfalls null beobachtet.
+- Das JSON hat unverändert `hardwareAcceptanceComplete=false`, `flightReady=false`, `dispatchAllowed=false`. **Keine Flug-, Pairing-, Kamera- oder MQTT-Schreibaktion** ist aus diesen Belegen abzuleiten.
+
+**Entscheidung:** **P0 Laufzeitmodule + Backend-Preflight = BESTÄTIGT. P0 RC Plus 2/M4T Live-Transport und separates SkyHub-Pairing = OFFEN.** Diese Messung beweist nicht, dass die Hardware beim Test eingeschaltet war, und belegt weder einen DJI-Fehler noch eine falsche MQTT-Konfiguration. Keine weitere Backend-Erstellung aus dem unvollständigen Smoke ableiten.
+
+**Nächstes Gate:** Nur falls die echte RC Plus 2 und M4T vor Ort sicher am Boden eingeschaltet und über Pilot 2 mit der bestehenden SkyHub-Cloud-URL verbunden sind, Cloud-/SkyHub-Session und die getrennte Geräteautorisierung *vor Ort* kontrollieren; notwendiges Pairing ist ein gesonderter, ausdrücklich freizugebender Schreibvorgang. Danach den **gleichen lesenden** `--json`-Smoketest erneut ausführen und die OSD-Alter, `linkedPairs` und `pairing`-Booleschen prüfen. Ohne echte Hardware bleibt die Live-Abnahme offen, auch bei grüner GitHub-CI.
+
 ## Nachtrag 24.10.2026: tatsächlicher Raspberry-Pi-Backend-Preflight
 
 **Evidenzquelle:** Vom Betreiber mitgeteilte Terminalausgabe eines **realen Raspberry Pi 5** am 24.10.2026, `2026-10-24T11:30:48.886Z` (**13:30:48 MESZ**). Diese Ausgabe wurde nicht selbst über SSH oder mit einem DJI-Gerät reproduziert. Prüfcode aus dem isolierten Worktree `~/Projekte/SkyHub-RCPlus2-M4T-Test`; laufender Compose-Stack im separaten `~/Projekte/SkyHub-Next`. **Laufender Container-Image-Commit weiterhin nicht separat bestätigt.**
