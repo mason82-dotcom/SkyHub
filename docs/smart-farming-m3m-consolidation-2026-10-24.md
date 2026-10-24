@@ -154,3 +154,36 @@ Testausgabe ist ein lokaler Nachweis; CI bleibt zusätzlich verpflichtend.
 Der neue Main-basierte Branch kann zudem gegenüber späteren Main-Commits
 zurückliegen. Vor jedem Merge daher erneut `git fetch`, aktuellen
 Branchvergleich und eventuelle Konflikte prüfen.
+
+
+## Verifizierte CI-Abnahme des konsolidierten Merge-Commits (24.10.2026)
+
+Der Integrationsbranch wurde durch einen separaten, nicht auf `main` wirkenden
+Merge-Commit mit dem damaligen aktuellen `main` zusammengeführt:
+`d05512376659bfee2a424814fe66499cd8d8bbcc`.
+Der GitHub-Vergleich dieses Commits ergab **17 Commits voraus,
+0 Commits zurück**, 44 geänderte Dateien; PR #104 ist GitHub-seitig
+mergefähig, bleibt aber **Draft**.
+
+Die zuvor joblos fehlgeschlagenen M3M-Workflows werden jetzt durch
+einen eigenständig laufenden Offline-Akzeptanzworkflow geprüft:
+
+| Nachweis | Lauf / Job | Tatsächliches Ergebnis |
+| --- | --- | --- |
+| Raster-/Sicherheits-Tests | [M3M offline acceptance #40046626455](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40046626455) – `raster-integrity-and-security` | **PASS**, 140 Python-Tests, `OK`, keine Skips; synthetische GeoTIFFs, SHA-Pinning, NoData, Pixel-QA und Cli-Sicherheit |
+| Katalog und Token-geschützte API | derselbe Lauf – `catalog-http-and-ui` | **PASS**, 41 Node-Tests, 0 Fehler, 0 Skips; darunter HTTP-Authentifizierung, Katalog und UI-Verträge |
+| Tatsächlicher Browserlauf | [TAK UI browser acceptance #40046626473](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40046626473) – `real-frontend-with-synthetic-backend` | **PASS**, Ergebnisartefakt `skyhub-tak-tabs-chromium-evidence` mit Screenshots/Prüfbericht |
+| Allgemeiner SkyHub-CI-Workflow | [#40046622546](https://github.com/mason82-dotcom/SkyHub-Next/actions/runs/40046622546) | **FAIL vor Jobstart**, 0 Jobs; kein bestandener oder fehlgeschlagener regulärer CI-Test ableitbar |
+
+Diese Nachweise gelten genau für `d0551237` und die zum Testlauf
+gehörenden Workflows. Bei weiteren Commits müssen die betroffenen
+Checks erneut erfolgreich laufen.
+
+**Freigabeentscheidung: NICHT NACH MAIN MERGEN.** Ausstehend bleiben
+die vollständige reguläre Haupt-CI, unabhängiges Auth-/Dateisystem-
+Review, tatsächliche DEDAL-Quell-/CLI-/Lizenzverifikation und
+radiometrische Abnahme realer, vollständig registrierter M3M-Daten.
+Ein synthetisch korrektes GeoTIFF oder bestandener Browser-Test
+belegt keine agronomische Eignung. Die alte Draft-PR-Kette wird nicht
+separat gemergt. Pi-Stack, DJI-Kommandos, MQTT, MinIO und PostGIS
+bleiben unverändert.
