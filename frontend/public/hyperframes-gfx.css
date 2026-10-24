@@ -737,3 +737,39 @@ body.skyhub-gfx .gfx-timeline-item strong{font-weight:700}
     background:Canvas;color:CanvasText;border-color:CanvasText;
   }
 }
+
+
+/* Phase 10: bounded diagnostic digest, never a simulated signal-strength or
+   flight-readiness meter. Stable textual counts, always tied to the retained list. */
+body.skyhub-gfx .gfx-timeline-digest{
+  padding:10px;margin:10px 0 8px;
+  border:1px solid #436879;border-radius:8px;background:#0d2638;
+}
+body.skyhub-gfx .gfx-timeline-digest h4{
+  margin:0;color:#e7f8fc;font-size:12px;line-height:1.4;
+}
+body.skyhub-gfx .gfx-timeline-digest h5{
+  margin:10px 0 6px;color:#d5eaf4;font-size:11px;line-height:1.4;
+}
+body.skyhub-gfx #gfxTimelineSummary,
+body.skyhub-gfx #gfxTimelineTopEmpty,
+body.skyhub-gfx .gfx-timeline-digest-note{
+  font-size:11px;line-height:1.5;margin:6px 0 0;color:#bfdae4;
+}
+body.skyhub-gfx .gfx-timeline-top{
+  padding:0;margin:0;display:grid;gap:5px;list-style:none;
+}
+body.skyhub-gfx .gfx-timeline-top li{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:8px;padding:7px 8px;background:#143349;border-radius:5px;
+  border-left:2px solid #dfbd89;color:#ebf7fc;font-size:11px;
+}
+body.skyhub-gfx .gfx-timeline-top li strong{
+  flex:0 0 auto;font-variant-numeric:tabular-nums;
+}
+@media (forced-colors:active){
+  body.skyhub-gfx .gfx-timeline-digest,
+  body.skyhub-gfx .gfx-timeline-top li{
+    background:Canvas;border-color:CanvasText;color:CanvasText;
+  }
+}

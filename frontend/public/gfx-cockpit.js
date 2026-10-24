@@ -90,16 +90,44 @@ function timelineChanges(previous,next,observedAt){
     const label=FIELD_LABELS[spec.key];
     if(older.kind!==newer.kind){
       // This reflects a UI-observed status change; not a claim about packet loss.
-      out.push({kind:newer.kind,label,
+      out.push({key:spec.key,kind:newer.kind,label,
         message:KIND_LABELS[older.kind]+' → '+KIND_LABELS[newer.kind],
         observedAt});
     }else if(newer.timeVerified&&newer.sourceAt!==null&&
              older.sourceAt!==null&&newer.sourceAt>older.sourceAt){
-      out.push({kind:'timestamp',label,message:'Verifizierter Feldzeitpunkt fortgeschrieben',
+      out.push({key:spec.key,kind:'timestamp',label,message:'Verifizierter Feldzeitpunkt fortgeschrieben',
         observedAt});
     }
   }
   return out;
+}
+/* Diagnostic counts are based ONLY on the retained (newest first) 24
+ * UI observations. They are not packet rates, outage counts or persistent logs. */
+function summarizeTimeline(entries){
+  const considered=Array.isArray(entries)?entries.slice(0,TIMELINE_MAX):[];
+  const staleCounts=new Map(SPECS.map(spec=>[spec.key,0]));
+  let staleTransitions=0;
+  let timestampAdvances=0;
+  let otherTransitions=0;
+  for(const event of considered){
+    if(!event||!staleCounts.has(event.key))continue;
+    if(event.kind==='stale'&&
+       typeof event.message==='string'&&event.message.endsWith('→ Veraltet')){
+      staleTransitions++;
+      staleCounts.set(event.key,staleCounts.get(event.key)+1);
+    }else if(event.kind==='timestamp'&&event.message==='Verifizierter Feldzeitpunkt fortgeschrieben'){
+      timestampAdvances++;
+    }else if(QUALITY_KINDS.includes(event.kind)){
+      otherTransitions++;
+    }
+  }
+  const topStale=SPECS.map(spec=>({
+    key:spec.key,label:FIELD_LABELS[spec.key],count:staleCounts.get(spec.key)
+  })).filter(x=>x.count>0)
+    .sort((a,b)=>b.count-a.count||SPECS.findIndex(s=>s.key===a.key)-
+      SPECS.findIndex(s=>s.key===b.key)).slice(0,3);
+  return {retained:considered.length,staleTransitions,timestampAdvances,
+    otherTransitions,topStale};
 }
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
@@ -110,6 +138,9 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const timelineList=doc.getElementById('gfxTimelineList');
   const timelineEmpty=doc.getElementById('gfxTimelineEmpty');
   const timelineClear=doc.getElementById('gfxTimelineClear');
+  const timelineSummary=doc.getElementById('gfxTimelineSummary');
+  const timelineTop=doc.getElementById('gfxTimelineTop');
+  const timelineTopEmpty=doc.getElementById('gfxTimelineTopEmpty');
   const qualitySummary=doc.getElementById('gfxQualitySummary');
   const qualityCounts=new Map(QUALITY_KINDS.map(kind=>[
     kind,doc.getElementById('gfxQuality'+kind.charAt(0).toUpperCase()+kind.slice(1))
@@ -164,6 +195,27 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
     timelineList.replaceChildren(fragment);
     timelineEmpty.hidden=timeline.length!==0;
     if(timelineClear)timelineClear.disabled=timeline.length===0;
+    const aggregate=summarizeTimeline(timeline);
+    if(timelineSummary)timelineSummary.textContent=
+      aggregate.retained+' von maximal '+TIMELINE_MAX+' lokal behaltenen Beobachtungen: '+
+      aggregate.staleTransitions+' Wechsel zu „Veraltet“, '+
+      aggregate.timestampAdvances+' bestätigte Feldzeitpunkt-Fortschreibungen, '+
+      aggregate.otherTransitions+' andere Statuswechsel.';
+    if(timelineTop){
+      const ranking=doc.createDocumentFragment();
+      for(const item of aggregate.topStale){
+        const li=doc.createElement('li');
+        const name=doc.createElement('span');
+        name.textContent=item.label;
+        const tally=doc.createElement('strong');
+        tally.textContent=String(item.count)+' ×';
+        li.appendChild(name);
+        li.appendChild(tally);
+        ranking.appendChild(li);
+      }
+      timelineTop.replaceChildren(ranking);
+    }
+    if(timelineTopEmpty)timelineTopEmpty.hidden=aggregate.topStale.length>0;
   }
   if(timelineClear)timelineClear.addEventListener('click',()=>{
     timeline=[];
@@ -268,7 +320,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,QUALITY_KINDS,TIMELINE_MAX,valueFor,bearingFor,attitudeFor,qualityFor,observeFields,timelineChanges,mount});
+const api=Object.freeze({SPECS,QUALITY_KINDS,TIMELINE_MAX,valueFor,bearingFor,attitudeFor,qualityFor,observeFields,timelineChanges,summarizeTimeline,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

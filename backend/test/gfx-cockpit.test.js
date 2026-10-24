@@ -211,3 +211,47 @@ test('timeline controls are local, bounded and explain observation limitations',
   assert.match(html,/kein Paket- oder Flugprotokoll/i);
   assert.match(css,/gfx-timeline-item/);
 });
+
+test('bounded field-observation digest separates stale transitions from timestamp updates',()=>{
+  const d=device({lastTelemetryAt:now});
+  const base=cockpit.observeFields(d,fresh,now);
+  const aged=cockpit.observeFields(d,fresh,now+20000);
+  const transitions=cockpit.timelineChanges(base,aged,now+20000);
+  const s=cockpit.summarizeTimeline(transitions);
+  assert.deepEqual([s.retained,s.staleTransitions,s.timestampAdvances,s.otherTransitions],
+    [6,6,0,0]);
+  assert.deepEqual(s.topStale.map(x=>x.key),['battery','altitude','horizontalSpeed']);
+  assert.ok(transitions.every(x=>cockpit.SPECS.some(spec=>spec.key===x.key)));
+  assert.deepEqual(cockpit.summarizeTimeline([]),{
+    retained:0,staleTransitions:0,timestampAdvances:0,otherTransitions:0,topStale:[]
+  });
+});
+test('repeated stale transitions count only within retained window and for known keys',()=>{
+  const stale=(key,ts)=>({key,kind:'stale',
+    label:'unused',message:'Aktuell → Veraltet',observedAt:ts});
+  const step=(key,ts)=>({key,kind:'timestamp',label:'unused',
+    message:'Verifizierter Feldzeitpunkt fortgeschrieben',observedAt:ts});
+  const q=cockpit.summarizeTimeline([
+    stale('altitude',now),stale('altitude',now+1000),
+    stale('battery',now+2000),step('battery',now+3000),
+    {key:'privateAccount',kind:'stale',message:'Aktuell → Veraltet',observedAt:now},
+    {key:'heading',kind:'stale',message:'arbitrary untrusted message',observedAt:now}
+  ]);
+  assert.equal(q.retained,6);
+  assert.equal(q.staleTransitions,3);
+  assert.equal(q.timestampAdvances,1);
+  assert.equal(q.otherTransitions,1);
+  assert.deepEqual(q.topStale.map(x=>[x.label,x.count]),
+    [['Höhe relativ',2],['Akku',1]]);
+  assert.equal(cockpit.summarizeTimeline(Array.from({length:26},(_,i)=>stale('altitude',now+i))).retained,24);
+  assert.equal(cockpit.summarizeTimeline(Array.from({length:26},(_,i)=>stale('altitude',now+i))).staleTransitions,24);
+});
+test('diagnostic digest documents bounded observations without packet-loss estimates',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  for(const id of ['gfxTimelineDigestTitle','gfxTimelineSummary','gfxTimelineTopEmpty','gfxTimelineTop']){
+    assert.ok(html.includes('id="'+id+'"'),id);
+  }
+  assert.match(html,/Keine Fehlerhäufigkeit, Paketverlustquote/);
+  assert.match(css,/gfx-timeline-digest/);
+});

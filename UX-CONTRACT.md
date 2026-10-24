@@ -84,3 +84,8 @@ Die Qualitätstafel ist auf die acht visuell im Cockpit vorhandenen Felder begre
 ## SKY//PULSE · Lokale Diagnosezeitleiste
 
 Der Feldverlauf ist ein flüchtiger, auf 24 Einträge begrenzter Browser-UI-Beobachtungsspeicher ausschließlich für das aktuell ausgewählte Gerät. Statusänderungen und vorwärtslaufende verifizierte Einzelzeitstempel dürfen angezeigt werden, **nicht** aber als DJI-Ereignislog, Empfangsmitschnitt oder beweisfähige Verbindungs-/Paketverluststatistik bezeichnet werden. Anfangszustand und Gerätewechsel erzeugen keine synthetischen Ereignisse; nur beobachtete Folgezustände sind sichtbar. Keine Werte, Koordinaten, Seriennummern, Zugangstokens, Server-Nachrichten oder persistierten Logs im Diagnoseverlauf. Beobachtungszeit ist von DJI-Feldzeit klar getrennt. Die reine Beobachtung verändert weder die Instrumenten-Qualitätskategorien noch Freigabezustände.
+
+
+## SKY//PULSE · Begrenzte Frischewechsel-Diagnose
+
+Die Diagnosezusammenfassung berechnet ausschließlich Häufigkeiten unter den **maximal 24 zuletzt gespeicherten lokalen UI-Beobachtungen**. Sie muss beobachtete Übergänge zu „Veraltet“ von verifiziert fortgeschriebenen Feldzeitstempeln und sonstigen Statuswechseln trennen. Ein Ranking darf sich nur auf genau dieses Fenster beziehen und darf niemals als langfristige Fehlerhäufigkeit, Empfangslücke, Paketverlustquote, Hardwarediagnose oder Flugfreigabe beschriftet sein. Ein Feld ohne erfassten Wechsel erhält keinen Rang; bei Gleichstand ist die feste Reihenfolge der acht Instrumente ausschlaggebend. Löschen und Gerätewechsel setzen Liste und Zähler atomar zurück.

@@ -117,6 +117,8 @@ def main():
                 check(page.locator("#gfxCockpitBattery").inner_text()=="74 %","Battery fixture missing")
                 check(page.locator("#gfxTimelineList li").count()==0,
                       "Initial field snapshot must not create fabricated history")
+                check(page.locator("#gfxTimelineSummary").text_content().startswith("0 von maximal 24"),
+                      "Empty timeline digest must start at zero")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="7",
                       "Initial fixture: seven of eight instrument fields should be current")
                 check(page.locator("#gfxQualityStale").inner_text()=="1",
@@ -181,9 +183,17 @@ def main():
                       "Timeline must remain bounded to 24 observations")
                 check(page.locator("#gfxTimelineList").inner_text().find("Feldzeitpunkt")>=0,
                       "Verified fresh source timestamp advancement was not observed")
+                check(page.locator("#gfxTimelineSummary").inner_text().find("Feldzeitpunkt-Fortschreibungen")>=0,
+                      "Digest must distinguish confirmed source timestamps from status transitions")
+                check(page.locator("#gfxTimelineTop li").count()==0,
+                      "Source timestamp updates must not count as stale transitions")
                 page.locator("#gfxTimelineClear").click()
                 check(page.locator("#gfxTimelineList li").count()==0,
                       "Clearing local history must remove all observations")
+                check(page.locator("#gfxTimelineSummary").text_content().startswith("0 von maximal 24"),
+                      "Clearing the list must also clear its diagnostic digest")
+                check(page.locator("#gfxTimelineTop li").count()==0,
+                      "Clearing the list must reset the ranked stale fields")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="6",
                       "Incremental update should have only six of eight current fields")
                 check(page.locator("#gfxQualityMissing").inner_text()=="2",
@@ -241,6 +251,14 @@ def main():
                       "Single stale roll must hide the artificial horizon")
                 check("Veraltet" in page.locator("#gfxTimelineList").inner_text(),
                       "Source status transitions must be logged without claiming packet loss")
+                check(page.locator("#gfxTimelineTop li").count()==2,
+                      "Heading and roll should be the two observed stale transitions")
+                check("Kurs / Heading" in page.locator("#gfxTimelineTop").inner_text(),
+                      "Stale heading not reflected in digest")
+                check("Rollwinkel" in page.locator("#gfxTimelineTop").inner_text(),
+                      "Stale roll not reflected in digest")
+                check("2 Wechsel" in page.locator("#gfxTimelineSummary").inner_text(),
+                      "Digest counts must reflect observed stale transitions only")
                 check(page.locator("#gfxQualityStale").inner_text()=="1",
                       "Stale roll must count in quality panel")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="7",
@@ -281,6 +299,8 @@ def main():
                     page.locator("#gfxCockpitDevice").select_option("SYN-A1")
                     check(page.locator("#gfxTimelineList li").count()==0,
                           "Switching instrument devices must not leak previous device timeline")
+                    check(page.locator("#gfxTimelineTop li").count()==0,
+                          "Switching devices must also clear the stale-field ranking")
                     check(page.locator("#gfxCockpitAttitude").is_visible(),
                           "Fresh, verified artificial horizon must be visible at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-attitude-fresh-synthetic.png"),
