@@ -38,7 +38,7 @@ Workspace-Zeilen lesen.
 bestehenden **Test-Schema** `ENABLE ROW LEVEL SECURITY` plus
 `FORCE ROW LEVEL SECURITY`. Zugriff wird per
 `workspace_id::text = NULLIF(current_setting('skyhub.workspace_id',true),'')`
-gefiltert. Für veränderte bzw. neue Zeilen gelten sowohl `USING`
+gefiltert. Die Workspace-Bedingung ist ausdrücklich **RESTRICTIVE** (`AND`) und wird mit einer erforderlichen permissiven Basisregel kombiniert: Eine künftig zusätzliche permissive Policy kann den Workspace-Filter nicht einfach per `OR` aufheben. Für veränderte bzw. neue Zeilen gelten sowohl `USING`
 als auch `WITH CHECK`. Nicht gesetzter Workspace = keine sichtbaren
 Zeilen; `INSERT`/fremde Änderungen scheitern.
 
