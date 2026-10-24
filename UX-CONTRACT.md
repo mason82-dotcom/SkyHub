@@ -48,3 +48,15 @@
 | Select/Listbox | Nativer `<select id="deviceFilter">` in `frontend/public/index.html` | Gerätelisten-Vertrag oben | Einzelauswahl für lokalen Statusfilter | Browser: Tastatur, schmale Ansicht, Popup |
 
 Weitere Standardkomponenten entstehen erst mit einem tatsächlichen zweiten Workflow. Neue Schreibaktionen benötigen vor der UI-Umsetzung einen expliziten Rollen-, Fehler- und Bestätigungsvertrag; die lesende Karte definiert dafür keine Freigabe.
+
+
+## Experimenteller GFX-Branch: SKY//PULSE
+
+Diese Ergänzung gilt ausschließlich für `feature/hyperframes-gfx-ui-rework-20261024`. Auf `main` sind unverändert das bisherige Dashboard-Layout und dessen primäre Bedienung maßgeblich.
+
+- Die Modulnavigation verlinkt ausschließlich vorhandene interne Seiten. `aria-current` bezeichnet den gerade geöffneten Pfad. Die ursprüngliche Header-Navigation bleibt ohne aktivierte GFX-JavaScript-Erweiterung nutzbar.
+- Der Karten-Fokusmodus ist eine **reine Layoutänderung**. Geräteauswahl, Positionsfrische, Filterstatus, Karten-Layer, Token, Socket.IO und Flugspurabruf bleiben unverändert. Die Info-Spalte wird nie ausgeblendet.
+- Der Tastaturbefehl `/` fokussiert ausschließlich die Suche auf dem sichtbaren Operations-Panel und greift nicht bei aktiven Eingaben oder im TAK-Tab.
+- Die visuelle Animation ist temporär und stets abschaltbar. Betriebssystemseitige Einstellungen für reduzierte Bewegung oder erzwungene Farben haben Vorrang.
+- Warnstufen, „aktuell“-Kennzeichnungen und Frischegrenzen stammen unverändert aus den fachlichen Komponenten. Dekorative Radarflächen sind keine Telemetriequellen.
+- Relevante automatisierte Tests: `backend/test/hyperframes-gfx-ui.test.js` und die etablierten Dashboard-/TAK-/WPML-Tests.
