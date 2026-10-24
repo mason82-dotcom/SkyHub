@@ -202,8 +202,16 @@ Schreiben, Verlängern, Ausstellen oder Widerrufen von Sitzungen.
   JSON-Attribute ab und bindet jeden Wert an die vorher überprüfte
   JWT-Identität. Abgelaufene, ausstehende, gesperrte, fremde oder
   unvollständige Sitzungen werden zurückgewiesen.
-- Ein Redis-Ausfall verweigert jeden Zugriff. **Keine**
-  Dashboard-/DJI-/MQTT-Identität wird dadurch automatisch zum Operator.
+- Ein Redis-Ausfall verweigert jeden Zugriff. Ein zusätzliches
+  begrenztes `lookupTimeoutMs` (Standard: 300 ms, erlaubt: 25–2000 ms)
+  lässt auch bei dauerhaft hängenden Redis-Anfragen die Prüfung
+  **fail-closed** enden. Spät eintreffende Antworten erteilen **keine**
+  nachträgliche Berechtigung. Die Größe der gelesenen Sitzungsdaten
+  ist auf 2048 UTF-8-Bytes begrenzt. Im späteren Betrieb benötigt der
+  Redis-Treiber ebenfalls kontrollierte Netzwerk-/Retry-Timeouts und
+  Request-Concurrency-Limits.
+  **Keine** Dashboard-/DJI-/MQTT-Identität wird dadurch automatisch
+  zum Operator.
 - Der kombinierte Unit-Test
   `backend/test/wpml-operator-session-redis.test.js` verwendet
   ausschließlich synthetische Sitzungen und temporäre Ed25519-Schlüssel.
