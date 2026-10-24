@@ -10,7 +10,7 @@ on:
       - "backend/test/smart-farming-*.test.js"
       - "backend/workers/m3m_*"
       - "frontend/public/smart-farming*"
-      - "frontend/test/smart-farming-ui.test.js"
+      - "frontend/test/smart-farming*.test.js"
       - "tests/test_m3m_*.py"
   workflow_dispatch:
 
@@ -34,7 +34,7 @@ jobs:
         run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
       - name: Catalog read, auth, LAN rejection and view-model tests
         run: |
-          node --test backend/test/smart-farming-catalog.test.js backend/test/smart-farming-catalog-http.test.js backend/test/smart-farming-geo-api.test.js frontend/test/smart-farming-ui.test.js
+          node --test backend/test/smart-farming-catalog.test.js backend/test/smart-farming-catalog-http.test.js backend/test/smart-farming-geo-api.test.js frontend/test/smart-farming-ui.test.js frontend/test/smart-farming-map-lab.test.js
       - name: Check default Compose has no active Smart Farming endpoint
         run: |
           docker compose --env-file .env.example config --quiet
