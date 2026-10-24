@@ -198,7 +198,7 @@ def convert_and_check(source, output, *, expected_crs, expected_dims,
         driver_copy(source, output, driver='COG',
                     compress='DEFLATE', blocksize=256,
                     overview_resampling='NEAREST', resampling='NEAREST',
-                    predictor=3, bigtiff='IF_SAFER',
+                    predictor=1, bigtiff='IF_SAFER',
                     overviews='IGNORE_EXISTING')
         # Readback deliberately checks exact Float32 bits, not RGB images,
         # palette values or approximate index formulas.
