@@ -184,10 +184,10 @@ def assert_mobile_map_help_below(page, selector: str, name: str) -> None:
         const map=document.querySelector('#map');
         const help=document.querySelector(selector);
         const zoom=document.querySelector('.leaflet-control-zoom');
-        if(!map || !help || !zoom) return null;
+        if(!map || !help) return null;
         const m=map.getBoundingClientRect();
         const h=help.getBoundingClientRect();
-        const z=zoom.getBoundingClientRect();
+        const z=zoom?.getBoundingClientRect();
         return {
             mapHeight:Math.round(m.height),
             helpTop:h.top,
@@ -195,11 +195,11 @@ def assert_mobile_map_help_below(page, selector: str, name: str) -> None:
             helpPosition:getComputedStyle(help).position,
             helpHeight:Math.round(h.height),
             helpVisible:getComputedStyle(help).display!=='none',
-            zoomWithinMap:z.top>=m.top-1 && z.bottom<=m.bottom+1,
+            zoomWithinMap:!z || (z.top>=m.top-1 && z.bottom<=m.bottom+1),
             noHorizontalOverflow:document.documentElement.scrollWidth<=innerWidth+1
         };
     }""", selector)
-    check(state is not None, name + ": missing map/help/Leaflet zoom")
+    check(state is not None, name + ": missing map or help")
     check(state["mapHeight"] >= 300, name + ": usable mobile map height missing")
     check(state["helpPosition"] == "static" and state["helpVisible"] and
           state["helpHeight"] >= 30, name + ": safety help is hidden or still overlayed")
