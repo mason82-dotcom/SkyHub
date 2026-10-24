@@ -309,3 +309,105 @@ body.skyhub-gfx[data-gfx-motion="on"] .map-shell::after { animation: gfx-scan 8s
   }
   body.skyhub-gfx .map-shell::after { display: none; }
 }
+
+
+/* Phase 2: unified command rail. The original header navigation remains
+   available when JS is off, and is hidden only after successful enhancement. */
+body.skyhub-gfx.gfx-has-module-rail > header nav {display:none}
+body.skyhub-gfx .gfx-module-rail {
+  display:flex;align-items:center;gap:clamp(12px,2vw,32px);min-width:0;
+  padding:7px clamp(12px,2vw,32px);background:#0a1928;
+  border-bottom:1px solid #426276;
+}
+body.skyhub-gfx .gfx-rail-signature {
+  flex:0 0 auto;color:#c9fa79;letter-spacing:.16em;
+  font:800 13px/1.1 "Cascadia Code",Consolas,monospace;
+}
+body.skyhub-gfx .gfx-rail-links {
+  display:flex;flex:1;align-items:stretch;gap:5px;min-width:0;
+  overflow-x:auto;overscroll-behavior-x:contain;scrollbar-gutter:stable;
+}
+body.skyhub-gfx .gfx-rail-link {
+  min-width:133px;min-height:48px;display:flex;flex-direction:column;
+  justify-content:center;gap:2px;padding:7px 13px;border:1px solid transparent;
+  border-bottom:2px solid transparent;border-radius:8px 8px 0 0;
+  color:#c0d4e2;text-decoration:none;white-space:nowrap;
+  transition:background 180ms ease,border-color 180ms ease;
+}
+body.skyhub-gfx .gfx-rail-link strong {font-size:12px;font-weight:750;letter-spacing:.025em}
+body.skyhub-gfx .gfx-rail-link small {
+  font:500 10px/1.3 "Cascadia Code",Consolas,monospace;color:#aac0cd;
+}
+body.skyhub-gfx .gfx-rail-link:hover {background:#18354b;border-color:#416d87}
+body.skyhub-gfx .gfx-rail-link[aria-current="page"] {
+  color:#f2fbff;background:#17364a;border-color:#46748b;border-bottom-color:#c9fa79;
+}
+body.skyhub-gfx .gfx-rail-link[aria-current="page"] small {color:#c9fa79}
+
+/* Keyboard-first skip link, available without JS. */
+body.skyhub-gfx .gfx-skip {
+  position:fixed;z-index:1200;top:6px;left:8px;padding:10px 14px;
+  background:#dfffac;color:#091522;border:2px solid #091522;
+  border-radius:8px;font-size:14px;font-weight:750;transform:translateY(-180%);
+}
+body.skyhub-gfx .gfx-skip:focus {transform:translateY(0)}
+
+/* Content-sized header, rail and tab heights, no brittle pixel subtraction. */
+body.skyhub-gfx.gfx-page-dashboard {
+  display:grid;grid-template-rows:auto auto auto minmax(0,1fr);
+  height:100dvh;overflow:hidden;
+}
+body.skyhub-gfx.gfx-page-dashboard main#skyhubMain {min-height:0;overflow:hidden}
+body.skyhub-gfx.gfx-page-dashboard #operationsPanel {height:100%;min-height:0}
+body.skyhub-gfx.gfx-page-dashboard #takPanel {height:100%;min-height:0;overflow:auto}
+body.skyhub-gfx.gfx-page-dashboard #map {min-height:0}
+body.skyhub-gfx.gfx-page-dashboard.gfx-map-focus #operationsPanel {
+  grid-template-columns:minmax(0,1fr) 314px;
+}
+body.skyhub-gfx .gfx-map-focus-toggle {
+  min-height:42px;font-size:12px;border-color:#7290a4;background:#0b2536;
+}
+body.skyhub-gfx .gfx-map-focus-toggle[aria-pressed="true"] {
+  border-color:#c9fa79;color:#edffc4;
+}
+body.skyhub-gfx .gfx-map-caption {
+  position:absolute;z-index:480;bottom:28px;left:20px;width:min(300px,52%);
+  padding:11px 13px;border-left:3px solid #67e8f9;
+  background:rgba(8,22,36,.90);box-shadow:0 6px 18px rgba(0,0,0,.22);
+  pointer-events:none;
+}
+body.skyhub-gfx .gfx-map-caption strong {
+  display:block;letter-spacing:.13em;color:#b4f2fb;
+  font:750 11px/1.4 "Cascadia Code",Consolas,monospace;
+}
+body.skyhub-gfx .gfx-map-caption span {
+  display:block;margin-top:3px;color:#d6e6ef;font-size:11px;line-height:1.35;
+}
+/* Survey previously subtracted only its header from 100vh. */
+body.skyhub-gfx.gfx-page-survey {
+  display:flex;flex-direction:column;min-height:100dvh;
+}
+body.skyhub-gfx.gfx-page-survey main {
+  flex:1;height:auto;min-height:530px;
+}
+body.skyhub-gfx.gfx-page-survey .map-shell {min-height:530px}
+@media (max-width:960px) {
+  body.skyhub-gfx.gfx-page-dashboard {
+    display:block;height:auto;min-height:100dvh;overflow:visible;
+  }
+  body.skyhub-gfx.gfx-page-dashboard main#skyhubMain {overflow:visible}
+  body.skyhub-gfx.gfx-page-dashboard #operationsPanel {height:auto}
+  body.skyhub-gfx.gfx-page-dashboard.gfx-map-focus #operationsPanel {grid-template-columns:1fr}
+  body.skyhub-gfx .gfx-map-focus-toggle {display:none}
+  body.skyhub-gfx.gfx-page-survey main {min-height:0}
+  body.skyhub-gfx.gfx-page-survey .map-shell {min-height:300px}
+}
+@media (max-width:640px) {
+  body.skyhub-gfx .gfx-module-rail {display:block;padding:6px 10px}
+  body.skyhub-gfx .gfx-rail-signature {display:none}
+  body.skyhub-gfx .gfx-rail-link {min-width:136px;min-height:48px}
+  body.skyhub-gfx .gfx-map-caption {left:10px;bottom:30px;padding:9px;width:min(235px,56%)}
+}
+@media (prefers-reduced-motion:reduce),(forced-colors:active) {
+  body.skyhub-gfx .gfx-rail-link {transition:none}
+}
