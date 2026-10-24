@@ -17,7 +17,7 @@
 
 ## Technische Referenz des Hauptbranches
 
-**DJI-Missionsbeobachtung seit Merge von #74/#78/#83:** [Statusautomat](dji-rpc-lifecycle-observation.md), [read-only Reply-Adapter](dji-flighttask-rpc-integration.md) und [isoliertes CAS-Journal](dji-flighttask-durable-journal.md). Die Module sind **in `main`, aber nicht in die aktive DJI-Laufzeit eingebunden**; kein produktives SQL-Deployment.
+**DJI-Missionsbeobachtung seit Merge von #74/#78/#83:** [Statusautomat](dji-rpc-lifecycle-observation.md), [read-only Reply-Adapter](dji-flighttask-rpc-integration.md), [isoliertes CAS-Journal](dji-flighttask-durable-journal.md), [Offline-Retention](dji-flighttask-journal-retention.md) und [optionale Workspace-Autorisierung](dji-flighttask-journal-access.md). Die Module sind **nicht in die aktive DJI-Laufzeit eingebunden**; kein produktives SQL-Deployment oder freigegebener Identity Provider.
 
 | Bereich | Dokumente |
 | --- | --- |

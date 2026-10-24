@@ -119,7 +119,7 @@ jobs:
           POSTGRES_PASSWORD: local_ci_only
           POSTGRES_DB: skyhub_test
         ports:
-          # Use allocated test service port; no fixed host-port collision.
+          # Allocate a runner-specific host port: parallel CI runners may share a Docker host.
           - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U skyhub_test -d skyhub_test"
