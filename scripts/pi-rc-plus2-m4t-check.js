@@ -48,11 +48,18 @@ const JSON_MODE=${json};
     return res.json();
   }
   try{
-    const [health,devices,shapes,pairings]=await Promise.all([
+    const requests=[
       get('/api/health',false),get('/api/devices',true),
       get('/api/diagnostics/mqtt-shapes',true),
-      get('/api/pilot-admin/pairings',true).catch(()=>null)
-    ]);
+      get('/api/pilot-admin/pairings',true)
+    ];
+    // Missing optional API endpoints are incomplete prerequisites, not an
+    // undiagnosable crash. Only preflight isolates every GET failure.
+    // Live diagnostics retain their existing strict GET error behavior.
+    const [health,devices,shapes,pairings]=await Promise.all(
+      requests.map((request,index)=>
+        (PREFLIGHT||index===3)?request.catch(()=>null):request)
+    );
     if(PREFLIGHT){
       // Preflight intentionally keeps full snapshots inside the container:
       // only a fixed, anonymized allowlist of booleans crosses stdout.
