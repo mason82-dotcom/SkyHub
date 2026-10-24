@@ -40,7 +40,7 @@ Constraint-validated inputs and selects use `:user-invalid` for a distinct borde
 
 ## Mobile route library quick navigation
 
-The exceptionally long local route library now provides a four-target sticky, keyboard-operable in-page navigation: Bibliothek, Wegpunkte, Aktionen and Export. All are native hash anchors to unique `tabindex="-1"` targets, with header scroll-margin so the focused heading stays visible on a 320px display. It does not persist data, change route inputs, contact SkyHub endpoints, or initiate DJI actions. Chromium verifies hash changes and DOM focus for a route-editing session, including 320px.
+The exceptionally long local route library now provides a four-target sticky, keyboard-operable in-page navigation: Bibliothek, Wegpunkte, Aktionen and Export. At 430px and below the controls switch to a **two-column, two-row layout** with 12px labels and 44px minimum target height rather than four cramped columns. All are native hash anchors to unique `tabindex="-1"` targets. The target scroll margin increases to 130px on small screens so the sticky header does not obscure the focused section. It does not persist data, change route inputs, contact SkyHub endpoints, or initiate DJI actions. Chromium verifies hash changes and DOM focus for a route-editing session, including 320px.
 
 The skip-to-content link is additionally clipped while unfocused, retaining its position in keyboard tab order. This avoids visual overlay artifacts in synthetic full-page mobile screenshots while preserving its visible focus state.
 

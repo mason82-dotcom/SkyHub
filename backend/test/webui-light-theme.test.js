@@ -207,6 +207,9 @@ test('sticky route section jump links target focusable, distinct sections in rea
   assert.match(css, /\.skyhub-route-jumps\s*\{\s*position:\s*sticky/);
   assert.match(css, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /scroll-margin-top:\s*76px/);
+  assert.match(css, /@media \(max-width: 430px\)/);
+  assert.match(css, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /scroll-margin-top:\s*130px/);
 });
 
 test('native form errors use interaction-aware styling without initial required-field warning', () => {

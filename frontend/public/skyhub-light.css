@@ -438,6 +438,20 @@ body[data-skyhub-page="routes"] .skyhub-route-jumps a:hover {
 body[data-skyhub-page="routes"] :is(#routeLibrarySection, #routeWaypoints, #routeActions, #routeExport) {
   scroll-margin-top: 76px;
 }
+@media (max-width: 430px) {
+  /* Two comfortably readable rows rather than four tiny labels at phone widths. */
+  body[data-skyhub-page="routes"] .skyhub-route-jumps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body[data-skyhub-page="routes"] .skyhub-route-jumps a {
+    font-size: 12px;
+    padding: 9px 8px;
+  }
+  /* 2 rows * 44px + gap and chrome: account for the taller sticky bar. */
+  body[data-skyhub-page="routes"] :is(#routeLibrarySection, #routeWaypoints, #routeActions, #routeExport) {
+    scroll-margin-top: 130px;
+  }
+}
 
 /* Compact DJI Pilot 2 pairing view (separate embedded layout) */
 body[data-skyhub-page="pilot"] { background: var(--sky-bg); color: var(--sky-ink); }

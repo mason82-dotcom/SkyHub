@@ -434,15 +434,43 @@ def main() -> None:
                               state["focused"] == anchor and
                               state["x"] <= state["width"] + 1,
                               "Route quick jump did not focus matching section")
-                    # Confirm all four jumps remain visible and functional on a narrow screen.
-                    route_page.set_viewport_size({"width": 320, "height": 844})
-                    for anchor in ("routeActions", "routeExport", "routeLibrarySection"):
-                        route_page.locator('.skyhub-route-jumps a[href="#' +
-                                           anchor + '"]').click()
-                        check(route_page.evaluate("location.hash") == "#" + anchor,
-                              "320px jump lost target")
-                        check(route_page.locator('.skyhub-route-jumps a').count() == 4,
-                              "Mobile quick jump missing a target")
+                    # Confirm four jumps retain visible, legible labels at mobile widths.
+                    for width_px in (320, 390):
+                        route_page.set_viewport_size({"width": width_px, "height": 844})
+                        for anchor in ("routeActions", "routeExport", "routeLibrarySection"):
+                            route_page.locator('.skyhub-route-jumps a[href="#' +
+                                               anchor + '"]').click()
+                            state = route_page.evaluate("""id => {
+                                const nav=document.querySelector('.skyhub-route-jumps');
+                                const links=[...nav.querySelectorAll('a')];
+                                const r=nav.getBoundingClientRect();
+                                const target=document.getElementById(id).getBoundingClientRect();
+                                return {
+                                    hash:location.hash,
+                                    focus:document.activeElement.id,
+                                    columns:getComputedStyle(nav).gridTemplateColumns.split(' ').length,
+                                    font:getComputedStyle(links[0]).fontSize,
+                                    navBottom:r.bottom,
+                                    targetTop:target.top,
+                                    scrollWidth:document.documentElement.scrollWidth,
+                                    width:window.innerWidth,
+                                    linksVisible:links.every(link => {
+                                        const b=link.getBoundingClientRect();
+                                        return b.left>=r.left-1 && b.right<=r.right+1 &&
+                                               b.top>=r.top-1 && b.bottom<=r.bottom+1;
+                                    })
+                                };
+                            }""", anchor)
+                            check(state["hash"] == "#" + anchor and
+                                  state["focus"] == anchor,
+                                  str(width_px) + "px route jump lost hash/focus")
+                            check(state["columns"] == 2 and state["font"] == "12px",
+                                  str(width_px) + "px quick navigation labels too crowded")
+                            check(state["linksVisible"] and
+                                  state["scrollWidth"] <= state["width"] + 1,
+                                  str(width_px) + "px quick navigation clips")
+                            check(state["targetTop"] >= state["navBottom"] - 2,
+                                  str(width_px) + "px jump target hidden under sticky navigation")
                     route_page.set_viewport_size({"width": 1280, "height": 860})
                     assert_light_theme(route_page, "/wpml-route-library.html",
                                        "Route library after quick jump smoke")
