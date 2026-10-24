@@ -296,19 +296,36 @@
     const closed=[...report.polygon,report.polygon[0]];
     const data={type:'FeatureCollection',name:'SkyHub 2D preview – NOT DJI WPML',
       properties:{flightReady:false,exportableAsWaylines:false,scope:report.validationScope,
-        cameraReferenceMode:photoReport&&$('camera-mode').value!=='manual'?
+        cameraReferenceMode:(photoReport||dualReport)&&$('camera-mode').value!=='manual'?
           $('camera-mode').value:null,
         cameraReferenceHardwareVerified:false,
-        dualSensorComparison:dualReport?{
+        dualSensorComparison:dualReport&&dualCount?{
+          schema:'skyhub-wpml-dual-optics-inspection-v1',
           kind:'unregistered-theoretical-optics-comparison',
+          referenceMode:dualReport.mode,
           rgbGsdAcrossCmPerPx:dualReport.rgb.gsdAcrossCmPerPx,
+          rgbGsdAlongCmPerPx:dualReport.rgb.gsdAlongCmPerPx,
           msGsdAcrossCmPerPx:dualReport.multispectral.gsdAcrossCmPerPx,
+          msGsdAlongCmPerPx:dualReport.multispectral.gsdAlongCmPerPx,
           nominalStripSpacingM:dualReport.nominalStripSpacingM,
           nominalPhotoSpacingM:dualReport.nominalPhotoSpacingM,
+          nominalIntervalSeconds:dualReport.nominalIntervalSeconds,
+          effectiveMinIntervalSeconds:dualReport.effectiveMinIntervalSeconds,
           meetsNumericalCadence:dualReport.meetsNumericalCadence,
           nominalCaptureEvents:dualCount.nominalCaptureEvents,
-          coRegistrationVerified:false,flightReady:false,
-          pilot2HardwareVerified:false,exportableAsWaylines:false
+          nominalRGBJpegFiles:dualCount.nominalRGBJpegFiles,
+          nominalMultispectralTiffFiles:dualCount.nominalMultispectralTiffFiles,
+          nominalTotalFiles:dualCount.nominalTotalFiles,
+          photoActionsGenerated:false,
+          coRegistrationVerified:false,
+          relativeBoresightVerified:false,
+          opticalCalibrationVerified:false,
+          terrainVerified:false,
+          cameraHardwareVerified:false,
+          pilot2HardwareVerified:false,
+          actualCaptureSupported:null,
+          flightReady:false,dispatchAllowed:false,
+          exportableAsWaylines:false
         }:null,
         opticsEstimate:photoReport?{...photoReport}:null},
       features:[
