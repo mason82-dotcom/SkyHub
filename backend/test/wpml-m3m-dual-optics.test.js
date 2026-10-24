@@ -100,11 +100,55 @@ test('rejects geometry spoofing and any mismatched strip spacing',()=>{
   assert.throws(()=>dual.estimate(input(),{...geo,lineSpacingMeters:40}),
     /matching offline bounded survey geometry/);
   const invalid={...geo,segments:[{...geo.segments[0],kind:'transit'}]};
-  assert.throws(()=>dual.estimate(input(),invalid),/non-coverage segment/);
+  assert.throws(()=>dual.estimate(input(),invalid),/coverage segments differ/);
 });
 test('the dual comparison has no transport, camera actions, DJI dispatch or KMZ generation',()=>{
   const code=fs.readFileSync(path.join(__dirname,
     '../../frontend/public/wpml-m3m-dual-optics-core.js'),'utf8');
   assert.doesNotMatch(code,/\bfetch\s*\(|XMLHttpRequest|WebSocket|mqtt\.connect|\/api\/mission\/create/);
   assert.doesNotMatch(code,/\bcreateKmz\s*\(|\bpackageKmz\s*\(|waylines\.wpml/);
+});
+
+test('geometry replay rejects forged segment lengths, positions, headings and totals',()=>{
+  const r=dual.compare(input());
+  const valid=survey.preview(area,{spacing:r.nominalStripSpacingM,heading:20});
+  assert.ok(dual.estimate(input(),valid).nominalCaptureEvents>0);
+  const first=valid.segments[0];
+  const attempts=[
+    {...valid,segments:[{...first,lengthMeters:first.lengthMeters+42},
+      ...valid.segments.slice(1)]},
+    {...valid,segments:[{...first,start:{...first.start,lon:first.start.lon+0.001}},
+      ...valid.segments.slice(1)]},
+    {...valid,segments:[{...first,end:{lat:0,lon:0}},...valid.segments.slice(1)]},
+    {...valid,previewSegmentLengthMeters:valid.previewSegmentLengthMeters+30},
+    {...valid,areaSqMeters:valid.areaSqMeters+90},
+    {...valid,segmentCount:valid.segmentCount+1},
+    {...valid,stripeCount:valid.stripeCount+1},
+    {...valid,headingDegrees:55},
+    {...valid,outlineGeometry:{type:'Polygon',coordinates:[[
+      [8,48],[8.0005,48],[8.0005,48.0005],[8,48.0005],[8,48]
+    ]]}}
+  ];
+  for(const fake of attempts)
+    assert.throws(()=>dual.estimate(input(),fake),
+      /M3M dual-optics comparison invalid/);
+});
+
+test('polygon holes remain excluded in replayed dual-sensor offline capture count',()=>{
+  const LAT=48,LON=8,xm=111320*Math.cos(LAT*Math.PI/180),ym=111132;
+  const ring=coords=>[...coords,coords[0]].map(([x,y])=>[LON+x/xm,LAT+y/ym]);
+  const geometry={type:'Polygon',coordinates:[
+    ring([[0,0],[120,0],[120,120],[0,120]]),
+    ring([[40,40],[80,40],[80,80],[40,80]])]};
+  const spacing=dual.compare(input()).nominalStripSpacingM;
+  const preview=survey.preview(geometry,{heading:90,spacing});
+  const estimate=dual.estimate(input(),preview);
+  assert.ok(preview.segmentCount>preview.stripeCount);
+  assert.equal(estimate.flightReady,false);
+  assert.equal(estimate.photoActionsGenerated,false);
+  assert.equal(estimate.transitionCoverageIncluded,false);
+  const fake={...preview,outlineGeometry:{type:'Polygon',
+    coordinates:[geometry.coordinates[0]]}};
+  assert.throws(()=>dual.estimate(input(),fake),
+    /M3M dual-optics comparison invalid/);
 });
