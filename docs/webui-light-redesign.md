@@ -17,7 +17,10 @@ The live read-only Operations dashboard, the separate TAK / CoT tab, Smart Farmi
 node scripts/check-dashboard-inline.js
 npm --prefix backend test
 node --test backend/test/webui-light-theme.test.js
+# Requires isolated Playwright/Leaflet/Socket.IO dependencies as configured in:
+# .github/workflows/tak-ui-browser.yml
 ```
+The Chromium TAK acceptance now **serves the actual skyhub-light.css**, asserts successful stylesheet loading, computed light canvas and white device cards, and checks mobile/desktop viewport overflow. WPML Chromium offline smoke and M3M isolated acceptance remain independent workflows. All GitHub runs must pass on the **final merged branch head**, not merely on an earlier commit.
 Verify manually on 390px, 768px and desktop widths, both tabs, disconnected and connected telemetry states, map controls and all individual editor pages. Review in DJI Pilot 2 webview before promotion to production.
 
 ## Rollout and compatibility

@@ -123,7 +123,7 @@ main > p.detail:last-child {
     <p class="warning" id="security">Die Übermittlung der Zugangsdaten erfordert HTTPS.</p>
     <p id="result" role="status" aria-live="polite"></p>
   </section>
-  <p class="detail">Die Konfiguration verwendet ausschließlich den bestehenden EMQX-Broker auf Raspberry-Pi-Port 1884. Die Übernahme des bisherigen SkyHub-Dienstes auf Port 4000 erfolgt erst nach einem getrennten Freigabetest.</p>
+  <p class="detail">Die MQTT-Verbindung und der verwendete Broker-Port werden durch die serverseitige SkyHub-Konfiguration vorgegeben. Die geladene Kopplungsseite bestätigt weder die aktive Verbindung noch eine Freigabe zur Übernahme anderer SkyHub-Dienste.</p>
 </main>
 <script src="/pilot-login.js" defer></script>
 </body>

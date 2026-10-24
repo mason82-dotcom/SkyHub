@@ -109,3 +109,18 @@ test('survey optics dropdown uses the common light skin rather than hard-coded d
   assert.ok(control);
   assert.doesNotMatch(control[1],/background:|color:/i);
 });
+
+test('accessible placeholder and focus colors remain legible in light mode', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  assert.match(css, /outline: 3px solid var\(--sky-primary\)/);
+  assert.match(css, /input::placeholder, textarea::placeholder \{ color: #586b84/);
+  function luminance(hex) {
+    const channels=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)
+      .map(c=>c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4);
+    return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+  }
+  const background=luminance('#ffffff');
+  for(const [label,color,minimum] of [
+    ['focus','#2458d3',3],['placeholder','#586b84',4.5]
+  ])assert.ok((background+0.05)/(luminance(color)+0.05)>=minimum,label);
+});
