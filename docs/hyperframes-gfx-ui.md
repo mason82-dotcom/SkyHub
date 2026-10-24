@@ -91,3 +91,14 @@ Die drei Screenshots werden unter dem GitHub-Actions-Artefaktnamen `gfx-browser-
 - `aria-hidden=true` für die Grafik: keine doppelten Screenreader-Ansagen und kein behaupteter Flugmodus. Zeigerrotation hat ausdrücklich **keine CSS-Animation**, um Richtungswechsel und Datenalter nicht als simulierte Bewegung erscheinen zu lassen.
 - `forced-colors` erzwingt klare Systemfarben für Kursrose, Zeiger und Nordmarkierung. Die grafische Anzeige fügt keine neue Datenquelle oder Netzwerkverbindung hinzu.
 - Abnahme: `backend/test/gfx-cockpit.test.js` testet negative Heading-Werte, 360°-Wrap, veraltete/ungeprüfte und getrennte Verbindungen; `tests/gfx_browser_acceptance.py` prüft echten Renderingzustand und Zeigerwinkel im isolierten Chromium. CI 5/5 am Implementierungscommit `348945aef82a` bestanden.
+
+
+## Phase 6 · Künstlicher Horizont mit zweifacher Einzelwert-Prüfung (24.10.2026)
+
+- `frontend/public/gfx-cockpit.js` stellt zwei weitere tatsächliche DJI-Felder dar: `attitudePitch` (Nickwinkel) und `attitudeRoll` (Rollwinkel), mit unabhängigen Zeitangaben aus `telemetryFieldAt` und `telemetryFieldTimeVerified`.
+- Die Grafik `#gfxCockpitAttitude` ist ausschließlich eine **schematische** Lagendarstellung und **kein** zertifiziertes Fluglageinstrument. Pitch ist auf ±90°, Roll auf ±180° begrenzt; die reine CSS-Geometrie verwendet `rotate(-roll)` und `translateY(pitch × 0.8 px)`.
+- Der künstliche Horizont erscheint **nur dann**, wenn **beide** Felder den Status `current` aus `SkyHubTelemetryFreshness.evaluateField` erhalten. Fehlende, zeitlich ungeprüfte, veraltete, unzulässige oder von einem getrennten Fluggerät gemeldete Daten unterdrücken die Szene.
+- Die numerischen Nick-/Rollwerte und ihre eigenständige Frischekennzeichnung bleiben unabhängig vom Szenenstatus sichtbar. Die Szene besitzt `aria-hidden="true"` und weder CSS-Animation noch Interpolation – keine künstliche Echtzeitbewegung.
+- Ehemals doppelt verwendetes `gfxCockpitHeading` wurde eindeutig getrennt: `gfxCockpitTitle` bezeichnet den Instrumentenbereich, `gfxCockpitHeading` ausschließlich den numerischen Kurswert. Die Änderung verhindert falsches Überschreiben der Überschrift und verbessert die Screenreader-Beschriftung.
+- Unit-Tests sichern gültige Winkel, Grenzen, fehlende Felder, unbestätigte Zeitpunkte und einseitige Veraltung ab. Der isolierte Chromium-Test verifiziert die gerenderte Lagegeometrie mit **synthetischen** Werten sowie das Ausblenden bei veraltetem Rollwert.
+- DJI-Protokoll, Authentisierung, Datenspeicherung, Flugkommandos, TAK-Sperre und produktive Raspberry-Pi-Dienste bleiben unverändert.

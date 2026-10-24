@@ -82,3 +82,8 @@ Vor einer Produktivübernahme sind reale Browser- und Hardware-Abnahmen erforder
 ### Kursinstrument (GFX-Variante)
 
 Die 48px-Kursrose im Heading-Instrument nutzt Cyan/Lime-Kontrast gegen Deep-Panel. Die 0°-Nordreferenz ist als N markiert, die aus DJI-Heading abgeleitete Richtung wird nur bei explizit aktueller, zeitgeprüfter Meldung dargestellt. Keine flugbereitschaftssignalisierende Bewegung; unbekannte/stale Quelle blendet die Rose aus. Im High-Contrast-Modus kommen `Canvas` und `CanvasText` zum Einsatz. Fachliche Zustandskommunikation bleibt textbasiert und gehört dem Telemetrie-Zeitprüfer.
+
+
+### Künstlicher Horizont (GFX-Variante)
+
+Zweifarbige, kreisförmig beschnittene Lagefläche (Sky/State) mit fester Luftfahrzeugmarkierung; Textwerte für Pitch und Roll daneben. Die Szene ist nur bei unabhängig bestätigter Zeitfrische beider DJI-Messwerte sichtbar und wird sonst ausgeblendet. Keine Animation der Messwert-Geometrie, keine übergestülpte Flugbereitschaftssemantik. Die Zeichenfläche ist dekorativ; der Screenreader erhält die Zahlen und per-Feld-Zeitstatus. Unter 390 px bleibt das Instrument in einer zweispaltigen, kompakten Ansicht.

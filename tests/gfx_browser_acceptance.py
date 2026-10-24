@@ -181,6 +181,33 @@ def main():
                       "Stale heading must not display an active compass needle")
                 check("Veraltet" in page.locator("#gfxCockpitHeadingAge").inner_text(),
                       "Stale heading provenance missing")
+                # One field stays fresh while roll becomes stale. Keep text,
+                # hide only the schematic flight-attitude geometry.
+                page.evaluate("""() => {
+                  window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
+                    sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',aircraftConnected:true,
+                    lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
+                    telemetry:{battery:52,altitude:0,horizontalSpeed:0,heading:270,
+                      verticalSpeed:0,linkQuality:4,latitude:49.1,longitude:8.6,
+                      attitudePitch:8,attitudeRoll:-15},
+                    lastPositionAt:Date.now(),positionTimeVerified:true,
+                    telemetryFieldAt:{battery:Date.now(),altitude:Date.now(),
+                      horizontalSpeed:Date.now(),heading:Date.now(),
+                      verticalSpeed:Date.now(),linkQuality:Date.now(),
+                      attitudePitch:Date.now(),attitudeRoll:Date.now()-32000},
+                    telemetryFieldTimeVerified:{battery:true,altitude:true,
+                      horizontalSpeed:true,heading:true,verticalSpeed:true,
+                      linkQuality:true,attitudePitch:true,attitudeRoll:true}
+                  });
+                }""")
+                check(page.locator("#gfxCockpitPitch").inner_text()=="8,0 °",
+                      "Fresh pitch should remain visible")
+                check(page.locator("#gfxCockpitRoll").inner_text()=="-15,0 °",
+                      "Stale roll must retain its reported numeric value")
+                check(page.locator("#gfxCockpitRollAge").get_attribute("data-kind")=="stale",
+                      "Stale roll provenance should remain explicit")
+                check(page.locator("#gfxCockpitAttitude").is_hidden(),
+                      "Single stale roll must hide the artificial horizon")
                 page.locator("#gfxMapFocus").click()
                 check(page.locator("#gfxMapFocus").get_attribute("aria-pressed")=="true",
                       "Map focus toggle failed")
