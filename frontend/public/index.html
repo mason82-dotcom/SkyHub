@@ -143,6 +143,21 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <label for="gfxCockpitDevice">Gerät für Instrumente</label>
       <select id="gfxCockpitDevice" disabled aria-describedby="gfxCockpitHelp"><option value="">Warte auf Gerätedaten</option></select>
       <p id="gfxCockpitStatus" role="status">Warte auf Gerätedaten.</p>
+      <section class="gfx-quality" aria-labelledby="gfxQualityTitle">
+        <div class="gfx-quality-head">
+          <h3 id="gfxQualityTitle">Einzelwert-Qualität</h3>
+          <span class="gfx-quality-scope">Nur 8 Instrumentenfelder</span>
+        </div>
+        <p id="gfxQualitySummary">Noch keine Instrumentenfelder geprüft</p>
+        <dl class="gfx-quality-counts">
+          <div data-kind="current"><dt>Aktuell · geprüft</dt><dd id="gfxQualityCurrent">—</dd></div>
+          <div data-kind="stale"><dt>Veraltet</dt><dd id="gfxQualityStale">—</dd></div>
+          <div data-kind="unverified"><dt>Zeit ungeprüft</dt><dd id="gfxQualityUnverified">—</dd></div>
+          <div data-kind="unknown"><dt>Zeit unbekannt</dt><dd id="gfxQualityUnknown">—</dd></div>
+          <div data-kind="missing"><dt>Nicht empfangen</dt><dd id="gfxQualityMissing">—</dd></div>
+        </dl>
+        <p class="gfx-quality-help">Dies ist die Feldprüfung der acht hier dargestellten Instrumentenwerte, nicht der Status der Drohne oder eine Flugfreigabe.</p>
+      </section>
       <div class="gfx-cockpit-dials" aria-label="Gemeldete Einzelwerte und Zeitprüfung">
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Akku</span><strong id="gfxCockpitBattery" class="gfx-cockpit-value">—</strong><small id="gfxCockpitBatteryAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small><div class="gfx-cockpit-meter" aria-hidden="true"><span id="gfxCockpitBatteryMeter"></span></div></div>
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Höhe relativ</span><strong id="gfxCockpitAltitude" class="gfx-cockpit-value">—</strong><small id="gfxCockpitAltitudeAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>

@@ -115,6 +115,14 @@ def main():
                 page.wait_for_function("() => document.querySelector('#gfxCockpitDevice').options.length===2")
                 check(page.locator(".leaflet-container").count()==1,"Leaflet map missing")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="74 %","Battery fixture missing")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="7",
+                      "Initial fixture: seven of eight instrument fields should be current")
+                check(page.locator("#gfxQualityStale").inner_text()=="1",
+                      "Initial fixture: altitude stale field missing in quality summary")
+                check(page.locator("#gfxQualityMissing").inner_text()=="0",
+                      "Initial fixture: no missing instrument fields expected")
+                check("7 von 8" in page.locator("#gfxQualitySummary").inner_text(),
+                      "Quality summary must state scope, not flight readiness")
                 check("Veraltet" in page.locator("#gfxCockpitAltitudeAge").inner_text(),
                       "Old altitude should be marked stale")
                 check(page.locator("#gfxCockpitAltitude").inner_text()=="35,5 m",
@@ -144,6 +152,8 @@ def main():
                 page.screenshot(path=str(ARTIFACTS/"gfx-1365-attitude-fresh-synthetic.png"),full_page=True)
                 page.locator("#gfxCockpitDevice").select_option("SYN-B2")
                 check(page.locator("#gfxCockpitAltitude").inner_text()=="0,0 m","Real zero missing")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="8",
+                      "Device selection must recompute all eight independent field statuses")
                 page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
                     sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',aircraftConnected:true,
                     lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
@@ -160,6 +170,10 @@ def main():
                       "Device selection lost on incremental OSD")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="52 %",
                       "New OSD field not rendered")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="6",
+                      "Incremental update should have only six of eight current fields")
+                check(page.locator("#gfxQualityMissing").inner_text()=="2",
+                      "Missing pitch/roll after update must be counted as missing")
                 # A stale heading must remove the compass, not suggest a live course.
                 page.evaluate("""() => {
                   const s=window.__skyhubTestSockets.at(-1);
@@ -211,6 +225,10 @@ def main():
                       "Stale roll provenance should remain explicit")
                 check(page.locator("#gfxCockpitAttitude").is_hidden(),
                       "Single stale roll must hide the artificial horizon")
+                check(page.locator("#gfxQualityStale").inner_text()=="1",
+                      "Stale roll must count in quality panel")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="7",
+                      "Remaining seven instrument fields must remain current")
                 page.locator("#gfxMapFocus").click()
                 check(page.locator("#gfxMapFocus").get_attribute("aria-pressed")=="true",
                       "Map focus toggle failed")
@@ -239,6 +257,8 @@ def main():
                           "Leaflet zoom and map tools intersect at "+str(width)+
                           " / geometry="+repr(geo))
                     check(page.locator("#gfxCockpit").is_visible(),"Cockpit absent on mobile")
+                    check(page.locator("#gfxQualitySummary").is_visible(),
+                          "Instrument-quality status not visible on mobile at "+str(width))
                     check(page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 2"),
                           "Horizontal document overflow at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-synthetic.png"),full_page=True)

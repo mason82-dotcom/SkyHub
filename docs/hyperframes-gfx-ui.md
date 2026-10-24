@@ -111,3 +111,12 @@ Die realen Chromium-Screenshots mit ausschließlich synthetischen DJI-Gerätedat
 Der isolierte Browser-Test prüft die tatsächlichen `getBoundingClientRect()`-Rechtecke auf Überlappung. Zusätzlich werden Desktop- und Mobil-Screenshots eines nach Einzelwert-Zeitprüfung gültigen künstlichen Horizonts aufgenommen. Die bereits vorhandenen Screenshots des veralteten Rollwinkels bleiben erhalten, sodass beide Zustände beurteilt werden können. Alle Artefakte tragen ausdrücklich die Kennzeichnung `SYNTHETIC / OFFLINE BROWSER TEST`.
 
 Kein produktiver Backend-, DJI- oder Raspberry-Pi-Test und keine Android-WebView-Hardwareabnahme.
+
+
+## Phase 8 · Einzelwert-Datenqualitätsanzeige (24.10.2026)
+
+Die SKY//PULSE-Cockpitkarte zeigt unter der ausgewählten Drohne einen **Textstatus für genau acht dargestellte Instrumentenfelder**: Akku, relative Höhe, horizontale Geschwindigkeit, Heading, vertikale Geschwindigkeit, Pitch, Roll und SDR-Funkqualität. Die Anzeige zählt `current`, `stale`, `unverified`, `unknown` und `missing` anhand **derselben** feldbezogenen DJI-Zeitprüfung wie die Einzelwerte. Bei invaliden, nichtfiniten oder außerhalb definierter Darstellungsgrenzen liegenden Messwerten zählt das Feld als nicht empfangen.
+
+`qualityFor(device, freshness, now)` arbeitet rein lokal, fügt weder persistierte Nutzerdaten noch Netzwerkzugriffe hinzu und verwendet keinen aggregierten MQTT-, Flug- oder Positionsstatus. Die Summe der fünf Kategorien entspricht genau der Anzahl der acht Spezifikationen. Fehlt ein ausgewähltes Gerät, stehen Striche statt irreführender Nullen. Bei getrenntem Fluggerät wird kein gemessener Feldwert als `current` ausgewiesen. Die Zahlen sind eine **begrenzte Instrumentenprüfung**, ausdrücklich **kein DJI-Flugbereitschaftsscore**.
+
+Die separate Datenqualitätstafel verwendet einfache Textzähler und läuft auch unter `forced-colors`. In der Chromium-Abnahme wird die Kategorisierung beim Gerätewechsel und nach inkrementellen Socket.IO-Snapshots sowie bei einem veralteten Rollwinkel geprüft. Weitere Unit-Tests decken fehlende, ungeprüfte, zeitlich unbekannte und ungültige Werte sowie die Summeninvariante ab.

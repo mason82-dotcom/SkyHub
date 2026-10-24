@@ -140,3 +140,34 @@ test('attitude visual is decorative and starts hidden without invented data',()=
   assert.match(css,/gfx-attitude-instrument\[hidden\]/);
   assert.doesNotMatch(css,/gfx-attitude-plane\s*\{[^}]*animation\s*:/);
 });
+
+test('quality panel counts only eight shown fields, never aggregate OSD readiness',()=>{
+  const d=device({lastTelemetryAt:now});
+  // Existing test fixture has six measured fields, two attitude fields absent.
+  let q=cockpit.qualityFor(d,fresh,now);
+  assert.deepEqual(q,{total:8,current:6,stale:0,unverified:0,unknown:0,missing:2});
+  d.telemetryFieldAt.altitude=now-19000;
+  d.telemetryFieldTimeVerified.heading=false;
+  delete d.telemetryFieldAt.linkQuality;
+  d.telemetry.battery=120;
+  q=cockpit.qualityFor(d,fresh,now);
+  assert.deepEqual(q,{total:8,current:2,stale:1,unverified:1,unknown:1,missing:3});
+  assert.equal(Object.keys(q).filter(k=>k!=='total')
+    .reduce((n,k)=>n+q[k],0),cockpit.SPECS.length);
+  d.aircraftConnected=false;
+  q=cockpit.qualityFor(d,fresh,now);
+  assert.equal(q.current,0,'disconnected device may not have current instrument quality');
+  assert.equal(q.stale,4,'measured nonmissing fields become stale');
+  assert.equal(cockpit.qualityFor(null,fresh,now),null);
+});
+test('quality panel offers text counts and clear non-readiness label',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  for(const id of ['gfxQualitySummary','gfxQualityTitle','gfxQualityCurrent','gfxQualityStale',
+    'gfxQualityUnverified','gfxQualityUnknown','gfxQualityMissing']){
+    assert.ok(html.includes('id="'+id+'"'),id);
+  }
+  assert.match(html,/nicht der Status der Drohne oder eine Flugfreigabe/);
+  assert.match(html,/class="gfx-quality" aria-labelledby="gfxQualityTitle"/);
+  assert.match(css,/gfx-quality-counts/);
+});

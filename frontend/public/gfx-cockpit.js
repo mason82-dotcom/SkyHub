@@ -42,12 +42,28 @@ function attitudeFor(device,freshness,now=Date.now()){
      freshness?.evaluateField?.(device,'attitudeRoll',now)?.kind!=='current')return null;
   return {pitch,roll,offset:Math.round(pitch*0.8*10)/10};
 }
+/* Counts the eight displayed instrument fields only; never flight readiness.
+ * Unknown or future timestamps count separately from unverified timestamps. */
+const QUALITY_KINDS=Object.freeze(['current','stale','unverified','unknown','missing']);
+function qualityFor(device,freshness,now=Date.now()){
+  if(!device||!freshness||typeof freshness.evaluateField!=='function')return null;
+  const counts={current:0,stale:0,unverified:0,unknown:0,missing:0};
+  for(const spec of SPECS){
+    const kind=valueFor(device,spec,freshness,now).kind;
+    counts[QUALITY_KINDS.includes(kind)?kind:'unknown']++;
+  }
+  return {total:SPECS.length,...counts};
+}
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
   if(!rootEl||!fieldFreshness||typeof fieldFreshness.evaluateField!=='function')return null;
   const picker=doc.getElementById('gfxCockpitDevice');
   const status=doc.getElementById('gfxCockpitStatus');
   const locate=doc.getElementById('gfxCockpitLocate');
+  const qualitySummary=doc.getElementById('gfxQualitySummary');
+  const qualityCounts=new Map(QUALITY_KINDS.map(kind=>[
+    kind,doc.getElementById('gfxQuality'+kind.charAt(0).toUpperCase()+kind.slice(1))
+  ]));
   if(!picker||!status||!locate)return null;
   let selected=null;
   let previousMapSelection=null;
@@ -83,6 +99,14 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
       current.telemetryTimeVerified===false?'OSD empfangen · Gesamtzeit ungeprüft; Felder separat bewerten.':
       'Gerätemesswerte · Frische je Feld separat angegeben.';
     if(nextStatus!==lastStatus){status.textContent=nextStatus;lastStatus=nextStatus;}
+    const quality=qualityFor(current,fieldFreshness,now);
+    if(qualitySummary)qualitySummary.textContent=quality?
+      quality.current+' von '+quality.total+' angezeigten Instrumentenfeldern aktuell und zeitverifiziert':
+      'Noch keine Instrumentenfelder geprüft';
+    for(const kind of QUALITY_KINDS){
+      const node=qualityCounts.get(kind);
+      if(node)node.textContent=quality?String(quality[kind]):'—';
+    }
     locate.disabled=!mapAvailable||!current||
       current.positionUnavailable===true||
       !current.telemetry||
@@ -146,7 +170,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,valueFor,bearingFor,attitudeFor,mount});
+const api=Object.freeze({SPECS,QUALITY_KINDS,valueFor,bearingFor,attitudeFor,qualityFor,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

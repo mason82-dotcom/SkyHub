@@ -74,3 +74,8 @@ Die Kursrose im Heading-Instrument ist ein sekundäres grafisches Hilfsmittel. S
 ## SKY//PULSE · Künstlicher Horizont (experimenteller Branch)
 
 Die Nick-/Rollanzeige übernimmt ausschließlich die normalisierten `attitudePitch`- und `attitudeRoll`-Felder aus der bestehenden Datenquelle. Das grafische Element ist nicht sicherheitskritisch und besitzt keine zertifizierte Fluglage-Geometrie; die Winkelskala ist schematisch. Die Szene wird nur sichtbar, wenn **beide** Feldwerte aktuell, zeitverifiziert und plausibel sind. Die numerischen Einzelwerte und deren Alter bleiben auch bei nur teilweise verfügbaren Daten zugänglich. Kein Wechsel des Flugstatus oder der Bedienrechte lässt sich aus der optischen Szene ableiten. Der Titel `gfxCockpitTitle` ist eindeutig vom Heading-Wert `gfxCockpitHeading` getrennt.
+
+
+## SKY//PULSE · Instrumentenfeldqualität
+
+Die Qualitätstafel ist auf die acht visuell im Cockpit vorhandenen Felder begrenzt. Ausschließlich `current` bedeutet „aktuell und zeitverifiziert“; fehlende/ungültige Felder, feldbezogene Veraltung, unbestätigte sowie nicht bekannte Einzelzeitpunkte müssen eigenständig gezählt und textlich erläutert werden. Aggregat-OSD-Frische, verbundene Topologie oder eine positive Qualitätssumme sind **weder** eine Flugfreigabe **noch** ein Gerätelink- oder Sicherheitsnachweis. Die Qualitätstafel darf keine vom Nutzer veränderbaren Schwellwerte zur künstlichen Statusaufwertung enthalten.
