@@ -12,6 +12,9 @@ const express = require('express');
 const {createSmartFarmingGeoRouter} = require('../smart-farming-geo-api');
 const {createPrivateRasterProvider} = require('../smart-farming-raster-provider');
 const TOKEN = 'private-test-workspace-token-1234567890';
+// Default main/backend CI deliberately has no optional Python raster wheels.
+// Run this *real subprocess* suite only from the dedicated raster workflow.
+const integrationTest = process.env.SKYHUB_M3M_REAL_RASTER_PROVIDER_TEST === '1' ? test : test.skip;
 
 function makeFixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'skyhub-m3m-p3-http-'));
@@ -84,7 +87,7 @@ async function post(url,geometry,token=TOKEN) {
     body:JSON.stringify({schema:'skyhub-m3m-geospatial-request-v1',geometry})
   });
 }
-test('authorized HTTP -> real Python/Rasterio -> sealed numeric pixel response', async t => {
+integrationTest('authorized HTTP -> real Python/Rasterio -> sealed numeric pixel response', async t => {
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   const res=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
   assert.equal(res.status,200);
@@ -106,27 +109,27 @@ test('authorized HTTP -> real Python/Rasterio -> sealed numeric pixel response',
     !raw.includes(cfg.sealSha256));
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('no authorization means no registry access and no worker',async t=>{
+integrationTest('no authorization means no registry access and no worker',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg,{workspace:'farm-other'});
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
   assert.equal(resp.status,404);
   assert.deepEqual(api.calls,['authorize']);
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('view-token auth still mandatory before any asset lookup',async t=>{
+integrationTest('view-token auth still mandatory before any asset lookup',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point},'wrong-token');
   assert.equal(resp.status,401);
   assert.deepEqual(api.calls,[]);
 });
-test('workspace mismatch in resolved entry is refused and temporary files removed',async t=>{
+integrationTest('workspace mismatch in resolved entry is refused and temporary files removed',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg,{tamperedRegistry:true});
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
   assert.equal(resp.status,503);
   assert.deepEqual(api.calls,['authorize','registry']);
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('point outside raster is rejected and response hides geographic locations',async t=>{
+integrationTest('point outside raster is rejected and response hides geographic locations',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   const resp=await post(await api.ready(),{type:'Point',coordinates:[0,0]});
   assert.equal(resp.status,503);
@@ -135,21 +138,21 @@ test('point outside raster is rejected and response hides geographic locations',
     !raw.includes(cfg.sealSha256));
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('modified GeoTIFF is rejected by full seal/pixel QA (no raster result)',async t=>{
+integrationTest('modified GeoTIFF is rejected by full seal/pixel QA (no raster result)',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   fs.appendFileSync(path.join(cfg.bundleDir,'indices','ndvi.tif'),'tampered');
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
   assert.equal(resp.status,503);
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('independently pinned seal is required; forged seal never passes',async t=>{
+integrationTest('independently pinned seal is required; forged seal never passes',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   fs.appendFileSync(cfg.sealFile,'tampered');
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
   assert.equal(resp.status,503);
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
-test('no spatial access via symlink outside source root',async t=>{
+integrationTest('no spatial access via symlink outside source root',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg);
   const outside = path.join(cfg.root,'outside');
   fs.renameSync(cfg.bundleDir,outside);
