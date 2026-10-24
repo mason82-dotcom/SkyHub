@@ -76,7 +76,7 @@ def guard(page,base,fixture,unexpected):
             route.fulfill(path=str(LEAFLET/"leaflet.css"),content_type="text/css")
         elif url.endswith("marker-icon.png") or url.endswith("marker-shadow.png"):
             route.fulfill(path=str(LEAFLET/"images"/url.split("/")[-1]),content_type="image/png")
-        elif url.startswith("https://") and ".tile.openstreetmap.org/" in url:
+        elif url.startswith("https://tile.openstreetmap.org/") or (url.startswith("https://") and ".tile.openstreetmap.org/" in url):
             route.fulfill(status=200,body=TILE,content_type="image/png")
         else:
             unexpected.append("Unexpected outbound request blocked");route.abort()
