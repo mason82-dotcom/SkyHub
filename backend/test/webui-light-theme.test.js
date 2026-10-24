@@ -184,5 +184,5 @@ test('native form errors use interaction-aware styling without initial required-
   assert.match(css, /\[aria-invalid="true"\]/);
   assert.match(css, /border: 2px solid var\(--sky-danger\)/);
   assert.match(css, /box-shadow: inset 3px 0 0 var\(--sky-danger\)/);
-  assert.doesNotMatch(css, /(^|[,\\s])input:invalid\s*[,\\{]/m);
+  assert.doesNotMatch(css, /(^|,)\s*input:invalid\b/m);
 });
