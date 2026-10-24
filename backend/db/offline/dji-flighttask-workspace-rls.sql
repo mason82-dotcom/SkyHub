@@ -5,10 +5,17 @@
 REVOKE ALL ON dji_flighttask_observation_snapshots FROM PUBLIC;
 ALTER TABLE dji_flighttask_observation_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dji_flighttask_observation_snapshots FORCE ROW LEVEL SECURITY;
+-- At least one permissive policy is required. Keep the mandatory tenant
+-- predicate RESTRICTIVE so a future permissive policy cannot OR it away.
+DROP POLICY IF EXISTS skyhub_flighttask_workspace_grant ON dji_flighttask_observation_snapshots;
 DROP POLICY IF EXISTS skyhub_flighttask_workspace_scope ON dji_flighttask_observation_snapshots;
-CREATE POLICY skyhub_flighttask_workspace_scope
+CREATE POLICY skyhub_flighttask_workspace_grant
   ON dji_flighttask_observation_snapshots
   AS PERMISSIVE FOR ALL TO PUBLIC
+  USING (true) WITH CHECK (true);
+CREATE POLICY skyhub_flighttask_workspace_scope
+  ON dji_flighttask_observation_snapshots
+  AS RESTRICTIVE FOR ALL TO PUBLIC
   USING (workspace_id::text = NULLIF(current_setting('skyhub.workspace_id', true), ''))
   WITH CHECK (workspace_id::text = NULLIF(current_setting('skyhub.workspace_id', true), ''));
 -- A policy does not grant SELECT/INSERT/UPDATE/DELETE itself. The isolated
