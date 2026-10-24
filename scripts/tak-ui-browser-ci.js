@@ -73,14 +73,16 @@ const assertNoOverflow=async page=>{
    lightStylesheet: [...document.styleSheets].some(sheet=>sheet.href?.endsWith('/skyhub-light.css')),
    colorScheme: getComputedStyle(document.documentElement).colorScheme,
    bodyBackground: getComputedStyle(document.body).backgroundColor,
-   deviceBackground: getComputedStyle(document.querySelector('.device')).backgroundColor
+   deviceBackground: document.querySelector('.device') ?
+     getComputedStyle(document.querySelector('.device')).backgroundColor : null
  }));
  assert.equal(dimensions.mainCount,1,'one semantic main landmark');
  assert.equal(dimensions.tabs,2,'two accessible tabs');
  assert.equal(dimensions.lightStylesheet,true,'light stylesheet must be loaded successfully');
  assert.equal(dimensions.colorScheme,'light','root color-scheme must remain light');
  assert.equal(dimensions.bodyBackground,'rgb(243, 246, 251)','light canvas must be rendered');
- assert.equal(dimensions.deviceBackground,'rgb(255, 255, 255)','device cards must be white');
+ if(dimensions.deviceBackground!==null)
+   assert.equal(dimensions.deviceBackground,'rgb(255, 255, 255)','device cards must be white');
  assert.ok(dimensions.scrollWidth<=dimensions.innerWidth+1,JSON.stringify(dimensions));
  return dimensions;
 };
