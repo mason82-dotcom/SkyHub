@@ -89,6 +89,31 @@ def check(condition, message: str):
     if not condition:
         raise AssertionError(message)
 
+def assert_light_theme(page, active_href: str, name: str) -> None:
+    """Verify actual computed shared CSS, unique module navigation and no page overflow."""
+    state = page.evaluate("""() => ({
+        sheet: [...document.styleSheets].some(s => s.href?.endsWith('/skyhub-light.css')),
+        colorScheme: getComputedStyle(document.documentElement).colorScheme,
+        background: getComputedStyle(document.body).backgroundColor,
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        navigation: [...document.querySelectorAll('.skyhub-global-nav a')].map(a => ({
+            href: a.getAttribute('href'),
+            current: a.getAttribute('aria-current')
+        }))
+    })""")
+    check(state["sheet"], name + ": actual shared light CSS was not loaded")
+    check(state["colorScheme"] == "light" and
+          state["background"] == "rgb(243, 246, 251)",
+          name + ": computed light palette mismatch: " + str(state))
+    check(state["scrollWidth"] <= state["viewportWidth"] + 1,
+          name + ": page overflows screen: " + str(state))
+    check(len(state["navigation"]) == 5,
+          name + ": expected five operator module navigation links")
+    check([a["href"] for a in state["navigation"] if a["current"] == "page"]
+          == [active_href], name + ": active module mismatch")
+
+
 def review(page) -> str:
     return page.locator("#mission-review").inner_text()
 
@@ -123,6 +148,7 @@ def main() -> None:
                     guard(page, base, real_map=True, unexpected=unexpected)
                     page.goto(base + "/wpml-editor.html", wait_until="load")
                     page.locator(".leaflet-container").wait_for()
+                    assert_light_theme(page, "/wpml-editor.html", "WPML editor desktop")
                     check(page.locator('a[href="/wpml-route-library.html"]').count() == 1,
                           "Parent-branch route-library navigation must survive merge")
                     check(page.locator("#waypoints [role=listitem]").count() == 0,
@@ -220,6 +246,7 @@ def main() -> None:
                     phone.on("dialog", lambda dialog: dialog.accept())
                     guard(phone, base, real_map=False, unexpected=unexpected_mobile)
                     phone.goto(base + "/wpml-editor.html", wait_until="load")
+                    assert_light_theme(phone, "/wpml-editor.html", "WPML editor 390px")
                     check("manuell" in phone.locator("#map").inner_text(),
                           "Map outage fallback message missing")
                     width = phone.evaluate("""() => ({
@@ -254,6 +281,8 @@ def main() -> None:
                     route_page.on("dialog", lambda dlg: dlg.accept())
                     guard(route_page, base, real_map=False, unexpected=outbound)
                     route_page.goto(base + "/wpml-route-library.html", wait_until="load")
+                    assert_light_theme(route_page, "/wpml-route-library.html",
+                                       "Route library desktop")
                     route_page.locator("#route-name").fill("Synthetic browser-only route")
                     for idx, (lat, lon) in enumerate([("49.12345", "8.56789"),
                                                        ("49.12445", "8.56889")]):
@@ -302,6 +331,16 @@ def main() -> None:
                         path=str(ARTIFACT_DIR / "local-route-backup-synthetic.png"),
                         full_page=True
                     )
+                    for width_px in (390, 320):
+                        route_page.set_viewport_size({"width": width_px, "height": 844})
+                        assert_light_theme(route_page, "/wpml-route-library.html",
+                                           "Route library " + str(width_px) + "px")
+                        check(route_page.locator("#backup-export").is_visible(),
+                              "Mobile route-backup action must remain visible")
+                    route_page.screenshot(
+                        path=str(ARTIFACT_DIR / "local-route-mobile-320.png"),
+                        full_page=True
+                    )
                     check(not outbound, "Backup workflow attempted off-origin or write request")
                     check(not library_errors, "Library browser errors: " +
                           " | ".join(library_errors[:2]))
@@ -318,6 +357,8 @@ def main() -> None:
                     guard(survey, base, real_map=True, unexpected=survey_requests)
                     survey.goto(base + "/wpml-survey-preview.html", wait_until="load")
                     survey.locator(".leaflet-container").wait_for()
+                    assert_light_theme(survey, "/wpml-survey-preview.html",
+                                       "Survey desktop")
                     outer = [[8, 49], [8.0018, 49], [8.0018, 49.0011],
                              [8, 49.0011], [8, 49]]
                     hole = [[8.0006, 49.0003], [8.0012, 49.0003],
@@ -409,6 +450,14 @@ def main() -> None:
                           "Reference mode cannot grant flight readiness")
                     survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-exclusion.png"),
                                       full_page=True)
+                    for width_px in (390, 320):
+                        survey.set_viewport_size({"width": width_px, "height": 844})
+                        assert_light_theme(survey, "/wpml-survey-preview.html",
+                                           "Survey " + str(width_px) + "px")
+                        check(survey.locator("#preview").is_visible(),
+                              "Mobile survey preview action must remain visible")
+                    survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-mobile-320.png"),
+                                      full_page=True)
                     check(not survey_requests, "Survey attempted outbound or non-GET request")
                     check(not survey_errors,
                           "Survey JS errors: " + " | ".join(survey_errors[:2]))
@@ -417,7 +466,7 @@ def main() -> None:
 
                     print("Chromium survey hole import, red transition gaps and safe GeoJSON preview PASS")
                     print("Chromium route library: local backup, redacted preview, confirmed restore PASS")
-                    print("Chromium desktop (real Leaflet) and 390px mobile (offline fallback): PASS")
+                    print("Chromium WPML desktop and 390px / 320px mobile light-CSS / overflow: PASS")
                     print("No DJI/MQTT/SkyHub write requests; KMZ verified locally; no flight approval.")
                 finally:
                     browser.close()
