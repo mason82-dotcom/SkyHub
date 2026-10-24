@@ -37,3 +37,7 @@ The shared CSS now honors `forced-colors: active` through system palette tokens 
 ## Interaction-aware native form validation
 
 Constraint-validated inputs and selects use `:user-invalid` for a distinct bordered error state **only after interaction**, not on initial page load. Fields marked by application code with `aria-invalid="true"` use the same visual treatment. A real offline Chromium WPML test checks that an invalid takeoff-height value receives the danger border and inset marker, and that a corrected value clears the invalid state. Field color is not a substitute for the existing textual review messages or WPML safety restrictions.
+
+## Cross-module navigation acceptance
+
+The isolated WPML Chromium test follows actual operator navigation clicks between WPML Editor, Route Library, Survey and Smart Farming, returning to the editor. It repeats the journey at 320px and 390px screen widths, verifies the newly loaded shared CSS, a unique `aria-current="page"` link, the main landmark, no horizontal overflow, and no unexpected non-GET or external requests. The fifth navigation link to Operations remains statically verified across all pages; this loopback-only smoke does not attempt production dashboard authentication. The test deliberately contains no real credentials, real DJI connection, or route telemetry.

@@ -186,3 +186,16 @@ test('native form errors use interaction-aware styling without initial required-
   assert.match(css, /box-shadow: inset 3px 0 0 var\(--sky-danger\)/);
   assert.doesNotMatch(css, /(^|,)\s*input:invalid\b/m);
 });
+
+test('all operator modules expose the same navigation destinations for real click smoke', () => {
+  const paths = ['/', '/wpml-editor.html', '/wpml-route-library.html',
+    '/wpml-survey-preview.html', '/smart-farming.html'];
+  for (const [fileName, page] of pages) {
+    if (page === 'pilot') continue;
+    const source = html(fileName);
+    const nav = source.match(/<nav class="skyhub-global-nav"[^>]*>([\s\S]*?)<\/nav>/);
+    assert.ok(nav, fileName + ': missing operator navigation');
+    const destinations = [...nav[1].matchAll(/<a href="([^"]+)"/g)].map(x => x[1]);
+    assert.deepEqual(destinations, paths, fileName + ': navigation order or target drift');
+  }
+});

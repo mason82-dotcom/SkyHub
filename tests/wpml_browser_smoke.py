@@ -571,10 +571,49 @@ def main() -> None:
                           "Survey JS errors: " + " | ".join(survey_errors[:2]))
                     survey_ctx.close()
 
+                    # Real link clicks across the four offline/operator views. This
+                    # context never sees production credentials or external services.
+                    # Local-only requests must stay GET; the guard rejects all writes.
+                    for nav_width in (320, 390):
+                        nav_ctx = browser.new_context(
+                            viewport={"width": nav_width, "height": 844})
+                        nav_page = nav_ctx.new_page()
+                        nav_requests, nav_errors = [], []
+                        nav_page.on("pageerror",
+                                    lambda error: nav_errors.append(str(error)))
+                        nav_page.on("dialog", lambda dialog: dialog.accept())
+                        guard(nav_page, base, real_map=True, unexpected=nav_requests)
+                        nav_page.goto(base + "/wpml-editor.html", wait_until="load")
+                        assert_light_theme(nav_page, "/wpml-editor.html",
+                                           "Navigation initial " + str(nav_width))
+                        journey = [
+                            ("/wpml-route-library.html", "Route library"),
+                            ("/wpml-survey-preview.html", "Survey"),
+                            ("/smart-farming.html", "Smart Farming"),
+                            ("/wpml-editor.html", "WPML editor")
+                        ]
+                        for target, title in journey:
+                            nav_page.locator(
+                                '.skyhub-global-nav a[href="' + target + '"]').click()
+                            nav_page.wait_for_url(base + target, wait_until="load")
+                            assert_light_theme(
+                                nav_page, target,
+                                "Navigation " + title + " " + str(nav_width))
+                            check(nav_page.locator('a[aria-current="page"]').count() == 1,
+                                  "Exactly one nav item must be selected after click")
+                            check(nav_page.locator('main#skyhubMain').count() == 1,
+                                  "Semantic main landmark lost after navigation")
+                        check(not nav_requests,
+                              "Cross-module navigation attempted unexpected outbound/write request")
+                        check(not nav_errors,
+                              "Cross-module JS errors: " + " | ".join(nav_errors[:2]))
+                        nav_ctx.close()
+
 
                     print("Chromium survey hole import, red transition gaps and safe GeoJSON preview PASS")
                     print("Chromium route library: local backup, redacted preview, confirmed restore PASS")
                     print("Chromium WPML desktop and 390px / 320px mobile light-CSS / overflow: PASS")
+                    print("Mobile 320px and 390px real cross-module links, no writes or errors: PASS")
                     print("No DJI/MQTT/SkyHub write requests; KMZ verified locally; no flight approval.")
                 finally:
                     browser.close()
