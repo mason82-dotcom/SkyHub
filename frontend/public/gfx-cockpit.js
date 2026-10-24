@@ -54,12 +54,62 @@ function qualityFor(device,freshness,now=Date.now()){
   }
   return {total:SPECS.length,...counts};
 }
+/* In-memory observation of displayed FIELD provenance, never a packet log.
+ * Only whitelist-backed label strings and local observation times are retained. */
+const TIMELINE_MAX=24;
+const FIELD_LABELS=Object.freeze({
+  battery:'Akku',altitude:'Höhe relativ',horizontalSpeed:'Horizontaltempo',
+  heading:'Kurs / Heading',verticalSpeed:'Vertikaltempo',
+  attitudePitch:'Nickwinkel',attitudeRoll:'Rollwinkel',linkQuality:'SDR-Funkqualität'
+});
+const KIND_LABELS=Object.freeze({
+  current:'Aktuell',stale:'Veraltet',unverified:'Zeit ungeprüft',
+  unknown:'Zeit unbekannt',missing:'Nicht empfangen'
+});
+function observeFields(device,freshness,now=Date.now()){
+  if(!device)return null;
+  const fields={};
+  for(const spec of SPECS){
+    const result=valueFor(device,spec,freshness,now);
+    const sourceAt=device.telemetryFieldAt?.[spec.key];
+    fields[spec.key]={
+      kind:QUALITY_KINDS.includes(result.kind)?result.kind:'unknown',
+      sourceAt:result.kind!=='missing'&&Number.isFinite(sourceAt)&&sourceAt<=now?
+        sourceAt:null,
+      timeVerified:device.telemetryFieldTimeVerified?.[spec.key]===true
+    };
+  }
+  return fields;
+}
+function timelineChanges(previous,next,observedAt){
+  if(!previous||!next)return [];
+  const out=[];
+  for(const spec of SPECS){
+    const older=previous[spec.key],newer=next[spec.key];
+    if(!older||!newer)continue;
+    const label=FIELD_LABELS[spec.key];
+    if(older.kind!==newer.kind){
+      // This reflects a UI-observed status change; not a claim about packet loss.
+      out.push({kind:newer.kind,label,
+        message:KIND_LABELS[older.kind]+' → '+KIND_LABELS[newer.kind],
+        observedAt});
+    }else if(newer.timeVerified&&newer.sourceAt!==null&&
+             older.sourceAt!==null&&newer.sourceAt>older.sourceAt){
+      out.push({kind:'timestamp',label,message:'Verifizierter Feldzeitpunkt fortgeschrieben',
+        observedAt});
+    }
+  }
+  return out;
+}
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
   if(!rootEl||!fieldFreshness||typeof fieldFreshness.evaluateField!=='function')return null;
   const picker=doc.getElementById('gfxCockpitDevice');
   const status=doc.getElementById('gfxCockpitStatus');
   const locate=doc.getElementById('gfxCockpitLocate');
+  const timelineList=doc.getElementById('gfxTimelineList');
+  const timelineEmpty=doc.getElementById('gfxTimelineEmpty');
+  const timelineClear=doc.getElementById('gfxTimelineClear');
   const qualitySummary=doc.getElementById('gfxQualitySummary');
   const qualityCounts=new Map(QUALITY_KINDS.map(kind=>[
     kind,doc.getElementById('gfxQuality'+kind.charAt(0).toUpperCase()+kind.slice(1))
@@ -88,6 +138,37 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   let devices=[];
   let state='loading';
   let lastStatus='';
+  let observedDevice=null;
+  let previousFields=null;
+  let timeline=[];
+  function renderTimeline(){
+    if(!timelineList||!timelineEmpty)return;
+    const fragment=doc.createDocumentFragment();
+    for(const entry of timeline){
+      const item=doc.createElement('li');
+      item.className='gfx-timeline-item';
+      item.dataset.kind=entry.kind;
+      const timestamp=doc.createElement('time');
+      timestamp.dateTime=new Date(entry.observedAt).toISOString();
+      timestamp.textContent=new Date(entry.observedAt).toLocaleTimeString('de-DE',
+        {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const description=doc.createElement('span');
+      const strong=doc.createElement('strong');
+      strong.textContent=entry.label;
+      description.appendChild(strong);
+      description.appendChild(doc.createTextNode(' · '+entry.message));
+      item.appendChild(timestamp);
+      item.appendChild(description);
+      fragment.appendChild(item);
+    }
+    timelineList.replaceChildren(fragment);
+    timelineEmpty.hidden=timeline.length!==0;
+    if(timelineClear)timelineClear.disabled=timeline.length===0;
+  }
+  if(timelineClear)timelineClear.addEventListener('click',()=>{
+    timeline=[];
+    renderTimeline();
+  });
   function updateView(){
     const now=Date.now();
     current=devices.find(d=>d&&d.sn===selected)||null;
@@ -99,6 +180,23 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
       current.telemetryTimeVerified===false?'OSD empfangen · Gesamtzeit ungeprüft; Felder separat bewerten.':
       'Gerätemesswerte · Frische je Feld separat angegeben.';
     if(nextStatus!==lastStatus){status.textContent=nextStatus;lastStatus=nextStatus;}
+    // No separate clock: existing dashboard update() observes stale transitions
+    // every five seconds. Never claim that a status change is a new OSD packet.
+    const nextFields=observeFields(current,fieldFreshness,now);
+    const currentDevice=current?.sn||null;
+    if(currentDevice!==observedDevice){
+      observedDevice=currentDevice;
+      previousFields=nextFields;
+      timeline=[];
+      renderTimeline();
+    }else if(nextFields&&previousFields){
+      const changes=timelineChanges(previousFields,nextFields,now);
+      previousFields=nextFields;
+      if(changes.length){
+        timeline=[...changes.reverse(),...timeline].slice(0,TIMELINE_MAX);
+        renderTimeline();
+      }
+    }
     const quality=qualityFor(current,fieldFreshness,now);
     if(qualitySummary)qualitySummary.textContent=quality?
       quality.current+' von '+quality.total+' angezeigten Instrumentenfeldern aktuell und zeitverifiziert':
@@ -170,7 +268,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,QUALITY_KINDS,valueFor,bearingFor,attitudeFor,qualityFor,mount});
+const api=Object.freeze({SPECS,QUALITY_KINDS,TIMELINE_MAX,valueFor,bearingFor,attitudeFor,qualityFor,observeFields,timelineChanges,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

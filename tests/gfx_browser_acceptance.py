@@ -115,6 +115,8 @@ def main():
                 page.wait_for_function("() => document.querySelector('#gfxCockpitDevice').options.length===2")
                 check(page.locator(".leaflet-container").count()==1,"Leaflet map missing")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="74 %","Battery fixture missing")
+                check(page.locator("#gfxTimelineList li").count()==0,
+                      "Initial field snapshot must not create fabricated history")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="7",
                       "Initial fixture: seven of eight instrument fields should be current")
                 check(page.locator("#gfxQualityStale").inner_text()=="1",
@@ -170,6 +172,18 @@ def main():
                       "Device selection lost on incremental OSD")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="52 %",
                       "New OSD field not rendered")
+                # Selecting SYN-B2 starts a fresh baseline; a changed battery
+                # source timestamp must appear as an observed provenance change.
+                page.locator("#gfxCockpitTimeline summary").click()
+                check(page.locator("#gfxTimelineList li").count()>0,
+                      "Incremental telemetry update should produce field provenance observations")
+                check(page.locator("#gfxTimelineList li").count()<=24,
+                      "Timeline must remain bounded to 24 observations")
+                check(page.locator("#gfxTimelineList").inner_text().find("Feldzeitpunkt")>=0,
+                      "Verified fresh source timestamp advancement was not observed")
+                page.locator("#gfxTimelineClear").click()
+                check(page.locator("#gfxTimelineList li").count()==0,
+                      "Clearing local history must remove all observations")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="6",
                       "Incremental update should have only six of eight current fields")
                 check(page.locator("#gfxQualityMissing").inner_text()=="2",
@@ -225,6 +239,8 @@ def main():
                       "Stale roll provenance should remain explicit")
                 check(page.locator("#gfxCockpitAttitude").is_hidden(),
                       "Single stale roll must hide the artificial horizon")
+                check("Veraltet" in page.locator("#gfxTimelineList").inner_text(),
+                      "Source status transitions must be logged without claiming packet loss")
                 check(page.locator("#gfxQualityStale").inner_text()=="1",
                       "Stale roll must count in quality panel")
                 check(page.locator("#gfxQualityCurrent").inner_text()=="7",
@@ -263,6 +279,8 @@ def main():
                           "Horizontal document overflow at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-synthetic.png"),full_page=True)
                     page.locator("#gfxCockpitDevice").select_option("SYN-A1")
+                    check(page.locator("#gfxTimelineList li").count()==0,
+                          "Switching instrument devices must not leak previous device timeline")
                     check(page.locator("#gfxCockpitAttitude").is_visible(),
                           "Fresh, verified artificial horizon must be visible at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-attitude-fresh-synthetic.png"),

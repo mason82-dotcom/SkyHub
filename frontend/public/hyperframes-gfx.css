@@ -686,3 +686,54 @@ body.skyhub-gfx .gfx-quality-help{
   }
   body.skyhub-gfx .gfx-quality-counts dd {color:CanvasText!important}
 }
+
+
+/* Phase 9 · Bounded, disclosure-only field-observation timeline. No flight status. */
+body.skyhub-gfx .gfx-timeline{
+  border:1px solid #38586a;border-radius:9px;
+  margin:0 0 12px;padding:0;background:rgba(6,25,40,.74);
+}
+body.skyhub-gfx .gfx-timeline>summary{
+  cursor:pointer;color:#deeff8;font-size:12px;font-weight:700;
+  padding:12px;min-height:44px;
+}
+body.skyhub-gfx .gfx-timeline>summary:focus-visible,
+body.skyhub-gfx .gfx-timeline button:focus-visible{
+  outline:2px solid #bdf5de;outline-offset:2px;
+}
+body.skyhub-gfx .gfx-timeline-content{padding:0 12px 12px}
+body.skyhub-gfx .gfx-timeline-controls{
+  display:flex;align-items:start;justify-content:space-between;gap:9px;flex-wrap:wrap;
+}
+body.skyhub-gfx .gfx-timeline-controls p{
+  flex:1 1 150px;margin:0;color:#b7cedb;font-size:11px;line-height:1.5;
+}
+body.skyhub-gfx .gfx-timeline-controls button{
+  flex:0 0 auto;min-height:36px;
+}
+body.skyhub-gfx .gfx-timeline #gfxTimelineEmpty,
+body.skyhub-gfx .gfx-timeline .gfx-timeline-footnote{
+  color:#c6d9e2;font-size:11px;line-height:1.5;margin:10px 0 0;
+}
+body.skyhub-gfx .gfx-timeline-list{
+  margin:9px 0 0;padding:0;list-style:none;
+  display:grid;gap:5px;max-height:220px;overflow-y:auto;
+}
+body.skyhub-gfx .gfx-timeline-item{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;
+  padding:7px 8px;border-left:2px solid #668e9e;border-radius:3px;
+  background:#132e41;color:#dbedf5;font-size:11px;line-height:1.4;
+}
+body.skyhub-gfx .gfx-timeline-item[data-kind="stale"],
+body.skyhub-gfx .gfx-timeline-item[data-kind="unverified"]{border-left-color:#eccb99}
+body.skyhub-gfx .gfx-timeline-item[data-kind="current"]{border-left-color:#adddc5}
+body.skyhub-gfx .gfx-timeline-item time{
+  color:#c3dbe8;white-space:nowrap;font-variant-numeric:tabular-nums;
+  font-family:"Cascadia Code",Consolas,monospace;
+}
+body.skyhub-gfx .gfx-timeline-item strong{font-weight:700}
+@media (forced-colors:active){
+  body.skyhub-gfx .gfx-timeline,body.skyhub-gfx .gfx-timeline-item{
+    background:Canvas;color:CanvasText;border-color:CanvasText;
+  }
+}

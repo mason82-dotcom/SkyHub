@@ -158,6 +158,18 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
         </dl>
         <p class="gfx-quality-help">Dies ist die Feldprüfung der acht hier dargestellten Instrumentenwerte, nicht der Status der Drohne oder eine Flugfreigabe.</p>
       </section>
+      <details class="gfx-timeline" id="gfxCockpitTimeline">
+        <summary>Feldverlauf · lokale Beobachtungen</summary>
+        <div class="gfx-timeline-content">
+          <div class="gfx-timeline-controls">
+            <p>Maximal 24 Beobachtungen nur für das ausgewählte Gerät und diesen geöffneten Tab. Keine Speicherung, kein Paket- oder Flugprotokoll.</p>
+            <button type="button" id="gfxTimelineClear" disabled>Verlauf leeren</button>
+          </div>
+          <p id="gfxTimelineEmpty">Noch keine Veränderungen beobachtet. Die Übersicht beginnt nach der ersten Feldprüfung und zeigt nur folgende Wechsel.</p>
+          <ol class="gfx-timeline-list" id="gfxTimelineList" aria-label="Beobachtete Feldstatus- und Zeitstempeländerungen"></ol>
+          <p class="gfx-timeline-footnote">Ein Frischewechsel wird beim Aktualisieren der Anzeige erkannt, nicht zwingend zum tatsächlichen Ereigniszeitpunkt. „Veraltet“ beweist weder einen Verbindungsabbruch noch einen ausgefallenen OSD-Empfang.</p>
+        </div>
+      </details>
       <div class="gfx-cockpit-dials" aria-label="Gemeldete Einzelwerte und Zeitprüfung">
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Akku</span><strong id="gfxCockpitBattery" class="gfx-cockpit-value">—</strong><small id="gfxCockpitBatteryAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small><div class="gfx-cockpit-meter" aria-hidden="true"><span id="gfxCockpitBatteryMeter"></span></div></div>
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Höhe relativ</span><strong id="gfxCockpitAltitude" class="gfx-cockpit-value">—</strong><small id="gfxCockpitAltitudeAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>

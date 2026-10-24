@@ -171,3 +171,43 @@ test('quality panel offers text counts and clear non-readiness label',()=>{
   assert.match(html,/class="gfx-quality" aria-labelledby="gfxQualityTitle"/);
   assert.match(css,/gfx-quality-counts/);
 });
+
+test('timeline observes only whitelisted fields with field timestamps, not OSD aggregate time',()=>{
+  const d=device({lastTelemetryAt:now});
+  const baseline=cockpit.observeFields(d,fresh,now);
+  assert.equal(Object.keys(baseline).length,8);
+  assert.equal(cockpit.timelineChanges(null,baseline,now).length,0,'baseline cannot produce events');
+  assert.deepEqual(cockpit.timelineChanges(baseline,cockpit.observeFields(d,fresh,now),now),[],
+    're-rendering the same snapshot must not invent data changes');
+  const next=cockpit.observeFields(d,fresh,now+20000);
+  const changes=cockpit.timelineChanges(baseline,next,now+20000);
+  assert.equal(changes.length,6);
+  assert.ok(changes.every(x=>x.kind==='stale'&&x.message==='Aktuell → Veraltet'));
+  assert.ok(changes.every(x=>x.observedAt===now+20000));
+  assert.ok(changes.every(x=>!JSON.stringify(x).includes('SYN-A1')),'event must not contain serials');
+});
+test('timeline detects verified field timestamp advancement but not unverified or older timestamps',()=>{
+  const d=device({lastTelemetryAt:now});
+  const old=cockpit.observeFields(d,fresh,now);
+  d.telemetryFieldAt.battery=now-1000;
+  let events=cockpit.timelineChanges(old,cockpit.observeFields(d,fresh,now),now);
+  assert.deepEqual(events.map(x=>x.kind),['timestamp']);
+  assert.equal(events[0].label,'Akku');
+  d.telemetryFieldTimeVerified.battery=false;
+  events=cockpit.timelineChanges(old,cockpit.observeFields(d,fresh,now),now);
+  assert.equal(events[0].kind,'unverified','status transition takes precedence over timestamp event');
+  d.telemetryFieldTimeVerified.battery=true;
+  d.telemetryFieldAt.battery=now-5000;
+  events=cockpit.timelineChanges(old,cockpit.observeFields(d,fresh,now),now);
+  assert.equal(events.length,0,'older timestamp cannot be called an update');
+  assert.equal(cockpit.observeFields(null,fresh,now),null);
+  assert.equal(cockpit.TIMELINE_MAX,24);
+});
+test('timeline controls are local, bounded and explain observation limitations',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  for(const id of ['gfxCockpitTimeline','gfxTimelineClear','gfxTimelineEmpty','gfxTimelineList'])
+    assert.ok(html.includes('id="'+id+'"'),id);
+  assert.match(html,/kein Paket- oder Flugprotokoll/i);
+  assert.match(css,/gfx-timeline-item/);
+});

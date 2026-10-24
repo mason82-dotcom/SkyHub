@@ -79,3 +79,8 @@ Die Nick-/Rollanzeige übernimmt ausschließlich die normalisierten `attitudePit
 ## SKY//PULSE · Instrumentenfeldqualität
 
 Die Qualitätstafel ist auf die acht visuell im Cockpit vorhandenen Felder begrenzt. Ausschließlich `current` bedeutet „aktuell und zeitverifiziert“; fehlende/ungültige Felder, feldbezogene Veraltung, unbestätigte sowie nicht bekannte Einzelzeitpunkte müssen eigenständig gezählt und textlich erläutert werden. Aggregat-OSD-Frische, verbundene Topologie oder eine positive Qualitätssumme sind **weder** eine Flugfreigabe **noch** ein Gerätelink- oder Sicherheitsnachweis. Die Qualitätstafel darf keine vom Nutzer veränderbaren Schwellwerte zur künstlichen Statusaufwertung enthalten.
+
+
+## SKY//PULSE · Lokale Diagnosezeitleiste
+
+Der Feldverlauf ist ein flüchtiger, auf 24 Einträge begrenzter Browser-UI-Beobachtungsspeicher ausschließlich für das aktuell ausgewählte Gerät. Statusänderungen und vorwärtslaufende verifizierte Einzelzeitstempel dürfen angezeigt werden, **nicht** aber als DJI-Ereignislog, Empfangsmitschnitt oder beweisfähige Verbindungs-/Paketverluststatistik bezeichnet werden. Anfangszustand und Gerätewechsel erzeugen keine synthetischen Ereignisse; nur beobachtete Folgezustände sind sichtbar. Keine Werte, Koordinaten, Seriennummern, Zugangstokens, Server-Nachrichten oder persistierten Logs im Diagnoseverlauf. Beobachtungszeit ist von DJI-Feldzeit klar getrennt. Die reine Beobachtung verändert weder die Instrumenten-Qualitätskategorien noch Freigabezustände.
