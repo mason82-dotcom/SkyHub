@@ -143,29 +143,36 @@ function createSmartFarmingGeoRouter({express, authenticate, scopedPrincipal,
   router.post('/:candidateId/sample', async (req, res) => {
     if (!ID.test(req.params.candidateId || '')) return res.sendStatus(404);
     if (!req.is('application/json')) return res.sendStatus(415);
+    let geometry, principal;
+    // Parse/identity errors are distinguishable from worker failures, with no
+    // leak of geometry, source path or principal in any response.
+    const declaredLength = Number(req.get('content-length'));
+    if (req.get('content-length') &&
+        (!Number.isSafeInteger(declaredLength) || declaredLength > MAX_BODY_BYTES))
+      return res.sendStatus(413);
     try {
       const size = Buffer.byteLength(JSON.stringify(req.body ?? null), 'utf8');
-      const declaredLength = Number(req.get('content-length'));
-      if (size > MAX_BODY_BYTES || (req.get('content-length') &&
-            (!Number.isSafeInteger(declaredLength) || declaredLength > MAX_BODY_BYTES)))
-        return res.sendStatus(413);
-      const geometry = validateRequest(req.body, size);
-      const principal = validatePrincipal(scopedPrincipal(req));
+      if (size > MAX_BODY_BYTES) return res.sendStatus(413);
+      geometry = validateRequest(req.body, size);
+    } catch (_) { return res.sendStatus(400); }
+    try { principal = validatePrincipal(scopedPrincipal(req)); }
+    catch (_) { return res.sendStatus(403); }
+    try {
       // Never query or resolve candidate assets before independent authorization.
       const permitted = await authorizeWorkspaceCandidate({principal,
         candidateId: req.params.candidateId});
       if (permitted !== true) return res.sendStatus(404);
-      if (inFlight >= maxConcurrent) return res.status(429).json({error: 'Busy'});
-      inFlight++;
-      try {
-        const raw = await sampleVerifiedBundle({principal, candidateId: req.params.candidateId,
-          geometry});
-        return res.json(sanitizeReport(raw, geometry.type));
-      } finally { inFlight--; }
+    } catch (_) { return res.status(503).json({error: 'Authorization unavailable'}); }
+    if (inFlight >= maxConcurrent) return res.status(429).json({error: 'Busy'});
+    inFlight++;
+    try {
+      const raw = await sampleVerifiedBundle({principal, candidateId: req.params.candidateId,
+        geometry});
+      return res.json(sanitizeReport(raw, geometry.type));
     } catch (_) {
       // Never leak files, coordinates, hashes, source error messages or principal IDs.
       return res.status(503).json({error: 'Private GIS analysis unavailable'});
-    }
+    } finally { inFlight--; }
   });
   return router;
 }
