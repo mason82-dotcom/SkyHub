@@ -138,8 +138,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <div class="tile"><small>OSD &lt;15 s</small><strong id="live">0</strong></div>
       <div class="tile"><small>HMS Stufe 2</small><strong id="hmsCount">0</strong></div>
     </div>
-    <section id="gfxCockpit" class="gfx-cockpit" aria-labelledby="gfxCockpitHeading">
-      <div class="gfx-cockpit-top"><div><span class="gfx-cockpit-overline">SKY//PULSE / OSD</span><h2 id="gfxCockpitHeading">Fluginstrumente</h2></div><span class="gfx-cockpit-badge">Nur lesend</span></div>
+    <section id="gfxCockpit" class="gfx-cockpit" aria-labelledby="gfxCockpitTitle">
+      <div class="gfx-cockpit-top"><div><span class="gfx-cockpit-overline">SKY//PULSE / OSD</span><h2 id="gfxCockpitTitle">Fluginstrumente</h2></div><span class="gfx-cockpit-badge">Nur lesend</span></div>
       <label for="gfxCockpitDevice">Gerät für Instrumente</label>
       <select id="gfxCockpitDevice" disabled aria-describedby="gfxCockpitHelp"><option value="">Warte auf Gerätedaten</option></select>
       <p id="gfxCockpitStatus" role="status">Warte auf Gerätedaten.</p>
@@ -149,6 +149,27 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Horizontaltempo</span><strong id="gfxCockpitSpeed" class="gfx-cockpit-value">—</strong><small id="gfxCockpitSpeedAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Kurs / Heading</span><div class="gfx-heading-readout"><strong id="gfxCockpitHeading" class="gfx-cockpit-value">—</strong><span id="gfxCockpitCompass" class="gfx-heading-compass" aria-hidden="true" hidden><span class="gfx-heading-north">N</span><span id="gfxCockpitNeedle" class="gfx-heading-needle"></span></span></div><small id="gfxCockpitHeadingAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Vertikaltempo</span><strong id="gfxCockpitClimb" class="gfx-cockpit-value">—</strong><small id="gfxCockpitClimbAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+
+        <div class="gfx-cockpit-dial gfx-attitude-dial" aria-label="Schematischer künstlicher Horizont mit einzeln geprüften Nick- und Rollwerten">
+          <span class="gfx-cockpit-name">Lageanzeige / Attitude</span>
+          <div class="gfx-attitude-layout">
+            <div id="gfxCockpitAttitude" class="gfx-attitude-instrument" aria-hidden="true" hidden>
+              <div class="gfx-attitude-scene">
+                <div id="gfxCockpitAttitudePlane" class="gfx-attitude-plane">
+                  <div class="gfx-attitude-sky"></div>
+                  <div class="gfx-attitude-ground"></div>
+                  <div class="gfx-attitude-horizonline"></div>
+                </div>
+              </div>
+              <span class="gfx-attitude-fixed-wing"></span>
+            </div>
+            <div class="gfx-attitude-readouts">
+              <div><span class="gfx-cockpit-name">Nickwinkel</span><strong id="gfxCockpitPitch" class="gfx-cockpit-value">—</strong><small id="gfxCockpitPitchAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+              <div><span class="gfx-cockpit-name">Rollwinkel</span><strong id="gfxCockpitRoll" class="gfx-cockpit-value">—</strong><small id="gfxCockpitRollAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+            </div>
+          </div>
+          <p class="gfx-attitude-note">Schematische Darstellung · nur mit zwei zeitverifizierten Einzelwerten, keine künstliche Flugfreigabe.</p>
+        </div>
         <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">SDR-Funkqualität</span><strong id="gfxCockpitLink" class="gfx-cockpit-value">—</strong><small id="gfxCockpitLinkAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small><div class="gfx-cockpit-meter" aria-hidden="true"><span id="gfxCockpitLinkMeter"></span></div></div>
       </div>
       <button id="gfxCockpitLocate" type="button" disabled>Letzten Kartenstandort zeigen</button>

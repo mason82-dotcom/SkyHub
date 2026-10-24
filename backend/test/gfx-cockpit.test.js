@@ -65,7 +65,9 @@ test('cockpit markup preserves canonical device and map interactions',()=>{
     html.indexOf('<script>'));
   assert.match(html,/SkyHubGfxCockpit\?\.mount/);
   assert.match(html,/cockpit\.render\(data,selectedSn,listState\)/);
-  assert.match(html,/id="gfxCockpit"[^>]+aria-labelledby="gfxCockpitHeading"/);
+  assert.match(html,/id="gfxCockpit"[^>]+aria-labelledby="gfxCockpitTitle"/);
+  assert.equal((html.match(/id="gfxCockpitHeading"/g)||[]).length,1,"Heading telemetry id must be unique");
+  assert.equal((html.match(/id="gfxCockpitTitle"/g)||[]).length,1,"Cockpit landmark title id must be unique");
 });
 test('cockpit module never creates secondary telemetry/auth transports',()=>{
   const source=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/gfx-cockpit.js'),'utf8');
@@ -100,4 +102,41 @@ test('decorative compass is hidden and driven by provenance, not fake animation'
   assert.match(html,/id="gfxCockpitNeedle" class="gfx-heading-needle"/);
   assert.match(css,/gfx-heading-compass\[hidden\]/);
   assert.doesNotMatch(css, /gfx-heading-needle[^{}]*\{[^}]*animation\s*:/);
+});
+
+test('attitude rendering requires both independently verified fresh field values',()=>{
+  const d=device();
+  d.telemetry.attitudePitch=12.5;
+  d.telemetry.attitudeRoll=-20;
+  d.telemetryFieldAt.attitudePitch=now-2000;
+  d.telemetryFieldAt.attitudeRoll=now-2000;
+  d.telemetryFieldTimeVerified.attitudePitch=true;
+  d.telemetryFieldTimeVerified.attitudeRoll=true;
+  assert.deepEqual(cockpit.attitudeFor(d,fresh,now),{pitch:12.5,roll:-20,offset:10});
+  assert.equal(cockpit.valueFor(d,cockpit.SPECS.find(s=>s.key==='attitudePitch'),fresh,now).value,'12,5 °');
+  d.telemetry.attitudePitch=90.01;
+  assert.equal(cockpit.attitudeFor(d,fresh,now),null,'out-of-range pitch must hide the horizon');
+  d.telemetry.attitudePitch=0;
+  d.telemetry.attitudeRoll=181;
+  assert.equal(cockpit.attitudeFor(d,fresh,now),null,'out-of-range roll must hide the horizon');
+  d.telemetry.attitudeRoll=0;
+  d.telemetryFieldAt.attitudeRoll=now-20000;
+  assert.equal(cockpit.attitudeFor(d,fresh,now),null,'one stale field invalidates geometry');
+  d.telemetryFieldAt.attitudeRoll=now-2000;
+  d.telemetryFieldTimeVerified.attitudePitch=false;
+  assert.equal(cockpit.attitudeFor(d,fresh,now),null,'unverified pitch invalidates geometry');
+  d.telemetryFieldTimeVerified.attitudePitch=true;
+  d.aircraftConnected=false;
+  assert.equal(cockpit.attitudeFor(d,fresh,now),null,'disconnected aircraft invalidates geometry');
+  assert.equal(cockpit.attitudeFor(null,fresh,now),null);
+});
+test('attitude visual is decorative and starts hidden without invented data',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  assert.match(html,/id="gfxCockpitAttitude"[^>]+aria-hidden="true" hidden/);
+  assert.match(html,/id="gfxCockpitAttitudePlane"/);
+  assert.match(html,/id="gfxCockpitPitchAge"/);
+  assert.match(html,/id="gfxCockpitRollAge"/);
+  assert.match(css,/gfx-attitude-instrument\[hidden\]/);
+  assert.doesNotMatch(css,/gfx-attitude-plane\s*\{[^}]*animation\s*:/);
 });

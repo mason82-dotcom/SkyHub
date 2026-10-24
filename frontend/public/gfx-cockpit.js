@@ -7,6 +7,8 @@ const SPECS=Object.freeze([
   {key:'horizontalSpeed',id:'Speed',digits:1,unit:' m/s'},
   {key:'heading',id:'Heading',digits:0,unit:' °',limit:[-360,360]},
   {key:'verticalSpeed',id:'Climb',digits:1,unit:' m/s'},
+  {key:'attitudePitch',id:'Pitch',digits:1,unit:' °',limit:[-90,90]},
+  {key:'attitudeRoll',id:'Roll',digits:1,unit:' °',limit:[-180,180]},
   {key:'linkQuality',id:'Link',digits:0,unit:' / 5',range:[0,5]}
 ]);
 function valueFor(device,spec,freshness,now){
@@ -29,6 +31,17 @@ function bearingFor(device,fieldFreshness,now=Date.now()){
   if(!status||status.kind!=='current')return null;
   return ((heading%360)+360)%360;
 }
+/* Presentation-only pitch/roll geometry. Both values must carry fresh, verified
+ * field-level provenance; the scene is schematic, not a certified attitude indicator. */
+function attitudeFor(device,freshness,now=Date.now()){
+  const pitch=device?.telemetry?.attitudePitch;
+  const roll=device?.telemetry?.attitudeRoll;
+  if(!Number.isFinite(pitch)||Math.abs(pitch)>90||
+     !Number.isFinite(roll)||Math.abs(roll)>180)return null;
+  if(freshness?.evaluateField?.(device,'attitudePitch',now)?.kind!=='current'||
+     freshness?.evaluateField?.(device,'attitudeRoll',now)?.kind!=='current')return null;
+  return {pitch,roll,offset:Math.round(pitch*0.8*10)/10};
+}
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
   if(!rootEl||!fieldFreshness||typeof fieldFreshness.evaluateField!=='function')return null;
@@ -49,6 +62,8 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   });
   const compass=doc.getElementById('gfxCockpitCompass');
   const needle=doc.getElementById('gfxCockpitNeedle');
+  const attitude=doc.getElementById('gfxCockpitAttitude');
+  const attitudePlane=doc.getElementById('gfxCockpitAttitudePlane');
   const nodes=new Map(SPECS.map(spec=>[spec.key,{
     value:doc.getElementById('gfxCockpit'+spec.id),
     age:doc.getElementById('gfxCockpit'+spec.id+'Age'),
@@ -82,6 +97,13 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
       const bearing=bearingFor(current,fieldFreshness,now);
       compass.hidden=bearing===null;
       needle.style.transform=bearing===null?'':('rotate('+bearing+'deg)');
+    }
+    // No animated or guessed horizon: neutral if either source is stale.
+    if(attitude&&attitudePlane){
+      const geometry=attitudeFor(current,fieldFreshness,now);
+      attitude.hidden=geometry===null;
+      attitudePlane.style.transform=geometry===null?'':(
+        'rotate('+(-geometry.roll)+'deg) translateY('+geometry.offset+'px)');
     }
     for(const spec of SPECS){
       const el=nodes.get(spec.key);
@@ -124,7 +146,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,valueFor,bearingFor,mount});
+const api=Object.freeze({SPECS,valueFor,bearingFor,attitudeFor,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

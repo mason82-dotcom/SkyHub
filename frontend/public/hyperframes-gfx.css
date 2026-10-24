@@ -563,3 +563,68 @@ body.skyhub-gfx .gfx-heading-needle::before{
   body.skyhub-gfx .gfx-heading-needle{background:CanvasText}
   body.skyhub-gfx .gfx-heading-needle::before{border-bottom-color:CanvasText}
 }
+
+
+/* Phase 6 · schematic attitude display. Never animate live field transforms. */
+body.skyhub-gfx .gfx-attitude-dial{
+  grid-column:span 2;min-height:180px;gap:8px;
+}
+body.skyhub-gfx .gfx-attitude-layout{
+  display:grid;grid-template-columns:minmax(125px,1fr) minmax(0,1fr);
+  align-items:center;gap:15px;
+}
+body.skyhub-gfx .gfx-attitude-instrument{
+  position:relative;justify-self:center;
+  width:clamp(125px,15vw,156px);aspect-ratio:1;border-radius:50%;
+  overflow:hidden;border:2px solid #7bb3c2;
+  background:#132b3a;box-shadow:inset 0 0 0 3px #071d2c,0 0 0 1px #294f64;
+}
+body.skyhub-gfx .gfx-attitude-instrument[hidden]{display:none!important}
+body.skyhub-gfx .gfx-attitude-scene{
+  position:absolute;inset:0;overflow:hidden;border-radius:50%;
+}
+body.skyhub-gfx .gfx-attitude-plane{
+  position:absolute;width:320px;height:320px;top:50%;left:50%;
+  margin-left:-160px;margin-top:-160px;transform-origin:center;
+}
+body.skyhub-gfx .gfx-attitude-sky{
+  height:50%;background:linear-gradient(180deg,#153f58,#2b708d);
+}
+body.skyhub-gfx .gfx-attitude-ground{
+  height:50%;background:linear-gradient(180deg,#726244,#3f4a42);
+}
+body.skyhub-gfx .gfx-attitude-horizonline{
+  position:absolute;top:calc(50% - 1px);left:0;width:100%;height:2px;background:#eaf9ff;
+}
+body.skyhub-gfx .gfx-attitude-fixed-wing{
+  position:absolute;left:50%;top:50%;width:68px;height:22px;
+  transform:translate(-50%,-50%);pointer-events:none;
+  border-bottom:2px solid #dcfaab;
+}
+body.skyhub-gfx .gfx-attitude-fixed-wing::before,
+body.skyhub-gfx .gfx-attitude-fixed-wing::after{
+  content:"";position:absolute;top:7px;width:16px;height:2px;background:#dcfaab;
+}
+body.skyhub-gfx .gfx-attitude-fixed-wing::before{left:-4px}
+body.skyhub-gfx .gfx-attitude-fixed-wing::after{right:-4px}
+body.skyhub-gfx .gfx-attitude-readouts{display:grid;gap:10px;min-width:0}
+body.skyhub-gfx .gfx-attitude-readouts>div{display:grid;gap:4px}
+body.skyhub-gfx .gfx-attitude-note{
+  margin:2px 0 0;color:#b4cad8;font-size:10px;line-height:1.45;
+}
+@media(max-width:390px){
+  body.skyhub-gfx .gfx-attitude-layout{
+    grid-template-columns:minmax(110px,1fr) minmax(0,1fr);gap:8px;
+  }
+  body.skyhub-gfx .gfx-attitude-instrument{width:112px}
+  body.skyhub-gfx .gfx-attitude-readouts .gfx-cockpit-value{font-size:18px}
+}
+@media(forced-colors:active){
+  body.skyhub-gfx .gfx-attitude-instrument{border-color:CanvasText;box-shadow:none}
+  body.skyhub-gfx .gfx-attitude-sky{background:Canvas}
+  body.skyhub-gfx .gfx-attitude-ground{background:GrayText}
+  body.skyhub-gfx .gfx-attitude-horizonline,
+  body.skyhub-gfx .gfx-attitude-fixed-wing,
+  body.skyhub-gfx .gfx-attitude-fixed-wing::before,
+  body.skyhub-gfx .gfx-attitude-fixed-wing::after{background:CanvasText;border-color:CanvasText}
+}
