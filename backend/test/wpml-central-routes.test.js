@@ -102,6 +102,33 @@ test('tampered plan attributes or unsupported fields reject without revealing GP
   assert.equal(canonical({b:2,a:{z:true,c:1}}),
     canonical({a:{c:1,z:true},b:2}));
 });
+test('database connection, SQL and audit errors are redacted before reaching callers',async()=>{
+  const secret='internal GPS 49.12345 and database password';
+  const brokenPool={connect:async()=>{throw Error(secret);}};
+  const svc=createWpmlRouteService({pool:brokenPool,authorize:async()=>actor});
+  await assert.rejects(svc.listRoutes({credential:'session',workspaceId:A}),
+    {code:'unavailable',message:'WPML route operation unavailable'});
+
+  let rollback=0;
+  const sqlFailure={connect:async()=>({
+    query:async statement=>{
+      if(statement==='ROLLBACK'){rollback++;return {rows:[],rowCount:0};}
+      if(statement==='BEGIN')return {rows:[],rowCount:0};
+      throw Object.assign(new Error(secret),{detail:secret,sql:secret});
+    },
+    release(){}
+  })};
+  const svc2=createWpmlRouteService({pool:sqlFailure,authorize:async()=>actor});
+  let thrown;
+  try{await svc2.listRoutes({credential:'session',workspaceId:A});}
+  catch(e){thrown=e;}
+  assert.equal(thrown.code,'unavailable');
+  assert.equal(thrown.message,'WPML route operation unavailable');
+  assert.equal(JSON.stringify({message:thrown.message,code:thrown.code})
+    .includes(secret),false);
+  assert.equal(rollback,1);
+});
+
 test('no route service is wired to production server or to DJI command interfaces',()=>{
   const root=path.resolve(__dirname,'..');
   const source=fs.readFileSync(path.join(root,'wpml-central-routes.js'),'utf8');
