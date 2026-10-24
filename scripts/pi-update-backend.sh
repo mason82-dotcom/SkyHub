@@ -41,7 +41,7 @@ try:
     e=json.load(sys.stdin)["services"]["backend"]["environment"]
     kind=e.get("SKYHUB_MQTT_BROKER_KIND","")
     pin=str(e.get("SKYHUB_MQTT_REQUIRED_PORT",""))
-    expected={"emqx":"1884","mosquitto":"1883"}
+    expected={"emqx":"1884","mosquitto":"1883","mosquitto-dedicated":"1884"}
     if kind not in expected or pin!=expected[kind]:
         raise ValueError("invalid broker kind / required-port pairing")
     url=urlsplit(e.get("MQTT_BROKER_URL",""))
