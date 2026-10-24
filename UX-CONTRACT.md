@@ -54,7 +54,7 @@ Weitere Standardkomponenten entstehen erst mit einem tatsächlichen zweiten Work
 
 Diese Ergänzung gilt ausschließlich für `feature/hyperframes-gfx-ui-rework-20261024`. Auf `main` sind unverändert das bisherige Dashboard-Layout und dessen primäre Bedienung maßgeblich.
 
-- Die Modulnavigation verlinkt ausschließlich vorhandene interne Seiten. `aria-current` bezeichnet den gerade geöffneten Pfad. Die ursprüngliche Header-Navigation bleibt ohne aktivierte GFX-JavaScript-Erweiterung nutzbar.
+- Die Modulnavigation verlinkt ausschließlich vorhandene interne Seiten. `aria-current` bezeichnet den gerade geöffneten Pfad. Die ursprüngliche Header-Navigation bleibt ohne JavaScript als HTML-Fallback nutzbar; nach erfolgreicher GFX-Navigationseinfügung wird sie aus dem DOM entfernt, damit Links und Tastaturziele nicht doppelt auftreten.
 - Der Karten-Fokusmodus ist eine **reine Layoutänderung**. Geräteauswahl, Positionsfrische, Filterstatus, Karten-Layer, Token, Socket.IO und Flugspurabruf bleiben unverändert. Die Info-Spalte wird nie ausgeblendet.
 - Der Tastaturbefehl `/` fokussiert ausschließlich die Suche auf dem sichtbaren Operations-Panel und greift nicht bei aktiven Eingaben oder im TAK-Tab.
 - Die visuelle Animation ist temporär und stets abschaltbar. Betriebssystemseitige Einstellungen für reduzierte Bewegung oder erzwungene Farben haben Vorrang.

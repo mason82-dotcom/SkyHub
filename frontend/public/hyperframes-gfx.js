@@ -57,6 +57,9 @@ function init(doc,win){
    }
    nav.appendChild(links);
    header.insertAdjacentElement('afterend',nav);
+   // Keep header fallback in HTML, but avoid duplicate links when enhanced.
+   const legacyNav=typeof header.querySelector==='function'?header.querySelector('nav'):null;
+   if(legacyNav&&typeof legacyNav.remove==='function')legacyNav.remove();
    doc.body.classList.add('gfx-has-module-rail');
  }
  const focus=doc.getElementById('gfxMapFocus');
