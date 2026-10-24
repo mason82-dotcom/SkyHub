@@ -14,6 +14,8 @@ Die Tabellenstruktur ist unter
 Teil von `backend/db/schema.sql`, produktiven Migrationen oder
 `track-store.js`. Sie wird nur im dedizierten CI-Datenbankschema erzeugt.
 
+**Ergänzungsstand 24.10.2026:** Zusätzlich zum Journal befinden sich die [isolierte Workspace-Autorisierung](dji-flighttask-journal-access.md), [Retention-/Löschgrenzen](dji-flighttask-journal-retention.md) und seit [PR #108](https://github.com/mason82-dotcom/SkyHub-Next/pull/108) auch das [read-only Multi-Missions-Routing](dji-flighttask-multimission-router.md) auf `main`. Das Routing verwendet den gespeicherten Journalzustand nur über eine eigene autorisierte und begrenzte Suche; bei zwei passenden Einträgen verweigert es die Zuordnung. Diese Bausteine sind **weder produktiv verdrahtet noch durch einen realen Identity Provider, DJI-Geräte oder Pi-Betrieb verifiziert**. Eine sichere Produktivmigration benötigt weiterhin nachgewiesene Berechtigungen, Retention-/Backup-Policy, RLS/Indizes und Hardware-Abnahme.
+
 ## Persistenz und Integrität
 
 `backend/dji-flighttask-durable-journal.js` bietet den optionalen
@@ -45,6 +47,14 @@ unabhängige Flugfreigabe oder verifizierte Landeoperation.
 unzulässige Readiness-Flags, beschädigte JSONB-Struktur und
 nicht korrelierbare Nachrichten werden zurückgewiesen. Datenbankfehler
 werden gegenüber dem Aufrufer redigiert.
+
+## Snapshot-Validierung (Hardening 24.10.2026)
+
+Beim erneuten Laden werden Gateway-, Flight-, TID- und BID-Felder nicht mehr nur per Regex, sondern **zuerst strikt als primitive Strings** geprüft. Dadurch werden manipulierte JSONB-Werte wie `gatewaySn:["SYNTHETIC_RC"]` oder `tid:["..."]` trotz der impliziten JavaScript-String-Konvertierung zurückgewiesen. Reply-/Fortschritt-Zeitstempel dürfen nicht vor dem Sendezeitpunkt bzw. außerhalb des gesendeten TTL-Fensters einschließlich der bisherigen 30-Sekunden-Skew-Toleranz liegen.
+
+Die Datenbank-Antworten für `SELECT`, `INSERT` und revisionsgesicherte `UPDATE` werden strukturell auf ein gültiges `rows`-Array und höchstens die erwartete Zeilenzahl geprüft. Eine positive Neuerstellung muss Revision 1 liefern; ein angewandtes CAS-Update exakt `vorherigeRevision+1`. PostgreSQL-Revisionen werden nur als kanonische positive Ganzzahlen im sicheren JavaScript-Zahlenbereich eingelesen; Zeichenfolgen wie `01`, `1.0` oder exponentielle Schreibweisen werden verworfen. Für fehlerhafte Datenbankantworten wird eine feststehende, von potentiellen Secrets bereinigte Fehlermeldung verwendet.
+
+Die zusätzlichen Unit-Regressionen betreffen ausschließlich synthetische Snapshots und gefälschte DB-Adapter. Das Hardening **führt keine neue Datenbankmigration, kein Live-Routing, kein MQTT und keinen Missionsbefehl** ein.
 
 ## Datenminimierung und Sicherheitsgrenzen
 
