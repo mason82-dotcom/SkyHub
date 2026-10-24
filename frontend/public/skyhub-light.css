@@ -353,7 +353,8 @@ body[data-skyhub-page="routes"] main {
   gap: 20px; padding: 22px clamp(16px,3vw,38px);
   max-width: 1700px; margin: 0 auto;
 }
-body[data-skyhub-page="routes"] header { display: grid; gap: 6px; }
+body[data-skyhub-page="routes"] header { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; }
+body[data-skyhub-page="routes"] .skyhub-global-nav { min-width: 0; max-width: 100%; }
 body[data-skyhub-page="routes"] main > section {
   background: var(--sky-white); border: 1px solid var(--sky-border);
   box-shadow: var(--sky-shadow); border-radius: var(--sky-radius); padding: 22px;
