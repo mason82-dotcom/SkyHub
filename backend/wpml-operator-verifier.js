@@ -79,6 +79,13 @@ function createWpmlOperatorVerifier({issuer,publicKeys,isActiveSession,clock=()=
     try{
       if(await isActiveSession(assertion)!==true)return null;
     }catch{return null;}
+    // A slow or maliciously stalled session service must not extend JWT
+    // validity. The signature and active session both have to be valid
+    // at the instant we grant the resulting operator principal.
+    let afterSession;
+    try{afterSession=Math.floor(clock()/1000);}catch{return null;}
+    if(!Number.isSafeInteger(afterSession)||afterSession<1||
+       afterSession<payload.nbf||afterSession>=payload.exp)return null;
     return Object.freeze({id:payload.sub,workspaceId:payload.workspaceId,
       role:payload.role,kind:'human',source:'independent-operator-auth'});
   };
