@@ -24,7 +24,7 @@ Die bestehende read-only Einsatzoberfläche erhält einen kontrastreichen, futur
 2. Am Desktop und auf 320 px Smartphone die fünf Seiten mit Tastatur prüfen: Tab-Fokus, Motion-Schalter, Suche, Karten-Zoom, Marker, TAK-Tab, Formulare.
 3. Besonders beachten: Kartennetz darf keine Marker/Leaflet-Attribution verdecken; Kartenaktionen bleiben auf 44px-Touch-Zielen erreichbar.
 4. Bei realem DJI-Gerät verifizieren, dass Telemetrie- und Frische-Beschriftungen unverändert und keine animierten Status-Fälschungen sichtbar sind.
-5. `cd motion/hyperframes/skyhub-gfx && npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect` — diese Render- und Browserprüfungen sind erst nach lokaler Ausführung bestätigt.
+5. `cd motion/hyperframes/skyhub-gfx && npx hyperframes lint && npx hyperframes check --snapshots` — die eigenständige HyperFrames-Browser-/Motion-/Kontrastprüfung ist erst nach tatsächlicher CLI-Ausführung bestätigt. `validate` und `inspect` sind inzwischen veraltete CLI-Aliase.
 6. Ein eigenständiger visueller Review des bestehenden hellen UI-Branches bleibt erforderlich. **Diesen experimentellen Branch nicht automatisch nach main mergen.**
 
 ## Sicherheitsgrenzen
@@ -49,7 +49,7 @@ Implementiert im selben experimentellen Branch:
 - Eine Seite einmal ohne JavaScript laden: die ursprünglichen Modullinks bleiben verfügbar.
 - Leaflet-Marker, Attribution, Scrollen der Geräteliste und Wechsel Operations/TAK bei aktiviertem Karten-Fokus testen.
 - Farbkontrast, Fokus und `forced-colors` kontrollieren. Motion darf keinen Datenstatus vortäuschen.
-- Alle neuen Regressionstests sowie HyperFrames-`lint`, `validate`, `inspect` getrennt ausführen.
+- Alle neuen Regressionstests sowie HyperFrames-`lint` und `check --snapshots` getrennt ausführen.
 
 
 ## Phase 3 · Field-provenance OSD-Cockpit
@@ -147,3 +147,19 @@ Der ausklappbare Abschnitt `Einzelwert · Zeitgrenze prüfen` erlaubt die Auswah
 **15 000 ms (exklusiv)** gelten als aktuell: bei 14 999 ms ist der Einzelwert mit verifizierter Feldzeit noch `current`, ab genau 15 000 ms `stale`. Ein Restzeit-Hinweis wird nur bei **aktuellen UND zeitverifizierten** Werten berechnet (`ceil((CURRENT_MS-age)/1000)`); die vorhandene Dashboard-Aktualisierung aktualisiert ihn, es gibt bewusst **keine sekündlich suggerierte Liveuhr**. Fehlender/unplausibler Messwert, nicht bestätigter/Future-Feldzeitpunkt oder getrenntes Fluggerät unterdrücken jeden aktuellen Countdown. Ein nicht auswertbarer Zeitstempel wird nicht als gültiges Datum ausgegeben. Status-, Zeit- und Countdown-Aussagen sind keine Bewertung der Link- oder Flugbereitschaft.
 
 Unit-Tests schützen diese Grenze sowie `missing`, `unknown`, `unverified`, `stale` und ungültige Instrumentenkeys. Die isolierte Chromium-Abnahme ergänzt synthetische Fluggerät-Trennung → aktuelle Feldzeit nach Wiederverbindung → leeren Gerätesnapshot → erneuten Vollsnapshot. Nach dem leeren Snapshot werden Instrumentenanzeige und Verlauf zurückgesetzt, der neue Snapshot ist wieder eine Baseline. Das testet ausschließlich das Web-UI-Verhalten, **keinen echten DJI-Verbindungszyklus**.
+
+
+## Phase 12 · Unverändernde Raspberry-Pi-Hardware-Prüfmatrix (24.10.2026)
+
+Der neue Host-Prüfer `scripts/pi-gfx-readonly-audit.js` führt **kein Deployment** aus. Er sendet den eigenständigen, geprüften Quelltext `scripts/lib/pi-gfx-audit-worker.js` als **stdin** in `docker compose -p skyhub-next exec -T backend node -`. Der Worker nutzt ausschließlich `GET /api/devices` via `127.0.0.1:4000` innerhalb des laufenden Containers; `SKYHUB_VIEW_TOKEN` wird ausschließlich dort aus der bestehenden Container-Umgebung gelesen. Raw-Snapshots und Tokens überschreiten nicht die Container-zu-Host-Grenze. Nach außen gehen nur begrenzte, auf acht OSD-Feldschlüssel und fünf Statusklassen reduzierte Ergebnisse, feste Modellklassen und Aussagen zur rein dekorativen Zeichenbarkeit von Kursrose und künstlichem Horizont.
+
+- **Voraussetzungen:** Laufender SkyHub-Next-Backend-Container enthält bereits die kompatiblen `frontend/public/gfx-cockpit.js` und `telemetry-freshness.js` mit acht Spezifikationen und 15-s-Grenze. Ein noch älteres Backend-Image meldet **nicht nachgewiesen**, nicht automatisch bestanden. Das Ausführen aus dem isolierten Worktree aktualisiert den Container **nicht**.
+- **Hardware sicher am Boden:** RC Plus 2 Enterprise und Matrice 4T in Pilot 2 verbunden. Keine Rotation, Starts, Flugaufträge, Piloten-Loginwechsel, Pairings oder Brokerkonfigurationsänderung durch dieses Skript.
+- **Prüfbefehl:** Im Worktree `node scripts/pi-gfx-readonly-audit.js --help`, anschließend `node scripts/pi-gfx-readonly-audit.js`. Bei abweichendem produktivem Compose-Ordner vorher nur `SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next"` als Prozessumgebung setzen.
+- **Kontrollfälle:** (A) Gerät wird erstmals beobachtet: acht Zustände protokollieren; nicht empfangene Felder ausdrücklich als fehlend, nicht als Hardwaredefekt werten. (B) M4T länger als 15 s ohne bestätigten Feldzeitpunkt: entsprechende Einzelwerte veraltet und Kursrose/Horizont ausgeblendet. (C) `aircraftConnected=false`: keine aktuellen Instrumentenfelder behaupten. (D) Nach Wiederverbindung und erneutem, verifiziertem Feldzeitpunkt erscheinen ausschließlich tatsächlich aktuelle Werte. (E) RC Plus 2 und M4T nicht nach Seriennummern oder anhand bloßer Gesamt-OSD-Zeit verwechseln. (F) Keine gespeicherten Rohdaten, GPS, Seriennummern oder Tokens im Bericht.
+- **Exitcodes:** 0 = mindestens ein Fluggerät-Snapshot mit auswertbarer Struktur beobachtet (NICHT vollständige Hardware-Abnahme); 3 = nicht nachgewiesen (zum Beispiel keine Fluggeräte oder inkompatibles Backend-Image); 1 = API-/Infrastruktur-/Berichtsproblem; 2 = falsche Argumente. Alle Zustände benötigen manuelle Interpretation.
+- **Sicherheit:** Maximal 16 Gerätestände, nur acht erlaubte Feldnamen, vollständige Summeninvariante je Gerät. Der Host verwirft unerwartete Berichtsformen, statt Roh-Container-Ausgaben durchzureichen. Keine MQTT-Publishs, keine POSTs, kein Refresh der Dienste. Offline-Unit-Tests prüfen echten Frontend-Freshness-Code mit synthetischen Samples sowie Disconnection, 25-s-Überalterung, leeren Geräten und Redaktion privater Strings.
+
+**Abgrenzung:** Die bereits existierenden Hardware-Profile für RC Plus 2/M4T und RC Pro/M3M prüfen weiterhin den dokumentierten DJI-Transport. Der neue GFX-Prüfer bescheinigt ausschließlich, was **der aktuell laufende Backend-Container** an bereits normalisierten Cockpit-Einzelwerten zu diesem lokalen Abfragezeitpunkt als aktuell/veraltet/fehlend bewertet. Er ersetzt keine Pilot-2-Kopplung, keinen Hardwaretest und keinen echten Android-WebView-Review.
+
+**HyperFrames Motion:** Laut aktueller CLI-Dokumentation sind `validate` und `inspect` veraltete Aliase. Verbindlicher Browser-/Layout-/Motion-/Kontrast-Gate für den separaten Intro-Film ist `npx hyperframes check --snapshots` nach `lint`; echte CLI-Abnahme und Video-Render sind weiterhin **nicht durchgeführt**.

@@ -179,3 +179,11 @@ test('all GFX pages support keyboard skip links and fixed readable labels',()=>{
   assert.match(html,/class="gfx-map-caption" aria-hidden="true"/);
   assert.match(html,/Zuletzt gemeldete Positionen · keine Flugsteuerung/);
 });
+
+
+test('HyperFrames motion README uses current check gate rather than deprecated validate/inspect',()=>{
+  const motion=fs.readFileSync(path.resolve(__dirname,'../../motion/hyperframes/skyhub-gfx/README.md'),'utf8');
+  assert.match(motion,/npx hyperframes check --snapshots/);
+  assert.match(motion,/Node\.js 22\+/);
+  assert.doesNotMatch(motion,/^\s*- npx hyperframes (?:validate|inspect)/m);
+});
