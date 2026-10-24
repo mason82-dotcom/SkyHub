@@ -46,11 +46,18 @@ def main():
     report = seal.create_seal(dst, receipt_file)
     lon, lat = transform('EPSG:32632', 'EPSG:4326',
                          [450000 + 0.05 * 0.5], [5400000 - 0.05 * 0.5])
+    corners = [(449999.99, 5400000.01), (450000.16, 5400000.01),
+               (450000.16, 5399999.89), (449999.99, 5399999.89),
+               (449999.99, 5400000.01)]
+    px, py = transform('EPSG:32632', 'EPSG:4326',
+                       [p[0] for p in corners], [p[1] for p in corners])
     print(json.dumps({
         'bundleDir': str(dst),
         'sealFile': str(receipt_file),
         'sealSha256': report['sha256OfSeal'],
-        'point': [lon[0], lat[0]]
+        'point': [lon[0], lat[0]],
+        'polygon': {'type': 'Polygon',
+                    'coordinates': [[list(point) for point in zip(px, py)]]}
     }, sort_keys=True))
 
 
