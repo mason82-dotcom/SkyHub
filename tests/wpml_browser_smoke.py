@@ -114,6 +114,25 @@ def assert_light_theme(page, active_href: str, name: str) -> None:
           == [active_href], name + ": active module mismatch")
 
 
+def assert_map_help_clear(page, selector: str, name: str) -> None:
+    """Instruction text must not be obscured by Leaflet zoom buttons."""
+    state = page.evaluate("""selector => {
+        const zoom = document.querySelector('.leaflet-control-zoom');
+        const help = document.querySelector(selector);
+        if (!zoom || !help) return null;
+        const a = zoom.getBoundingClientRect();
+        const b = help.getBoundingClientRect();
+        return {
+            overlaps: a.left < b.right && a.right > b.left &&
+                      a.top < b.bottom && a.bottom > b.top,
+            zoom: [a.left, a.right, a.top, a.bottom],
+            help: [b.left, b.right, b.top, b.bottom]
+        };
+    }""", selector)
+    check(state is not None, name + ": missing map help or zoom control")
+    check(not state["overlaps"], name + ": map help covered by Leaflet: " + str(state))
+
+
 def review(page) -> str:
     return page.locator("#mission-review").inner_text()
 
@@ -149,6 +168,7 @@ def main() -> None:
                     page.goto(base + "/wpml-editor.html", wait_until="load")
                     page.locator(".leaflet-container").wait_for()
                     assert_light_theme(page, "/wpml-editor.html", "WPML editor desktop")
+                    assert_map_help_clear(page, ".map-overlay", "WPML editor desktop")
                     check(page.locator('a[href="/wpml-route-library.html"]').count() == 1,
                           "Parent-branch route-library navigation must survive merge")
                     check(page.locator("#waypoints [role=listitem]").count() == 0,
@@ -359,6 +379,7 @@ def main() -> None:
                     survey.locator(".leaflet-container").wait_for()
                     assert_light_theme(survey, "/wpml-survey-preview.html",
                                        "Survey desktop")
+                    assert_map_help_clear(survey, ".instructions", "Survey desktop")
                     outer = [[8, 49], [8.0018, 49], [8.0018, 49.0011],
                              [8, 49.0011], [8, 49]]
                     hole = [[8.0006, 49.0003], [8.0012, 49.0003],
@@ -454,6 +475,8 @@ def main() -> None:
                         survey.set_viewport_size({"width": width_px, "height": 844})
                         assert_light_theme(survey, "/wpml-survey-preview.html",
                                            "Survey " + str(width_px) + "px")
+                        assert_map_help_clear(survey, ".instructions",
+                                              "Survey mobile " + str(width_px) + "px")
                         check(survey.locator("#preview").is_visible(),
                               "Mobile survey preview action must remain visible")
                     survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-mobile-320.png"),
