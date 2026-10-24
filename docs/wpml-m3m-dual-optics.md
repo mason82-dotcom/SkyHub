@@ -82,3 +82,37 @@ Sämtliche physikalischen Testwerte sind synthetisch und KEINE DJI-Kalibrierung.
 
 Herstellerquelle: https://enterprise.dji.com/mavic-3-m/specs
 Dokumentation: https://dl.djicdn.com/downloads/DJI_Mavic_3_Enterprise/20240814/DJI_Mavic_3M_User_Manual_EN.pdf
+
+## Gestapelte Browser-Bedienoberfläche (separater PR)
+
+Die experimentelle Dualoptik-UI hängt **auf dem unabhängigen
+Rechenkern-Branch aus PR #109** und wird nicht direkt aus diesem
+Entwicklungsbranch nach \`main\` gemergt.
+
+Bei aktivierter Kamerageometrie und gewähltem
+\`m3m-rgb-ms-tiff\`-Referenzmodus kann optional der separate
+RGB-/MS-Vergleich aktiviert werden. In diesem Modus müssen für RGB
+zusätzlich **fünf unabhängige** manuelle Werte eingegeben werden:
+physische Sensorbreite, physische Sensorhöhe, physische Brennweite,
+Querüberlappung und Längsüberlappung. RGB-Pixelauflösung 5280×3956 ist
+ausschließlich eine dokumentierte Gerätereferenz, **keine**
+Kamerakalibrierung. MS-Pixel 2592×1944, die MS-Optik und die gemeinsame
+AGL/Geschwindigkeit stammen aus dem bestehenden Formular.
+
+Die Vorschau berechnet den engeren theoretischen Streifenabstand
+und das gemeinsame Mindestfotointervall. Bei aktiver Dualoptik
+erzeugt die UI **keine einzelnen Foto-Mittelpunkte** und zeigt
+eine numerische Ereignis-/Dateimengenschätzung ohne reale DJI-Aktionen.
+Der GeoJSON-Export enthält nur berechnete Kennzahlen sowie
+\`coRegistrationVerified:false\`, \`pilot2HardwareVerified:false\`,
+\`flightReady:false\` und \`exportableAsWaylines:false\`.
+Ändern der Referenzauswahl, Optik oder Fluggeschwindigkeit invalidiert
+den bisherigen Export; deaktivieren der Dualoptik schaltet zurück
+auf die bisherige Einzelkamera-Vorschau.
+
+Der Browser-CI-Test prüft fehlende RGB-Eingaben, korrekt angezeigte
+duale GSD, die gesperrten Fotomarker, ausgelöste Kadenzwarnungen,
+die unveränderte Offline-/Nur-GET-Grenze und die sicheren
+GeoJSON-Exportkennzeichnungen. Auch diese UI enthält keine
+vermessungstaugliche Co-Registrierung, Terrainmodellierung oder
+Flugfreigabe.
