@@ -96,7 +96,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install independent binary raster libraries
-        run: python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
+        run: |
+          python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
       - name: Check M3M worker syntax
         run: python -m py_compile backend/workers/m3m_*.py
       - name: Run all offline M3M raster and integrity security tests
@@ -118,7 +119,8 @@ jobs:
           POSTGRES_PASSWORD: local_ci_only
           POSTGRES_DB: skyhub_test
         ports:
-          - 55432:5432
+          # Use allocated test service port; no fixed host-port collision.
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U skyhub_test -d skyhub_test"
           --health-interval 5s
@@ -133,7 +135,7 @@ jobs:
         run: npm ci --prefix backend --ignore-scripts --no-audit --no-fund
       - name: Run real SQL and PostGIS integration in dedicated test database
         env:
-          SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:55432/skyhub_test
+          SKYHUB_TEST_DATABASE_URL: postgresql://skyhub_test:local_ci_only@127.0.0.1:${{ job.services.postgis.ports[5432] }}/skyhub_test
         run: node --test backend/test/postgis.integration.test.js backend/test/map-element-mutation.integration.test.js backend/test/dji-flighttask-journal.integration.test.js backend/test/dji-flighttask-journal-retention.integration.test.js backend/test/wpml-route-schema.integration.test.js
 
   isolated-postgis-backup-restore:
