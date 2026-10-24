@@ -109,6 +109,19 @@ integrationTest('authorized HTTP -> real Python/Rasterio -> sealed numeric pixel
     !raw.includes(cfg.sealSha256));
   assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
 });
+integrationTest('authorized WGS84 polygon -> actual six-pixel raster statistics', async t => {
+  const cfg=makeFixture(t), api=makeServer(t,cfg);
+  const res=await post(await api.ready(),cfg.polygon);
+  assert.equal(res.status,200);
+  const data=await res.json();
+  assert.equal(data.geometryType,'Polygon');
+  assert.equal(data.queryPixels,6);
+  assert.equal(data.statistics.ndvi.validPixels,5);
+  assert.equal(data.statistics.ndvi.maskedOrNoDataPixels,1);
+  assert.ok(Math.abs(data.statistics.ndvi.median - .5) < .00001);
+  assert.deepEqual(api.calls,['authorize','registry']);
+  assert.deepEqual(fs.readdirSync(cfg.scratchRoot),[]);
+});
 integrationTest('no authorization means no registry access and no worker',async t=>{
   const cfg=makeFixture(t), api=makeServer(t,cfg,{workspace:'farm-other'});
   const resp=await post(await api.ready(),{type:'Point',coordinates:cfg.point});
