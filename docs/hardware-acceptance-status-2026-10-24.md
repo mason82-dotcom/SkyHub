@@ -2,6 +2,18 @@
 
 **Geprüfte GitHub-Basis:** `543a05ca308071a850f43a153abf464c45e13738` · **Typ:** datierter Evidence-Index, **keine neue Pi-Messung**. GitHub-Commits, synthetische Tests, reale Messungen aus früheren Pi-Sitzungen und tatsächliche Bereitstellung sind getrennte Aussagen. Ein neuer Commit verschiebt nicht das Datum oder den Umfang früherer Messungen.
 
+## Nachtrag 24.10.2026: tatsächlicher Raspberry-Pi-Backend-Preflight
+
+**Evidenzquelle:** Vom Betreiber mitgeteilte Terminalausgabe eines **realen Raspberry Pi 5** am 24.10.2026, `2026-10-24T11:30:48.886Z` (**13:30:48 MESZ**). Diese Ausgabe wurde nicht selbst über SSH oder mit einem DJI-Gerät reproduziert. Prüfcode aus dem isolierten Worktree `~/Projekte/SkyHub-RCPlus2-M4T-Test`; laufender Compose-Stack im separaten `~/Projekte/SkyHub-Next`. **Laufender Container-Image-Commit weiterhin nicht separat bestätigt.**
+
+- `node --test backend/test/rc-plus2-m4t-preflight.test.js backend/test/rc-plus2-m4t-evidence.test.js backend/test/rc-plus2-m4t-json-container.test.js`: **13 Tests, 13 bestanden, 0 fehlgeschlagen**. Diese drei Suiten sind synthetische Offline-Regressionen auf dem Pi.
+- `SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" node scripts/pi-rc-plus2-m4t-check.js --preflight --json`: **Exit 0**, `result=READY`, **8/8 True** (`healthApi`, `devicesApi`, `shapesApi`, `pairingsApi`, `mqttConnected`, `subscribed`, `topologyAckEnabled`, `topologyAckConnected`). Die GET-Abfragen erfolgten gegen den **tatsächlich laufenden** Backend-Container.
+- Die Ausgabe enthält keine Controller-Seriennummern, Tokens, Koordinaten oder Pilot-2-Pairing-Codes. `hardwareAcceptanceComplete=false`, `flightReady=false`, `dispatchAllowed=false`.
+
+**Abnahmeentscheidung:** **P0 Pi-Backend-Voraussetzungen = BESTÄTIGT** zum angegebenen Zeitpunkt. **RC Plus 2 + Matrice 4T Live-Hardware-Transport-Smoketest = OFFEN**; keine bestätigte Modelltopologie, kein aktuelles Zielgeräte-OSD, keine unabhängige RC-Plus-2-Token-Verwendung und keine In-Container-Live-Evidence-Modulverfügbarkeit nachgewiesen. Dieser Nachtrag bestätigt weder ein DJI-Gerät noch eine Firmware oder den parallelen Controllerbetrieb.
+
+**Nächstes Gate (read-only):** Vor dem Einschalten/Pairing zunächst im unveränderten **laufenden** Backend-Container prüfen, ob `./rc-plus2-m4t-hardware-validation` und `./rc-plus2-m4t-evidence` ladbar sind. Das vollständige, gerätebezogene `--json`-Smoketest-Protokoll darf bei fehlendem Modul kontrolliert scheitern; **kein automatischer Image-Rebuild oder Neustart**. Danach erst mit sicher am Boden stehender RC Plus 2/M4T die Live-Sitzung und den Parallelbetrieb getrennt prüfen.
+
 ## Nachweise und Grenzen
 
 | Gerät/Funktion | Wirklich vorliegende Evidenz | Offen, nicht behaupten |
