@@ -126,6 +126,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 </nav>
 <main id="skyhubMain" tabindex="-1">
 <div id="operationsPanel" role="tabpanel" aria-labelledby="tabOperations">
+  <a class="skyhub-mobile-fleet-jump" href="#fleetPanel">Direkt zum Gerätestatus ↓</a>
   <section class="map-shell" aria-label="Drohnenkarte">
     <div class="map-title" aria-hidden="true"><strong>Live-Lagebild</strong><span>Letzte gemeldete Gerätepositionen</span></div>
     <div id="map" aria-label="Karte mit zuletzt gemeldeten Gerätepositionen"></div>
@@ -134,8 +135,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <span id="mapNote" class="map-note" role="status">Warte auf Gerätepositionen.</span>
     </div>
   </section>
-  <aside>
-    <div class="sidebar-heading"><div><p class="skyhub-eyebrow">FLOTTE / TELEMETRIE</p><h2>Gerätestatus</h2></div><span class="readonly-pill">Nur Lesen</span></div>
+  <aside id="fleetPanel" tabindex="-1" aria-labelledby="fleetHeading">
+    <div class="sidebar-heading"><div><p class="skyhub-eyebrow">FLOTTE / TELEMETRIE</p><h2 id="fleetHeading">Gerätestatus</h2></div><span class="readonly-pill">Nur Lesen</span></div>
     <div class="notice">Lesende Ansicht · keine Flugsteuerung. Fehlende Werte: —. Karte benötigt Internet.</div>
     <div class="grid">
       <div class="tile"><small>Geräte</small><strong id="count">0</strong></div>

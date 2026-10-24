@@ -45,3 +45,7 @@ The isolated WPML Chromium test follows actual operator navigation clicks betwee
 ## Dashboard ↔ Smart Farming browser navigation
 
 The TAK/Operations synthetic browser workflow additionally follows actual operator links in both directions between the Operations dashboard and Smart Farming, at 320px and 390px widths. It checks the unique selected `aria-current` state after each full document navigation, common light palette, main landmark and overflow. The test does not authenticate to any real service and the simulator refuses to accept non-GET HTTP writes. Together with the WPML Chromium journey, all five operator sections now have exercised navigation links.
+
+## Operations mobile shortcut
+
+At 320–900px, Operations now exposes a `Direkt zum Gerätestatus ↓` touch/keyboard link between tabs and the large read-only map. It targets the uniquely labelled and programmatically focusable `#fleetPanel` complementary landmark, preserving device state and avoiding any network activity. Desktop widths do not display it. The isolated Chromium browser checks 320px, 390px and 834px visibility, minimum 44px height, actual hash/focus/scroll, and continued device presence; the 1440px screenshot confirms it is hidden.

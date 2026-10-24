@@ -83,6 +83,10 @@ Die Light-UI bleibt der reguläre Darstellungsmodus. Für `(forced-colors: activ
 
 Die gemeinsamen Formularfelder erhalten erst **nach einer ungültigen Benutzerinteraktion** über `:user-invalid` eine sichtbare Fehlerkontur mit inset-Markierung. Eine bereits vom Anwendungscode gesetzte `aria-invalid="true"`-Kennzeichnung nutzt denselben Stil. Unberührte Pflichtfelder sollen nicht beim Laden pauschal rot hervorgehoben werden. Die bestehende JS-Validierung von DJI-/WPML-Fachgrenzen und ihre textlichen Statusmeldungen bleiben die fachliche Quelle; CSS allein ist keine Freigabeprüfung. Ein Chromium-Test schreibt eine ungültige WPML-Steighöhe, prüft die sichtbare Kontur und bestätigt, dass die Markierung nach Korrektur verschwindet.
 
+## Mobiler Schnellzugriff auf den Gerätestatus
+
+In der Operations-Ansicht steht bei Viewports bis 900px zwischen Tabs und Karte ein 44px hoher Link **„Direkt zum Gerätestatus ↓“**. Dadurch lassen sich die Flotten-/Telemetriekennzahlen direkt erreichen, ohne durch die Kartenansicht zu scrollen. Das Sprungziel ist `aside#fleetPanel` mit `tabindex="-1"` und `aria-labelledby="fleetHeading"`; die Zielregion wird nach Tastatur- oder Touchaktivierung fokussiert. Im Desktoplayout ist der Zusatzlink vollständig ausgeblendet. Für den Link ist keine JavaScript-, API- oder DJI-Funktion erforderlich. Der echte Chromium-Test prüft Sichtbarkeit, Touch-Zielhöhe, URI-Fragment, fokussierte Region und unveränderten Gerätesnapshot.
+
 ## Barrierefreiheit und technische Überprüfung
 
 Kontraste der semantischen Textfarben auf weißen Flächen werden automatisiert gegen **WCAG AA (4,5:1)** geprüft. Tastaturfokus, reduzierte Bewegung und native Formelemente sind beizubehalten. Daneben sind sichtbare Browserprüfungen von horizontalem Overflow, Tabs, Suchformular, Karteninteraktionen, Responsivität und DJI-Pilot-2-Webview erforderlich.

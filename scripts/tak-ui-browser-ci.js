@@ -184,6 +184,28 @@ async function run(){
     assert.equal(await page.locator('.device').count(),1,'device list survives tab switches');
     assert.equal(await page.locator('.leaflet-pane').count()>0,true,'Leaflet panes survive tab switches');
     await assertNoOverflow(page);
+    const fleetJump=page.locator('.skyhub-mobile-fleet-jump');
+    assert.equal(await fleetJump.isVisible(),width<=900,
+      'mobile fleet jump must be visible only on compact layouts');
+    if(width<=900){
+      const jumpRect=await fleetJump.boundingBox();
+      assert.ok(jumpRect&&jumpRect.height>=44,'compact fleet shortcut is touch-sized');
+      await fleetJump.click();
+      assert.equal(await page.evaluate(()=>location.hash),'#fleetPanel',
+        'mobile link must target the fleet panel');
+      assert.equal(await page.evaluate(()=>document.activeElement.id),'fleetPanel',
+        'mobile link must move focus to fleet panel');
+      assert.ok(await page.locator('#fleetPanel').evaluate(node=>{
+        const b=node.getBoundingClientRect();
+        return b.top<window.innerHeight && b.bottom>0;
+      }),'fleet region must actually enter mobile viewport');
+      assert.equal(await page.locator('.device').count(),1,
+        'fleet shortcut must not reset synthetic device data');
+      await page.evaluate(()=>{
+        history.replaceState(null,'',location.pathname+location.search);
+        window.scrollTo(0,0);
+      });
+    }
     if(width===320||width===1440)
       await page.screenshot({path:path.join(output,'operations-'+width+'.png'),fullPage:true});
   }
@@ -329,6 +351,7 @@ async function run(){
     smartFarmingAndPilotLightScreensChecked:true,
     dashboardSmartFarmingNavigationChecked:true,
     forcedColorsAndReducedMotionChecked:true,
+    mobileFleetShortcutFocusChecked:true,
     singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
   process.stdout.write(JSON.stringify(results,null,2)+'\n');

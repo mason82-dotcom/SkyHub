@@ -199,3 +199,17 @@ test('all operator modules expose the same navigation destinations for real clic
     assert.deepEqual(destinations, paths, fileName + ': navigation order or target drift');
   }
 });
+
+test('mobile fleet jump links to a labeled focusable status region without data side effects', () => {
+  const page = html('index.html');
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  assert.match(page, /<a class="skyhub-mobile-fleet-jump" href="#fleetPanel">Direkt zum Gerätestatus/);
+  assert.match(page, /<aside id="fleetPanel" tabindex="-1" aria-labelledby="fleetHeading">/);
+  assert.match(page, /<h2 id="fleetHeading">Gerätestatus<\/h2>/);
+  assert.equal((page.match(/id="fleetPanel"/g) || []).length, 1);
+  assert.match(css, /\.skyhub-mobile-fleet-jump\s*\{\s*display:\s*none/);
+  const compact=css.split('@media (max-width: 900px) {')[1];
+  assert.ok(compact,'mobile breakpoint required');
+  assert.match(compact, /\.skyhub-mobile-fleet-jump\s*\{\s*display:\s*inline-flex/);
+  assert.match(css, /#fleetPanel:focus\s*\{\s*outline:\s*3px solid/);
+});

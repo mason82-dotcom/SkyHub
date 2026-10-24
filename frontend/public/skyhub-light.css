@@ -427,6 +427,15 @@ body[data-skyhub-page="pilot"] .code { color: var(--sky-primary-hover); }
 body[data-skyhub-page="pilot"] #result { color: var(--sky-ink); }
 body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
 
+/* On compact screens, make the fleet status reachable before the tall map.
+   The jump is a plain anchor (no JS, no drone or network calls). */
+body[data-skyhub-page="dashboard"] .skyhub-mobile-fleet-jump { display: none; }
+body[data-skyhub-page="dashboard"] #fleetPanel { scroll-margin-top: 12px; }
+body[data-skyhub-page="dashboard"] #fleetPanel:focus {
+  outline: 3px solid var(--sky-primary);
+  outline-offset: -4px;
+}
+
 /* Usable layouts on tablets / phones without changing map behavior. */
 @media (max-width: 1320px) {
   body[data-skyhub-page="dashboard"] > header {
@@ -440,6 +449,18 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
   body[data-skyhub-page="dashboard"] #operationsPanel { height: calc(100dvh - 195px); }
 }
 @media (max-width: 900px) {
+  body[data-skyhub-page="dashboard"] .skyhub-mobile-fleet-jump {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: 9px 20px;
+    background: var(--sky-white);
+    color: var(--sky-primary-hover);
+    border-bottom: 1px solid var(--sky-border);
+    font-weight: 750;
+    text-underline-offset: 3px;
+  }
   .skyhub-global-nav { flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
   .skyhub-global-nav a { flex-shrink: 0; min-height: 44px; }
   button, input:not([type=checkbox]):not([type=radio]), select { min-height: 44px; }
@@ -522,6 +543,9 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
     outline-offset: -2px;
   }
   button:disabled { opacity: 1; }
+  body[data-skyhub-page="dashboard"] #fleetPanel:focus {
+    outline-color: Highlight;
+  }
   .skyhub-skip-link:focus, .skyhub-skip-link:focus-visible {
     outline: 3px solid Highlight;
     outline-offset: 2px;
