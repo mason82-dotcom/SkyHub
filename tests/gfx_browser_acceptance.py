@@ -40,13 +40,14 @@ def check(value,message):
 
 def fixtures(now):
     def sample(sn,model,battery,altitude,age):
-        fields=["battery","altitude","horizontalSpeed","heading","verticalSpeed","linkQuality"]
+        fields=["battery","altitude","horizontalSpeed","heading","verticalSpeed","linkQuality","attitudePitch","attitudeRoll"]
         return {
           "sn":sn,"modelName":model,"deviceCategory":"aircraft","role":"aircraft",
           "aircraftConnected":True,"lastSeenAt":now,"lastTelemetryAt":now,
           "lastPositionAt":now,"positionTimeVerified":True,"telemetryTimeVerified":True,
           "telemetry":{"battery":battery,"altitude":altitude,"horizontalSpeed":0,
                        "heading":270,"verticalSpeed":-0.5,"linkQuality":4,
+                       "attitudePitch":12.5,"attitudeRoll":-20,
                        "latitude":49.1,"longitude":8.6},
           "telemetryFieldAt":{**{f:now-1000 for f in fields},"altitude":now-age},
           "telemetryFieldTimeVerified":{f:True for f in fields}
@@ -122,6 +123,17 @@ def main():
                     "el=>parseFloat(el.style.width)")>0,"Fresh verified battery meter missing")
                 check(page.locator("#gfxCockpitLocate").is_enabled(),"Map location button disabled")
                 check(page.locator('a[href="/wpml-editor.html"]').count()==1,"Duplicate module link")
+                check(page.locator("#gfxCockpitTitle").inner_text()=="Fluginstrumente",
+                      "Cockpit heading must not be overwritten by numeric DJI heading")
+                check(page.locator("#gfxCockpitHeading").inner_text()=="270 °",
+                      "DJI heading value must render into its own instrument")
+                check(page.locator("#gfxCockpitAttitude").is_visible(),
+                      "Both fresh verified attitude fields should display the horizon")
+                check(page.locator("#gfxCockpitAttitudePlane").evaluate(
+                    "el => el.style.transform") == "rotate(20deg) translateY(10px)",
+                    "Pitch/roll scene transform differs from fixture values")
+                check(page.locator("#gfxCockpitPitch").inner_text()=="12,5 °",
+                      "Reported pitch is missing or incorrectly formatted")
                 check(page.locator("#gfxCockpitCompass").is_visible(),
                       "Fresh verified heading must show a real-data compass")
                 check(page.locator("#gfxCockpitNeedle").evaluate(
@@ -161,6 +173,10 @@ def main():
                       heading:true,verticalSpeed:true,linkQuality:true}
                   });
                 }""")
+                check(page.locator("#gfxCockpitAttitude").is_hidden(),
+                      "Horizon must hide when updated device lacks both verified pitch/roll fields")
+                check(page.locator("#gfxCockpitPitchAge").inner_text()=="Nicht empfangen",
+                      "Missing pitch must not be represented as current")
                 check(page.locator("#gfxCockpitCompass").is_hidden(),
                       "Stale heading must not display an active compass needle")
                 check("Veraltet" in page.locator("#gfxCockpitHeadingAge").inner_text(),
