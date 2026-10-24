@@ -3,6 +3,7 @@
 (function(){
   const engine=window.SkyHubSurveyPreview;
   const optics=window.SkyHubPhotoGeometry;
+  const cameraReference=window.SkyHubCameraReference;
   const capture=window.SkyHubCapturePreview;
   const $=id=>document.getElementById(id);
   if(!engine){$('status').textContent='Offline-Geometriemodul fehlt.';return;}
@@ -145,6 +146,12 @@
   for(const id of cameraIds)$(id).addEventListener('input',()=>{
     if(report){invalidate();render();feedback('Kameraparameter geändert. Neu berechnen.');}
   });
+  $('camera-mode').addEventListener('change',()=>{
+    invalidate();render();
+    feedback($('camera-mode').value==='manual'?
+      'Kameramodus: manuelle Eingabe ohne Modellreferenz.':
+      'DJI-Modusreferenz ausgewählt. Bitte physische Optik und exakt passende Bildabmessungen eintragen; keine Kalibrierungsfreigabe.');
+  });
   function cameraInputs(){
     const v=id=>$(id).value.trim();
     const n=id=>v(id)===''?undefined:v(id);
@@ -165,7 +172,13 @@
     try{
       const photogrammetry=$('optics-enable').checked;
       if(photogrammetry&&(!optics||!capture))throw new Error('Kamerageometriemodul nicht geladen');
-      const camera=photogrammetry?cameraInputs():null;
+      const manuallyEntered=photogrammetry?cameraInputs():null;
+      const selectedMode=$('camera-mode').value;
+      if(photogrammetry&&selectedMode!=='manual'&&!cameraReference)
+        throw new Error('M3M-Kamerareferenzmodul nicht geladen.');
+      const referenced=photogrammetry&&selectedMode!=='manual'?
+        cameraReference.bind(selectedMode,manuallyEntered):null;
+      const camera=referenced?referenced.opticalInputs:manuallyEntered;
       const profile=photogrammetry?optics.optics(camera):null;
       report=engine.preview(importedGeometry||points,{
         spacing:photogrammetry?profile.stripSpacingM:$('spacing').value,
@@ -173,6 +186,7 @@
       });
       photoReport=photogrammetry?optics.estimate(report,camera):null;
       captureReport=photogrammetry?capture.plan(report,camera):null;
+      const modeEstimate=referenced?cameraReference.estimate(selectedMode,camera,report):null;
       $('show-photo-centers').disabled=!photogrammetry;
       $('geojson').disabled=false;
       render();
@@ -195,6 +209,15 @@
         if(captureReport.sampleOnly)
           message+='\nACHTUNG: Es werden nicht alle '+captureReport.estimatedImageCount+
             ' geschätzten Fotopunkte dargestellt.';
+        if(modeEstimate){
+          message+='\nDJI-M3M-Referenz '+modeEstimate.id+': mindestens '+
+            modeEstimate.configuredMinIntervalSeconds.toFixed(1)+' s. Geschätzte '+
+            modeEstimate.estimatedCaptureEvents+' Ereignisse / '+
+            modeEstimate.estimatedImageArtifacts+' Bilddateien (nur theoretisch). '+
+            (modeEstimate.cadencePassesReference?'Geometrisches Intervall erfüllt das Referenzminimum.':
+              'WARNUNG: Referenz-Aufnahmeintervall bei der gewählten Geschwindigkeit unterschritten.')+
+            ' Keine physische Kalibrierung, keine RGB-Zweitkamera-Footprint-Prüfung, kein Pilot-2-Test.';
+        }
         if(cam.cameraIntervalSatisfiesConstraint===false)
           message+='\nWARNUNG: Auslöseintervall unterschreitet das angegebene minimale Kamera-Aufnahmeintervall.';
         else if(cam.cameraIntervalSatisfiesConstraint===null)
@@ -211,6 +234,9 @@
     const closed=[...report.polygon,report.polygon[0]];
     const data={type:'FeatureCollection',name:'SkyHub 2D preview – NOT DJI WPML',
       properties:{flightReady:false,exportableAsWaylines:false,scope:report.validationScope,
+        cameraReferenceMode:photoReport&&$('camera-mode').value!=='manual'?
+          $('camera-mode').value:null,
+        cameraReferenceHardwareVerified:false,
         opticsEstimate:photoReport?{...photoReport}:null},
       features:[
         {type:'Feature',geometry:report.outlineGeometry||
