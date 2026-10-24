@@ -43,6 +43,9 @@ const server=http.createServer((request,response)=>{
   if(['/workspace-tabs.js','/telemetry-freshness.js'].includes(url.pathname)){
     response.writeHead(200,{'Content-Type':'application/javascript'});response.end(get(url.pathname.slice(1)));return;
   }
+  if(url.pathname==='/skyhub-light.css'){
+    response.writeHead(200,{'Content-Type':'text/css; charset=utf-8'});response.end(get('skyhub-light.css'));return;
+  }
   if(url.pathname==='/api/health'){
     json(response,{status:'degraded',mqtt:false,subscribed:false,trackRecordingEnabled:false,
       mqttLastObservedOsdAt:null,mqttLastTelemetryAt:null,postgresConfigured:false});
@@ -66,10 +69,18 @@ const assertNoOverflow=async page=>{
    mainCount:document.querySelectorAll('main').length,
    opsHidden:document.getElementById('operationsPanel').hidden,
    takHidden:document.getElementById('takPanel').hidden,
-   tabs:document.querySelectorAll('[role=tab]').length
+   tabs:document.querySelectorAll('[role=tab]').length,
+   lightStylesheet: [...document.styleSheets].some(sheet=>sheet.href?.endsWith('/skyhub-light.css')),
+   colorScheme: getComputedStyle(document.documentElement).colorScheme,
+   bodyBackground: getComputedStyle(document.body).backgroundColor,
+   deviceBackground: getComputedStyle(document.querySelector('.device')).backgroundColor
  }));
  assert.equal(dimensions.mainCount,1,'one semantic main landmark');
  assert.equal(dimensions.tabs,2,'two accessible tabs');
+ assert.equal(dimensions.lightStylesheet,true,'light stylesheet must be loaded successfully');
+ assert.equal(dimensions.colorScheme,'light','root color-scheme must remain light');
+ assert.equal(dimensions.bodyBackground,'rgb(243, 246, 251)','light canvas must be rendered');
+ assert.equal(dimensions.deviceBackground,'rgb(255, 255, 255)','device cards must be white');
  assert.ok(dimensions.scrollWidth<=dimensions.innerWidth+1,JSON.stringify(dimensions));
  return dimensions;
 };
@@ -104,6 +115,10 @@ async function run(){
   await page.waitForFunction(()=>document.querySelector('#count')?.textContent==='1',{timeout:15000});
   await page.waitForFunction(()=>document.querySelector('#message')?.textContent.includes('Live verbunden'),{timeout:15000});
   assert.equal(await page.locator('.leaflet-container').count(),1,'real Leaflet map created');
+  assert.equal(await page.locator('.skyhub-global-nav a[aria-current="page"]').count(),1,
+    'operator navigation must mark the current view');
+  assert.equal(requests.some(x=>x.path==='/skyhub-light.css'),true,
+    'browser must request the real shared CSS asset');
   assert.ok(await page.locator('.device').count()>0,'synthetic live snapshot appears in device list');
   await page.evaluate(()=>{
     window.__invalidationCount=0;
@@ -165,6 +180,7 @@ async function run(){
     backend:'SYNTHETIC LOOPBACK ONLY; no full SkyHub server, no Pi, no DJI',
     screenWidths:sizeChecks,authenticated:true,unauthorized:true,socketDisconnected:true,
     noExportRequests:true,noHttpMutation:true,noPageErrors:true,
+    sharedLightCssServed:true,computedLightPaletteChecked:true,
     singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
   process.stdout.write(JSON.stringify(results,null,2)+'\n');
