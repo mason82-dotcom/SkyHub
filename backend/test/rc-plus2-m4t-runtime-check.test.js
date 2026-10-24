@@ -26,6 +26,8 @@ if(process.env.TEST_INJECT_PRIVATE==='1'){
         id==='./rc-plus2-m4t-hardware-validation')throw Error('PRIVATE_SECRET');
     if(process.env.TEST_MISSING_MODULE==='evidence'&&
         id==='./rc-plus2-m4t-evidence')throw Error('PRIVATE_SECRET');
+    if(process.env.TEST_STUB_EVIDENCE==='1'&&
+        id==='./rc-plus2-m4t-evidence')return {makeLiveEvidence:()=>{}};
     return normalRequire(id);
   };
   new Function('require',args[index+1])(mockedRequire);
@@ -94,4 +96,12 @@ test('runtime check cannot be mixed with --preflight or duplicated',()=>{
     assert.equal(result.status,2,result.stderr);
     assert.equal(result.stdout,'');
   }
+});
+
+test('module file without required validator export is not accepted as ready',()=>{
+  const r=execute(['--json'],{TEST_STUB_EVIDENCE:'1'});
+  assert.equal(r.status,3,r.stderr);
+  const receipt=JSON.parse(r.stdout);
+  assert.equal(receipt.checks.evidenceAvailable,false);
+  assert.equal(receipt.result,'INCOMPLETE');
 });
