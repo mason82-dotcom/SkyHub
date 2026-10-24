@@ -1,6 +1,6 @@
 # DJI Cloud API 1.18: RC Plus 2 Enterprise + Matrice 4T hardware validation
 
-**Stand:** 22.10.2026, auf aktuelle Main-Basis am 23.10.2026 neu integriert. **Modus:** Nur Lesen, kein Flug, kein Deployment. Die Matrice-4T-/RC-Plus-2-Hardwareabnahme ist **weiterhin offen**.
+**Historischer Stand:** 22.10.2026, am 23.10.2026 nach `main` integriert. **Abgleich am 24.10.2026:** [aktueller Evidence-Index](hardware-acceptance-status-2026-10-24.md). Der reine Diagnoseaufruf liest nur; eine nötige neue Geräte-Kopplung ist ein **separater, ausdrücklich zu bestätigender Schreibvorgang**. Kein Flug oder Deployment. Die Matrice-4T-/RC-Plus-2-Liveabnahme bleibt **offen**.
 
 Die Prüfer sind aus dem älteren Diagnosezweig auf den nach PR #61/#47/#63 aktuellen Main-Stand portiert. Der geschützte HTTP-Modellkennungsfix wird **nicht** erneut überschrieben.
 Details und Offline-Nachweise: [Diagnosekonsolidierung](hardware-diagnostics-consolidation.md).
@@ -20,14 +20,14 @@ DJI bestätigt die Kombination Matrice 4E/4T + RC Plus 2 + DJI Pilot 2 in der [P
 
 1. **DJI Pilot 2 / DJI-Konto:** bestehendes Konto und dieselbe DJI-Cloud-API-Anwendung/Lizenz können grundsätzlich weiterverwendet werden, sofern die vorhandene DJI-Konfiguration das zulässt. SkyHub erzeugt keine DJI-Benutzerkonten.
 2. **SkyHub-Gerätekopplung:** **jede zusätzliche RC** wird einmalig und unabhängig mittels neuem sechsstelligen SkyHub-Code autorisiert. Danach hat die neue RC ein separates widerrufbares Geräte-Token. Vorhandene RC-Pro-Kopplung **nicht widerrufen**.
-3. **EMQX-MQTT-Zugang:** die von SkyHub konfigurierte Pilot-MQTT-Identität ist getrennt vom lesenden Backend-Account. Sie muss nur dann zusätzlich provisioniert werden, wenn die Broker-ACL, Client-ID-Politik oder Betreiber-Anforderungen den Parallelbetrieb verhindern. Nichts automatisch ändern.
+3. **MQTT-Broker-Zugang:** Die Pilot-MQTT-Identität ist vom lesenden Backend-Account getrennt. Ob auf dem Pi EMQX oder Mosquitto und welcher Port tatsächlich läuft, lässt sich **nicht** allein aus `main` ableiten. Die optionale separate Mosquitto-Konfiguration aus [PR #118](https://github.com/mason82-dotcom/SkyHub-Next/pull/118) ist kein Deploy-Nachweis. Broker-ACL/Client-ID/Port nur vor Ort **lesen**, niemals für diese Diagnose umkonfigurieren.
 
 SkyHub speichert nur SHA-256-Hashes der Geräte-Tokens in Redis. Die neuen Tokens nicht in Git, Logs oder Chat kopieren.
 
 ## 0. Sicherheitsvoraussetzungen
 
 - RC Plus 2 Enterprise und Matrice 4T sicher **am Boden**, gekoppelt und eingeschaltet, DJI Pilot 2 geöffnet.
-- Der bereits laufende produktive SkyHub-Next-Stack `skyhub-next` unter `~/Projekte/SkyHub-Next`. Laufende EMQX-, Caddy-, PostGIS-, Redis- und Backend-Dienste **nicht ändern**.
+- Der bereits laufende SkyHub-Next-Stack `skyhub-next` unter `~/Projekte/SkyHub-Next`. Den tatsächlich verwendeten MQTT-Broker (Mosquitto/EMQX), Reverse Proxy, PostGIS, Redis und Backend **nicht ändern**. Die Pi-Laufzeitversion kann vom GitHub-`main` abweichen.
 - Sichtbar erreichbare bestehende SkyHub-Pilot-2-HTTPS-Seite (in Pilot 2: Cloud Services / Open Platforms); dieselbe URL wie bei der bestehenden RC, **kein erfundener zusätzlicher Endpunkt**.
 - Der laufende Backend-Container stellt `GET /api/health`, `GET /api/devices`, `GET /api/diagnostics/mqtt-shapes` sowie intern `GET /api/pilot-admin/pairings` bereit und besitzt die erweiterten `deviceProperties`-/`propertyFieldObservedAt`-Snapshots. Der Pairing-Endpunkt benötigt View-Token und bleibt hinter dem lokalen Backend-Loopback.
 - Vor jedem Test prüfen, ob die M4T in Pilot 2 erfolgreich gekoppelt ist. Die Geräte **nicht starten oder bewegen**.
@@ -39,15 +39,17 @@ cd ~/Projekte/SkyHub-Next
 git status --short --branch
 git fetch origin
 git worktree add --detach ~/Projekte/SkyHub-RCPlus2-M4T-Test \
-  origin/feature/hardware-diagnostics-current-main-20261023
+  origin/main
 cd ~/Projekte/SkyHub-RCPlus2-M4T-Test
 node --test backend/test/rc-plus2-m4t-hardware-validation.test.js
 node scripts/pi-rc-plus2-m4t-check.js --help
 ```
 
-Bei bereits vorhandenem Worktree zuerst `git worktree list` und `git status` prüfen, nicht überschreiben. `git worktree add` startet keinen Dienst. Keine Dateien oder Container des Produktionsverzeichnisses werden geändert.
+Bei bereits vorhandenem Worktree zuerst `git worktree list` und `git status` im betreffenden Test-Worktree prüfen, **nicht** mit `git worktree add` überschreiben. Die obigen Befehle nutzen den aktuellen Quellstand von `origin/main` für die Offlineprüfer, installieren aber **keine** neue Pi-Backend-Version und starten keinen Dienst. Fehlt dem aktiven Container eine neuere Diagnose-API, gilt `NICHT PRÜFBAR`, nicht `BESTANDEN`.
 
 ## 2. Einmalige Kopplung der **neuen** RC Plus 2
+
+**Getrennter optionaler Freigabeschritt:** Nur falls noch keine unabhängige SkyHub-Kopplung besteht und der Betreiber die Einrichtung ausdrücklich bestätigt. `scripts/pi-pilot-pair.js` listet bei leerem Aufruf potenziell **private Kopplungscodes und Gerätekennungen**. Mit einem Code schreibt der Befehl die Autorisierung (`POST /api/pilot-admin/approve`). Das ist **kein read-only Hardwarecheck**; Ausgabe niemals in Chat/GitHub kopieren, niemals `--revoke` im Test benutzen.
 
 1. In **DJI Pilot 2 auf der RC Plus 2** Cloud Services / Open Platforms und die **bestehende** SkyHub-HTTPS-URL öffnen; den Lizenz-/Workspace-Handshake abwarten.
 2. Nur falls SkyHub einen neuen sechsstelligen Pairing-Code zeigt: **auf dem Pi im laufenden SkyHub-Next-Projekt**, nicht im isolierten Test-Worktree, lokal die vorhandenen Pairings anzeigen und den sichtbaren Code autorisieren:
@@ -90,7 +92,7 @@ Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf 
 | OSD | Beide Geräte liefern frische gültige OSD-Beobachtung unter 15 s | Kein Flug oder gültiger GNSS-Fix am Boden erforderlich |
 | Connection | M4T `aircraftConnected=true` | Getrennte Geräte dürfen nicht durch alte OSD-Daten reaktiviert werden |
 | State | Dokumentierte, getrennte State-Feldbeobachtung | Eventgesteuert, darf ohne Zustandsänderung alt sein |
-| Properties | RC Plus 2: 54 dokumentierte statische Pfade, M4T: 199 | Nur tatsächlich beobachtete/aktuelle Pfade zählen; nicht alle müssen vorliegen |
+| Properties | RC Plus 2: **54** dokumentierte statische Pfade, M4T: **202 vorläufige** generische statische Pfade + **9** dynamische Gimbal-Feldtypen | Nur tatsächlich beobachtete/aktuelle Pfade zählen; nicht alle müssen vorliegen; keine M4T-Geräteprofil-Vollständigkeitsgarantie |
 | Privacy | `sn`, Token, `device_secret`, `nonce`, IMEI/EID und GPS-Werte nicht ausgeben | Redigierte Felder sind keine fehlenden Felder |
 | RC Pro/M3M | Parallelbetrieb möglich; nur dedizierte RC-Plus-2/M4T-Paarung besteht Zieltest | Separate Live-Überprüfung erforderlich |
 
