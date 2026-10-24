@@ -106,6 +106,10 @@ jobs:
           python -m pip install --only-binary=:all: -r backend/workers/m3m_requirements.txt
       - name: Check M3M worker syntax
         run: python -m py_compile backend/workers/m3m_*.py
+      - name: Assert complete Python-and-Node M3M E2E prerequisites (no silent skips)
+        run: |
+          node --version
+          python -c 'import numpy, rasterio, shutil; assert shutil.which("node"), "Node catalog runtime missing"'
       - name: Run all offline M3M raster and integrity security tests
         run: python -m unittest discover -s tests -p 'test_m3m_*.py' -v
       - name: Verify offline CLIs expose safe help paths
