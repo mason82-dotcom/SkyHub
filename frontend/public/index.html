@@ -105,6 +105,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 <script src="/hyperframes-gfx.js" defer></script>
 </head>
 <body class="skyhub-gfx gfx-page-dashboard" data-gfx-motion="off">
+<a class="gfx-skip" href="#skyhubMain">Zum Hauptinhalt springen</a>
 <header>
   <h1>SKY<span>HUB</span> NEXT <small>· read-only</small><span class="gfx-brand-caption" aria-hidden="true">MISSION CONTROL // SKY·PULSE</span></h1>
   <nav class="module-nav" aria-label="SkyHub-Module"><a href="/" aria-current="page">Live-Dashboard</a><a href="/smart-farming.html">Smart Farming <small>· Experimentell</small></a><a href="/wpml-editor.html">Mission Studio</a><a href="/wpml-route-library.html">Routenbibliothek</a><a href="/wpml-survey-preview.html">Survey 2D</a></nav>
@@ -123,7 +124,9 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 <div id="operationsPanel" role="tabpanel" aria-labelledby="tabOperations">
   <section class="map-shell" aria-label="Drohnenkarte">
     <div id="map" aria-label="Karte mit zuletzt gemeldeten Gerätepositionen"></div>
+    <div class="gfx-map-caption" aria-hidden="true"><strong>GEO / WGS84</strong><span>Zuletzt gemeldete Positionen · keine Flugsteuerung</span></div>
     <div class="map-tools">
+      <button id="gfxMapFocus" class="gfx-map-focus-toggle" type="button" aria-pressed="false" hidden>Karte priorisieren</button>
       <button id="fitDevices" type="button" disabled>Alle Positionen zeigen</button>
       <span id="mapNote" class="map-note" role="status">Warte auf Gerätepositionen.</span>
     </div>
