@@ -73,9 +73,9 @@ function validateActor(actor,workspaceId){
 function createWpmlRouteStore(pool){
   if(!pool||typeof pool.connect!=='function')throw new TypeError('PostgreSQL pool required');
   async function transaction(callback){
-    const client=await pool.connect();
-    let started=false;
+    let client,started=false;
     try{
+      client=await pool.connect();
       await client.query('BEGIN');
       started=true;
       const out=await callback(client);
@@ -83,8 +83,13 @@ function createWpmlRouteStore(pool){
       return out;
     }catch(err){
       if(started){try{await client.query('ROLLBACK');}catch{}}
-      throw err;
-    }finally{client.release();}
+      // Never expose driver errors: SQL text, GPS/route names and database
+      // topology may appear in their message/detail fields.
+      if(err instanceof RouteError)throw err;
+      throw new RouteError('unavailable');
+    }finally{
+      if(client){try{client.release();}catch{}}
+    }
   }
   return Object.freeze({
     async create({workspaceId,actorId,routeId,name,plan}){
