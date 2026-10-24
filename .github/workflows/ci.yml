@@ -6,6 +6,7 @@ on:
       - main
       - "develop/**"
       - "feature/**"
+      - "integrate/**"
       - "chore/**"
   pull_request:
 
