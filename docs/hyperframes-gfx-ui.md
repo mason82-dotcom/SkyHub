@@ -8,12 +8,12 @@ Die bestehende read-only Einsatzoberfläche erhält einen kontrastreichen, futur
 ## Implementierung
 - Kanonischer GFX-Stylesheet-Owner: \`frontend/public/hyperframes-gfx.css\`; wird **nach** dem Legacy-Stil der fünf HTML-Oberflächen geladen und ist auf \`body.skyhub-gfx\` begrenzt.
 - Motion-Progressive-Enhancement: \`frontend/public/hyperframes-gfx.js\`, keine Cookies, keine Speicherung, keine Netzaufrufe, keine Tokenberührung.
-- Motion-Opt-in automatisch gemäß OS-Einstellung, zusätzlich manuell umschaltbar. \`prefers-reduced-motion\` erzwingt bei Bedarf die statische Darstellung; \`forced-colors\` reduziert Dekoration.
+- Animationen initial gemäß OS-Einstellung, zusätzlich manuell umschaltbar. \`prefers-reduced-motion\` erzwingt bei Bedarf die statische Darstellung; \`forced-colors\` reduziert Dekoration.
 - Keine fremden Font-CDNs, kein Framework-/Build-Schritt, keine zusätzlichen Produktionsabhängigkeiten.
 - Tokens: Deep \`#07101c\`; Panel \`#101e30\`; Signal Cyan \`#67e8f9\`; Ion Lime \`#c9fa79\` (Bedienauswahl); Warnfarbe \`#ffc37c\`. Warnstufen des Backends bleiben in ihrer bisherigen Bedeutung erhalten.
 - Typografie: Bahnschrift für technische Anzeige, Segoe UI/System für Fließtext, Cascadia Code/Consolas für optionale Statusdetails.
 - Das Kartenfenster erhält ein dekoratives, transparentes Koordinatennetz mit \`pointer-events: none\` und besitzt keine zusätzlichen Interaktionsflächen.
-- Originale IDs, Formularfelder, API-Aufrufe, DJI-Livezustände, Authentifizierung, WPML-Erstelllogik und TA K/CoT Export-Sperren bleiben unverändert.
+- Originale IDs, Formularfelder, API-Aufrufe, DJI-Livezustände, Authentifizierung, WPML-Erstelllogik und TAK/CoT Export-Sperren bleiben unverändert.
 - Die lokale \`DESIGN.md\` im Motion-Ordner beschreibt bewusst **nur** die eigenständige HyperFrames-Animation; das bestehende projektweite \`DESIGN.md\` bleibt für den Standard-Branch kanonisch.
 
 ## Motion-Graphics

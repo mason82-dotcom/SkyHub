@@ -176,7 +176,9 @@ body.skyhub-gfx.gfx-page-dashboard .map-shell::after {
   border: 1px solid rgba(103,232,249,.27);
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 0 88px rgba(103,232,249,.025), 0 0 0 176px rgba(103,232,249,.018);
+  background: conic-gradient(from 0deg, rgba(103,232,249,.32), rgba(103,232,249,0) 62deg, rgba(103,232,249,0) 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 2px));
 }
 body.skyhub-gfx.gfx-page-dashboard .map-tools { z-index: 500; }
 body.skyhub-gfx.gfx-page-dashboard .map-tools button,
@@ -262,7 +264,6 @@ body.skyhub-gfx:not(.gfx-page-dashboard) :is(.warning,.notice) {
 }
 body.skyhub-gfx a:hover { text-underline-offset: 4px; }
 body.skyhub-gfx[data-gfx-motion="on"] .tile,
-body.skyhub-gfx[data-gfx-motion="on"] .device,
 body.skyhub-gfx[data-gfx-motion="on"] .panel,
 body.skyhub-gfx[data-gfx-motion="on"] .tak-card {
   animation: gfx-reveal 460ms cubic-bezier(.16,1,.3,1) both;
