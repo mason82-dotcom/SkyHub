@@ -1,12 +1,12 @@
 # Experimenteller Smart-Farming-Tab (M3M)
 
-**Stand: 23.10.2026** · Repository
+**Aktualisiert: 24.10.2026** · Repository
 https://github.com/mason82-dotcom/SkyHub-Next
 
 ## Neue Oberfläche
 
-Im Entwicklungsbranch `feature/m3m-smart-farming-ui-repo-rename-20261023`
-gibt es folgende statische, ohne Frontend-Build lauffähige Dateien:
+Seit dem Merge von [PR #100](https://github.com/mason82-dotcom/SkyHub-Next/pull/100)
+sind folgende statische, ohne Frontend-Build lauffähige Dateien **im Repository-Branch `main`** vorhanden:
 
 - `frontend/public/smart-farming.html`: eine getrennte Seite, im
   bestehenden Dashboard als **Smart Farming · Experimentell** verlinkt.
@@ -22,6 +22,10 @@ Die Seite fragt nur
 eingegebenem SkyHub-View-Token im `Authorization: Bearer`-Header.
 Das Token wird weder in eine URL noch in Local-/Session-Storage
 geschrieben und nach der Anfrage aus dem Eingabefeld gelöscht.
+Vor dem Absenden verlangt die Oberfläche HTTPS oder einen lokalen
+Loopback-Zugang (`localhost`/`127.0.0.1`/`[::1]`). Unverschlüsselte
+LAN-Adressen sind gesperrt. Dies wird in
+`frontend/test/smart-farming-ui.test.js` geprüft.
 
 Der Browser zeigt unterscheidbare Zustände für:
 ungültigen Token (401), noch nicht aktivierte API (404),
@@ -30,9 +34,9 @@ einen leeren Kandidatenbestand. Die Anfrage ist ausschließlich lesend.
 
 ## Voraussetzung / wichtige Schranke
 
-Die API stammt aus dem vorgeschalteten Draft-PR
-[#84](https://github.com/mason82-dotcom/SkyHub-Next/pull/84).
-Sie ist ohne `SKYHUB_M3M_CATALOG_ENABLED=true` nicht
+Die API wurde zusammen mit der M3M-Konsolidierung über
+[PR #100](https://github.com/mason82-dotcom/SkyHub-Next/pull/100) nach `main` übernommen.
+Sie ist ohne `SKYHUB_M3M_CATALOG_ENABLED=true` weiterhin nicht
 gemountet; mit dem Flag müssen zusätzlich ein geschützter
 Katalogstamm und ein **unabhängig gepinnter** Manifest-SHA256
 gesetzt werden. Diese Konfiguration wurde **nicht** am Pi
@@ -61,8 +65,17 @@ folgt **keine** Freischaltung des Katalog-API-Endpunkts.
 
 ## Nächste Gates
 
-Zuerst die GitHub-Actions-Prüfung des neuen PR-Heads auswerten,
-danach Browser-/Mobiltests (Chrome Android, Firefox, schmale Screens),
+Die erforderlichen GitHub-Integrations- und TAK-Browserchecks liefen
+auf der M3M-Main-Konsolidierung erfolgreich; siehe
+[Release- und Teststatus](smart-farming-m3m-release-status-2026-10-24.md).
+Zusätzlich prüft `tests/test_m3m_e2e_offline_catalog.py` auf einem
+isolierten Runner den gesamten **synthetischen** Datenfluss:
+5-Band-GeoTIFF → vier Reflektanzraster → vier Indizes → Pixel-QA →
+extern gepinnter SHA-256-Beleg → privater Kandidat → echter Node-Katalog.
+Auch absichtlich manipulierte Raster, Kandidaten und Katalogmanifeste
+müssen dort blockiert werden. Das ist keine M3M-Radiometrieabnahme.
+
+Danach Browser-/Mobiltests (Chrome Android, Firefox, schmale Screens),
 Auth-Review und einen separat versionierten, privaten
 Katalog-Testdatensatz abnehmen. Auf realen DJI-M3M-Bildern
 sind weiterhin kalibrierte Referenzflächen, Bandregistrierung
