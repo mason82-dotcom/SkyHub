@@ -19,7 +19,7 @@ function help(){
   console.log('Keine Seriennummern, Rohwerte, GPS-Koordinaten oder Tokens.');
   console.log('Bestehender Backend-Container wird weder neu gebaut noch gestartet.');
   console.log('SKYHUB_COMPOSE_DIR kann auf den bestehenden Compose-Ordner zeigen.');
-  console.log('Exit 0: aktueller Hardware-Smoketest; 3: unvollständig; 1: API-Fehler; 2: Parameter.');
+  console.log('Exit 0: jeweiliges begrenztes Prüf-Gate erfüllt; 3: unvollständig; 1: Fehler; 2: Parameter.');
 }
 const args=process.argv.slice(2);
 const preflight=args.includes('--preflight');
@@ -45,13 +45,17 @@ const JSON_MODE=${json};
     // Require only two known local modules in the already running backend.
     // Never inspect or export .env, credentials, source text, devices or logs.
     const checks=[
-      ['evaluatorAvailable','./rc-plus2-m4t-hardware-validation'],
-      ['evidenceAvailable','./rc-plus2-m4t-evidence']
+      ['evaluatorAvailable','./rc-plus2-m4t-hardware-validation',
+        ['evaluateHardwareSession']],
+      ['evidenceAvailable','./rc-plus2-m4t-evidence',
+        ['makeLiveEvidence','validateLiveEvidenceReceipt']]
     ];
     const output={schema:'skyhub-rcplus2-m4t-runtime-check-v1'};
-    for(const [key,moduleName] of checks){
-      try{require(moduleName);output[key]=true;}
-      catch(_){output[key]=false;}
+    for(const [key,moduleName,exportsRequired] of checks){
+      try{
+        const loaded=require(moduleName);
+        output[key]=exportsRequired.every(name=>typeof loaded?.[name]==='function');
+      }catch(_){output[key]=false;}
     }
     process.stdout.write(JSON.stringify(output));
     return;
