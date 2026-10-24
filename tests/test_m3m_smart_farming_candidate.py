@@ -129,6 +129,32 @@ class CandidateTests(unittest.TestCase):
         self._save_report()
         with self.assertRaises(worker.CandidateError): self._run()
 
+    def test_float32_mean_just_above_constant_max_is_normalized(self):
+        row = self.report['outputs']['ndvi']
+        row.update(mean=0.25000003, min=0.25, max=0.25)
+        self._save_report()
+        result = self._run()
+        self.assertEqual(result['indexLayers'][0]['mean'], 0.25)
+        self.assertEqual(result['indexLayers'][0]['min'], 0.25)
+        self.assertEqual(result['indexLayers'][0]['max'], 0.25)
+        self.assertFalse(result['operationalUseAllowed'])
+
+    def test_float32_mean_just_below_constant_min_is_normalized(self):
+        row = self.report['outputs']['ndre']
+        row.update(mean=0.24999997, min=0.25, max=0.25)
+        self._save_report()
+        result = self._run()
+        self.assertEqual(result['indexLayers'][1]['mean'], 0.25)
+        self.assertFalse(result['prescriptionExportAllowed'])
+
+    def test_mean_outside_rounding_tolerance_is_rejected(self):
+        row = self.report['outputs']['osavi']
+        row.update(mean=0.2502, min=0.25, max=0.25)
+        self._save_report()
+        with self.assertRaises(worker.CandidateError):
+            self._run()
+        self.assertFalse(self.dest.exists())
+
     def test_inconsistent_minimum_maximum_rejected(self):
         self.report['outputs']['osavi']['min'] = .7
         self._save_report()
