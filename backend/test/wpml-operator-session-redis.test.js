@@ -129,17 +129,42 @@ test('expiring during a delayed Redis lookup always fails closed',async()=>{
   }};
   assert.equal(await session(staleRecord,{clock:()=>now})(claim()),false);
 });
-test('pending Redis timeout fails closed and releases the request slot',async()=>{
-  let requests=0;
-  const redis={get:async()=>{requests++;return new Promise(()=>{});}};
+test('timed-out Redis I/O holds its concurrency slot until actual settlement',async()=>{
+  let requests=0,finish;
+  const redis={get:()=>{
+    requests++;
+    return requests===1?new Promise(resolve=>{finish=resolve;}):
+      Promise.resolve(JSON.stringify(record()));
+  }};
   const check=session(redis,{lookupTimeoutMs:25,maxConcurrentLookups:1});
   const first=check(claim());
-  assert.equal(await check(claim()),false);
-  assert.equal(await first,false);
+  assert.equal(await check(claim()),false,'in-flight request must occupy slot');
+  assert.equal(await first,false,'deadline must fail closed');
   assert.equal(requests,1);
-  // The adapter does not cancel Redis sockets. Driver-level socket timeout
-  // and retry limits remain an explicit requirement for production use.
+  // A timed-out Redis GET can still consume a real driver connection.
+  // Do not free its slot until I/O settles: repeated attempts must not
+  // build an unbounded backlog during an outage.
+  for(let i=0;i<5;i++)assert.equal(await check(claim()),false);
+  assert.equal(requests,1,'timeout must not permit more pending Redis work');
+  finish(JSON.stringify(record()));
+  await Promise.resolve(); // releases the actual Redis slot, never the old caller
+  assert.equal(await check(claim()),true);
+  assert.equal(requests,2);
+});
+test('rejected Redis I/O eventually frees the slot but grants no session',async()=>{
+  let requests=0,rejectFirst;
+  const redis={get:()=>{
+    requests++;
+    return requests===1?new Promise((_,reject)=>{rejectFirst=reject;}):
+      Promise.resolve(JSON.stringify(record()));
+  }};
+  const check=session(redis,{lookupTimeoutMs:25,maxConcurrentLookups:1});
   assert.equal(await check(claim()),false);
+  assert.equal(await check(claim()),false);
+  assert.equal(requests,1);
+  rejectFirst(Error('private I/O failure'));
+  await Promise.resolve();
+  assert.equal(await check(claim()),true);
   assert.equal(requests,2);
 });
 test('revocation, expiry and actor tampering prevent access',async()=>{
