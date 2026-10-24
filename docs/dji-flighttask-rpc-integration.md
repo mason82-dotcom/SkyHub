@@ -84,7 +84,7 @@ Nachrichten versendet.
 
 ## Nicht Bestandteil / noch offen
 
-- **Update 24.10.2026:** Der isolierte, nicht in den Server eingebundene CAS-/Reconnect-Prototyp ist mit [PR #83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) in `main`. Er hat noch **keine produktive Migration, API-/Workspace-Zugriffsschicht oder Live-Integration**.
+- **Update 24.10.2026:** Der isolierte, nicht in den Server eingebundene CAS-/Reconnect-Prototyp ist mit [PR #83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) in `main`. Er hat noch **keine produktive Migration oder Live-Integration**. Die inzwischen ergänzte [isolierte Workspace-Hülle](dji-flighttask-journal-access.md) und das [experimentelle Multi-Missions-Routing](dji-flighttask-multimission-router.md) sind **keine produktiv angebundene API und kein geprüfter Identity Provider**.
 - Keine geklärte produktive Autorisierungs-, Berechtigungs-, ACL- oder
   Gerätebindung für aktive DJI-Kommandos.
 - Für `need_reply=1`-Events fehlt eine getrennte, sichere
