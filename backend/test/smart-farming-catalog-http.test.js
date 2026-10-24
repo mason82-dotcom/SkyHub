@@ -75,6 +75,28 @@ test('individual lookup protected, no POST routes or arbitrary paths',async t=>{
     assert.equal((await fetch(url,{method:'POST',headers})).status,404);
   });
 });
+test('individual reads also enforce Bearer and reject traversal-like identifiers',async t=>{
+  const cfg=fixture(t);
+  await serve(cfg,async base=>{
+    const url=base+'/api/smart-farming/candidates/';
+    assert.equal((await fetch(url+cfg.candidateId)).status,401);
+    assert.equal((await fetch(url+cfg.candidateId,{
+      headers:{Authorization:'Bearer incorrect-token'}
+    })).status,401);
+    const headers={Authorization:'Bearer '+secret};
+    for(const id of ['candidate.json','not-a-candidate','m3m-exp-'+('z'.repeat(24))]){
+      const response=await fetch(url+id,{headers});
+      assert.equal(response.status,404,id);
+    }
+    const result=await fetch(url+cfg.candidateId,{headers});
+    assert.equal(result.status,200);
+    assert.equal(result.headers.get('cache-control'),'no-store');
+    const response=await result.json();
+    assert.equal(response.candidateId,cfg.candidateId);
+    assert.equal(JSON.stringify(response).includes('secretPath'),false);
+  });
+});
+
 test('changed registry yields generic 503 without private paths',async t=>{
   const cfg=fixture(t), headers={Authorization:'Bearer '+secret};
   await serve(cfg,async base=>{
