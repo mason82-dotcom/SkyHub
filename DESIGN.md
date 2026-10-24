@@ -55,7 +55,7 @@ Auf großen Displays belegt die Operations-Karte den Hauptraum; die rechte Gerä
 
 Fünf operatorseitige Ansichten teilen dieselben Modul-Links: Übersicht, Missionen, Routen, Survey, Smart Farming. `aria-current="page"` bezeichnet genau die aktuelle Seite. Die Pilot-2-Webview bleibt bewusst ohne zusätzliche Operatornavigation und mit eigener kompakter Kopplung.
 
-Breakpoints sind **1320**, **900** und **660 Pixel**. Unter 900 Pixeln steht die Karte oberhalb der Daten- und Editoransichten; ab 660 Pixeln wird die Navigation horizontal scrollbar und es gibt keine abgeschnittenen primären Aktionen. Zielansichten für Tests: 320, 390, 834 und 1440 Pixel.
+Breakpoints sind **1320**, **900** und **660 Pixel**. Unter 900 Pixeln steht die Karte oberhalb der Daten- und Editoransichten. Zwischen 661 und 900 Pixeln darf die Navigation horizontal scrollbar sein; bis einschließlich 660 Pixeln **umfließen alle fünf Operator-Links** auf zusätzliche Zeilen, sodass auch der aktive Bereich sichtbar bleibt. Es gibt keine abgeschnittenen primären Aktionen. Zielansichten für Tests: 320, 390, 834 und 1440 Pixel.
 
 ## Typografie, Komponenten und Zustände
 

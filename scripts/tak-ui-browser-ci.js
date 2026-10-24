@@ -83,6 +83,17 @@ const assertNoOverflow=async page=>{
    opsHidden:document.getElementById('operationsPanel').hidden,
    takHidden:document.getElementById('takPanel').hidden,
    tabs:document.querySelectorAll('[role=tab]').length,
+   allNavLinksVisible:(()=>{
+     const nav=document.querySelector('.skyhub-global-nav');
+     if(!nav)return false;
+     const bound=nav.getBoundingClientRect();
+     const links=[...nav.querySelectorAll('a')];
+     return links.length===5 && links.every(link=>{
+       const rect=link.getBoundingClientRect();
+       return rect.left>=bound.left-1 && rect.right<=bound.right+1 &&
+         rect.top>=bound.top-1 && rect.bottom<=bound.bottom+1;
+     });
+   })(),
    lightStylesheet: [...document.styleSheets].some(sheet=>sheet.href?.endsWith('/skyhub-light.css')),
    colorScheme: getComputedStyle(document.documentElement).colorScheme,
    bodyBackground: getComputedStyle(document.body).backgroundColor,
@@ -91,6 +102,8 @@ const assertNoOverflow=async page=>{
  }));
  assert.equal(dimensions.mainCount,1,'one semantic main landmark');
  assert.equal(dimensions.tabs,2,'two accessible tabs');
+ assert.equal(dimensions.allNavLinksVisible,true,
+   'five module links including the current module must all remain visible');
  assert.equal(dimensions.lightStylesheet,true,'light stylesheet must be loaded successfully');
  assert.equal(dimensions.colorScheme,'light','root color-scheme must remain light');
  assert.equal(dimensions.bodyBackground,'rgb(243, 246, 251)','light canvas must be rendered');
@@ -212,6 +225,16 @@ async function run(){
           scrollWidth:document.documentElement.scrollWidth,
           width:window.innerWidth,
           menuLinks:document.querySelectorAll('.skyhub-global-nav a').length,
+          navLinksVisible:(()=>{
+            const nav=document.querySelector('.skyhub-global-nav');
+            if(!nav)return true;
+            const parent=nav.getBoundingClientRect();
+            return [...nav.querySelectorAll('a')].every(link=>{
+              const rect=link.getBoundingClientRect();
+              return rect.left>=parent.left-1 && rect.right<=parent.right+1 &&
+                rect.top>=parent.top-1 && rect.bottom<=parent.bottom+1;
+            });
+          })(),
           pilotBridge:typeof window.djiBridge!=='undefined'
         };
       });
@@ -221,6 +244,7 @@ async function run(){
       assert.equal(visual.scheme,'light',filename+' color scheme');
       assert.ok(visual.scrollWidth<=visual.width+1,filename+' overflow: '+JSON.stringify(visual));
       assert.equal(visual.menuLinks,pageType==='pilot'?0:5,filename+' operator navigation');
+      assert.equal(visual.navLinksVisible,true,filename+' all nav links must remain visible');
       if(pageType==='pilot'){
         assert.equal(visual.pilotBridge,false,'synthetic Pilot 2 has no device bridge');
         assert.match(await screen.locator('#result').innerText(),/JSBridge nicht verfügbar/);

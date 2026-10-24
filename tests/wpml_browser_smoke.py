@@ -99,7 +99,13 @@ def assert_light_theme(page, active_href: str, name: str) -> None:
         viewportWidth: window.innerWidth,
         navigation: [...document.querySelectorAll('.skyhub-global-nav a')].map(a => ({
             href: a.getAttribute('href'),
-            current: a.getAttribute('aria-current')
+            current: a.getAttribute('aria-current'),
+            fullyVisible: (() => {
+                const nav = a.closest('.skyhub-global-nav').getBoundingClientRect();
+                const rect = a.getBoundingClientRect();
+                return rect.left >= nav.left - 1 && rect.right <= nav.right + 1 &&
+                       rect.top >= nav.top - 1 && rect.bottom <= nav.bottom + 1;
+            })()
         })),
         // Layout only: never include route names, input values or GPS in CI diagnostics.
         overflowElements: document.documentElement.scrollWidth > window.innerWidth + 1
@@ -126,6 +132,8 @@ def assert_light_theme(page, active_href: str, name: str) -> None:
           name + ": page overflows screen: " + str(state))
     check(len(state["navigation"]) == 5,
           name + ": expected five operator module navigation links")
+    check(all(a["fullyVisible"] for a in state["navigation"]),
+          name + ": operator navigation clips a module on this viewport")
     check([a["href"] for a in state["navigation"] if a["current"] == "page"]
           == [active_href], name + ": active module mismatch")
 

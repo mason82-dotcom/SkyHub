@@ -435,6 +435,14 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
   body[data-skyhub-page="routes"] main { grid-template-columns: 1fr; }
 }
 @media (max-width: 660px) {
+  /* Show every module directly: a scrolling nav hides the active link on 320px screens. */
+  .skyhub-global-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    overflow-y: visible;
+    row-gap: 3px;
+    padding-bottom: 0;
+  }
   body:not([data-skyhub-page="pilot"]) > header { padding: 12px 14px; }
   body[data-skyhub-page="dashboard"] > header {
     display: flex; flex-direction: column; align-items: stretch; gap: 12px;

@@ -9,7 +9,7 @@ The live read-only Operations dashboard, the separate TAK / CoT tab, Smart Farmi
 - Light-only, accessible UI: canvas `#f3f6fb`, surfaces `#ffffff`, text `#1b2b42`, blue action `#2458d3`, teal/success, amber warnings, red incidents.
 - Semantic CSS design tokens with aliases for the legacy static pages; old embedded CSS remains for layout compatibility, while the shared stylesheet (loaded after each page's embedded styles) controls the visual skin.
 - Consistent cross-module navigation on standalone operator pages. DJI Pilot 2 pairing remains compact and does **not** receive extra navigation.
-- Breakpoints at 1320/900/660px, focus-visible outlines, minimum 42px input/button height (44px menu links on smaller displays), reduced motion, map-first operations layout and card-based status.
+- Breakpoints at 1320/900/660px. At <=660px, all five operator navigation links wrap into visible rows instead of hiding the active link in a horizontally scrolled strip; Chromium verifies their actual bounding rectangles. Focus-visible outlines, minimum 42px input/button height (44px menu links on smaller displays), reduced motion, map-first operations layout and card-based status.
 - No new external dependencies, runtime state, browser storage, API actions or flight controls. Existing read-only, experimental, and safety warnings are preserved.
 
 ## Validation

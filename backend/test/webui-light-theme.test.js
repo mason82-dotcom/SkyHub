@@ -139,3 +139,11 @@ test('dynamically rendered WPML notices use the shared readable light tokens', (
   assert.ok(dashboard,'dashboard body exists');
   assert.doesNotMatch(dashboard, /#47c3e7|#ff6b5b|#f0b84a/i);
 });
+
+test('mobile operator navigation wraps rather than hiding the active section', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  const mobile = css.split('@media (max-width: 660px) {')[1]?.split('@media (prefers-reduced-motion: reduce)')[0];
+  assert.ok(mobile, '660px breakpoint must exist');
+  assert.match(mobile, /\.skyhub-global-nav\s*\{\s*flex-wrap:\s*wrap;/);
+  assert.match(mobile, /overflow-x:\s*visible;/);
+});
