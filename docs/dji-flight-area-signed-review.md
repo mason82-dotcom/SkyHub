@@ -78,7 +78,7 @@ JSON-Textlayout** übernommen, sondern mit
 `reviewSigningBytes(declaration, signerKeyId)` fest definiert:
 UTF-8, Domain-Separation
 `SkyHub-Next/offline-flight-area-review/v1\n`,
-gefolgt vom JSON-Array der neun eindeutigen Werte in fester
+gefolgt vom JSON-Array der zehn eindeutigen Werte in fester
 Reihenfolge einschließlich der Signer-ID.
 Workspace-UUID, Review-UUID und Hashes werden normalisiert; die
 DJI-Gatewaykennung bleibt exakt. Alle zusätzlichen oder unbekannten
