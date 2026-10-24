@@ -26,7 +26,8 @@ function validClaim(x){
     Number.isSafeInteger(x.expiresAt)&&x.expiresAt>0;
 }
 function createWpmlRedisSessionCheck({
-  redis,keySecret,clock=()=>Date.now(),lookupTimeoutMs=300
+  redis,keySecret,clock=()=>Date.now(),lookupTimeoutMs=300,
+  maxConcurrentLookups=32
 }={}){
   if(!redis||typeof redis.get!=='function')
     throw new TypeError('A read-only Redis GET adapter is required');
@@ -37,6 +38,10 @@ function createWpmlRedisSessionCheck({
   if(!Number.isSafeInteger(lookupTimeoutMs)||lookupTimeoutMs<25||
      lookupTimeoutMs>2000)
     throw new TypeError('Bounded Redis lookup timeout (25-2000 ms) required');
+  if(!Number.isSafeInteger(maxConcurrentLookups)||maxConcurrentLookups<1||
+     maxConcurrentLookups>128)
+    throw new TypeError('Bounded Redis session concurrency (1-128) required');
+  let inFlight=0;
   const key=Buffer.from(keySecret); // Never reuse a mutable caller buffer.
   function lookupKey(sessionId){
     return KEY_PREFIX+crypto.createHmac('sha256',key)
@@ -46,6 +51,10 @@ function createWpmlRedisSessionCheck({
     if(!validClaim(assertion))return false;
     const now=Math.floor(clock()/1000);
     if(!Number.isSafeInteger(now)||now<1||assertion.expiresAt<=now)return false;
+    // Fail closed under an exhausted Redis pool instead of allowing
+    // unbounded pending promises to accumulate during an outage.
+    if(inFlight>=maxConcurrentLookups)return false;
+    inFlight++;
     // Only a verified JWT assertion is suitable input. The Redis key
     // intentionally contains no raw UUID, user name, GPS or bearer token.
     let value,timeout;
@@ -59,7 +68,17 @@ function createWpmlRedisSessionCheck({
         })
       ]);
     }catch{return false;}
-    finally{if(timeout!==undefined)clearTimeout(timeout);}
+    finally{
+      if(timeout!==undefined)clearTimeout(timeout);
+      inFlight--;
+    }
+    // A lookup may cross the JWT expiry boundary even if it started before
+    // expiry. Re-check against the clock after I/O, never trust only 'now'
+    // captured before awaiting an externally controlled Redis response.
+    let afterLookup;
+    try{afterLookup=Math.floor(clock()/1000);}catch{return false;}
+    if(!Number.isSafeInteger(afterLookup)||afterLookup<1||
+       assertion.expiresAt<=afterLookup)return false;
     if(typeof value!=='string'||Buffer.byteLength(value,'utf8')>2048)return false;
     let record;
     try{record=parseJson(value,2048);}catch{return false;}
@@ -71,7 +90,7 @@ function createWpmlRedisSessionCheck({
        record.sessionId!==assertion.sessionId||
        !Number.isSafeInteger(record.expiresAt)||
        record.expiresAt<assertion.expiresAt||
-       record.expiresAt<=now)return false;
+       record.expiresAt<=afterLookup)return false;
     return true;
   };
 }
