@@ -67,6 +67,8 @@ function makeHarness({pathName='/',reduced=false,forcedColors=false}={}){
   body.classList.add('skyhub-gfx');
   body.dataset={};
   const header=makeNode('header');
+  let legacyRemoved=false;
+  header.querySelector=selector=>selector==='nav'?{remove(){legacyRemoved=true;}}:null;
   let inserted=null;
   header.insertAdjacentElement=(position,node)=>{inserted={position,node};};
   const motionButton=makeNode('button');
@@ -98,7 +100,7 @@ function makeHarness({pathName='/',reduced=false,forcedColors=false}={}){
   gfx.init(doc,win);
   return {
     body,motionButton,mapButton,search,panel,inserted,keyListener,
-    reducedMedia,forcedMedia,resizeCount:()=>resizeCount
+    legacyRemoved:()=>legacyRemoved,reducedMedia,forcedMedia,resizeCount:()=>resizeCount
   };
 }
 
@@ -106,6 +108,7 @@ test('shared GFX module rail has five fixed internal links and correct active ro
   const h=makeHarness({pathName:'/wpml-editor.html'});
   assert.equal(gfx.ROUTES.length,5);
   assert.ok(h.body.classList.contains('gfx-has-module-rail'));
+  assert.equal(h.legacyRemoved(),true,'legacy module links are removed only after enhancement');
   assert.equal(h.inserted.position,'afterend');
   assert.equal(h.inserted.node.getAttribute('aria-label'),'SkyHub Modulnavigation');
   const links=h.inserted.node.children[1].children;
