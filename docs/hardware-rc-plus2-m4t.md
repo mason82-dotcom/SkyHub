@@ -66,6 +66,19 @@ Bei einem bestehenden Checkout, der die Option nicht kennt, zuerst nur im **isol
 
 Der **reale Pi-Preflight vom 24.10.2026, 13:30 MESZ** hat alle acht API-/MQTT-/Topologie-ACK-Voraussetzungen mit Exit 0 erfüllt; zuvor bestanden 13/13 Offline-Sicherheitstests im isolierten Test-Worktree. [Datiertes Pi-Evidence-Protokoll](hardware-acceptance-status-2026-10-24.md#nachtrag-24102026-tatsächlicher-raspberry-pi-backend-preflight). Das bedeutet **nicht**, dass die RC Plus 2 oder Matrice 4T schon online gewesen wären oder dass das laufende Backend-Image die erst später ergänzten Live-JSON-Module bereits enthält.
 
+Die reproduzierbare Variante benutzt jetzt das einheitliche Diagnose-CLI im isolierten Test-Worktree, ohne DJI-Geräte, Cloud-Login, Backend-Neustart oder Modifikation der Berechtigungen:
+
+```bash
+cd ~/Projekte/SkyHub-RCPlus2-M4T-Test || exit 1
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-plus2-m4t-check.js --runtime-check --json
+printf 'Modul-Exitstatus: %s\n' "$?"
+```
+
+Im JSON-Modus werden ausschließlich `evaluatorAvailable` und `evidenceAvailable` samt festgelegtem, anonymisiertem Schema ausgegeben. Der Lauf prüft, ob die Module **im bestehenden Backend-Container** geladen werden können und ob die drei benötigten Funktionen (`evaluateHardwareSession`, `makeLiveEvidence`, `validateLiveEvidenceReceipt`) vorhanden sind. `result=READY` mit Exit `0` bedeutet **nur Modulverfügbarkeit**, nicht, dass die Geräte verbunden sind oder eine Live-Diagnose bestanden haben. Fehlende Module/Funktionen ergeben `INCOMPLETE` (Exit `3`); Docker-Fehler Exit `1`; unzulässige Parameter Exit `2`. Keine Pfade, Ausnahmetexte, Schlüssel, Hardware-Snapshots oder Tokenwerte verlassen den Container.
+
+Der folgende direkte Node-Befehl bleibt als ältere Alternative ohne `--runtime-check`-Unterstützung dokumentiert. Er prüft nur, ob sich die Module laden lassen, nicht deren Exportfunktionen.
+
 Vor der echten Live-JSON-Abnahme den **bereits laufenden** Container ohne Neustart, Umkonfiguration oder Ausgabe von Zugangsdaten prüfen:
 
 ```bash
