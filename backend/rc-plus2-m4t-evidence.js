@@ -41,6 +41,20 @@ function makePreflightEvidence(snapshot,date=new Date()){
     checks
   };
 }
+const RUNTIME_KEYS=['evaluatorAvailable','evidenceAvailable'];
+function makeRuntimeEvidence(snapshot,date=new Date()){
+  if(snapshot?.schema!=='skyhub-rcplus2-m4t-runtime-check-v1'||
+      RUNTIME_KEYS.some(key=>typeof snapshot[key]!=='boolean')||
+      Object.keys(snapshot).length!==RUNTIME_KEYS.length+1){
+    throw new TypeError('invalid runtime module check');
+  }
+  const checks=Object.fromEntries(RUNTIME_KEYS.map(key=>[key,snapshot[key]]));
+  return {
+    ...receiptBase('runtime-module-check',date),
+    result:RUNTIME_KEYS.every(key=>checks[key])?'READY':'INCOMPLETE',
+    checks
+  };
+}
 function summarizeDevice(device,includeAircraft){
   // Always return explicit null (not fabricated zero) for unsupported profiles.
   const fields=device?.fieldInterface===true?device.fields:null;
@@ -152,4 +166,4 @@ function validateLiveEvidenceReceipt(value){
   }
   return true;
 }
-module.exports={makePreflightEvidence,makeLiveEvidence,validateLiveEvidenceReceipt};
+module.exports={makePreflightEvidence,makeRuntimeEvidence,makeLiveEvidence,validateLiveEvidenceReceipt};
