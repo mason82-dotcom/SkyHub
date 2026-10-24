@@ -37,12 +37,12 @@ globalThis.fetch=async url=>{
 };
 eval(args[scriptIndex+1]);
 `;
-function executePreflight(broken=false){
+function executePreflight(broken=false,json=false){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'skyhub-hardware-preflight-'));
   try{
     const executable=path.join(dir,'docker');
     fs.writeFileSync(executable,fakeDocker,{mode:0o700});
-    return spawnSync(process.execPath,[cli,'--preflight'],{
+    return spawnSync(process.execPath,[cli,'--preflight',...(json?['--json']:[])],{
       cwd:dir,encoding:'utf8',timeout:10000,
       env:{...process.env,PATH:dir+path.delimiter+process.env.PATH,
         SKYHUB_COMPOSE_DIR:dir,TEST_MISSING_PAIRINGS:broken?'1':'0'}
@@ -65,4 +65,27 @@ test('unavailable read-only pairing endpoint is incomplete, not paired',()=>{
   assert.match(result.stdout,/Pairing-API \(nur GET\): NEIN/);
   assert.match(result.stdout,/Pi-Backend-Voraussetzungen: UNVOLLSTÄNDIG/);
   assert.doesNotMatch(result.stdout,/SECRET_|987654|49\.123456/);
+});
+
+test('preflight JSON response contains only an allowed status projection',()=>{
+  const run=executePreflight(false,true);
+  assert.equal(run.status,0,run.stderr);
+  const data=JSON.parse(run.stdout);
+  assert.equal(data.schema,'skyhub-rcplus2-m4t-evidence-v1');
+  assert.equal(data.mode,'backend-preflight');
+  assert.equal(data.result,'READY');
+  assert.equal(data.hardwareAcceptanceComplete,false);
+  assert.equal(data.flightReady,false);
+  assert.equal(data.dispatchAllowed,false);
+  assert.equal(Object.keys(data.checks).length,8);
+  assert.equal(run.stdout.includes('SECRET_'),false);
+  assert.equal(run.stdout.includes('987654'),false);
+});
+test('preflight unavailable pairings gives JSON incomplete, never ready',()=>{
+  const run=executePreflight(true,true);
+  assert.equal(run.status,3,run.stderr);
+  const data=JSON.parse(run.stdout);
+  assert.equal(data.result,'INCOMPLETE');
+  assert.equal(data.checks.pairingsApi,false);
+  assert.equal(data.hardwareAcceptanceComplete,false);
 });
