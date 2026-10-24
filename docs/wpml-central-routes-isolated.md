@@ -146,4 +146,39 @@ dienen. Ein Request-Parameter wie `workspaceId` oder
 node --test backend/test/wpml-central-rls.integration.test.js
 ```
 
+## Isolierter Ed25519-Operator-Verifikationsvertrag (Phase 4)
+
+`backend/wpml-operator-verifier.js` ist ein **rein lokaler**
+Signatur- und Session-Gate-Baustein. Er ist nicht in `server.js`
+eingebunden und lädt niemals JSON Web Keys aus einem vom Client angegebenen
+Pfad. Nur zuvor ausdrücklich vom Server gepinnte **Ed25519-Public-Key-Objekte**
+mit erlaubter `kid`-Kennung werden akzeptiert.
+
+- `alg:EdDSA`, `typ:JWT`, genau drei JWT-Teile, unveränderliches
+  Zielpublikum `skyhub-wpml-route-service`, HTTPS-Issuer und eine streng
+  bekannte Menge von Claims; unbekannte sowie doppelte JSON-Schlüssel,
+  `none`/`HS256`, `jku`/`x5u`, abweichende Signaturen und fremde
+  Schlüssel werden zurückgewiesen.
+- Maximal 900 Sekunden Gültigkeitsfenster ab `iat`, Prüfung von
+  `nbf` und `exp`, validierte UUIDs für Operator, Workspace und
+  `jti`; nur kryptografisch signierte `kind:human`-Identitäten mit
+  `operator`- bzw. `admin`-Rolle sind möglich.
+- Eine **verpflichtend injizierte** asynchrone `isActiveSession`-Funktion
+  muss Sitzung, Sperrung/Widerruf und Workspace-Mitgliedschaft unabhängig
+  anhand einer vertrauenswürdigen serverseitigen Quelle als `true`
+  bestätigen. `false`, fehlende Werte oder Serverfehler führen
+  zur vollständigen Ablehnung. Das Modul implementiert bewusst selbst
+  **keinen** Session-Store, keine Authentifizierungs-Endpunkte,
+  keine Signier-/Registrierungslogik und keinen Schlüsselabruf.
+- Der geprüfte Rückgabewert kann später als `authorize`-Adapter des
+  isolierten Routenservice dienen. **Solange kein echter IdP, kein
+  dauerhaftes Session-Backend und keine produktive RLS-Rolle existieren,
+  ist dies keine vollständig implementierte Anmeldung.**
+
+Node-Unit-Test: `backend/test/wpml-operator-verifier.test.js` prüft
+Signaturfälschung, Algorithmus-/Key-Confusion, mehrdeutige Claims,
+Ablauf und Widerruf sowie einen isolierten Ende-zu-Ende-Test mit
+Workspace-Berechtigung. Testsignaturschlüssel sind rein zufällig erzeugt
+und werden weder in Dateien noch in Produktionsschlüsselmaterial übernommen.
+
 **Keine der P0-Datenbankoperationen autorisiert Flüge.**
