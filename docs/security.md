@@ -1,10 +1,10 @@
-# Sicherheitsmodell – SkyHub Next
+# Sicherheitsmodell – SkyHub-Next
 
 Diese Regeln gelten für den aktiven Root-Stack. Die historische Konfiguration unter `stacks/legacy-skyhub/` darf nicht als freigegebene aktuelle Sicherheitskonfiguration interpretiert werden. Sicherheitsbeobachtungen vom 20.10.2026 sind **zeitbezogene Diagnosebefunde**, keine permanente Aussage über den laufenden Broker.
 
 `SKYHUB_PILOT_ENABLED` und `SKYHUB_TOPOLOGY_ACK_ENABLED` sind standardmäßig deaktiviert. Änderungen am Broker, an ACLs, an Caddy oder am produktiven HTTP-Port gehören nicht zu diesem Dokumentations-Cleanup.
 
-**Weiterführend:** [MQTT/OSD und EMQX](mqtt-osd-integration.md), [Betrieb](ops.md), [Migration](legacy-migration.md).
+**Weiterführend:** [MQTT/OSD und EMQX](mqtt-osd-integration.md), [Betrieb](ops.md), [Repository-Identität](repository-identity.md), [Migration](legacy-migration.md).
 
 ## Sicherheitsmodell
 
@@ -63,3 +63,9 @@ brauchen das Token. Akzeptiert werden nur private Netze von /16 bis /32
 außerhalb der Docker-Bereiche (172.16.0.0/12). Leer lassen, um das Token immer
 zu verlangen. Die Kartenkacheln senden einen Referer
 (`strict-origin-when-cross-origin`), wie es die OSM-Nutzungsregeln verlangen.
+
+## Offline-P0-Route-Library und zentraler Default-Deny-Entwurf (23.10.2026)
+
+Die optionale Browser-Routenbibliothek speichert GPS-Rohkoordinaten nur nach ausdrücklicher Benutzeraktion im **unverschlüsselten `localStorage`** der Website-Origin. Es gibt weder automatische Serversynchronisation noch eine sichere Teamfreigabe. Browserprofil und lokaler Datenträger müssen deshalb als schutzbedürftig behandelt werden; auf gemeinsam genutzten Geräten diese Funktion nicht aktivieren. Vergleichsberichte geben nur aggregierte Änderungszahlen aus.
+
+Die zentrale WPML-PostgreSQL-Struktur ist ausschließlich eine **nicht aktivierte Migration** (`003_wpml_route_library_draft.sql`): mandantenbezogene Fremdschlüssel, unveränderliche Revisionen/Snapshots, RLS ohne Freigabepolicies. Weder View-Token noch Pilot-2-Pairing sind berechtigte schreibende Operator-Identitäten. Es gibt keine aktive Route-CRUD-API und keine DJI-Dispatch-Freigabe. Repository-Umbenennung ändert weder Ports noch Geheimnisse noch dieses Berechtigungsmodell.

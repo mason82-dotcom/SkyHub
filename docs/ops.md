@@ -10,9 +10,20 @@
 
 ## Entwicklung auf dem Pi (nicht die produktive Python-Installation überschreiben!)
 
-    git clone --branch develop/skyhub-next-mqtt-integrity-v3 https://github.com/mason82-dotcom/SkyHub.git ~/Projekte/SkyHub-Next
+    git clone https://github.com/mason82-dotcom/SkyHub-Next.git ~/Projekte/SkyHub-Next
     cd ~/Projekte/SkyHub-Next
+    git remote -v
     cp .env.example .env
+
+Dieser Befehl gilt **nur für eine neue, noch nicht vorhandene Arbeitskopie**. Besteht
+`~/Projekte/SkyHub-Next` bereits, **nicht erneut klonen**, sondern den Remote
+nach Prüfung der Arbeitskopie bei Bedarf mit
+`git remote set-url origin https://github.com/mason82-dotcom/SkyHub-Next.git`
+aktualisieren. Lokale Änderungen zunächst mit `git status --short` prüfen.
+Das Legacy-Projekt `~/Projekte/SkyHub` und sein Containerbetrieb bleiben
+unberührt. Der frühere Entwicklungs-Branch `develop/skyhub-next-mqtt-integrity-v3`
+ist für einen frischen Standard-Checkout **nicht** vorauszusetzen.
+Siehe [Repository-Identität](repository-identity.md).
 
 Die Datei .env bearbeiten. Alle REPLACE_* Platzhalter ersetzen. Zufallstokens/Passwörter mit openssl rand -hex 32 erzeugen. **Für den Raspberry Pi ist MQTT-Port 1884 verbindlich**: `MQTT_BROKER_URL=mqtt://host.docker.internal:1884`. Nutzername und Passwort des vorhandenen Pi-Brokers in MQTT_USER und MQTT_PASSWORD eintragen. SkyHub Next startet keinen eigenen MQTT-Broker und belegt weder Host-Port 1883 noch 1884. `SKYHUB_MQTT_REQUIRED_PORT=1884` im Pi-Compose verhindert den versehentlichen Betrieb mit einem anderen Port. MinIO wird erst mit docker compose --profile media up -d minio gestartet, da die Medien-API noch aussteht. Das separate System benötigt keinen eigenen EMQX-Broker und belegt keine bestehenden DJI-Dienstports. Auf dem Pi läuft das bestehende `skyhub_backend` bereits auf **4000**. Deshalb verwendet SkyHub Next standardmäßig den Host-Port **4001** (intern weiterhin 4000) und lauscht nur auf `127.0.0.1`. Vor jedem Start mit dem beigefügten Preflight-Skript kontrollieren, dass auch 4001 frei ist. Eine bereits vorhandene lokale `.env` mit `SKYHUB_HTTP_PORT=4000` muss manuell angepasst werden; sie wird nicht automatisch überschrieben.
 

@@ -352,6 +352,26 @@ app.get('/api/health',(req,res)=>res.json({
   trackRetentionDays,...mqttStats.snapshot()
 }));
 app.use('/api',auth);
+// Offline WPML/KMZ inspection is opt-in and uses only the normal view-token auth.
+// No mission dispatch, media persistence, MQTT publish or aircraft communication.
+app.post('/api/wpml/inspect',
+  express.raw({type:['application/octet-stream','application/vnd.google-earth.kmz',
+    'application/zip'],limit:'12mb'}),
+  (req,res)=>{
+    if(process.env.SKYHUB_WPML_INSPECT_ENABLED!=='true')
+      return res.status(404).json({error:'WPML inspection disabled'});
+    if(!Buffer.isBuffer(req.body))
+      return res.status(415).json({error:'KMZ binary content type required'});
+    try{
+      const {inspectKmz}=require('./wpml-kmz');
+      const result=inspectKmz(req.body);
+      res.status(result.valid?200:422).json(result);
+    }catch(_err){
+      // Do not echo arbitrary ZIP members, XML payloads or decompressor details.
+      res.status(422).json({error:'Invalid, unsafe or unsupported KMZ'});
+    }
+  }
+);
 app.get('/api/devices',(req,res)=>res.json(registry.snapshot()));
 app.get('/api/topology',(req,res)=>res.json(registry.snapshot().map(d=>({sn:d.sn,role:d.role,gatewaySn:d.gatewaySn,model:d.model,topologyOnline:d.topologyOnline,
   lastTopologyAt:d.lastTopologyAt,topologyTimeVerified:d.topologyTimeVerified,children:d.children}))));

@@ -1,4 +1,4 @@
-# Architektur und Datenmodell – SkyHub Next
+# Architektur und Datenmodell – SkyHub-Next
 
 **Geltungsbereich:** Aktiver Entwicklungsstand im Repository-Root (Version 0.1.0), nicht der archivierte Stack.
 
@@ -14,13 +14,13 @@
 
 SkyHub Next nutzt den vorhandenen MQTT-Broker (Pi-Hostport 1884), einen separaten Redis-/PostGIS-Stack und optional MinIO im Compose-Profil `media`. MQTT-Verbindung, empfangene Topics, verwertbare OSD-Messwerte und validierte Positionen sind **verschiedene** Zustände; sie dürfen in der UI nicht gleichgesetzt werden.
 
-**Vertiefung:** [MQTT/OSD-Integration](mqtt-osd-integration.md), [DJI-API-Kompatibilität](dji-cloud-api-compatibility.md), [Sicherheit](security.md).
+**Vertiefung:** [MQTT/OSD-Integration](mqtt-osd-integration.md), [DJI-API-Kompatibilität](dji-cloud-api-compatibility.md), [WPML-Route-Library und Aktionsmodell](dji-waylines-sdk-reference.md), [Repository-Identität](repository-identity.md), [Sicherheit](security.md).
 
 ## Aktueller Funktionsumfang und Grenzen
 
 OSD-Nachrichten lesen und geographische Punkte anzeigen; Status-/Event-Kanäle als beobachtete Quellen behandeln, ohne aktive Flüge zu steuern. Persistenz der GPS-Telemetrie in PostGIS sowie Redis-Cache. MQTT-Broker muss passend für DJI Pilot 2 konfiguriert sein. Grundlegende Gateway-/Subgerätezuordnung ist vorhanden; dauerhafter Geräte-Online-Status und zuverlässige Modellzuordnung aus allen Firmwarevarianten sind noch nicht abschließend validiert. Der Online-Status bezeichnet ausschließlich MQTT-Brokerkonnektivität, **nicht** den Gerätezustand.
 
-Das Frontend benötigt Leaflet/OpenStreetMap über CDN und Internetzugang. MinIO ist eine isolierte Speichergrundlage für zukünftige Medien; eine Medien-API gibt es noch nicht. Die vorhandenen M3E-/M3T-/M3M-Python-Worker sind Demonstrationscode und dürfen nicht als reale Messergebnisse verwendet werden. WPML-Missionseditor, Radiometrie und Photogrammetrie stehen noch aus.
+Das Frontend benötigt Leaflet/OpenStreetMap über CDN und Internetzugang. MinIO ist eine isolierte Speichergrundlage für zukünftige Medien; eine Medien-API gibt es noch nicht. Die vorhandenen M3E-/M3T-/M3M-Python-Worker sind Demonstrationscode und dürfen nicht als reale Messergebnisse verwendet werden. Ein **browserlokaler WPML-Wegpunkteditor und eine P0-Routenbibliothek** existieren im isolierten Feature-Branch und erzeugen nur Offline-Entwürfe; eine zentrale produktive Routenbibliothek, Hardwareabnahme, Radiometrie und echte Photogrammetrie stehen noch aus.
 
 DJI Cloud API Dokumentation:
 - https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-plus/properties.html
