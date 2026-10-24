@@ -28,9 +28,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install FFmpeg on runner
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
       - name: Check host prerequisites
         run: |
           node --version
+          command -v ffmpeg
           ffmpeg -version | head -n 1
       - name: Ensure pinned HyperFrames browser
         run: npx --yes hyperframes@0.8.192 browser ensure

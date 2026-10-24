@@ -20,3 +20,7 @@ Instrumenten-Opener für die hypothetische SkyHub-Leitstellenoberfläche: geomet
 - Keine animierten UI-Funktionen als echte DJI-Steuerung verkaufen.
 - Keine endlosen GSAP-Timelines, zufälligen Daten oder asynchronen Timeline-Generatoren.
 - Keine absoluten Positionen für Haupttextcontainer; nur für dekorative Ringe und Raster.
+
+## Render-Schrift (reproduzierbarer Fallback)
+
+Für die isolierte HyperFrames-Videokomposition ist die Hauptschrift bewusst auf das allgemeine `Arial, sans-serif`-Fallback reduziert, statt auf nicht eingebettete Bahnschrift-/Arial-Narrow-Installationen zu vertrauen. Dadurch wird kein Nutzer-/CI-Font installiert oder mit ausgeliefert. Die produktive WebUI bleibt typografisch unverändert.
