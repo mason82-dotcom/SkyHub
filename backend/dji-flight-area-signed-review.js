@@ -42,7 +42,8 @@ function validDeclaration(d){
 // A detached Ed25519 signature covers all fields INCLUDING signerKeyId,
 // which prevents key-id substitution even if keys were accidentally reused.
 function reviewSigningBytes(declaration,signerKeyId){
-  if(!validDeclaration(declaration)||!KEY_ID.test(signerKeyId))
+  if(!validDeclaration(declaration)||typeof signerKeyId!=='string'||
+     !KEY_ID.test(signerKeyId))
     throw new TypeError('Invalid signed review declaration');
   const d=declaration;
   return Buffer.from(DOMAIN+'\n'+JSON.stringify([
@@ -62,7 +63,8 @@ function inspectSignedFlightAreaReview({
     return reject('untrusted_context');
   if(!epoch(now))return reject('invalid_clock');
   if(!exact(envelope,ENVELOPE_KEYS)||envelope.schema!==SCHEMA||
-     !KEY_ID.test(envelope.signerKeyId)||!SIG.test(envelope.signature)||
+     (typeof envelope.signerKeyId!=='string'||!KEY_ID.test(envelope.signerKeyId))||
+     (typeof envelope.signature!=='string'||!SIG.test(envelope.signature))||
      !validDeclaration(envelope.declaration))return reject('invalid_envelope');
 
   const d=envelope.declaration;
