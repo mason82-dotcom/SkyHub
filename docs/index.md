@@ -2,7 +2,7 @@
 
 **Repository:** https://github.com/mason82-dotcom/SkyHub-Next. Historische GitHub-Links wurden auf den neuen Slug normalisiert; die lokalen Pi-Verzeichnisse `SkyHub` (Legacy) und `SkyHub-Next` (Entwicklung) bleiben unterschiedlich.
 
-**Aktualisiert am 23.10.2026.** Diese Navigation gilt für den Root-Stack `skyhub-next`. Die wichtigste Unterscheidung ist die zwischen dem **Code auf `main`** und **noch nicht integrierten Entwicklungszweigen**.
+**Aktualisiert am 24.10.2026.** Diese Navigation gilt für den Root-Stack `skyhub-next`. Die wichtigste Unterscheidung ist die zwischen dem **Code auf `main`** und **noch nicht integrierten Entwicklungszweigen**.
 
 ## Zuerst lesen
 
@@ -17,7 +17,7 @@
 
 ## Technische Referenz des Hauptbranches
 
-**DJI-Missionsbeobachtung seit Merge von #74/#78/#83:** [Statusautomat](dji-rpc-lifecycle-observation.md), [read-only Reply-Adapter](dji-flighttask-rpc-integration.md) und [isoliertes CAS-Journal](dji-flighttask-durable-journal.md). Die Module sind **in `main`, aber nicht in die aktive DJI-Laufzeit eingebunden**; kein produktives SQL-Deployment.
+**DJI-Missionsbeobachtung: #74/#78/#83 und Multi-Missions-Router #108 in `main`:** [Statusautomat](dji-rpc-lifecycle-observation.md), [read-only Reply-Adapter](dji-flighttask-rpc-integration.md), [isoliertes CAS-Journal](dji-flighttask-durable-journal.md), [Offline-Retention](dji-flighttask-journal-retention.md) und [optionale Workspace-Autorisierung](dji-flighttask-journal-access.md) und [experimentelles Multi-Missions-Routing](dji-flighttask-multimission-router.md). Die Module sind **nicht in die aktive DJI-Laufzeit eingebunden**; kein produktives SQL-Deployment oder freigegebener Identity Provider.
 
 | Bereich | Dokumente |
 | --- | --- |
@@ -31,6 +31,10 @@
 | Betriebssicherheit und Migration | [Skriptwirkung](scripts.md), [Legacy-Migration](legacy-migration.md), [Legacy-Dependency-Audit](legacy-dependency-audit.md), [Takeover/Rollback](skyhub-legacy-takeover.md) |
 | Frontend-Kontrakte | [UX-CONTRACT](../UX-CONTRACT.md), [DESIGN](../DESIGN.md) |
 | FlightHub 2 Frontend – optionale Herstellerkomponenten, nur Referenz | [FH2-On-Premises-Komponenten und Sicherheitsgates](dji-flighthub2-frontend-components.md) |
+
+## Passiver DJI Flight-Area-Laborstand
+
+[Event-Inspector](dji-flight-area-integration.md) · [Offline-Zielrevisionsmonitor](dji-flight-area-sync-monitor.md). Ausschließlich gelesene, begrenzte Daten; keine aktiven Fluggebietsänderungen, kein Pi-Hardwarebeleg.
 
 ## Historische Momentaufnahmen – nicht als Live-Betriebszustand verwenden
 

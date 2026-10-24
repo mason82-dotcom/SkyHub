@@ -363,6 +363,50 @@ def main() -> None:
                     check(len(gap_features) == 1 and
                           gap_features[0]["properties"]["safetyVerified"] is False,
                           "Survey gap not preserved as explicitly unsafe")
+                    # P1: documented DJI Mavic 3M camera mode reference checks.
+                    # Values below are synthetic physical optics, NOT DJI calibration.
+                    survey.locator("#optics-enable").check()
+                    survey.locator("#camera-mode").select_option("m3m-ms-tiff")
+                    optical = {
+                        "sensor-width": "13.2", "sensor-height": "8.8",
+                        "focal": "8.8", "agl": "60", "image-width": "5280",
+                        "image-height": "3956", "side-overlap": "70",
+                        "front-overlap": "80", "photo-speed": "6"
+                    }
+                    for field, value in optical.items():
+                        survey.locator("#" + field).fill(value)
+                    survey.locator("#preview").click()
+                    check("image dimensions differ" in survey.locator("#status").inner_text(),
+                          "20MP RGB dimensions were silently accepted for M3M multispectral")
+                    check(survey.locator("#geojson").is_disabled(),
+                          "Incompatible camera dimensions must block even preview download")
+                    survey.locator("#image-width").fill("2592")
+                    survey.locator("#image-height").fill("1944")
+                    survey.locator("#preview").click()
+                    report_text=survey.locator("#status").inner_text()
+                    check("DJI-M3M-Referenz m3m-ms-tiff" in report_text,
+                          "Valid synthetic multispectral selection missing from survey")
+                    check("Keine physische Kalibrierung" in report_text,
+                          "Survey claimed a physical camera calibration")
+                    survey.locator("#photo-speed").fill("12")
+                    survey.locator("#preview").click()
+                    check("Referenz-Aufnahmeintervall" in survey.locator("#status").inner_text(),
+                          "Cadence violation missing for multispectral survey")
+                    survey.locator("#photo-speed").fill("6")
+                    survey.locator("#camera-mode").select_option("m3m-rgb-ms-tiff")
+                    survey.locator("#preview").click()
+                    check("DJI-M3M-Referenz m3m-rgb-ms-tiff" in
+                          survey.locator("#status").inner_text(),
+                          "Combined RGB plus multispectral mode not distinct")
+                    with survey.expect_download() as event:
+                        survey.locator("#geojson").click()
+                    metadata=json.loads(Path(event.value.path()).read_text(encoding="utf-8"))
+                    check(metadata["properties"]["cameraReferenceMode"]=="m3m-rgb-ms-tiff",
+                          "Offline export lost acquisition reference id")
+                    check(metadata["properties"]["cameraReferenceHardwareVerified"] is False,
+                          "Reference mode must not imply camera hardware verification")
+                    check(metadata["properties"]["flightReady"] is False,
+                          "Reference mode cannot grant flight readiness")
                     survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-exclusion.png"),
                                       full_page=True)
                     check(not survey_requests, "Survey attempted outbound or non-GET request")

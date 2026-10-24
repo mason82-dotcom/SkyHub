@@ -14,6 +14,8 @@ Die Tabellenstruktur ist unter
 Teil von `backend/db/schema.sql`, produktiven Migrationen oder
 `track-store.js`. Sie wird nur im dedizierten CI-Datenbankschema erzeugt.
 
+**Ergänzungsstand 24.10.2026:** Zusätzlich zum Journal befinden sich die [isolierte Workspace-Autorisierung](dji-flighttask-journal-access.md), [Retention-/Löschgrenzen](dji-flighttask-journal-retention.md) und seit [PR #108](https://github.com/mason82-dotcom/SkyHub-Next/pull/108) auch das [read-only Multi-Missions-Routing](dji-flighttask-multimission-router.md) auf `main`. Das Routing verwendet den gespeicherten Journalzustand nur über eine eigene autorisierte und begrenzte Suche; bei zwei passenden Einträgen verweigert es die Zuordnung. Diese Bausteine sind **weder produktiv verdrahtet noch durch einen realen Identity Provider, DJI-Geräte oder Pi-Betrieb verifiziert**. Eine sichere Produktivmigration benötigt weiterhin nachgewiesene Berechtigungen, Retention-/Backup-Policy, RLS/Indizes und Hardware-Abnahme.
+
 ## Persistenz und Integrität
 
 `backend/dji-flighttask-durable-journal.js` bietet den optionalen
@@ -57,11 +59,11 @@ GPS-/Telemetriedaten, DJI-Secrets, Tokens, Media-URLs oder Waypoints.
 Achtung: Gateway-SN und Flight-ID sind bei späterer Realnutzung
 identifizierende Daten. **Vor Produktion fehlen** mindestens
 rollenbasierte Workspace-Autorisierung, minimale DB-Rechte,
-Aufbewahrungs- und Löschregeln, Backup-Schutz, Verschlüsselung/
+**produktive** Aufbewahrungs- und Löschregeln (ein [isolierter Offline-Retention-Adapter](dji-flighttask-journal-retention.md) ist bereits in `main`), Backup-Schutz, Verschlüsselung/
 Pseudonymisierung sowie Koppelung an eine autorisierte Mission.
 Das Journal selbst ist **keine Authentifizierungsschicht** und darf
 nicht direkt einer API oder einem beliebigen Client freigegeben werden.
-`get`/`read` liefern für einen vertrauenswürdigen Backend-Prozess
+`read` liefert für einen vertrauenswürdigen Backend-Prozess
 den internen Zustand einschließlich Korrelations-IDs;
 `summary` enthält diese IDs nicht.
 

@@ -58,6 +58,15 @@ p{line-height:1.5}.muted{color:#a8bdd0;font-size:12px}
 <label style="display:flex;align-items:center;gap:8px"><input id="optics-enable" type="checkbox" style="width:auto"> Bildbasierte Streifenabstände, GSD und Fotoabstände schätzen</label>
 <p class="muted">Alle Werte müssen zur <strong>tatsächlich gewählten Kamera und Linse</strong> gehören. Keine voreingestellten Mavic-/Matrice-Kameradaten; gerade bei Mavic 3M dürfen RGB- und Multispektralkameras nicht verwechselt werden. Höhe ist tatsächliche AGL-Höhe, nicht Höhe über Startpunkt.</p>
 <fieldset id="optics-fields" hidden style="border:1px solid var(--edge);padding:12px;border-radius:9px">
+<label for="camera-mode">Aufnahmereferenz (optional, DJI Mavic 3M)</label>
+<select id="camera-mode" style="width:100%;background:#173248;color:white;border:1px solid #476981;border-radius:8px;padding:9px 10px">
+<option value="manual" selected>Manuell / unbekannte Kamera – keine DJI-Referenzannahme</option>
+<option value="m3m-rgb-jpeg">Mavic 3M – RGB JPEG (DJI Minimum 0,7 s)</option>
+<option value="m3m-rgb-jpeg-raw">Mavic 3M – RGB JPEG + DNG (DJI Minimum 3 s)</option>
+<option value="m3m-ms-tiff">Mavic 3M – 4 multispektrale TIFF-Bänder (DJI Minimum 2 s)</option>
+<option value="m3m-rgb-ms-tiff">Mavic 3M – RGB + Multispektral simultan (DJI Minimum 2 s)</option>
+</select>
+<p class="muted">Die Auswahl prüft Bildabmessungen und Foto-Mindestintervalle gegen DJI-Referenzangaben. Bei RGB+Multispektral ist für die geometrische Berechnung ausschließlich der Multispektralsensor maßgeblich. Physische Sensorgröße und Brennweite müssen weiterhin selbst bestätigt werden; die Auswahl erzeugt keine Kamerakalibrierung oder DJI-Freigabe.</p>
 <div class="row">
 <div><label for="sensor-width">Sensorbreite (mm)</label><input type="number" id="sensor-width" min="1" max="70" step="any" placeholder="Kameraspezifikation"></div>
 <div><label for="sensor-height">Sensorhöhe (mm)</label><input type="number" id="sensor-height" min="1" max="70" step="any" placeholder="Kameraspezifikation"></div>
@@ -83,6 +92,7 @@ p{line-height:1.5}.muted{color:#a8bdd0;font-size:12px}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/wpml-survey-preview-core.js"></script>
 <script src="/wpml-photogrammetry-core.js"></script>
+<script src="/wpml-camera-reference-core.js"></script>
 <script src="/wpml-capture-preview-core.js"></script>
 <script src="/wpml-survey-preview.js"></script>
 </body>
