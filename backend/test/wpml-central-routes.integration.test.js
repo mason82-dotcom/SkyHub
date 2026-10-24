@@ -121,7 +121,7 @@ test('isolated route transaction CAS, immutable snapshots, workspace boundary an
       authorize:async token=>token==='isolated-operator-session'?operator:null});
     await assert.rejects(badService.appendRevision({...common,
       routeId:createdRoute.routeId,expectedRevision:2,plan:plan(7)}),
-      /synthetic audit sink refusal/);
+      {code:'unavailable',message:'WPML route operation unavailable'});
     assert.equal((await db.query(
       'SELECT COUNT(*)::int AS n FROM skyhub_wpml_route_revisions '+
       'WHERE workspace_id=$1 AND route_id=$2',
