@@ -28,8 +28,8 @@ function registry(initial=JSON.stringify(record())){
   return {keys,get:async key=>{keys.push(key);return data;},
     update:v=>{data=v;}};
 }
-function session(redis){return createWpmlRedisSessionCheck({
-  redis,keySecret:PEPPER,clock:()=>NOW*1000});}
+function session(redis,options={}){return createWpmlRedisSessionCheck({
+  redis,keySecret:PEPPER,clock:()=>NOW*1000,...options});}
 test('requires dedicated key material and independent read-only lookup',()=>{
   assert.throws(()=>createWpmlRedisSessionCheck(),/read-only Redis/);
   assert.throws(()=>createWpmlRedisSessionCheck({redis:{get:async()=>null},
@@ -93,6 +93,54 @@ test('stalled or extremely slow Redis lookup rejects by a bounded deadline',asyn
 test('multibyte session response exceeding the byte budget is rejected',async()=>{
   const r=registry(JSON.stringify(record())+'🛰️'.repeat(700));
   assert.equal(await session(r)(claim()),false);
+});
+test('concurrency cap denies excess lookups and releases slots after success/failure',async()=>{
+  let resolveFirst,requests=0;
+  const firstGet=new Promise(resolve=>{resolveFirst=resolve;});
+  const adapter={get:async()=>{
+    requests++;
+    return requests===1?firstGet:JSON.stringify(record());
+  }};
+  const check=session(adapter,{maxConcurrentLookups:1,lookupTimeoutMs:100});
+  const pending=check(claim());
+  assert.equal(await check(claim()),false);
+  assert.equal(requests,1);
+  resolveFirst(JSON.stringify(record()));
+  assert.equal(await pending,true);
+  assert.equal(await check(claim()),true);
+  assert.equal(requests,2);
+  for(const n of [0,-1,1.5,129,Infinity,'4']){
+    assert.throws(()=>session(registry(),{maxConcurrentLookups:n}),/concurrency/);
+  }
+});
+test('expiring during a delayed Redis lookup always fails closed',async()=>{
+  let now=NOW*1000;
+  const delayed={get:async()=>{
+    now=(NOW+301)*1000;
+    return JSON.stringify(record());
+  }};
+  const check=session(delayed,{clock:()=>now});
+  assert.equal(await check(claim()),false);
+  // Likewise, Redis record can become invalid while a lookup is blocked.
+  now=NOW*1000;
+  const staleRecord={get:async()=>{
+    now=(NOW+601)*1000;
+    return JSON.stringify(record());
+  }};
+  assert.equal(await session(staleRecord,{clock:()=>now})(claim()),false);
+});
+test('pending Redis timeout fails closed and releases the request slot',async()=>{
+  let requests=0;
+  const redis={get:async()=>{requests++;return new Promise(()=>{});}};
+  const check=session(redis,{lookupTimeoutMs:25,maxConcurrentLookups:1});
+  const first=check(claim());
+  assert.equal(await check(claim()),false);
+  assert.equal(await first,false);
+  assert.equal(requests,1);
+  // The adapter does not cancel Redis sockets. Driver-level socket timeout
+  // and retry limits remain an explicit requirement for production use.
+  assert.equal(await check(claim()),false);
+  assert.equal(requests,2);
 });
 test('revocation, expiry and actor tampering prevent access',async()=>{
   const r=registry(),check=session(r);
