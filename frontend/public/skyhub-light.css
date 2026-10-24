@@ -368,6 +368,12 @@ body[data-skyhub-page="routes"] .notice {
   border: 1px solid #efdcb7; border-radius: 10px; padding: 12px;
 }
 body[data-skyhub-page="routes"] .row { align-items: center; }
+body[data-skyhub-page="routes"] .row > button {
+  /* Long backup/restore labels must wrap inside their card, never cross into
+     the adjacent editor column or widen the page on 320/390px screens. */
+  flex-shrink: 1; min-width: 0; max-width: 100%;
+  white-space: normal; overflow-wrap: anywhere;
+}
 body[data-skyhub-page="routes"] #status,
 body[data-skyhub-page="routes"] #library-status,
 body[data-skyhub-page="routes"] #revision-diff {
