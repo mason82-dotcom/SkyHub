@@ -442,6 +442,28 @@ def main() -> None:
                     comparison = dual_export["properties"]["dualSensorComparison"]
                     check(comparison["kind"] == "unregistered-theoretical-optics-comparison",
                           "Dual-mode GeoJSON lost unverified comparison marker")
+                    check(dual_export["properties"]["cameraReferenceMode"] ==
+                          "m3m-rgb-ms-tiff",
+                          "Dual-mode GeoJSON lost its original mixed acquisition mode")
+                    check(comparison["schema"] == "skyhub-wpml-dual-optics-inspection-v1"
+                          and comparison["referenceMode"] == "m3m-rgb-ms-tiff",
+                          "Export lacks explicit version and mixed mode evidence")
+                    check(comparison["nominalTotalFiles"] ==
+                          comparison["nominalRGBJpegFiles"] +
+                          comparison["nominalMultispectralTiffFiles"] ==
+                          5 * comparison["nominalCaptureEvents"],
+                          "Dual camera theoretical file counts inconsistent")
+                    check(comparison["photoActionsGenerated"] is False
+                          and comparison["dispatchAllowed"] is False
+                          and comparison["relativeBoresightVerified"] is False
+                          and comparison["opticalCalibrationVerified"] is False
+                          and comparison["terrainVerified"] is False
+                          and comparison["actualCaptureSupported"] is None,
+                          "Dual export promoted unverified optical data to flight evidence")
+                    check(not any(feature["properties"].get("kind") ==
+                          "nominal-photo-centers-NOT-DJI-actions"
+                          for feature in dual_export["features"]),
+                          "Combined mode must not export unverified photo centers")
                     check(comparison["coRegistrationVerified"] is False and
                           comparison["flightReady"] is False and
                           comparison["pilot2HardwareVerified"] is False and
