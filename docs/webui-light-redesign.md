@@ -41,3 +41,7 @@ Constraint-validated inputs and selects use `:user-invalid` for a distinct borde
 ## Cross-module navigation acceptance
 
 The isolated WPML Chromium test follows actual operator navigation clicks between WPML Editor, Route Library, Survey and Smart Farming, returning to the editor. It repeats the journey at 320px and 390px screen widths, verifies the newly loaded shared CSS, a unique `aria-current="page"` link, the main landmark, no horizontal overflow, and no unexpected non-GET or external requests. The fifth navigation link to Operations remains statically verified across all pages; this loopback-only smoke does not attempt production dashboard authentication. The test deliberately contains no real credentials, real DJI connection, or route telemetry.
+
+## Dashboard ↔ Smart Farming browser navigation
+
+The TAK/Operations synthetic browser workflow additionally follows actual operator links in both directions between the Operations dashboard and Smart Farming, at 320px and 390px widths. It checks the unique selected `aria-current` state after each full document navigation, common light palette, main landmark and overflow. The test does not authenticate to any real service and the simulator refuses to accept non-GET HTTP writes. Together with the WPML Chromium journey, all five operator sections now have exercised navigation links.

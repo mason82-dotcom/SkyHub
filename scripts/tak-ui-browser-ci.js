@@ -212,6 +212,28 @@ async function run(){
   await assertNoOverflow(guest);
   await guest.close();
 
+  // Follow real links dashboard ↔ Smart Farming at two phone widths. The
+  // HTTP simulator is unauthenticated; no credential may be needed for routing.
+  const crossNav=await context.newPage();
+  crossNav.on('pageerror',error=>errors.push('cross-module navigation: '+error.message));
+  for(const width of [320,390]){
+    await crossNav.setViewportSize({width,height:844});
+    await crossNav.goto(url,{waitUntil:'load'});
+    assert.equal(await crossNav.locator('.skyhub-global-nav a[aria-current="page"]').getAttribute('href'),
+      '/','Operations must be the only selected module before navigating');
+    await crossNav.locator('.skyhub-global-nav a[href="/smart-farming.html"]').click();
+    await crossNav.waitForURL(url+'smart-farming.html',{waitUntil:'load'});
+    assert.equal(await crossNav.locator('.skyhub-global-nav a[aria-current="page"]').getAttribute('href'),
+      '/smart-farming.html','Smart Farming must be the selected module');
+    assert.equal(await crossNav.evaluate(()=>getComputedStyle(document.body).backgroundColor),
+      'rgb(243, 246, 251)','Light canvas remains after module navigation');
+    assert.ok(await crossNav.locator('main#skyhubMain').count()===1);
+    await crossNav.locator('.skyhub-global-nav a[href="/"]').click();
+    await crossNav.waitForURL(url,{waitUntil:'load'});
+    await assertNoOverflow(crossNav);
+  }
+  await crossNav.close();
+
   // Inspect the TWO remaining operationally different light pages with real Chromium:
   // Smart Farming has no imagery; Pilot 2 has no JSBridge or live MQTT connection.
   // Both use the actual shared CSS and synthetic loopback HTTP only.
@@ -305,6 +327,7 @@ async function run(){
     noExportRequests:true,noHttpMutation:true,noPageErrors:true,
     sharedLightCssServed:true,computedLightPaletteChecked:true,
     smartFarmingAndPilotLightScreensChecked:true,
+    dashboardSmartFarmingNavigationChecked:true,
     forcedColorsAndReducedMotionChecked:true,
     singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
