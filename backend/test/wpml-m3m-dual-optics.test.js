@@ -100,7 +100,8 @@ test('rejects geometry spoofing and any mismatched strip spacing',()=>{
   assert.throws(()=>dual.estimate(input(),{...geo,lineSpacingMeters:40}),
     /matching offline bounded survey geometry/);
   const invalid={...geo,segments:[{...geo.segments[0],kind:'transit'}]};
-  assert.throws(()=>dual.estimate(input(),invalid),/coverage segments differ/);
+  assert.throws(()=>dual.estimate(input(),invalid),
+    /M3M dual-optics comparison invalid/);
 });
 test('the dual comparison has no transport, camera actions, DJI dispatch or KMZ generation',()=>{
   const code=fs.readFileSync(path.join(__dirname,
