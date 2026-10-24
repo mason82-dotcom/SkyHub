@@ -94,6 +94,25 @@ Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf 
 
 **Exitcodes:** `0` = *aktueller Transport-/Feldparser-Smoketest **und** separate SkyHub-Geräte-Token-Verwendung in den letzten 30 Minuten bestätigt*, **nicht** vollständige 1.18-Konformität. `3` = unvollständig oder nicht eindeutig. `1` = Docker/Backend/JSON nicht lesbar. `2` = ungültige Argumente.
 
+## 3a. Anonymer, maschinenlesbarer JSON-Prüfbeleg
+
+Beide unverändert **lesenden** Modi unterstützen optional `--json`. Das CLI gibt genau ein JSON-Dokument auf `stdout` aus; **es speichert keine Datei** und ändert weder die RC-Kopplung noch Container oder MQTT. Die UTC-Zeit `measuredAt` stammt von der **Host-Uhr des Prüfskripts**, nicht aus einem DJI-signierten Ereignis.
+
+```bash
+cd ~/Projekte/SkyHub-RCPlus2-M4T-Test || exit 1
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-plus2-m4t-check.js --preflight --json
+# Bei real eingeschalteten, gekoppelten Geräten:
+SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
+  node scripts/pi-rc-plus2-m4t-check.js --json
+```
+
+**Vertrag `skyhub-rcplus2-m4t-evidence-v1`:** `mode=backend-preflight` enthält nur acht zuvor freigegebene Boolesche API-/MQTT-Gates. `mode=live-transport-smoke` enthält ausschließlich feste Modelltitel und Felder für MQTT-/ACK-Status, anonymisierte Pairing-Bestätigung, eindeutige Geräteverknüpfung, OSD-/State-Boolesche und **begrenzte Zähler** zu beobachteten statischen bzw. dynamischen Feldern. Es werden **keine** Seriennummern, Pilot-2-Benutzernamen, Kennungen, Positionen, Aufnahmeinhalte, frei übernommenen Feldnamen, Tokens oder Pairing-Codes serialisiert. Zähler bei nicht verfügbarem Feldparser sind `null` statt erfundener Nullwerte.
+
+`result=READY` bedeutet nur, dass der Backend-Preflight bestanden ist. `result=TRANSPORT_SMOKE_OK` bedeutet nur, dass die bisherige **eng begrenzte** Live-OSD-/Token-Smokeprüfung erfolgreich war. `result=INCOMPLETE` meldet fehlende Prüfvoraussetzungen, **keinen Hardwaredefekt**. In **allen** Fällen sind `hardwareAcceptanceComplete=false`, `flightReady=false` und `dispatchAllowed=false` fest verdrahtet. Exitcodes bleiben wie bisher `0/3/1/2`; `--json` ist kein Schreib- oder Deployment-Parameter.
+
+Die JSON-Ausgabe ist zur freiwilligen **lokalen** Protokollierung oder zum Vergleich zweier Messungen gedacht. Nicht ungeprüft mit sensiblen Debug-Logs zusammenführen. Ein vollständig bestandener Prüfbeleg wird erst nach eigener manueller Zuordnung zu einem echten Gerät und Firmwarestand als Transport-Evidenz gewertet, niemals als Flug- oder Missionsfreigabe.
+
 ## 4. Abnahmematrix (Cloud API 1.18, Pilot-to-Cloud)
 
 | Bereich | Positivnachweis | Grenzen |
