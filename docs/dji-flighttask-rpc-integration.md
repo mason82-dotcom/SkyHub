@@ -84,8 +84,7 @@ Nachrichten versendet.
 
 ## Nicht Bestandteil / noch offen
 
-- Noch keine **persistente**, idempotente Reconnect-/Restart-Verwaltung
-  von Missionskorrelationen.
+- **Update 24.10.2026:** Der isolierte, nicht in den Server eingebundene CAS-/Reconnect-Prototyp ist mit [PR #83](https://github.com/mason82-dotcom/SkyHub-Next/pull/83) in `main`. Er hat noch **keine produktive Migration, API-/Workspace-Zugriffsschicht oder Live-Integration**.
 - Keine geklärte produktive Autorisierungs-, Berechtigungs-, ACL- oder
   Gerätebindung für aktive DJI-Kommandos.
 - Für `need_reply=1`-Events fehlt eine getrennte, sichere
