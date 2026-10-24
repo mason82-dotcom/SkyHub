@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {execFile} = require('node:child_process');
+const crypto = require('node:crypto');
 
 const CANDIDATE = /^m3m-exp-[0-9a-f]{24}$/;
 const PRINCIPAL = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
@@ -58,7 +59,10 @@ function validateRegistration(entry, principal, candidateId, roots) {
     typeof entry.bundleDir === 'string' &&
     typeof entry.sealFile === 'string' &&
     typeof entry.sealSha256 === 'string' &&
-    SHA256.test(entry.sealSha256), 'Untrusted or unpinned workspace registry entry');
+    SHA256.test(entry.sealSha256) &&
+    candidateId === 'm3m-exp-' + crypto.createHash('sha256')
+      .update(Buffer.from(entry.sealSha256, 'hex')).digest('hex').slice(0, 24),
+    'Untrusted or unpinned workspace registry entry');
   return {
     bundle: childOf(roots.sourceRoot, entry.bundleDir, false),
     seal: childOf(roots.sealRoot, entry.sealFile, true),
