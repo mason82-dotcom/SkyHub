@@ -11,6 +11,7 @@ const ROUTES=Object.freeze([
 function init(doc,win){
  if(!doc||!win||!doc.body||!doc.body.classList.contains('skyhub-gfx'))return null;
  const motionButton=doc.getElementById('gfxMotionToggle');
+ if(motionButton)motionButton.hidden=false;
  const reduced=win.matchMedia?win.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
  const forced=win.matchMedia?win.matchMedia('(forced-colors: active)'):{matches:false};
  let requestedMotion=true;

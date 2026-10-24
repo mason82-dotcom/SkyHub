@@ -121,6 +121,7 @@ test('shared GFX module rail has five fixed internal links and correct active ro
 test('motion control respects system reduced-motion and forced-colors changes',()=>{
   const h=makeHarness();
   assert.equal(h.body.dataset.gfxMotion,'on');
+  assert.equal(h.motionButton.hidden,false,'motion control becomes usable only with JS');
   h.motionButton.click();
   assert.equal(h.body.dataset.gfxMotion,'off');
   assert.equal(h.motionButton.getAttribute('aria-pressed'),'false');
