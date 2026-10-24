@@ -163,3 +163,9 @@ Der neue Host-Prüfer `scripts/pi-gfx-readonly-audit.js` führt **kein Deploymen
 **Abgrenzung:** Die bereits existierenden Hardware-Profile für RC Plus 2/M4T und RC Pro/M3M prüfen weiterhin den dokumentierten DJI-Transport. Der neue GFX-Prüfer bescheinigt ausschließlich, was **der aktuell laufende Backend-Container** an bereits normalisierten Cockpit-Einzelwerten zu diesem lokalen Abfragezeitpunkt als aktuell/veraltet/fehlend bewertet. Er ersetzt keine Pilot-2-Kopplung, keinen Hardwaretest und keinen echten Android-WebView-Review.
 
 **HyperFrames Motion:** Laut aktueller CLI-Dokumentation sind `validate` und `inspect` veraltete Aliase. Verbindlicher Browser-/Layout-/Motion-/Kontrast-Gate für den separaten Intro-Film ist `npx hyperframes check --snapshots` nach `lint`; echte CLI-Abnahme und Video-Render sind weiterhin **nicht durchgeführt**.
+
+## Phase 13 · Separater HyperFrames-Motion-CLI-Gate (24.10.2026)
+
+Der Workflow `.github/workflows/gfx-hyperframes-motion.yml` prüft ausschließlich die eigenständige, als fiktional gekennzeichnete 8-Sekunden-Komposition unter `motion/hyperframes/skyhub-gfx/`. Er verwendet Node.js 22, FFmpeg und die **festgehaltene HyperFrames-CLI-Version 0.8.192**. Nach `browser ensure` läuft `check --json --snapshots` mit Browser-/Runtime-, Layout-, Motion- und Kontrastdiagnostik. JSON-Bericht und Prüf-Screenshots werden nur als auf sieben Tage befristete, ausdrücklich synthetische GitHub-Actions-Artefakte gespeichert.
+
+Der Motion-Workflow ist von der vorhandenen GFX-Dashboard-Chromium-Abnahme getrennt. Die CLI-Prüfung behauptet weder den Erfolg eines MP4-Exports noch eine DJI-Telemetrie-/Hardware-Abnahme. Die Version wird für reproduzierbare Ergebnisse bewusst fixiert und bei Bedarf separat aktualisiert. Der Workflow enthält weder `publish` noch `render` oder Cloud-Uploads und verändert keinen Raspberry-Pi-Dienst.

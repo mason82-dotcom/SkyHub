@@ -1,0 +1,59 @@
+name: SKY//PULSE HyperFrames motion acceptance
+
+on:
+  pull_request:
+    paths:
+      - "motion/hyperframes/skyhub-gfx/**"
+      - "docs/hyperframes-gfx-ui.md"
+      - ".github/workflows/gfx-hyperframes-motion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gfx-hyperframes-motion-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  hyperframes-motion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      HYPERFRAMES_NO_UPDATE_CHECK: "1"
+      NO_COLOR: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check host prerequisites
+        run: |
+          node --version
+          ffmpeg -version | head -n 1
+      - name: Ensure pinned HyperFrames browser
+        run: npx --yes hyperframes@0.8.192 browser ensure
+      - name: Lint and run browser, layout, motion, contrast acceptance
+        run: |
+          mkdir -p artifacts/hyperframes-motion
+          set -o pipefail
+          npx --yes hyperframes@0.8.192 check motion/hyperframes/skyhub-gfx --json --snapshots > artifacts/hyperframes-motion/check.json
+          node -e '
+          const fs=require("fs");
+          const result=JSON.parse(fs.readFileSync("artifacts/hyperframes-motion/check.json","utf8"));
+          const ok=result.ok===true;
+          console.log("HyperFrames gate:",ok?"PASS":"FAIL",
+            "cli:",result._meta?.version||"version not reported");
+          if(!ok)process.exitCode=1;
+          '
+      - name: Upload synthetic concept acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gfx-hyperframes-motion-check
+          path: |
+            artifacts/hyperframes-motion/check.json
+            motion/hyperframes/skyhub-gfx/snapshots/*.png
+          if-no-files-found: warn
+          retention-days: 7
