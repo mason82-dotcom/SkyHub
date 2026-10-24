@@ -244,3 +244,18 @@ test('mobile fleet jump links to a labeled focusable status region without data 
   assert.match(compact, /\.skyhub-mobile-fleet-jump\s*\{\s*display:\s*inline-flex/);
   assert.match(css, /#fleetPanel:focus\s*\{\s*outline:\s*3px solid/);
 });
+
+test('mobile map instructions move below WPML and Survey maps, retaining full safety text', () => {
+  const css=html('skyhub-light.css');
+  const mobile=css.split('@media (max-width: 660px) {')[1];
+  assert.ok(mobile, 'mobile breakpoint must exist');
+  assert.match(mobile, /grid-template-rows:\s*minmax\(300px, min\(48vh, 480px\)\) auto;/);
+  assert.match(mobile, /\.map-overlay,\s*body\[data-skyhub-page="survey"\] \.instructions\s*\{/);
+  assert.match(mobile, /position:\s*static;/);
+  assert.match(mobile, /grid-row:\s*2;/);
+  assert.match(mobile, /pointer-events:\s*auto;/);
+  const editor=html('wpml-editor.html');
+  const survey=html('wpml-survey-preview.html');
+  assert.match(editor, /Keine Hindernis-, Geländehöhen- oder Flugfreigabeprüfung/);
+  assert.match(survey, /Keine DJI-Waylines/);
+});

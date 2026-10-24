@@ -178,6 +178,37 @@ def assert_system_accessibility(page, name: str) -> None:
     page.emulate_media(forced_colors="none", reduced_motion="no-preference")
 
 
+def assert_mobile_map_help_below(page, selector: str, name: str) -> None:
+    """Mobile help must remain legible without blocking the Leaflet map."""
+    state = page.evaluate("""selector => {
+        const map=document.querySelector('#map');
+        const help=document.querySelector(selector);
+        const zoom=document.querySelector('.leaflet-control-zoom');
+        if(!map || !help || !zoom) return null;
+        const m=map.getBoundingClientRect();
+        const h=help.getBoundingClientRect();
+        const z=zoom.getBoundingClientRect();
+        return {
+            mapHeight:Math.round(m.height),
+            helpTop:h.top,
+            mapBottom:m.bottom,
+            helpPosition:getComputedStyle(help).position,
+            helpHeight:Math.round(h.height),
+            helpVisible:getComputedStyle(help).display!=='none',
+            zoomWithinMap:z.top>=m.top-1 && z.bottom<=m.bottom+1,
+            noHorizontalOverflow:document.documentElement.scrollWidth<=innerWidth+1
+        };
+    }""", selector)
+    check(state is not None, name + ": missing map/help/Leaflet zoom")
+    check(state["mapHeight"] >= 300, name + ": usable mobile map height missing")
+    check(state["helpPosition"] == "static" and state["helpVisible"] and
+          state["helpHeight"] >= 30, name + ": safety help is hidden or still overlayed")
+    check(state["helpTop"] >= state["mapBottom"] - 1,
+          name + ": safety text covers the mobile map: " + str(state))
+    check(state["zoomWithinMap"] and state["noHorizontalOverflow"],
+          name + ": zoom or responsive layout invalid")
+
+
 def assert_map_help_clear(page, selector: str, name: str) -> None:
     """Instruction text must not be obscured by Leaflet zoom buttons."""
     state = page.evaluate("""selector => {
@@ -348,6 +379,8 @@ def main() -> None:
                     assert_light_theme(phone, "/wpml-editor.html", "WPML editor 390px")
                     assert_skip_link(phone, "WPML editor 390px")
                     assert_system_accessibility(phone, "WPML editor 390px")
+                    assert_mobile_map_help_below(
+                        phone, ".map-overlay", "WPML editor 390px")
                     check("manuell" in phone.locator("#map").inner_text(),
                           "Map outage fallback message missing")
                     width = phone.evaluate("""() => ({
@@ -590,6 +623,9 @@ def main() -> None:
                                            "Survey " + str(width_px) + "px")
                         assert_map_help_clear(survey, ".instructions",
                                               "Survey mobile " + str(width_px) + "px")
+                        assert_mobile_map_help_below(
+                            survey, ".instructions",
+                            "Survey mobile " + str(width_px) + "px")
                         check(survey.locator("#preview").is_visible(),
                               "Mobile survey preview action must remain visible")
                     survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-mobile-320.png"),

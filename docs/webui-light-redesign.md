@@ -55,3 +55,7 @@ The TAK/Operations synthetic browser workflow additionally follows actual operat
 ## Operations mobile shortcut
 
 At 320–900px, Operations now exposes a `Direkt zum Gerätestatus ↓` touch/keyboard link between tabs and the large read-only map. It targets the uniquely labelled and programmatically focusable `#fleetPanel` complementary landmark, preserving device state and avoiding any network activity. Desktop widths do not display it. The isolated Chromium browser checks 320px, 390px and 834px visibility, minimum 44px height, actual hash/focus/scroll, and continued device presence; the 1440px screenshot confirms it is hidden.
+
+## Unobstructed mobile map interactions
+
+At widths up to 660px, WPML Editor and Survey map instruction cards move from absolute overlays into a normal-flow, full-width safety notice **below** the interactive Leaflet map. The map remains at least 300px high and retains its zoom controls, while the complete no-flight-clearance wording stays readable. Desktop/tablet overlays are unchanged. Real Chromium now checks computed positioning, notice visibility, map height, zoom placement and absence of horizontal overflow for editor 390px and Survey 390/320px; no DJI commands are involved.

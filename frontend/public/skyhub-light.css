@@ -545,6 +545,35 @@ body[data-skyhub-page="dashboard"] #fleetPanel:focus {
   body[data-skyhub-page="smart-farming"] .panel { padding: 16px; }
   body[data-skyhub-page="smart-farming"] .layout,
   body[data-skyhub-page="smart-farming"] .metric-grid { grid-template-columns: 1fr; }
+  /* Mobile map help is a normal text block below the map, not a large overlay.
+     Preserve the full safety wording and allow real touches across the map. */
+  body[data-skyhub-page="wpml-editor"] .map-wrap,
+  body[data-skyhub-page="survey"] .map-shell {
+    display: grid;
+    grid-template-rows: minmax(300px, min(48vh, 480px)) auto;
+    height: auto;
+    min-height: 0;
+  }
+  body[data-skyhub-page="wpml-editor"] #map,
+  body[data-skyhub-page="survey"] #map {
+    grid-row: 1;
+    height: 100%;
+    min-height: 300px;
+    min-width: 0;
+  }
+  body[data-skyhub-page="wpml-editor"] .map-overlay,
+  body[data-skyhub-page="survey"] .instructions {
+    position: static;
+    grid-row: 2;
+    z-index: auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 11px 14px;
+    border-radius: 0;
+    box-shadow: none;
+    pointer-events: auto;
+  }
   body[data-skyhub-page="wpml-editor"] aside,
   body[data-skyhub-page="survey"] aside { padding: 16px; }
   body[data-skyhub-page="routes"] main { padding: 14px; }
