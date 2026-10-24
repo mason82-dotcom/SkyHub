@@ -62,6 +62,32 @@ Nur acht festgelegte **Boolesche Statuswerte** verlassen bei `--preflight` den B
 
 Bei einem bestehenden Checkout, der die Option nicht kennt, zuerst nur im **isolierten** Worktree den Quellstand kontrollieren; keinesfalls den Pi-Backend-Container für das Preflight-Skript automatisch neu deployen. Der reguläre Aufruf **ohne** `--preflight` bleibt der eigentliche Live-Smoke in Abschnitt 3.
 
+## 1b. Laufendes Backend-Image auf Live-JSON-Bereitschaft prüfen (24.10.2026)
+
+Der **reale Pi-Preflight vom 24.10.2026, 13:30 MESZ** hat alle acht API-/MQTT-/Topologie-ACK-Voraussetzungen mit Exit 0 erfüllt; zuvor bestanden 13/13 Offline-Sicherheitstests im isolierten Test-Worktree. [Datiertes Pi-Evidence-Protokoll](hardware-acceptance-status-2026-10-24.md#nachtrag-24102026-tatsächlicher-raspberry-pi-backend-preflight). Das bedeutet **nicht**, dass die RC Plus 2 oder Matrice 4T schon online gewesen wären oder dass das laufende Backend-Image die erst später ergänzten Live-JSON-Module bereits enthält.
+
+Vor der echten Live-JSON-Abnahme den **bereits laufenden** Container ohne Neustart, Umkonfiguration oder Ausgabe von Zugangsdaten prüfen:
+
+```bash
+cd ~/Projekte/SkyHub-Next || exit 1
+docker compose -p skyhub-next exec -T backend node -e '
+for (const moduleName of [
+  "./rc-plus2-m4t-hardware-validation",
+  "./rc-plus2-m4t-evidence"
+]) {
+  try {
+    require(moduleName);
+    console.log(moduleName + ": LADBAR");
+  } catch (_) {
+    console.log(moduleName + ": FEHLT ODER NICHT LADBAR");
+    process.exitCode = 3;
+  }
+}'
+printf 'Modul-Exitstatus: %s\n' "$?"
+```
+
+Nur Modulnamen und `LADBAR`/`FEHLT ODER NICHT LADBAR` werden ausgegeben. Werden Module nicht geladen, bleibt die neue Live-JSON-Abnahme **blockiert**; das ist kein Nachweis eines DJI-Gerätefehlers. Der Pi-Quellstand im getrennten Worktree darf **nicht** mit dem tatsächlich laufenden Container-Image gleichgesetzt werden. Keine `docker compose up`-, Build-, Broker-, Neustart- oder Pairing-Kommandos als automatische Folge.
+
 ## 2. Einmalige Kopplung der **neuen** RC Plus 2
 
 **Getrennter optionaler Freigabeschritt:** Nur falls noch keine unabhängige SkyHub-Kopplung besteht und der Betreiber die Einrichtung ausdrücklich bestätigt. `scripts/pi-pilot-pair.js` listet bei leerem Aufruf potenziell **private Kopplungscodes und Gerätekennungen**. Mit einem Code schreibt der Befehl die Autorisierung (`POST /api/pilot-admin/approve`). Das ist **kein read-only Hardwarecheck**; Ausgabe niemals in Chat/GitHub kopieren, niemals `--revoke` im Test benutzen.
@@ -96,7 +122,7 @@ Das Testskript ruft `docker compose -p skyhub-next exec -T backend node -e` auf 
 
 ## 3a. Anonymer, maschinenlesbarer JSON-Prüfbeleg
 
-Beide unverändert **lesenden** Modi unterstützen optional `--json`. Das CLI gibt genau ein JSON-Dokument auf `stdout` aus; **es speichert keine Datei** und ändert weder die RC-Kopplung noch Container oder MQTT. Die UTC-Zeit `measuredAt` stammt von der **Host-Uhr des Prüfskripts**, nicht aus einem DJI-signierten Ereignis.
+Beide unverändert **lesenden** Modi unterstützen optional `--json`. Das CLI gibt genau ein JSON-Dokument auf `stdout` aus; **es speichert keine Datei** und ändert weder die RC-Kopplung noch Container oder MQTT. Die UTC-Zeit `measuredAt` stammt bei `--preflight --json` aus der Host-Uhr des Prüfskripts und bei Live-`--json` aus der Container-Uhr (gemeinsame Pi-Systemzeit), **nicht** aus einem DJI-signierten Ereignis.
 
 ```bash
 cd ~/Projekte/SkyHub-RCPlus2-M4T-Test || exit 1
@@ -107,7 +133,7 @@ SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
   node scripts/pi-rc-plus2-m4t-check.js --json
 ```
 
-**Vertrag `skyhub-rcplus2-m4t-evidence-v1`:** `mode=backend-preflight` enthält nur acht zuvor freigegebene Boolesche API-/MQTT-Gates. `mode=live-transport-smoke` enthält ausschließlich feste Modelltitel und Felder für MQTT-/ACK-Status, anonymisierte Pairing-Bestätigung, eindeutige Geräteverknüpfung, OSD-/State-Boolesche und **begrenzte Zähler** zu beobachteten statischen bzw. dynamischen Feldern. Im **ausgegebenen Prüfbeleg** erscheinen **keine** Seriennummern, Pilot-2-Benutzernamen, Kennungen, Positionen, Aufnahmeinhalte, frei übernommenen Feldnamen, Tokens oder Pairing-Codes. Im **Live-Modus** durchlaufen die bisherigen begrenzten API-Snapshots weiterhin die lokale Docker-Host-Pipe zur Auswertung; der neue JSON-Modus verhindert deren Ausgabe im Prüfbeleg, ersetzt aber keinen vollständigen In-Container-Datensparsamkeitsumbau. Der **Preflight** überträgt dagegen ausschließlich acht Boolesche. Zähler bei nicht verfügbarem Feldparser sind `null` statt erfundener Nullwerte.
+**Vertrag `skyhub-rcplus2-m4t-evidence-v1`:** `mode=backend-preflight` enthält nur acht zuvor freigegebene Boolesche API-/MQTT-Gates. `mode=live-transport-smoke` enthält ausschließlich feste Modelltitel und Felder für MQTT-/ACK-Status, anonymisierte Pairing-Bestätigung, eindeutige Geräteverknüpfung, OSD-/State-Boolesche und **begrenzte Zähler** zu beobachteten statischen bzw. dynamischen Feldern. Im **ausgegebenen Prüfbeleg** erscheinen **keine** Seriennummern, Pilot-2-Benutzernamen, Kennungen, Positionen, Aufnahmeinhalte, frei übernommenen Feldnamen, Tokens oder Pairing-Codes. Mit **`--json`** werden auch im Live-Modus MQTT-/Topologie-/Geräte-/Pairing-API-Snapshots **im Backend-Container** ausgewertet. Nur der streng auf festgelegte Felder begrenzte Prüfbeleg durchläuft anschließend die Docker-Host-Pipe; der Host validiert seine exakte Struktur und verweigert zusätzliche Metadaten. Bei **fehlenden Evaluator-/Evidence-Modulen im noch laufenden, älteren Pi-Backend-Image** schlägt der Live-JSON-Aufruf ausdrücklich **mit Exit 1 fehl**. Er fällt nicht auf eine unsichere Rohdaten-Ausgabe oder ein automatisches Backend-Deployment zurück. **Nur der bisherige menschenlesbare Aufruf ohne `--json`** nutzt weiter die auf 3 MB begrenzte lokale Snapshot-Pipe; der Preflight überträgt ausschließlich acht Boolesche. Zähler bei nicht verfügbarem Feldparser sind `null` statt erfundener Nullwerte.
 
 `result=READY` bedeutet nur, dass der Backend-Preflight bestanden ist. `result=TRANSPORT_SMOKE_OK` bedeutet nur, dass die bisherige **eng begrenzte** Live-OSD-/Token-Smokeprüfung erfolgreich war. `result=INCOMPLETE` meldet fehlende Prüfvoraussetzungen, **keinen Hardwaredefekt**. In **allen** Fällen sind `hardwareAcceptanceComplete=false`, `flightReady=false` und `dispatchAllowed=false` fest verdrahtet. Exitcodes bleiben wie bisher `0/3/1/2`; `--json` ist kein Schreib- oder Deployment-Parameter.
 
