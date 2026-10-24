@@ -122,6 +122,11 @@ def main():
                     "el=>parseFloat(el.style.width)")>0,"Fresh verified battery meter missing")
                 check(page.locator("#gfxCockpitLocate").is_enabled(),"Map location button disabled")
                 check(page.locator('a[href="/wpml-editor.html"]').count()==1,"Duplicate module link")
+                check(page.locator("#gfxCockpitCompass").is_visible(),
+                      "Fresh verified heading must show a real-data compass")
+                check(page.locator("#gfxCockpitNeedle").evaluate(
+                    "el => el.style.transform") == "rotate(270deg)",
+                    "Heading compass bearing does not match DJI fixture")
                 page.locator("#gfxCockpitDevice").select_option("SYN-B2")
                 check(page.locator("#gfxCockpitAltitude").inner_text()=="0,0 m","Real zero missing")
                 page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
@@ -140,6 +145,26 @@ def main():
                       "Device selection lost on incremental OSD")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="52 %",
                       "New OSD field not rendered")
+                # A stale heading must remove the compass, not suggest a live course.
+                page.evaluate("""() => {
+                  const s=window.__skyhubTestSockets.at(-1);
+                  s.emitFixture('device_update',{
+                    sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',aircraftConnected:true,
+                    lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
+                    telemetry:{battery:52,altitude:0,horizontalSpeed:0,heading:270,
+                      verticalSpeed:0,linkQuality:4,latitude:49.1,longitude:8.6},
+                    lastPositionAt:Date.now(),positionTimeVerified:true,
+                    telemetryFieldAt:{battery:Date.now(),altitude:Date.now(),
+                      horizontalSpeed:Date.now(),heading:Date.now()-35000,
+                      verticalSpeed:Date.now(),linkQuality:Date.now()},
+                    telemetryFieldTimeVerified:{battery:true,altitude:true,horizontalSpeed:true,
+                      heading:true,verticalSpeed:true,linkQuality:true}
+                  });
+                }""")
+                check(page.locator("#gfxCockpitCompass").is_hidden(),
+                      "Stale heading must not display an active compass needle")
+                check("Veraltet" in page.locator("#gfxCockpitHeadingAge").inner_text(),
+                      "Stale heading provenance missing")
                 page.locator("#gfxMapFocus").click()
                 check(page.locator("#gfxMapFocus").get_attribute("aria-pressed")=="true",
                       "Map focus toggle failed")

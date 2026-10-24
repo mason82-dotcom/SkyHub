@@ -5,20 +5,29 @@ const SPECS=Object.freeze([
   {key:'battery',id:'Battery',digits:0,unit:' %',range:[0,100]},
   {key:'altitude',id:'Altitude',digits:1,unit:' m'},
   {key:'horizontalSpeed',id:'Speed',digits:1,unit:' m/s'},
-  {key:'heading',id:'Heading',digits:0,unit:' °'},
+  {key:'heading',id:'Heading',digits:0,unit:' °',limit:[-360,360]},
   {key:'verticalSpeed',id:'Climb',digits:1,unit:' m/s'},
   {key:'linkQuality',id:'Link',digits:0,unit:' / 5',range:[0,5]}
 ]);
 function valueFor(device,spec,freshness,now){
   const source=device&&device.telemetry;
   const value=source&&source[spec.key];
-  if(!Number.isFinite(value)||(spec.range&&(value<spec.range[0]||value>spec.range[1]))){
+  const validRange=spec.range||spec.limit;
+  if(!Number.isFinite(value)||(validRange&&(value<validRange[0]||value>validRange[1]))){
     return {value:'—',age:'Nicht empfangen',kind:'missing',meter:null};
   }
   const status=freshness.evaluateField(device,spec.key,now);
   const formatted=value.toFixed(spec.digits).replace('.',',')+spec.unit;
   const meter=spec.range?100*(value-spec.range[0])/(spec.range[1]-spec.range[0]):null;
   return {value:formatted,age:status.text,kind:status.kind,meter};
+}
+// Direction is visualized only from current, time-verified DJI heading data.
+function bearingFor(device,fieldFreshness,now=Date.now()){
+  const heading=device?.telemetry?.heading;
+  if(!Number.isFinite(heading)||Math.abs(heading)>360)return null;
+  const status=fieldFreshness?.evaluateField?.(device,'heading',now);
+  if(!status||status.kind!=='current')return null;
+  return ((heading%360)+360)%360;
 }
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
@@ -38,6 +47,8 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   locate.addEventListener('click',()=>{
     if(current&&typeof onLocate==='function')onLocate(current.sn);
   });
+  const compass=doc.getElementById('gfxCockpitCompass');
+  const needle=doc.getElementById('gfxCockpitNeedle');
   const nodes=new Map(SPECS.map(spec=>[spec.key,{
     value:doc.getElementById('gfxCockpit'+spec.id),
     age:doc.getElementById('gfxCockpit'+spec.id+'Age'),
@@ -66,6 +77,12 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
       Math.abs(current.telemetry.longitude)>180||
       (current.telemetry.latitude===0&&current.telemetry.longitude===0)||
       !Number.isFinite(current.lastPositionAt);
+    // No needle if heading is missing, disconnected, stale or time-unverified.
+    if(compass&&needle){
+      const bearing=bearingFor(current,fieldFreshness,now);
+      compass.hidden=bearing===null;
+      needle.style.transform=bearing===null?'':('rotate('+bearing+'deg)');
+    }
     for(const spec of SPECS){
       const el=nodes.get(spec.key);
       if(!el||!el.value||!el.age)continue;
@@ -107,7 +124,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,valueFor,mount});
+const api=Object.freeze({SPECS,valueFor,bearingFor,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

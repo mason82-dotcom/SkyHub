@@ -71,3 +71,33 @@ test('cockpit module never creates secondary telemetry/auth transports',()=>{
   const source=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/gfx-cockpit.js'),'utf8');
   assert.doesNotMatch(source,/\bfetch\s*\(|\bWebSocket\s*\(|\bXMLHttpRequest\b|\bEventSource\b|\blocalStorage\b|\bsessionStorage\b/);
 });
+
+test('compass bearing only uses current, verified, bounded DJI headings',()=>{
+  const freshRecord=device();
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),270);
+  freshRecord.telemetry.heading=-90;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),270,'negative signed yaw normalized to 270 degrees');
+  freshRecord.telemetry.heading=360;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),0);
+  freshRecord.telemetry.heading=361;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),null,'unbounded heading must not draw a needle');
+  assert.equal(cockpit.valueFor(freshRecord,cockpit.SPECS[3],fresh,now).kind,'missing');
+  freshRecord.telemetry.heading=90;
+  freshRecord.telemetryFieldTimeVerified.heading=false;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),null);
+  freshRecord.telemetryFieldTimeVerified.heading=true;
+  freshRecord.telemetryFieldAt.heading=now-17000;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),null);
+  freshRecord.telemetryFieldAt.heading=now-2000;
+  freshRecord.aircraftConnected=false;
+  assert.equal(cockpit.bearingFor(freshRecord,fresh,now),null);
+  assert.equal(cockpit.bearingFor(null,fresh,now),null);
+});
+test('decorative compass is hidden and driven by provenance, not fake animation',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  assert.match(html,/id="gfxCockpitCompass"[^>]+aria-hidden="true" hidden/);
+  assert.match(html,/id="gfxCockpitNeedle" class="gfx-heading-needle"/);
+  assert.match(css,/gfx-heading-compass\[hidden\]/);
+  assert.doesNotMatch(css, /gfx-heading-needle[^{}]*\{[^}]*animation\s*:/);
+});
