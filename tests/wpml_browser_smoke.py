@@ -100,7 +100,23 @@ def assert_light_theme(page, active_href: str, name: str) -> None:
         navigation: [...document.querySelectorAll('.skyhub-global-nav a')].map(a => ({
             href: a.getAttribute('href'),
             current: a.getAttribute('aria-current')
-        }))
+        })),
+        // Layout only: never include route names, input values or GPS in CI diagnostics.
+        overflowElements: document.documentElement.scrollWidth > window.innerWidth + 1
+          ? [...document.body.querySelectorAll('*')]
+              .map(el => {
+                  const r = el.getBoundingClientRect();
+                  return {
+                      tag: el.tagName.toLowerCase(),
+                      id: el.id || null,
+                      cls: typeof el.className === 'string' ? el.className.slice(0, 60) : null,
+                      left: Math.round(r.left),
+                      right: Math.round(r.right),
+                      width: Math.round(r.width)
+                  };
+              }).filter(r => r.right > window.innerWidth + 1 || r.left < -1)
+              .slice(0, 20)
+          : []
     })""")
     check(state["sheet"], name + ": actual shared light CSS was not loaded")
     check(state["colorScheme"] == "light" and
