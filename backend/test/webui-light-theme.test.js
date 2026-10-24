@@ -124,3 +124,18 @@ test('accessible placeholder and focus colors remain legible in light mode', () 
     ['focus','#2458d3',3],['placeholder','#586b84',4.5]
   ])assert.ok((background+0.05)/(luminance(color)+0.05)>=minimum,label);
 });
+
+test('dynamically rendered WPML notices use the shared readable light tokens', () => {
+  const editors = [
+    'wpml-editor.js','wpml-route-library.js','wpml-survey-preview.js'
+  ];
+  for (const name of editors) {
+    const source=html(name);
+    assert.match(source, /var\(--sky-warning\)/, name);
+    assert.match(source, /var\(--sky-ink\)/, name);
+    assert.doesNotMatch(source, /#(?:ccebf7|c4e8fa|e5f7ff|ffdda6|ffcb7d|ffca8c)/i, name);
+  }
+  const dashboard=html('index.html').split('</style>')[1];
+  assert.ok(dashboard,'dashboard body exists');
+  assert.doesNotMatch(dashboard, /#47c3e7|#ff6b5b|#f0b84a/i);
+});
