@@ -27,11 +27,14 @@ p{line-height:1.5}.muted{color:#a8bdd0;font-size:12px}
 #points{padding-left:20px;font-size:12px;color:#c7def0}#points li{padding:4px 0}
 @media(max-width:850px){main{grid-template-columns:1fr;height:auto}.map-shell{height:45vh;min-height:300px}aside{border:0;border-top:1px solid var(--edge)}}
 </style>
+<link rel="stylesheet" href="/hyperframes-gfx.css">
+<script src="/hyperframes-gfx.js" defer></script>
 </head>
-<body>
+<body class="skyhub-gfx gfx-page-survey" data-gfx-motion="off">
 <header>
 <h1>SkyHub <span>2D-Vermessungsvorschau</span></h1>
 <nav><a href="/wpml-editor.html">Wegpunkteditor</a> · <a href="/">Dashboard</a></nav>
+  <button id="gfxMotionToggle" class="gfx-motion-toggle" type="button" aria-pressed="false" aria-label="Visuelle Animationen einschalten">GFX · AUS</button>
 </header>
 <main>
 <section class="map-shell" aria-label="2D-Vermessungskarte">

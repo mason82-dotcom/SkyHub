@@ -44,8 +44,10 @@ button.secondary{background:#243b51}
 small{color:var(--muted)}
 @media(max-width:800px){.layout{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}header{align-items:flex-start}}
 </style>
+<link rel="stylesheet" href="/hyperframes-gfx.css">
+<script src="/hyperframes-gfx.js" defer></script>
 </head>
-<body>
+<body class="skyhub-gfx gfx-page-farming" data-gfx-motion="off">
 <header>
   <div>
     <span class="tag">Experimentell · Nicht kalibriert</span>
@@ -55,6 +57,7 @@ small{color:var(--muted)}
     <a href="/">Live-Dashboard</a>
     <a href="/smart-farming.html" aria-current="page">Smart Farming</a>
   </nav>
+  <button id="gfxMotionToggle" class="gfx-motion-toggle" type="button" aria-pressed="false" aria-label="Visuelle Animationen einschalten">GFX · AUS</button>
 </header>
 <main>
   <p class="intro">Read-only-Übersicht für geprüfte, aber wissenschaftlich noch nicht freigegebene Mavic-3M-Indexkandidaten. Die Katalogschnittstelle ist standardmäßig deaktiviert.</p>
