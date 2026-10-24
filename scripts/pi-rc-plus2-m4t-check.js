@@ -94,23 +94,22 @@ const PREFLIGHT=${preflight};
             keys.some(k=>typeof data[k]!=='boolean')){
           throw Error('unrecognized preflight reply');
         }
+        const ready=keys.every(k=>data[k]===true);
         if(json){
-          const evidence=makePreflightEvidence(data);
-          console.log(JSON.stringify(evidence));
+          console.log(JSON.stringify(makePreflightEvidence(data)));
         }else{
           console.log('=== RC Plus 2/M4T – nur lesender Pi-Backend-Preflight ===');
-        for(const [key,label] of [
-          ['healthApi','Health-API'],['devicesApi','Devices-API'],
-          ['shapesApi','MQTT-Shapes-API'],['pairingsApi','Pairing-API (nur GET)'],
-          ['mqttConnected','MQTT verbunden'],['subscribed','MQTT abonniert'],
-          ['topologyAckEnabled','Topologie-ACK aktiviert'],
-          ['topologyAckConnected','Topologie-ACK-Publisher verbunden']
-        ]){
-          console.log(label+': '+(data[key]?'JA':'NEIN'));
-        }
-        const ready=keys.every(k=>data[k]===true);
-        console.log('Pi-Backend-Voraussetzungen: '+(ready?'BEREIT':'UNVOLLSTÄNDIG'));
-        console.log('Kein DJI-Gerätenachweis, keine Hardware- oder Flugfreigabe.');
+          for(const [key,label] of [
+            ['healthApi','Health-API'],['devicesApi','Devices-API'],
+            ['shapesApi','MQTT-Shapes-API'],['pairingsApi','Pairing-API (nur GET)'],
+            ['mqttConnected','MQTT verbunden'],['subscribed','MQTT abonniert'],
+            ['topologyAckEnabled','Topologie-ACK aktiviert'],
+            ['topologyAckConnected','Topologie-ACK-Publisher verbunden']
+          ]){
+            console.log(label+': '+(data[key]?'JA':'NEIN'));
+          }
+          console.log('Pi-Backend-Voraussetzungen: '+(ready?'BEREIT':'UNVOLLSTÄNDIG'));
+          console.log('Kein DJI-Gerätenachweis, keine Hardware- oder Flugfreigabe.');
         }
         process.exitCode=ready?0:3;
       }else{
