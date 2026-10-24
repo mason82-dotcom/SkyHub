@@ -4,11 +4,14 @@
 // already running SkyHub Next backend. No service restart and no MQTT publish.
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
+const {makePreflightEvidence,makeLiveEvidence}=
+  require('../backend/rc-plus2-m4t-evidence');
 const {evaluateHardwareSession,formatReport}=
   require('../backend/rc-plus2-m4t-hardware-validation');
 
 function help(){
-  console.log('Nutzung: node scripts/pi-rc-plus2-m4t-check.js [--preflight]');
+  console.log('Nutzung: node scripts/pi-rc-plus2-m4t-check.js [--preflight] [--json]');
+  console.log('--json: streng begrenzter JSON-Prüfbeleg auf stdout, keine Dateien.');
   console.log('--preflight: ausschließlich Backend-APIs, MQTT und ACK prüfen; kein DJI-Gerät nötig.');
   console.log('Leseprüfung: RC Plus 2 Enterprise + Matrice 4T (DJI Cloud API 1.18).');
   console.log('Nur Modell, Topologie, Pairing-ANZAHLEN und dokumentierte Feldnamen.');
@@ -17,10 +20,14 @@ function help(){
   console.log('SKYHUB_COMPOSE_DIR kann auf den bestehenden Compose-Ordner zeigen.');
   console.log('Exit 0: aktueller Hardware-Smoketest; 3: unvollständig; 1: API-Fehler; 2: Parameter.');
 }
-const preflight=process.argv.length===3&&process.argv[2]==='--preflight';
-if(process.argv.length===3&&process.argv[2]==='--help'){
+const args=process.argv.slice(2);
+const preflight=args.includes('--preflight');
+const json=args.includes('--json');
+const valid=args.length<=2&&new Set(args).size===args.length&&
+  args.every(a=>a==='--preflight'||a==='--json');
+if(args.length===1&&args[0]==='--help'){
   help();
-}else if(process.argv.length!==2&&!preflight){
+}else if(!valid){
   console.error('Ungültige Parameter. --help zeigt die sichere Nutzung.');
   process.exitCode=2;
 }else{
@@ -87,24 +94,29 @@ const PREFLIGHT=${preflight};
             keys.some(k=>typeof data[k]!=='boolean')){
           throw Error('unrecognized preflight reply');
         }
-        console.log('=== RC Plus 2/M4T – nur lesender Pi-Backend-Preflight ===');
-        for(const [key,label] of [
-          ['healthApi','Health-API'],['devicesApi','Devices-API'],
-          ['shapesApi','MQTT-Shapes-API'],['pairingsApi','Pairing-API (nur GET)'],
-          ['mqttConnected','MQTT verbunden'],['subscribed','MQTT abonniert'],
-          ['topologyAckEnabled','Topologie-ACK aktiviert'],
-          ['topologyAckConnected','Topologie-ACK-Publisher verbunden']
-        ]){
-          console.log(label+': '+(data[key]?'JA':'NEIN'));
-        }
         const ready=keys.every(k=>data[k]===true);
-        console.log('Pi-Backend-Voraussetzungen: '+(ready?'BEREIT':'UNVOLLSTÄNDIG'));
-        console.log('Kein DJI-Gerätenachweis, keine Hardware- oder Flugfreigabe.');
+        if(json){
+          console.log(JSON.stringify(makePreflightEvidence(data)));
+        }else{
+          console.log('=== RC Plus 2/M4T – nur lesender Pi-Backend-Preflight ===');
+          for(const [key,label] of [
+            ['healthApi','Health-API'],['devicesApi','Devices-API'],
+            ['shapesApi','MQTT-Shapes-API'],['pairingsApi','Pairing-API (nur GET)'],
+            ['mqttConnected','MQTT verbunden'],['subscribed','MQTT abonniert'],
+            ['topologyAckEnabled','Topologie-ACK aktiviert'],
+            ['topologyAckConnected','Topologie-ACK-Publisher verbunden']
+          ]){
+            console.log(label+': '+(data[key]?'JA':'NEIN'));
+          }
+          console.log('Pi-Backend-Voraussetzungen: '+(ready?'BEREIT':'UNVOLLSTÄNDIG'));
+          console.log('Kein DJI-Gerätenachweis, keine Hardware- oder Flugfreigabe.');
+        }
         process.exitCode=ready?0:3;
       }else{
         const report=evaluateHardwareSession(data.devices,data.health,data.shapes,
           Date.now(),data.pairings);
-        console.log(formatReport(report));
+        console.log(json?JSON.stringify(makeLiveEvidence(report)):
+          formatReport(report));
         process.exitCode=report.passed?0:3;
       }
     }catch(_){
