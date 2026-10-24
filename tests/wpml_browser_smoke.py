@@ -480,6 +480,28 @@ def main() -> None:
                     survey.locator("#preview").click()
                     check(survey.locator("#geojson").is_disabled(),
                           "Cleared RGB focal length should invalidate dual export")
+                    # Returning to ordinary MS preview must drop ALL dual-mode
+                    # metadata without retaining a previous RGB calibration.
+                    survey.locator("#dual-optics-enable").uncheck()
+                    check(survey.locator("#dual-optics-fields").is_hidden(),
+                          "Disabled comparison still shows independent RGB inputs")
+                    survey.locator("#preview").click()
+                    check("DJI-M3M-Referenz m3m-rgb-ms-tiff" in
+                          survey.locator("#status").inner_text(),
+                          "Original single-sensor reference preview not restored")
+                    with survey.expect_download() as event:
+                        survey.locator("#geojson").click()
+                    single_export = json.loads(Path(event.value.path()).read_text(
+                        encoding="utf-8"))
+                    check(single_export["properties"]["cameraReferenceMode"] ==
+                          "m3m-rgb-ms-tiff"
+                          and single_export["properties"]["dualSensorComparison"] is None,
+                          "Old RGB dual optics leaked into single-sensor preview export")
+                    survey.locator("#camera-mode").select_option("manual")
+                    check(survey.locator("#dual-optics-enable").is_disabled(),
+                          "Manual reference mode must disable specialized dual optics")
+                    check(survey.locator("#geojson").is_disabled(),
+                          "Changing the camera reference must invalidate export")
                     check(not survey_requests,
                           "Dual optics triggered unexpected off-origin or write traffic")
                     check(not survey_errors,
