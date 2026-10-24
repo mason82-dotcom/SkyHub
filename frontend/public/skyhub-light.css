@@ -373,7 +373,8 @@ body[data-skyhub-page="routes"] #revision-diff {
 
 /* Compact DJI Pilot 2 pairing view (separate embedded layout) */
 body[data-skyhub-page="pilot"] { background: var(--sky-bg); color: var(--sky-ink); }
-body[data-skyhub-page="pilot"] header { color: var(--sky-ink); }
+body[data-skyhub-page="pilot"] header { color: var(--sky-ink); flex-wrap: wrap; }
+body[data-skyhub-page="pilot"] .tag { max-width: 100%; overflow-wrap: anywhere; }
 body[data-skyhub-page="pilot"] header span:not(.tag) { color: var(--sky-primary) !important; }
 body[data-skyhub-page="pilot"] .tag {
   background: var(--sky-primary-soft); color: var(--sky-primary-hover);
