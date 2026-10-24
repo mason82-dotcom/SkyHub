@@ -148,6 +148,12 @@ test('mobile operator navigation wraps rather than hiding the active section', (
   assert.match(mobile, /overflow-x:\s*visible;/);
 });
 
+test('blurred keyboard bypass is clipped but remains in keyboard order', () => {
+  const css=html('skyhub-light.css');
+  assert.match(css, /\.skyhub-skip-link\s*\{[^}]*clip-path:\s*inset\(50%\)/);
+  assert.match(css, /\.skyhub-skip-link:focus[^}]*clip-path:\s*none/);
+});
+
 test('six delivered views support keyboard bypass to a single focusable main landmark', () => {
   const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
   assert.match(css, /\.skyhub-skip-link:focus[^\{]*\{\s*transform: translateY\(0\)/);
@@ -176,6 +182,31 @@ test('system high-contrast and reduced-motion modes use visible nonchromatic sta
   const pilot=html('pilot-login.html');
   assert.match(pilot, /class="pilot-brand-accent"/);
   assert.doesNotMatch(pilot, /style="color:#38bdf8"/);
+});
+
+test('sticky route section jump links target focusable, distinct sections in reading order', () => {
+  const htmlSource = html('wpml-route-library.html');
+  const labels = [
+    ['routeLibrarySection', 'Bibliothek'],
+    ['routeWaypoints', 'Wegpunkte'],
+    ['routeActions', 'Aktionen'],
+    ['routeExport', 'Export']
+  ];
+  const links = htmlSource.match(/<nav class="skyhub-route-jumps"[^>]*>([\s\S]*?)<\/nav>/);
+  assert.ok(links);
+  let last = -1;
+  for(const [id, label] of labels) {
+    assert.ok(links[1].includes('href="#'+id+'">'+label+'</a>'), label);
+    const target = new RegExp('<(?:section|h3|div)\\b[^>]*\\bid="'+id+'"[^>]*\\btabindex="-1"');
+    assert.match(htmlSource, target, id);
+    const pos = htmlSource.indexOf('id="'+id+'"');
+    assert.ok(pos>last, id+' must follow previous section');
+    last=pos;
+  }
+  const css=html('skyhub-light.css');
+  assert.match(css, /\.skyhub-route-jumps\s*\{\s*position:\s*sticky/);
+  assert.match(css, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /scroll-margin-top:\s*76px/);
 });
 
 test('native form errors use interaction-aware styling without initial required-field warning', () => {

@@ -67,9 +67,11 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible {
   background: var(--sky-white); color: var(--sky-primary-hover);
   box-shadow: var(--sky-shadow-hover); font-weight: 750;
   text-decoration: none; transform: translateY(-160%);
+  clip-path: inset(50%);
 }
 .skyhub-skip-link:focus, .skyhub-skip-link:focus-visible {
   transform: translateY(0);
+  clip-path: none;
 }
 main#skyhubMain:focus { outline: none; }
 ::selection { background: #cfdaff; color: #142b61; }
@@ -402,6 +404,41 @@ body[data-skyhub-page="routes"] #revision-diff {
   color: var(--sky-ink); overflow-wrap: anywhere;
 }
 
+/* Accessible quick navigation: 320px route editors should not require a five-screen scroll. */
+body[data-skyhub-page="routes"] .skyhub-route-jumps {
+  position: sticky;
+  top: 0;
+  z-index: 800;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px clamp(12px, 2vw, 24px);
+  background: var(--sky-white);
+  border-bottom: 1px solid var(--sky-border);
+  box-shadow: 0 2px 12px rgba(28, 49, 87, .045);
+}
+body[data-skyhub-page="routes"] .skyhub-route-jumps a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 9px;
+  padding: 8px 3px;
+  background: var(--sky-primary-soft);
+  color: var(--sky-primary-hover);
+  font-weight: 700;
+  font-size: clamp(10px, 1.8vw, 12px);
+  text-decoration: none;
+  text-align: center;
+}
+body[data-skyhub-page="routes"] .skyhub-route-jumps a:hover {
+  background: #dce7ff;
+}
+body[data-skyhub-page="routes"] :is(#routeLibrarySection, #routeWaypoints, #routeActions, #routeExport) {
+  scroll-margin-top: 76px;
+}
+
 /* Compact DJI Pilot 2 pairing view (separate embedded layout) */
 body[data-skyhub-page="pilot"] { background: var(--sky-bg); color: var(--sky-ink); }
 body[data-skyhub-page="pilot"] header { color: var(--sky-ink); flex-wrap: wrap; }
@@ -537,6 +574,7 @@ body[data-skyhub-page="dashboard"] #fleetPanel:focus {
     --sky-danger-soft: Canvas;
   }
   .skyhub-global-nav a[aria-current="page"],
+  body[data-skyhub-page="routes"] .skyhub-route-jumps a:focus-visible,
   .workspace-tab[aria-selected="true"],
   .candidate-button[aria-pressed="true"] {
     outline: 2px solid Highlight;

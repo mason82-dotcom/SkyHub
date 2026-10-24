@@ -274,6 +274,9 @@ async function run(){
     await screen.keyboard.press('Enter');
     assert.equal(await screen.evaluate(()=>document.activeElement.id),'skyhubMain',
       filename+' main receives keyboard focus');
+    assert.equal(await screen.locator('.skyhub-skip-link').evaluate(el=>
+      getComputedStyle(el).clipPath==='inset(50%)'),true,
+      filename+' skip link must hide again after focus moves');
     for(const width of sizeChecks){
       await screen.setViewportSize({width,height:880});
       const visual=await screen.evaluate(()=>{

@@ -385,6 +385,34 @@ def main() -> None:
                     assert_light_theme(route_page, "/wpml-route-library.html",
                                        "Route library desktop")
                     assert_skip_link(route_page, "Route library desktop")
+                    # Section jump links must scroll within the same local page and
+                    # focus the intended heading/section, without mutating drafts.
+                    for anchor in ("routeActions", "routeWaypoints", "routeExport",
+                                   "routeLibrarySection"):
+                        route_page.locator('.skyhub-route-jumps a[href="#' +
+                                           anchor + '"]').click()
+                        state = route_page.evaluate("""() => ({
+                            hash:location.hash,
+                            focused:document.activeElement.id,
+                            x:document.documentElement.scrollWidth,
+                            width:window.innerWidth
+                        })""")
+                        check(state["hash"] == "#" + anchor and
+                              state["focused"] == anchor and
+                              state["x"] <= state["width"] + 1,
+                              "Route quick jump did not focus matching section")
+                    # Confirm all four jumps remain visible and functional on a narrow screen.
+                    route_page.set_viewport_size({"width": 320, "height": 844})
+                    for anchor in ("routeActions", "routeExport", "routeLibrarySection"):
+                        route_page.locator('.skyhub-route-jumps a[href="#' +
+                                           anchor + '"]').click()
+                        check(route_page.evaluate("location.hash") == "#" + anchor,
+                              "320px jump lost target")
+                        check(route_page.locator('.skyhub-route-jumps a').count() == 4,
+                              "Mobile quick jump missing a target")
+                    route_page.set_viewport_size({"width": 1280, "height": 860})
+                    assert_light_theme(route_page, "/wpml-route-library.html",
+                                       "Route library after quick jump smoke")
                     assert_system_accessibility(route_page, "Route library desktop")
                     route_page.locator("#route-name").fill("Synthetic browser-only route")
                     for idx, (lat, lon) in enumerate([("49.12345", "8.56789"),
