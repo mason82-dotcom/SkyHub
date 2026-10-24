@@ -407,6 +407,61 @@ def main() -> None:
                           "Reference mode must not imply camera hardware verification")
                     check(metadata["properties"]["flightReady"] is False,
                           "Reference mode cannot grant flight readiness")
+                    # P1 opt-in dual optics: independent RGB physical inputs,
+                    # no photomarkers, no remote writes, and no flight rights.
+                    check(survey.locator("#dual-optics-enable").is_enabled(),
+                          "Combined M3M reference did not enable optional dual optics")
+                    survey.locator("#dual-optics-enable").check()
+                    check(survey.locator("#dual-optics-fields").is_visible(),
+                          "Independent RGB optics inputs should be visible")
+                    survey.locator("#preview").click()
+                    check("physical optics" in survey.locator("#status").inner_text() or
+                          "outside accepted range" in survey.locator("#status").inner_text(),
+                          "Missing RGB physical optics must fail closed")
+                    check(survey.locator("#geojson").is_disabled(),
+                          "Missing RGB optics must block GeoJSON download")
+                    rgb_fields = {
+                        "dual-rgb-width": "10", "dual-rgb-height": "7.5",
+                        "dual-rgb-focal": "8", "dual-rgb-side": "70",
+                        "dual-rgb-front": "70"
+                    }
+                    for key, value in rgb_fields.items():
+                        survey.locator("#" + key).fill(value)
+                    survey.locator("#preview").click()
+                    dual_text = survey.locator("#status").inner_text()
+                    check("DUALOPTIK" in dual_text and "MS GSD" in dual_text and
+                          "RGB GSD" in dual_text,
+                          "Separate RGB/MS results missing from dual-mode survey")
+                    check("Keine Co-Registrierung" in dual_text,
+                          "Unregistered dual optics were represented as calibrated")
+                    check(survey.locator("#show-photo-centers").is_disabled(),
+                          "Dual optics must not enable nominal photo center markers")
+                    with survey.expect_download() as event:
+                        survey.locator("#geojson").click()
+                    dual_export = json.loads(Path(event.value.path()).read_text(encoding="utf-8"))
+                    comparison = dual_export["properties"]["dualSensorComparison"]
+                    check(comparison["kind"] == "unregistered-theoretical-optics-comparison",
+                          "Dual-mode GeoJSON lost unverified comparison marker")
+                    check(comparison["coRegistrationVerified"] is False and
+                          comparison["flightReady"] is False and
+                          comparison["pilot2HardwareVerified"] is False and
+                          comparison["exportableAsWaylines"] is False,
+                          "Dual comparison illegally received operational authorization")
+                    check(dual_export["properties"]["flightReady"] is False,
+                          "Dual export must remain not flight-ready")
+                    survey.locator("#photo-speed").fill("12")
+                    survey.locator("#preview").click()
+                    check("NICHT erfüllt" in survey.locator("#status").inner_text(),
+                          "Fast dual-camera cadence violation not reported")
+                    survey.locator("#photo-speed").fill("6")
+                    survey.locator("#dual-rgb-focal").fill("")
+                    survey.locator("#preview").click()
+                    check(survey.locator("#geojson").is_disabled(),
+                          "Cleared RGB focal length should invalidate dual export")
+                    check(not survey_requests,
+                          "Dual optics triggered unexpected off-origin or write traffic")
+                    check(not survey_errors,
+                          "Dual optics browser errors: " + " | ".join(survey_errors[:2]))
                     survey.screenshot(path=str(ARTIFACT_DIR / "synthetic-survey-exclusion.png"),
                                       full_page=True)
                     check(not survey_requests, "Survey attempted outbound or non-GET request")
