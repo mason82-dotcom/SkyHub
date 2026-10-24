@@ -147,7 +147,9 @@ test('timed-out Redis I/O holds its concurrency slot until actual settlement',as
   for(let i=0;i<5;i++)assert.equal(await check(claim()),false);
   assert.equal(requests,1,'timeout must not permit more pending Redis work');
   finish(JSON.stringify(record()));
-  await Promise.resolve(); // releases the actual Redis slot, never the old caller
+  // Redis's promise settles through more than one microtask (thenable
+  // adoption + I/O slot accounting). Wait for the event-loop boundary.
+  await new Promise(resolve=>setImmediate(resolve));
   assert.equal(await check(claim()),true);
   assert.equal(requests,2);
 });
@@ -163,7 +165,7 @@ test('rejected Redis I/O eventually frees the slot but grants no session',async(
   assert.equal(await check(claim()),false);
   assert.equal(requests,1);
   rejectFirst(Error('private I/O failure'));
-  await Promise.resolve();
+  await new Promise(resolve=>setImmediate(resolve));
   assert.equal(await check(claim()),true);
   assert.equal(requests,2);
 });
