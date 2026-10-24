@@ -29,10 +29,12 @@ const reject=reason=>({accepted:false,reason});
 
 function validDeclaration(d){
   return exact(d,DECLARATION_KEYS)&&d.reviewKind===REVIEW_KIND&&
-    UUID.test(d.workspaceId)&&serial(d.gatewaySn)!==null&&
+    typeof d.workspaceId==='string'&&UUID.test(d.workspaceId)&&
+    typeof d.gatewaySn==='string'&&serial(d.gatewaySn)!==null&&
     positive(d.revision)&&typeof d.fileSha256==='string'&&
     HASH.test(d.fileSha256)&&typeof d.evidenceSha256==='string'&&
-    HASH.test(d.evidenceSha256)&&UUID.test(d.reviewId)&&
+    HASH.test(d.evidenceSha256)&&typeof d.reviewId==='string'&&
+    UUID.test(d.reviewId)&&
     epoch(d.issuedAt)&&epoch(d.expiresAt)&&
     d.expiresAt>d.issuedAt&&
     d.expiresAt-d.issuedAt<=MAX_LIFETIME_MS;
@@ -57,7 +59,8 @@ function inspectSignedFlightAreaReview({
   envelope,expectedWorkspaceId,expectedGatewaySn,expectedRevision,
   expectedFileSha256,approvedKeys,now=Date.now()
 }={}){
-  if(!UUID.test(expectedWorkspaceId)||!serial(expectedGatewaySn)||
+  if(typeof expectedWorkspaceId!=='string'||!UUID.test(expectedWorkspaceId)||
+     typeof expectedGatewaySn!=='string'||!serial(expectedGatewaySn)||
      !positive(expectedRevision)||typeof expectedFileSha256!=='string'||
      !HASH.test(expectedFileSha256)||!(approvedKeys instanceof Map))
     return reject('untrusted_context');
