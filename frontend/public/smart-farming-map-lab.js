@@ -158,6 +158,7 @@
     const svg=doc.getElementById('mapOverlay');
     const queryOutput=doc.getElementById('mapQuery');
     const status=doc.getElementById('mapStatus');
+    const placeholder=doc.getElementById('mapPlaceholder');
     const pointButton=doc.getElementById('mapPoint');
     const polyButton=doc.getElementById('mapPolygon');
     const complete=doc.getElementById('mapComplete');
@@ -176,7 +177,6 @@
         line.setAttribute('fill','none');
         line.setAttribute('stroke','#fff');
         line.setAttribute('stroke-width','.006');
-        line.setAttribute('vector-effect','non-scaling-stroke');
         svg.append(line);
       }
       for(const [u,v] of points) {
@@ -211,7 +211,7 @@
       for(const url of urls.values())URL.revokeObjectURL(url);
       urls=new Map();manifest=null;points=[];
       img.removeAttribute('src');img.hidden=true;
-      stage.hidden=true;layer.disabled=true;
+      stage.hidden=true;placeholder.hidden=false;layer.disabled=true;
       fileInput.value='';pinInput.value='';
       load.disabled=false;
       pointButton.disabled=true;polyButton.disabled=true;
@@ -238,7 +238,7 @@
         for(const url of urls.values())URL.revokeObjectURL(url);
         urls=next;manifest=result.manifest;
         img.width=manifest.width;img.height=manifest.height;img.hidden=false;
-        stage.hidden=false;layer.disabled=false;
+        stage.hidden=false;placeholder.hidden=true;layer.disabled=false;
         pointButton.disabled=false;polyButton.disabled=false;
         layer.value='ndvi';switchMode('point');switchLayer();
         setStatus('Vier georeferenzierte Vorschauen lokal geprüft. Rein visuell, nicht kalibriert.');
@@ -279,5 +279,9 @@
   }
   const api={normalizeManifest,projectedPoint,makeQuery,validatePng,verifyFiles,mount};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
-  if(global)global.SkyHubPrivateMapLab=api;
+  if(global) {
+    global.SkyHubPrivateMapLab=api;
+    if(global.document && typeof global.document.addEventListener==='function')
+      global.document.addEventListener('DOMContentLoaded',()=>mount(global.document));
+  }
 })(typeof window==='undefined'?null:window);
