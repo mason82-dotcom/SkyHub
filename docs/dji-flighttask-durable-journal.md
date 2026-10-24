@@ -57,11 +57,11 @@ GPS-/Telemetriedaten, DJI-Secrets, Tokens, Media-URLs oder Waypoints.
 Achtung: Gateway-SN und Flight-ID sind bei späterer Realnutzung
 identifizierende Daten. **Vor Produktion fehlen** mindestens
 rollenbasierte Workspace-Autorisierung, minimale DB-Rechte,
-Aufbewahrungs- und Löschregeln, Backup-Schutz, Verschlüsselung/
+**produktive** Aufbewahrungs- und Löschregeln (ein [isolierter Offline-Retention-Adapter](dji-flighttask-journal-retention.md) ist bereits in `main`), Backup-Schutz, Verschlüsselung/
 Pseudonymisierung sowie Koppelung an eine autorisierte Mission.
 Das Journal selbst ist **keine Authentifizierungsschicht** und darf
 nicht direkt einer API oder einem beliebigen Client freigegeben werden.
-`get`/`read` liefern für einen vertrauenswürdigen Backend-Prozess
+`read` liefert für einen vertrauenswürdigen Backend-Prozess
 den internen Zustand einschließlich Korrelations-IDs;
 `summary` enthält diese IDs nicht.
 
