@@ -32,9 +32,11 @@ const freePort=()=>new Promise((resolve,reject)=>{
   server.once('error',reject);
   server.listen(0,'127.0.0.1',()=>{const {port}=server.address();server.close(()=>resolve(port));});
 });
-async function waitForPort(port,child){
+async function waitForPort(port,child,stderr){
   for(let i=0;i<50;i++){
-    if(child.exitCode!==null)throw new Error('mosquitto exited early with code '+child.exitCode);
+    if(child.exitCode!==null){
+      throw new Error('mosquitto exited early with code '+child.exitCode+': '+stderr().trim().slice(-600));
+    }
     const open=await new Promise(resolve=>{
       const socket=net.connect(port,'127.0.0.1');
       socket.once('connect',()=>{socket.destroy();resolve(true);});
@@ -52,10 +54,17 @@ async function withBroker(acl,fn){
   fs.writeFileSync(path.join(dir,'passwd'),Object.values(accounts).map(passwdLine).join('\n')+'\n',{mode:0o600});
   fs.writeFileSync(path.join(dir,'acl'),acl,{mode:0o600});
   fs.writeFileSync(path.join(dir,'mosquitto.conf'),
-    confText({port,bind:'127.0.0.1',confDir:dir,logDest:'file '+path.join(dir,'log')}),{mode:0o600});
-  const child=spawn(binary,['-c',path.join(dir,'mosquitto.conf')],{stdio:'ignore'});
+    confText({port,bind:'127.0.0.1',confDir:dir,logDest:'stderr'}),{mode:0o600});
+  // Run a private copy: distribution AppArmor profiles attach to /usr/sbin/mosquitto by path and
+  // would deny reading config, password and ACL files from a temp directory (exit code 3).
+  const executable=path.join(dir,'mosquitto-test-binary');
+  fs.copyFileSync(binary,executable);
+  fs.chmodSync(executable,0o755);
+  const child=spawn(executable,['-c',path.join(dir,'mosquitto.conf')],{stdio:['ignore','ignore','pipe']});
+  let stderrText='';
+  child.stderr.on('data',chunk=>{stderrText=(stderrText+chunk).slice(-4000);});
   try{
-    await waitForPort(port,child);
+    await waitForPort(port,child,()=>stderrText);
     return await fn('mqtt://127.0.0.1:'+port);
   }finally{
     child.kill('SIGTERM');
