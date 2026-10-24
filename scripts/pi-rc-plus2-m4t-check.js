@@ -4,7 +4,7 @@
 // already running SkyHub Next backend. No service restart and no MQTT publish.
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
-const {makePreflightEvidence,makeLiveEvidence}=
+const {makePreflightEvidence,validateLiveEvidenceReceipt}=
   require('../backend/rc-plus2-m4t-evidence');
 const {evaluateHardwareSession,formatReport}=
   require('../backend/rc-plus2-m4t-hardware-validation');
@@ -35,6 +35,7 @@ if(args.length===1&&args[0]==='--help'){
   // is read there, never forwarded to or printed by the host shell.
   const inside=String.raw`'use strict';
 const PREFLIGHT=${preflight};
+const JSON_MODE=${json};
 (async()=>{
   const token=process.env.SKYHUB_VIEW_TOKEN;
   if(!token){process.exitCode=1;return;}
@@ -69,6 +70,16 @@ const PREFLIGHT=${preflight};
         topologyAckConnected:health?.topologyReplyConnected===true
       };
       process.stdout.write(JSON.stringify(result));
+      return;
+    }
+    if(JSON_MODE){
+      // Live JSON is evaluated inside the *running* backend container.
+      // Do not transfer raw DJI device, GNSS, pairing or MQTT API snapshots.
+      // If the runtime image lacks these modules, fail closed: no deployment.
+      const {evaluateHardwareSession}=require('./rc-plus2-m4t-hardware-validation');
+      const {makeLiveEvidence}=require('./rc-plus2-m4t-evidence');
+      const report=evaluateHardwareSession(devices,health,shapes,Date.now(),pairings);
+      process.stdout.write(JSON.stringify(makeLiveEvidence(report)));
       return;
     }
     const payload=JSON.stringify({health,devices,shapes,pairings});
@@ -112,11 +123,15 @@ const PREFLIGHT=${preflight};
           console.log('Kein DJI-Gerätenachweis, keine Hardware- oder Flugfreigabe.');
         }
         process.exitCode=ready?0:3;
+      }else if(json){
+        if(!validateLiveEvidenceReceipt(data))throw Error('invalid receipt');
+        console.log(JSON.stringify(data));
+        process.exitCode=data.result==='TRANSPORT_SMOKE_OK'?0:3;
       }else{
+        // Historical human-readable mode retains its bounded local snapshot pipe.
         const report=evaluateHardwareSession(data.devices,data.health,data.shapes,
           Date.now(),data.pairings);
-        console.log(json?JSON.stringify(makeLiveEvidence(report)):
-          formatReport(report));
+        console.log(formatReport(report));
         process.exitCode=report.passed?0:3;
       }
     }catch(_){
