@@ -76,7 +76,7 @@ test('nonprivileged database role is verified, not assumed from client role stri
   ]){
     const f=fixture({role});
     await assert.rejects(f.transactions.run({workspaceId:A,principal:operator,action:'observe'},async()=>1),/transaction unavailable/);
-    assert.equal(f.calls.at(-2)[0],'ROLLBACK');
+    assert.equal(f.calls.at(-1)[0],'ROLLBACK');
     assert.equal(f.connection.released,1);
   }
 });
