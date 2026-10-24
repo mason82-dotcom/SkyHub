@@ -75,6 +75,10 @@ Wegpunkteditor und Survey sind Offline-Vorschauen, keine Flugfreigabe. Die Route
 
 Alle sechs ausgelieferten Ansichten besitzen als **erstes fokussierbares Element** einen nur bei Tastaturfokus eingeblendeten Link „Zum Inhalt springen“. Er verweist auf das eindeutige `main#skyhubMain` mit `tabindex="-1"`. Das ermöglicht die direkte Bedienung ohne wiederholtes Tabben durch die fünf globalen Modul-Links, die Operations-Tabs oder die kompakten Pilot-2-Header-Elemente. Der Link nutzt den kontrastreichen gemeinsamen Light-Stil und benötigt weder JavaScript noch zusätzliche API-Rechte. Chromium testet Fokus, Sichtbarkeit und tatsächliche Ziel-Fokussierung.
 
+## System-Kontrastmodus und reduzierte Bewegung
+
+Die Light-UI bleibt der reguläre Darstellungsmodus. Für `(forced-colors: active)` werden Flächen, Texte und Links über die Systemfarben `Canvas`, `CanvasText`, `LinkText` und `Highlight` dargestellt. Der aktive Operatorbereich sowie der ausgewählte Workspace-Tab erhalten eine sichtbare Kontur; die Darstellung basiert nicht nur auf einem Farbhintergrund. Für `(prefers-reduced-motion: reduce)` werden CSS-Übergänge und Animationen deaktiviert. Die kompakte Pilot-2-Brandmarkierung bezieht ihre Akzentfarbe aus dem gemeinsamen Theme statt aus einem Inline-Attribut. Automatisierte Chromium-Suites emulieren beide Systemmodi ohne DJI-Verbindung.
+
 ## Barrierefreiheit und technische Überprüfung
 
 Kontraste der semantischen Textfarben auf weißen Flächen werden automatisiert gegen **WCAG AA (4,5:1)** geprüft. Tastaturfokus, reduzierte Bewegung und native Formelemente sind beizubehalten. Daneben sind sichtbare Browserprüfungen von horizontalem Overflow, Tabs, Suchformular, Karteninteraktionen, Responsivität und DJI-Pilot-2-Webview erforderlich.

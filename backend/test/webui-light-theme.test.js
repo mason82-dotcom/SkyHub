@@ -162,3 +162,18 @@ test('six delivered views support keyboard bypass to a single focusable main lan
     assert.ok(skipAt >= 0 && mainAt > skipAt, name + ' skip target must follow link');
   }
 });
+
+test('system high-contrast and reduced-motion modes use visible nonchromatic states', () => {
+  const css = fs.readFileSync(path.join(root, 'skyhub-light.css'), 'utf8');
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(css, /--sky-bg:\s*Canvas;/);
+  assert.match(css, /--sky-ink:\s*CanvasText;/);
+  assert.match(css, /--sky-primary:\s*LinkText;/);
+  assert.match(css, /\.skyhub-global-nav a\[aria-current="page"\]/);
+  assert.match(css, /outline:\s*2px solid Highlight;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /transition:\s*none !important;/);
+  const pilot=html('pilot-login.html');
+  assert.match(pilot, /class="pilot-brand-accent"/);
+  assert.doesNotMatch(pilot, /style="color:#38bdf8"/);
+});

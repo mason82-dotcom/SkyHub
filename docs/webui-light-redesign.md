@@ -29,3 +29,7 @@ This is a separate presentation-only branch; merge only after functional and har
 ## Keyboard accessibility gate
 
 All six static pages expose a first-tab, visually-on-focus `Zum Inhalt springen` link to the unique `<main id="skyhubMain" tabindex="-1">` landmark. The control is hidden above the viewport until focused; the shared CSS reveals it without JavaScript. Offline Chromium acceptance checks actual keyboard Tab → Enter, visibility and main focus on Operations, WPML, Route Library, Survey, Smart Farming and Pilot 2. The skip target contains no credentials and does not trigger DJI calls.
+
+## System accessibility modes
+
+The shared CSS now honors `forced-colors: active` through system palette tokens and a high-contrast outline for the current module/workspace selection. `prefers-reduced-motion: reduce` disables CSS animations and transitions. The DJI Pilot 2 brand accent no longer relies on a legacy inline color override. Browser tests emulate both OS modes in the synthetic loopback environment, then restore the normal light view; real Pilot 2 hardware remains a separate acceptance gate.

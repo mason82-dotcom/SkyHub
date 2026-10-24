@@ -398,7 +398,7 @@ body[data-skyhub-page="routes"] #revision-diff {
 body[data-skyhub-page="pilot"] { background: var(--sky-bg); color: var(--sky-ink); }
 body[data-skyhub-page="pilot"] header { color: var(--sky-ink); flex-wrap: wrap; }
 body[data-skyhub-page="pilot"] .tag { max-width: 100%; overflow-wrap: anywhere; }
-body[data-skyhub-page="pilot"] header span:not(.tag) { color: var(--sky-primary) !important; }
+body[data-skyhub-page="pilot"] .pilot-brand-accent { color: var(--sky-primary); }
 body[data-skyhub-page="pilot"] .tag {
   background: var(--sky-primary-soft); color: var(--sky-primary-hover);
   border: 1px solid #cddafb; font-weight: 750;
@@ -486,7 +486,44 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
   body[data-skyhub-page="routes"] .grid { grid-template-columns: 1fr; }
   body[data-skyhub-page="pilot"] main { padding: 12px 14px; }
 }
+/* OS accessibility preferences: retain focus, labels and selection even without color. */
+@media (forced-colors: active) {
+  :root {
+    --sky-bg: Canvas;
+    --sky-white: Canvas;
+    --sky-soft: Canvas;
+    --sky-muted-bg: Canvas;
+    --sky-border: CanvasText;
+    --sky-border-strong: CanvasText;
+    --sky-ink: CanvasText;
+    --sky-muted: CanvasText;
+    --sky-primary: LinkText;
+    --sky-primary-hover: LinkText;
+    --sky-primary-soft: Canvas;
+    --sky-success: CanvasText;
+    --sky-success-soft: Canvas;
+    --sky-warning: CanvasText;
+    --sky-warning-soft: Canvas;
+    --sky-danger: CanvasText;
+    --sky-danger-soft: Canvas;
+  }
+  .skyhub-global-nav a[aria-current="page"],
+  .workspace-tab[aria-selected="true"],
+  .candidate-button[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  button:disabled { opacity: 1; }
+  .skyhub-skip-link:focus, .skyhub-skip-link:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  button, .skyhub-global-nav a { transition: none; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
   button:active:not(:disabled) { transform: none; }
 }

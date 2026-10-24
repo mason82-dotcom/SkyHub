@@ -273,6 +273,28 @@ async function run(){
     }
     await screen.close();
   }
+  // Browser-level emulation of system accessibility modes. This is a presentation
+  // check, not an indication of a real DJI Pilot 2 WebView configuration.
+  await page.emulateMedia({forcedColors:'active',reducedMotion:'reduce'});
+  const accessibility=await page.evaluate(()=>{
+    const selected=document.querySelector('.skyhub-global-nav a[aria-current="page"]');
+    const button=document.querySelector('.workspace-tab');
+    return {
+      forced:matchMedia('(forced-colors: active)').matches,
+      reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,
+      canvasToken:getComputedStyle(document.documentElement).getPropertyValue('--sky-bg').trim(),
+      selectedOutline:getComputedStyle(selected).outlineWidth,
+      buttonTransition:getComputedStyle(button).transitionDuration,
+      navTransition:getComputedStyle(selected).transitionDuration
+    };
+  });
+  assert.equal(accessibility.forced,true,'forced system contrast mode must activate');
+  assert.equal(accessibility.reduced,true,'OS reduced motion must activate');
+  assert.equal(accessibility.canvasToken,'Canvas','system canvas color must replace branded canvas');
+  assert.equal(accessibility.selectedOutline,'2px','current module must have nonchromatic indicator');
+  assert.equal(accessibility.buttonTransition,'0s','no button transition in reduced-motion mode');
+  assert.equal(accessibility.navTransition,'0s','no nav transition in reduced-motion mode');
+  await page.emulateMedia({forcedColors:'none',reducedMotion:'no-preference'});
   if(errors.length)throw new Error('browser exceptions: '+errors.join('; '));
   const unexpectedWrites=requests.filter(x=>x.method!=='GET');
   assert.equal(unexpectedWrites.length,0,'no API mutations (Socket.IO may use WS)');
@@ -283,6 +305,7 @@ async function run(){
     noExportRequests:true,noHttpMutation:true,noPageErrors:true,
     sharedLightCssServed:true,computedLightPaletteChecked:true,
     smartFarmingAndPilotLightScreensChecked:true,
+    forcedColorsAndReducedMotionChecked:true,
     singleSocketSessionDuringTabNavigation:true,leafletRecalculatedOnEveryReturn:true};
   fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(results,null,2)+'\n');
   process.stdout.write(JSON.stringify(results,null,2)+'\n');
