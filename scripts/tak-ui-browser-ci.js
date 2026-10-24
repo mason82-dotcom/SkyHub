@@ -19,7 +19,8 @@ const {Server}=require(path.join(deps,'socket.io'));
 const output=process.env.SKYHUB_BROWSER_ARTIFACTS||path.join(os.tmpdir(),'skyhub-tabs-browser-evidence');
 fs.mkdirSync(output,{recursive:true});
 const get=(name)=>fs.readFileSync(path.join(root,'frontend/public',name));
-const image=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==','base64');
+// Valid neutral 1x1 PNG test tile; makes offline screenshots readable without implying real map geography.
+const image=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN4/eE7AAWcAtOLY6c0AAAAAElFTkSuQmCC','base64');
 const marker=()=>({
   sn:'SYNTHETIC-DEVICE-01',gatewaySn:'SYNTHETIC-RC-01',
   modelName:'Testfluggerät',role:'subdevice',aircraftConnected:true,
