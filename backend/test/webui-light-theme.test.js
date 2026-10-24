@@ -94,7 +94,7 @@ test('each operator page marks only its own module as active', () => {
     ['wpml-survey-preview.html','/wpml-survey-preview.html']
   ]);
   for (const [name,active] of expected) {
-    const nav = html(name).match(/<nav class="skyhub-global-nav"[^>]*>([\\s\\S]*?)<\\/nav>/);
+    const nav = html(name).match(/<nav class="skyhub-global-nav"[^>]*>(.*?)<\/nav>/);
     assert.ok(nav, name);
     const links = [...nav[1].matchAll(/<a href="([^"]+)"([^>]*)>/g)];
     assert.deepEqual(links.map(link=>link[1]),globalLinks, name);
@@ -105,7 +105,7 @@ test('each operator page marks only its own module as active', () => {
 
 test('survey optics dropdown uses the common light skin rather than hard-coded dark styles', () => {
   const control = html('wpml-survey-preview.html')
-    .match(/<select\\s+id="camera-mode"([^>]*)>/);
+    .match(/<select\s+id="camera-mode"([^>]*)>/);
   assert.ok(control);
   assert.doesNotMatch(control[1],/background:|color:/i);
 });
