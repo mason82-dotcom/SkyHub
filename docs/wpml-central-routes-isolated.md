@@ -167,7 +167,9 @@ mit erlaubter `kid`-Kennung werden akzeptiert.
   muss Sitzung, Sperrung/Widerruf und Workspace-Mitgliedschaft unabhängig
   anhand einer vertrauenswürdigen serverseitigen Quelle als `true`
   bestätigen. `false`, fehlende Werte oder Serverfehler führen
-  zur vollständigen Ablehnung. Das Modul implementiert bewusst selbst
+  zur vollständigen Ablehnung. Auch **nach** Abschluss dieser asynchronen
+  Bestätigung kontrolliert der Verifier erneut `exp`/`nbf`:
+  ein zwischenzeitlich abgelaufenes JWT liefert keine Identität. Das Modul implementiert bewusst selbst
   **keinen** Session-Store, keine Authentifizierungs-Endpunkte,
   keine Signier-/Registrierungslogik und keinen Schlüsselabruf.
 - Der geprüfte Rückgabewert kann später als `authorize`-Adapter des
