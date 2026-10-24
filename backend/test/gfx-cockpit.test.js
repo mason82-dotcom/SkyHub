@@ -255,3 +255,54 @@ test('diagnostic digest documents bounded observations without packet-loss estim
   assert.match(html,/Keine Fehlerhäufigkeit, Paketverlustquote/);
   assert.match(css,/gfx-timeline-digest/);
 });
+
+test('field inspection uses exactly the freshness validator at the 15-second boundary',()=>{
+  const record=device();
+  const near=cockpit.inspectField(record,'battery',fresh,now+14999-2000);
+  assert.equal(near.kind,'current');
+  assert.match(near.threshold,/1 s bis zur 15-s-Frischegrenze/);
+  const boundary=cockpit.inspectField(record,'battery',fresh,now+15000-2000);
+  assert.equal(boundary.kind,'stale');
+  assert.match(boundary.threshold,/Frischegrenze überschritten/);
+  assert.doesNotMatch(boundary.threshold,/s bis zur/);
+  assert.equal(cockpit.inspectField(record,'attitudeRoll',fresh,now).kind,'missing');
+  assert.equal(cockpit.inspectField(record,'__proto__',fresh,now),null);
+  assert.equal(cockpit.inspectField(record,'battery',null,now),null);
+});
+test('inspection refuses countdown for unverified, future and invalid data',()=>{
+  const record=device();
+  record.telemetryFieldTimeVerified.battery=false;
+  let v=cockpit.inspectField(record,'battery',fresh,now);
+  assert.equal(v.kind,'unverified');
+  assert.match(v.source,/Feldzeit ungeprüft/);
+  assert.match(v.threshold,/kein verifizierter Countdown/);
+  record.telemetryFieldTimeVerified.battery=true;
+  record.telemetryFieldAt.battery=now+5000;
+  v=cockpit.inspectField(record,'battery',fresh,now);
+  assert.equal(v.kind,'unknown');
+  assert.equal(v.source,'Kein auswertbarer Feldzeitpunkt');
+  assert.match(v.threshold,/liegt in der Zukunft/);
+  record.telemetryFieldAt.battery=now-2000;
+  record.telemetry.battery=101;
+  v=cockpit.inspectField(record,'battery',fresh,now);
+  assert.equal(v.kind,'missing');
+  assert.equal(v.value,'—');
+  assert.match(v.threshold,/Kein gültiger Messwert/);
+  record.telemetry.battery=0;
+  record.aircraftConnected=false;
+  v=cockpit.inspectField(record,'battery',fresh,now);
+  assert.equal(v.kind,'stale');
+  assert.match(v.threshold,/Fluggerät getrennt/);
+});
+test('inspector UI is read-only and has independently labelled field status',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/index.html'),'utf8');
+  const css=fs.readFileSync(path.resolve(__dirname,'../../frontend/public/hyperframes-gfx.css'),'utf8');
+  for(const id of ['gfxFieldInspector','gfxFieldInspectSelect','gfxFieldInspectValue',
+    'gfxFieldInspectStatus','gfxFieldInspectSource','gfxFieldInspectThreshold','gfxFieldInspectHelp']){
+    assert.ok(html.includes('id="'+id+'"'),id);
+  }
+  for(const spec of cockpit.SPECS)
+    assert.match(html,new RegExp('<option value="'+spec.key+'">'));
+  assert.match(html,/nicht sekündlich/);
+  assert.match(css,/gfx-field-inspector-data/);
+});

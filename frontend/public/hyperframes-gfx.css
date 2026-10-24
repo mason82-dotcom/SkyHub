@@ -773,3 +773,49 @@ body.skyhub-gfx .gfx-timeline-top li strong{
     background:Canvas;border-color:CanvasText;color:CanvasText;
   }
 }
+
+
+/* Phase 11: one field at a time; provenance-focused and disclosure-only. */
+body.skyhub-gfx .gfx-field-inspector{
+  margin:0 0 12px;border:1px solid #3d687b;border-radius:9px;
+  background:rgba(7,29,45,.78);
+}
+body.skyhub-gfx .gfx-field-inspector>summary{
+  padding:12px;min-height:44px;font-weight:700;font-size:12px;
+  cursor:pointer;color:#e1eff8;
+}
+body.skyhub-gfx .gfx-field-inspector>summary:focus-visible,
+body.skyhub-gfx #gfxFieldInspectSelect:focus-visible{
+  outline:2px solid #c0ffe8;outline-offset:2px;
+}
+body.skyhub-gfx .gfx-field-inspector-body{padding:0 12px 12px}
+body.skyhub-gfx .gfx-field-inspector-body>label{
+  display:block;margin:0 0 5px;color:#c0d9e4;font-size:11px;
+}
+body.skyhub-gfx #gfxFieldInspectSelect{width:100%;min-height:42px;max-width:100%}
+body.skyhub-gfx .gfx-field-inspector-data{
+  margin:10px 0 0;display:grid;gap:6px;
+}
+body.skyhub-gfx .gfx-field-inspector-data>div{
+  min-width:0;padding:8px 9px;border:1px solid #385b6c;
+  background:#102b3d;border-radius:6px;
+}
+body.skyhub-gfx .gfx-field-inspector-data dt{
+  color:#b4cad6;font-size:11px;margin:0 0 4px;
+}
+body.skyhub-gfx .gfx-field-inspector-data dd{
+  margin:0;color:#edf9ff;font-size:12px;line-height:1.4;overflow-wrap:anywhere;
+}
+body.skyhub-gfx #gfxFieldInspectStatus[data-kind="stale"],
+body.skyhub-gfx #gfxFieldInspectStatus[data-kind="unverified"]{color:#f0cf9a}
+body.skyhub-gfx #gfxFieldInspectStatus[data-kind="current"]{color:#b3e7d0}
+body.skyhub-gfx #gfxFieldInspectHelp{
+  margin:10px 0 0;color:#b3cdd8;font-size:10px;line-height:1.5;
+}
+@media (forced-colors:active){
+  body.skyhub-gfx .gfx-field-inspector,
+  body.skyhub-gfx .gfx-field-inspector-data>div{
+    background:Canvas;color:CanvasText;border-color:CanvasText;
+  }
+  body.skyhub-gfx .gfx-field-inspector-data dd{color:CanvasText!important}
+}

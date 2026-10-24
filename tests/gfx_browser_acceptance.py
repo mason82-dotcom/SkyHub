@@ -115,6 +115,18 @@ def main():
                 page.wait_for_function("() => document.querySelector('#gfxCockpitDevice').options.length===2")
                 check(page.locator(".leaflet-container").count()==1,"Leaflet map missing")
                 check(page.locator("#gfxCockpitBattery").inner_text()=="74 %","Battery fixture missing")
+                page.locator("#gfxFieldInspector summary").click()
+                check(page.locator("#gfxFieldInspectSelect").input_value()=="battery",
+                      "Inspector must default to first instrument field")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="current",
+                      "Inspector fresh verified battery should be current")
+                check("15-s-Frischegrenze" in page.locator("#gfxFieldInspectThreshold").inner_text(),
+                      "Verified current field requires threshold explanation")
+                page.locator("#gfxFieldInspectSelect").select_option("altitude")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="stale",
+                      "Inspector should reuse existing stale altitude field status")
+                check("überschritten" in page.locator("#gfxFieldInspectThreshold").inner_text(),
+                      "Stale altitude threshold should be explicit")
                 check(page.locator("#gfxTimelineList li").count()==0,
                       "Initial field snapshot must not create fabricated history")
                 check(page.locator("#gfxTimelineSummary").text_content().startswith("0 von maximal 24"),
@@ -247,6 +259,11 @@ def main():
                       "Stale roll must retain its reported numeric value")
                 check(page.locator("#gfxCockpitRollAge").get_attribute("data-kind")=="stale",
                       "Stale roll provenance should remain explicit")
+                page.locator("#gfxFieldInspectSelect").select_option("attitudeRoll")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="stale",
+                      "Field inspection should follow stale roll status")
+                check("Feldzeit bestätigt" in page.locator("#gfxFieldInspectSource").inner_text(),
+                      "Stale roll provenance needs verified source timestamp")
                 check(page.locator("#gfxCockpitAttitude").is_hidden(),
                       "Single stale roll must hide the artificial horizon")
                 check("Veraltet" in page.locator("#gfxTimelineList").inner_text(),
@@ -293,6 +310,8 @@ def main():
                     check(page.locator("#gfxCockpit").is_visible(),"Cockpit absent on mobile")
                     check(page.locator("#gfxQualitySummary").is_visible(),
                           "Instrument-quality status not visible on mobile at "+str(width))
+                    check(page.locator("#gfxFieldInspector summary").is_visible(),
+                          "Inspector disclosure unavailable at "+str(width))
                     check(page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 2"),
                           "Horizontal document overflow at "+str(width))
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-synthetic.png"),full_page=True)
@@ -306,6 +325,70 @@ def main():
                     page.screenshot(path=str(ARTIFACTS/f"gfx-{width}-attitude-fresh-synthetic.png"),
                                     full_page=True)
                     page.locator("#gfxCockpitDevice").select_option("SYN-B2")
+                # Synthetic separation/reconnection and empty-snapshot reset:
+                # these are UI-state tests, not physical DJI link assertions.
+                page.locator("#gfxCockpitDevice").select_option("SYN-B2")
+                page.locator("#gfxFieldInspectSelect").select_option("battery")
+                page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
+                  sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',
+                  aircraftConnected:false,lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
+                  telemetry:{battery:55,altitude:0,horizontalSpeed:0,heading:270,
+                    verticalSpeed:0,linkQuality:4,latitude:49.1,longitude:8.6},
+                  telemetryFieldAt:{battery:Date.now(),altitude:Date.now(),
+                    horizontalSpeed:Date.now(),heading:Date.now(),
+                    verticalSpeed:Date.now(),linkQuality:Date.now()},
+                  telemetryFieldTimeVerified:{battery:true,altitude:true,
+                    horizontalSpeed:true,heading:true,verticalSpeed:true,linkQuality:true}
+                })""")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="stale",
+                      "Disconnected aircraft cannot produce current field inspection")
+                check("Fluggerät getrennt" in page.locator("#gfxFieldInspectThreshold").inner_text(),
+                      "Disconnected aircraft should suppress the current countdown")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="0",
+                      "Disconnected aircraft must have zero current instrument values")
+                page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('device_update',{
+                  sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',
+                  aircraftConnected:true,lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
+                  telemetry:{battery:56,altitude:0,horizontalSpeed:0,heading:270,
+                    verticalSpeed:0,linkQuality:4,attitudePitch:0,attitudeRoll:0,
+                    latitude:49.1,longitude:8.6},
+                  telemetryFieldAt:Object.fromEntries(
+                    ['battery','altitude','horizontalSpeed','heading','verticalSpeed',
+                     'linkQuality','attitudePitch','attitudeRoll'].map(k=>[k,Date.now()])),
+                  telemetryFieldTimeVerified:Object.fromEntries(
+                    ['battery','altitude','horizontalSpeed','heading','verticalSpeed',
+                     'linkQuality','attitudePitch','attitudeRoll'].map(k=>[k,true]))
+                })""")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="current",
+                      "A new verified field timestamp should restore current inspection")
+                check(page.locator("#gfxQualityCurrent").inner_text()=="8",
+                      "Fresh source timestamps should restore eight current fields")
+                check(page.locator("#gfxCockpitAttitude").is_visible(),
+                      "Restored pitch and roll must show a verified schematic horizon")
+                page.evaluate("() => window.__skyhubTestSockets.at(-1).emitFixture('snapshot',[])")
+                check(page.locator("#gfxFieldInspectValue").inner_text()=="—",
+                      "Empty snapshot must clear inspected telemetry value")
+                check(page.locator("#gfxFieldInspectStatus").get_attribute("data-kind")=="missing",
+                      "Empty snapshot must neutralize field inspector")
+                check(page.locator("#gfxTimelineList li").count()==0,
+                      "Empty snapshot must clear prior local observation timeline")
+                page.evaluate("""() => window.__skyhubTestSockets.at(-1).emitFixture('snapshot',[{
+                  sn:'SYN-B2',modelName:'SYNTHETIC Matrice 4T',
+                  aircraftConnected:true,lastSeenAt:Date.now(),lastTelemetryAt:Date.now(),
+                  telemetry:{battery:57,altitude:0,horizontalSpeed:0,heading:270,
+                    verticalSpeed:0,linkQuality:4,attitudePitch:0,attitudeRoll:0,
+                    latitude:49.1,longitude:8.6},
+                  telemetryFieldAt:Object.fromEntries(
+                    ['battery','altitude','horizontalSpeed','heading','verticalSpeed',
+                     'linkQuality','attitudePitch','attitudeRoll'].map(k=>[k,Date.now()])),
+                  telemetryFieldTimeVerified:Object.fromEntries(
+                    ['battery','altitude','horizontalSpeed','heading','verticalSpeed',
+                     'linkQuality','attitudePitch','attitudeRoll'].map(k=>[k,true]))
+                }])""")
+                check(page.locator("#gfxFieldInspectValue").inner_text()=="57 %",
+                      "Fresh snapshot should restore last selected inspector field")
+                check(page.locator("#gfxTimelineList li").count()==0,
+                      "New snapshot after empty list must start with a clean baseline")
                 check(not errors,"Browser JS errors: "+repr(errors))
                 check(not unexpected,"Unexpected traffic: "+repr(unexpected))
                 context.close()

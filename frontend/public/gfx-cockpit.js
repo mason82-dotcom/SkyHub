@@ -129,6 +129,38 @@ function summarizeTimeline(entries){
   return {retained:considered.length,staleTransitions,timestampAdvances,
     otherTransitions,topStale};
 }
+/* Field-detail readout shares exactly the valueFor/evaluateField result with
+ * the dials. A countdown is shown ONLY for time-verified current measurements. */
+function inspectField(device,key,freshness,now=Date.now()){
+  const spec=SPECS.find(item=>item.key===key);
+  if(!spec||!freshness||typeof freshness.evaluateField!=='function')return null;
+  const result=valueFor(device,spec,freshness,now);
+  const timestamp=device?.telemetryFieldAt?.[key];
+  const usableTime=result.kind!=='missing'&&Number.isFinite(timestamp)&&
+    timestamp<=now&&Math.abs(timestamp)<=8.64e15;
+  const verified=device?.telemetryFieldTimeVerified?.[key]===true;
+  const source=usableTime?
+    (new Date(timestamp).toLocaleString('de-DE')+
+      ' · '+(verified?'Feldzeit bestätigt':'Feldzeit ungeprüft')):
+    'Kein auswertbarer Feldzeitpunkt';
+  let threshold;
+  if(result.kind==='current'&&usableTime&&verified){
+    const remaining=Math.ceil((freshness.CURRENT_MS-(now-timestamp))/1000);
+    threshold=remaining+' s bis zur 15-s-Frischegrenze bei ausbleibendem neuem Feldzeitpunkt';
+  }else if(result.kind==='stale'&&device?.aircraftConnected===false){
+    threshold='Fluggerät getrennt · kein aktueller Frische-Countdown';
+  }else if(result.kind==='stale'){
+    threshold='15-s-Frischegrenze überschritten · kein aktueller Countdown';
+  }else if(result.kind==='unverified'){
+    threshold='Feldzeit ungeprüft · kein verifizierter Countdown';
+  }else if(result.kind==='unknown'){
+    threshold='Feldzeit fehlt oder liegt in der Zukunft · kein Countdown';
+  }else{
+    threshold='Kein gültiger Messwert · kein Countdown';
+  }
+  return {label:FIELD_LABELS[key],value:result.value,kind:result.kind,
+    status:result.age,source,threshold};
+}
 function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
   if(!rootEl||!fieldFreshness||typeof fieldFreshness.evaluateField!=='function')return null;
@@ -141,6 +173,11 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const timelineSummary=doc.getElementById('gfxTimelineSummary');
   const timelineTop=doc.getElementById('gfxTimelineTop');
   const timelineTopEmpty=doc.getElementById('gfxTimelineTopEmpty');
+  const fieldInspector=doc.getElementById('gfxFieldInspectSelect');
+  const fieldInspectValue=doc.getElementById('gfxFieldInspectValue');
+  const fieldInspectStatus=doc.getElementById('gfxFieldInspectStatus');
+  const fieldInspectSource=doc.getElementById('gfxFieldInspectSource');
+  const fieldInspectThreshold=doc.getElementById('gfxFieldInspectThreshold');
   const qualitySummary=doc.getElementById('gfxQualitySummary');
   const qualityCounts=new Map(QUALITY_KINDS.map(kind=>[
     kind,doc.getElementById('gfxQuality'+kind.charAt(0).toUpperCase()+kind.slice(1))
@@ -157,6 +194,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   locate.addEventListener('click',()=>{
     if(current&&typeof onLocate==='function')onLocate(current.sn);
   });
+  if(fieldInspector)fieldInspector.addEventListener('change',updateView);
   const compass=doc.getElementById('gfxCockpitCompass');
   const needle=doc.getElementById('gfxCockpitNeedle');
   const attitude=doc.getElementById('gfxCockpitAttitude');
@@ -249,6 +287,19 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
         renderTimeline();
       }
     }
+    const inspection=inspectField(current,
+      fieldInspector?.value||SPECS[0].key,fieldFreshness,now);
+    if(fieldInspectValue)fieldInspectValue.textContent=
+      current&&inspection?inspection.value:'—';
+    if(fieldInspectStatus){
+      fieldInspectStatus.textContent=current&&inspection?
+        inspection.status:'Kein Gerät ausgewählt';
+      fieldInspectStatus.dataset.kind=current&&inspection?inspection.kind:'missing';
+    }
+    if(fieldInspectSource)fieldInspectSource.textContent=
+      current&&inspection?inspection.source:'Kein auswertbarer Feldzeitpunkt';
+    if(fieldInspectThreshold)fieldInspectThreshold.textContent=
+      current&&inspection?inspection.threshold:'Kein Gerät ausgewählt · kein Countdown';
     const quality=qualityFor(current,fieldFreshness,now);
     if(qualitySummary)qualitySummary.textContent=quality?
       quality.current+' von '+quality.total+' angezeigten Instrumentenfeldern aktuell und zeitverifiziert':
@@ -320,7 +371,7 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   }
   return {render};
 }
-const api=Object.freeze({SPECS,QUALITY_KINDS,TIMELINE_MAX,valueFor,bearingFor,attitudeFor,qualityFor,observeFields,timelineChanges,summarizeTimeline,mount});
+const api=Object.freeze({SPECS,QUALITY_KINDS,TIMELINE_MAX,valueFor,bearingFor,attitudeFor,qualityFor,observeFields,timelineChanges,summarizeTimeline,inspectField,mount});
 if(typeof module==='object'&&module.exports)module.exports=api;
 if(root)root.SkyHubGfxCockpit=api;
 })(typeof window==='object'?window:null);

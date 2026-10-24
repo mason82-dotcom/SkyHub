@@ -158,6 +158,29 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
         </dl>
         <p class="gfx-quality-help">Dies ist die Feldprüfung der acht hier dargestellten Instrumentenwerte, nicht der Status der Drohne oder eine Flugfreigabe.</p>
       </section>
+      <details class="gfx-field-inspector" id="gfxFieldInspector">
+        <summary>Einzelwert · Zeitgrenze prüfen</summary>
+        <div class="gfx-field-inspector-body">
+          <label for="gfxFieldInspectSelect">Instrumentenfeld</label>
+          <select id="gfxFieldInspectSelect" aria-describedby="gfxFieldInspectHelp">
+            <option value="battery">Akku</option>
+            <option value="altitude">Höhe relativ</option>
+            <option value="horizontalSpeed">Horizontaltempo</option>
+            <option value="heading">Kurs / Heading</option>
+            <option value="verticalSpeed">Vertikaltempo</option>
+            <option value="attitudePitch">Nickwinkel</option>
+            <option value="attitudeRoll">Rollwinkel</option>
+            <option value="linkQuality">SDR-Funkqualität</option>
+          </select>
+          <dl class="gfx-field-inspector-data">
+            <div><dt>Gemeldeter Wert</dt><dd id="gfxFieldInspectValue">—</dd></div>
+            <div><dt>Einzelwert-Status</dt><dd id="gfxFieldInspectStatus" data-kind="missing">Kein Gerät ausgewählt</dd></div>
+            <div><dt>Feldzeitstempel · Ortszeit</dt><dd id="gfxFieldInspectSource">Kein auswertbarer Feldzeitpunkt</dd></div>
+            <div><dt>Frischegrenze</dt><dd id="gfxFieldInspectThreshold">Kein Gerät ausgewählt · kein Countdown</dd></div>
+          </dl>
+          <p id="gfxFieldInspectHelp">Frischegrenze: 15 Sekunden ab bestätigtem Einzelzeitpunkt. Restzeit nur für aktuell verifizierte Messwerte; Aktualisierung beim nächsten Dashboard-Zeichnen, nicht sekündlich. Kein DJI-Paketnachweis und keine Flugfreigabe.</p>
+        </div>
+      </details>
       <details class="gfx-timeline" id="gfxCockpitTimeline">
         <summary>Feldverlauf · lokale Beobachtungen</summary>
         <div class="gfx-timeline-content">

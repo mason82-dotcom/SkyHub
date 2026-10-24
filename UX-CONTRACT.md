@@ -89,3 +89,8 @@ Der Feldverlauf ist ein flüchtiger, auf 24 Einträge begrenzter Browser-UI-Beob
 ## SKY//PULSE · Begrenzte Frischewechsel-Diagnose
 
 Die Diagnosezusammenfassung berechnet ausschließlich Häufigkeiten unter den **maximal 24 zuletzt gespeicherten lokalen UI-Beobachtungen**. Sie muss beobachtete Übergänge zu „Veraltet“ von verifiziert fortgeschriebenen Feldzeitstempeln und sonstigen Statuswechseln trennen. Ein Ranking darf sich nur auf genau dieses Fenster beziehen und darf niemals als langfristige Fehlerhäufigkeit, Empfangslücke, Paketverlustquote, Hardwarediagnose oder Flugfreigabe beschriftet sein. Ein Feld ohne erfassten Wechsel erhält keinen Rang; bei Gleichstand ist die feste Reihenfolge der acht Instrumente ausschlaggebend. Löschen und Gerätewechsel setzen Liste und Zähler atomar zurück.
+
+
+## SKY//PULSE · Einzelwert-Frischegrenze
+
+Die selektierbare Felddetailansicht darf ausschließlich für einen aktuell und mit eigener Zeit verifizierten Messwert eine verbleibende Frischezeit ausgeben. Die Zeitspanne wird mit derselben 15-Sekunden-Grenze wie der originale DJI-OSD-Feldvalidator bestimmt; bei exakt 15 000 ms ist ein Wert nicht mehr aktuell. Fehlt die Verifizierung, ist das Datum zukünftiger/ungültiger Art, der Messwert unplausibel oder das Fluggerät getrennt, wird der Countdown ausgeblendet. Die UI zeigt eine bedarfsaktualisierte Frischeprojektion, keinen Echtzeit-Ticker oder Empfangsnachweis. Leere Snapshots neutralisieren ausgewählten Wert und Verlauf; danach folgende Meldungen beginnen eine neue Baseline.
