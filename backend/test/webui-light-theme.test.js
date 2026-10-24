@@ -94,7 +94,7 @@ test('each operator page marks only its own module as active', () => {
     ['wpml-survey-preview.html','/wpml-survey-preview.html']
   ]);
   for (const [name,active] of expected) {
-    const nav = html(name).match(/<nav class="skyhub-global-nav"[^>]*>(.*?)<\/nav>/);
+    const nav = html(name).match(/<nav class="skyhub-global-nav"[^>]*>(.*?)<\/nav>/s);
     assert.ok(nav, name);
     const links = [...nav[1].matchAll(/<a href="([^"]+)"([^>]*)>/g)];
     assert.deepEqual(links.map(link=>link[1]),globalLinks, name);
