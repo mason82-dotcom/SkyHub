@@ -187,3 +187,30 @@ test('HyperFrames motion README uses current check gate rather than deprecated v
   assert.match(motion,/Node\.js 22\+/);
   assert.doesNotMatch(motion,/^\s*- npx hyperframes (?:validate|inspect)/m);
 });
+
+test('HyperFrames root mounts a reusable nested scene without manually nesting timelines',()=>{
+  const dir=path.resolve(__dirname,'../../motion/hyperframes/skyhub-gfx');
+  const rootHtml=fs.readFileSync(path.join(dir,'index.html'),'utf8');
+  const hero=fs.readFileSync(path.join(dir,'compositions/hero.html'),'utf8');
+  assert.match(rootHtml,/data-composition-src="\.\/compositions\/hero\.html"/);
+  assert.match(rootHtml,/data-composition-id="skyhub-gfx-hero"/);
+  assert.match(rootHtml,/window\.__timelines\['skyhub-gfx-intro'\]=gsap\.timeline\(\{paused:true\}\)/);
+  assert.doesNotMatch(rootHtml,/\.add\(\s*window\.__timelines/);
+  assert.match(hero,/^<template>/);
+  assert.match(hero,/data-composition-id="skyhub-gfx-hero"/);
+  assert.match(hero,/window\.__timelines\['skyhub-gfx-hero'\]=timeline/);
+  assert.match(hero,/\.to\('#gfx-hero',\{opacity:0,duration:\.7/);
+  assert.doesNotMatch(rootHtml,/https?:\/\/(?!cdn\.jsdelivr\.net)/);
+});
+test('HyperFrames root motion assertions cover timeline and remain finite/read-only',()=>{
+  const dir=path.resolve(__dirname,'../../motion/hyperframes/skyhub-gfx');
+  const sidecar=JSON.parse(fs.readFileSync(path.join(dir,'index.motion.json'),'utf8'));
+  assert.equal(sidecar.duration,8);
+  assert.ok(Array.isArray(sidecar.assertions)&&sidecar.assertions.length>=5);
+  for(const assertion of sidecar.assertions){
+    assert.ok(['appearsBy','before','staysInFrame','keepsMoving'].includes(assertion.kind));
+    if(assertion.bySec!==undefined)assert.ok(assertion.bySec>=0&&assertion.bySec<=8);
+  }
+  assert.ok(sidecar.assertions.some(a=>a.kind==='before'));
+  assert.ok(sidecar.assertions.some(a=>a.kind==='staysInFrame'));
+});
