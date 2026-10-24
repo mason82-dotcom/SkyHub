@@ -72,6 +72,28 @@ test('rejected, altered or revoked session records fail closed without retries o
   assert.equal(await session(unavailable)(claim()),false);
   assert.equal(await session({get:async()=>({active:true})})(claim()),false);
 });
+test('stalled or extremely slow Redis lookup rejects by a bounded deadline',async()=>{
+  const hanging={get:()=>new Promise(()=>{})};
+  const start=Date.now();
+  const check=createWpmlRedisSessionCheck({
+    redis:hanging,keySecret:PEPPER,clock:()=>NOW*1000,lookupTimeoutMs:25});
+  assert.equal(await check(claim()),false);
+  assert.ok(Date.now()-start<1000,'stalled lookup must not block the session gate');
+  assert.throws(()=>createWpmlRedisSessionCheck({
+    redis:hanging,keySecret:PEPPER,lookupTimeoutMs:0}),/Bounded Redis/);
+  assert.throws(()=>createWpmlRedisSessionCheck({
+    redis:hanging,keySecret:PEPPER,lookupTimeoutMs:60000}),/Bounded Redis/);
+  let release;
+  const late={get:()=>new Promise(resolve=>{release=resolve;})};
+  const delayed=createWpmlRedisSessionCheck({
+    redis:late,keySecret:PEPPER,clock:()=>NOW*1000,lookupTimeoutMs:25});
+  assert.equal(await delayed(claim()),false);
+  release(JSON.stringify(record())); // must never authorize after timeout
+});
+test('multibyte session response exceeding the byte budget is rejected',async()=>{
+  const r=registry(JSON.stringify(record())+'🛰️'.repeat(700));
+  assert.equal(await session(r)(claim()),false);
+});
 test('revocation, expiry and actor tampering prevent access',async()=>{
   const r=registry(),check=session(r);
   assert.equal(await check(claim()),true);
