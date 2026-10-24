@@ -24,6 +24,9 @@ SHA = re.compile(r'[0-9a-fA-F]{64}\Z')
 INDICES = ('ndvi', 'ndre', 'gndvi', 'osavi')
 NAMES = {'ndvi': 'NDVI', 'ndre': 'NDRE', 'gndvi': 'GNDVI', 'osavi': 'OSAVI'}
 MAX_REPORT_BYTES = 128 * 1024
+# Float32 raster reports may round a constant mean a few ULPs beyond its extrema.
+# This tolerance is much smaller than the independent raster QA bound (5e-5).
+INDEX_STAT_ROUNDING_TOLERANCE = 1e-7
 FALSE_FLAGS = ('operationalUseAllowed', 'reflectanceReady', 'ndviReady', 'ndreReady')
 
 
@@ -119,8 +122,13 @@ def _validated_indices(report: dict) -> list[dict]:
             if type(v) not in (int, float) or not math.isfinite(v) or not -2 <= v <= 2:
                 raise CandidateError('Invalid index summary statistic')
             stat[key] = float(v)
-        if not stat['min'] <= stat['mean'] <= stat['max']:
+        if (stat['min'] > stat['max'] or
+            stat['mean'] < stat['min'] - INDEX_STAT_ROUNDING_TOLERANCE or
+            stat['mean'] > stat['max'] + INDEX_STAT_ROUNDING_TOLERANCE):
             raise CandidateError('Contradictory index statistics')
+        # Normalize only an accepted float-roundoff excursion, so downstream
+        # fail-closed catalog/UI rules still require min <= mean <= max.
+        stat['mean'] = min(stat['max'], max(stat['min'], stat['mean']))
         cards.append({'index': name, 'title': NAMES[name], 'validPixels': valid,
                       'mean': stat['mean'], 'min': stat['min'], 'max': stat['max'],
                       'unit': 'dimensionless', 'mapTilesAvailable': False})
