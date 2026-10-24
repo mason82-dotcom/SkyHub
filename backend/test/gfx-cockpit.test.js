@@ -63,7 +63,7 @@ test('cockpit markup preserves canonical device and map interactions',()=>{
     html.indexOf('<script src="/gfx-cockpit.js"></script>'));
   assert.ok(html.indexOf('<script src="/gfx-cockpit.js"></script>')<
     html.indexOf('<script>'));
-  assert.match(html,/SkyHubGfxCockpit\.mount/);
+  assert.match(html,/SkyHubGfxCockpit\?\.mount/);
   assert.match(html,/cockpit\.render\(data,selectedSn,listState\)/);
   assert.match(html,/id="gfxCockpit"[^>]+aria-labelledby="gfxCockpitHeading"/);
 });

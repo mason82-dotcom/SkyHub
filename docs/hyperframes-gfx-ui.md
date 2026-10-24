@@ -50,3 +50,15 @@ Implementiert im selben experimentellen Branch:
 - Leaflet-Marker, Attribution, Scrollen der Geräteliste und Wechsel Operations/TAK bei aktiviertem Karten-Fokus testen.
 - Farbkontrast, Fokus und `forced-colors` kontrollieren. Motion darf keinen Datenstatus vortäuschen.
 - Alle neuen Regressionstests sowie HyperFrames-`lint`, `validate`, `inspect` getrennt ausführen.
+
+
+## Phase 3 · Field-provenance OSD-Cockpit
+
+- Neuer Owner `frontend/public/gfx-cockpit.js`. Ausschließlich browserlokale Aufbereitung derselben Geräte-Snapshots, die bereits `index.html` rendert; **kein** separater Netzabruf und keine Kopie des View-Tokens.
+- Enthält sechs Instrumente: Akku, relative Höhe, Horizontalgeschwindigkeit, Heading, Vertikalgeschwindigkeit und SDR-Funkqualität. Fehlende optionale DJI-Felder werden als „Nicht empfangen“ angezeigt; Nullwerte bleiben gültige Zahlen.
+- `telemetry-freshness.js` liefert die per-Feld-Kategorien `current`, `unverified`, `stale`, `missing` und `unknown`. Aggregat-OSD-Zeit ist kein Ersatz für Einzelwert-Zeitpunkte.
+- Füllstandsbalken sind **nur** bei aktuellem, zeitverifiziertem Einzelwert gefüllt; für alte, fehlende und unbestätigte Werte werden sie geleert. Balken sind dekorativ; Status bleibt Text.
+- Die Geräteauswahl ist alphabetisch nach Serienkennung sortiert und wird bei unverändertem Bestand nicht neu aufgebaut. Nutzerwahl bleibt bei OSD-Updates bestehen. Eine bewusste Kartenmarker-Auswahl kann das Cockpitgerät wechseln.
+- Der Button „Letzten Kartenstandort zeigen“ ist nur aktiv, wenn eine Karte existiert und eine gültige WGS84-Position inklusive Positionstimestamp vorliegt. `0/0` und explizit `positionUnavailable` sind ausgeschlossen. Dies ist eine reine Karten-Navigation.
+- Der Instrumentenstatus ist ausdrücklich `Nur lesend`, ohne DJI-Befehl, Start-/Stopp- oder Missionsfreigabe.
+- Regressionstests: `backend/test/gfx-cockpit.test.js` und die bisherigen Dashboard-/TAK-/WPML-Tests. GPU/GSAP ist für die Instrumente nicht erforderlich.

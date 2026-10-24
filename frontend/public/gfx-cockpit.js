@@ -84,11 +84,11 @@ function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
     devices=Array.isArray(records)?records.filter(d=>d&&typeof d.sn==='string'&&d.sn.length>0):[];
     state=listState||'loading';
     // The command instrument has its own explicit selection; nothing is stored.
-    const ordered=devices.map(d=>d.sn);
-    const nextSignature=devices.map(d=>JSON.stringify([d.sn,d.modelName])).join('|');
+    const ordered=[...devices].sort((a,b)=>a.sn.localeCompare(b.sn,'de'));
+    const nextSignature=ordered.map(d=>JSON.stringify([d.sn,d.modelName])).join('|');
     if(signature!==nextSignature){
       const fragment=doc.createDocumentFragment();
-      for(const d of devices){
+      for(const d of ordered){
         const option=doc.createElement('option');
         option.value=d.sn;
         option.textContent=(typeof d.modelName==='string'&&d.modelName.trim()?

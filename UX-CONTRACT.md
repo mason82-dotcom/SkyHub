@@ -60,3 +60,8 @@ Diese Ergänzung gilt ausschließlich für `feature/hyperframes-gfx-ui-rework-20
 - Die visuelle Animation ist temporär und stets abschaltbar. Betriebssystemseitige Einstellungen für reduzierte Bewegung oder erzwungene Farben haben Vorrang.
 - Warnstufen, „aktuell“-Kennzeichnungen und Frischegrenzen stammen unverändert aus den fachlichen Komponenten. Dekorative Radarflächen sind keine Telemetriequellen.
 - Relevante automatisierte Tests: `backend/test/hyperframes-gfx-ui.test.js` und die etablierten Dashboard-/TAK-/WPML-Tests.
+
+
+## SKY//PULSE · Fluginstrumente (Branch-spezifisch)
+
+Im GFX-Branch dürfen Instrumente nur reale, normalisierte Werte aus dem bestehenden Gerätesnapshot darstellen. Jedes Instrument verwendet denselben `SkyHubTelemetryFreshness.evaluateField`-Status wie die Original-Gerätekarte. Null gilt als gemeldene Zahl, fehlende/ungültige Werte als „Nicht empfangen“. Die optionale Instrumenten-Geräteauswahl bleibt bei laufenden OSD-Updates stabil. Ein verringertes Balkendiagramm darf nie als Live-Nachweis gelten: Nur `current` erzeugt eine Füllung. Kein Instrument ist Flugsteuerung, Missionsfreigabe oder Vorhersage.
