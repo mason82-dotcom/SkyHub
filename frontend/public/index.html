@@ -138,6 +138,22 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
       <div class="tile"><small>OSD &lt;15 s</small><strong id="live">0</strong></div>
       <div class="tile"><small>HMS Stufe 2</small><strong id="hmsCount">0</strong></div>
     </div>
+    <section id="gfxCockpit" class="gfx-cockpit" aria-labelledby="gfxCockpitHeading">
+      <div class="gfx-cockpit-top"><div><span class="gfx-cockpit-overline">SKY//PULSE / OSD</span><h2 id="gfxCockpitHeading">Fluginstrumente</h2></div><span class="gfx-cockpit-badge">Nur lesend</span></div>
+      <label for="gfxCockpitDevice">Gerät für Instrumente</label>
+      <select id="gfxCockpitDevice" disabled aria-describedby="gfxCockpitHelp"><option value="">Warte auf Gerätedaten</option></select>
+      <p id="gfxCockpitStatus" role="status">Warte auf Gerätedaten.</p>
+      <div class="gfx-cockpit-dials" aria-label="Gemeldete Einzelwerte und Zeitprüfung">
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Akku</span><strong id="gfxCockpitBattery" class="gfx-cockpit-value">—</strong><small id="gfxCockpitBatteryAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small><div class="gfx-cockpit-meter" aria-hidden="true"><span id="gfxCockpitBatteryMeter"></span></div></div>
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Höhe relativ</span><strong id="gfxCockpitAltitude" class="gfx-cockpit-value">—</strong><small id="gfxCockpitAltitudeAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Horizontaltempo</span><strong id="gfxCockpitSpeed" class="gfx-cockpit-value">—</strong><small id="gfxCockpitSpeedAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Kurs / Heading</span><strong id="gfxCockpitHeading" class="gfx-cockpit-value">—</strong><small id="gfxCockpitHeadingAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">Vertikaltempo</span><strong id="gfxCockpitClimb" class="gfx-cockpit-value">—</strong><small id="gfxCockpitClimbAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small></div>
+        <div class="gfx-cockpit-dial"><span class="gfx-cockpit-name">SDR-Funkqualität</span><strong id="gfxCockpitLink" class="gfx-cockpit-value">—</strong><small id="gfxCockpitLinkAge" class="gfx-cockpit-age" data-kind="missing">Nicht empfangen</small><div class="gfx-cockpit-meter" aria-hidden="true"><span id="gfxCockpitLinkMeter"></span></div></div>
+      </div>
+      <button id="gfxCockpitLocate" type="button" disabled>Letzten Kartenstandort zeigen</button>
+      <p id="gfxCockpitHelp">DJI-OSD aus der vorhandenen Verbindung. Frische und Quellzeit werden je Feld geprüft. Keine Flugfreigabe.</p>
+    </section>
     <details class="health-panel">
       <summary>Datenpfad · <span id="healthSummary" role="status">wird geprüft</span></summary>
       <dl>
@@ -205,6 +221,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 8p
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/telemetry-freshness.js"></script>
+<script src="/gfx-cockpit.js"></script>
 <script src="/workspace-tabs.js"></script>
 <script>
 (function(){
@@ -248,6 +265,7 @@ let eventsController=null,eventsLoadId=0;
 const recentEvents=[];
 const expanded=new Set();
 let listState='loading',composingSearch=false;
+const cockpit=window.SkyHubGfxCockpit?.mount({document,fieldFreshness,mapAvailable:Boolean(map),onLocate:sn=>revealDevice(sn)});
 const show=(x,suffix='')=>typeof x==='number'&&Number.isFinite(x)?String(Math.round(x*100)/100)+suffix:'—';
 const fresh=d=>Number.isFinite(d.lastTelemetryAt)&&Date.now()>=d.lastTelemetryAt&&Date.now()-d.lastTelemetryAt<15000;
 // HMS lists are pushed repeatedly while alerts are active; older lists are stale.
@@ -311,6 +329,7 @@ function fitDevices(){
 }
 function update(){
   const data=[...records.values()].sort((a,b)=>(b.lastSeenAt||0)-(a.lastSeenAt||0));
+  if(cockpit)cockpit.render(data,selectedSn,listState);
   const root=el('devices');
   const focusedSn=document.activeElement?.dataset?.focusSn;
   const focusedDetailsSn=document.activeElement?.dataset?.detailsSn;

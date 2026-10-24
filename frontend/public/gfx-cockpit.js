@@ -20,7 +20,7 @@ function valueFor(device,spec,freshness,now){
   const meter=spec.range?100*(value-spec.range[0])/(spec.range[1]-spec.range[0]):null;
   return {value:formatted,age:status.text,kind:status.kind,meter};
 }
-function mount({document:doc,fieldFreshness,onLocate}={}){
+function mount({document:doc,fieldFreshness,onLocate,mapAvailable=false}={}){
   const rootEl=doc&&doc.getElementById('gfxCockpit');
   if(!rootEl||!fieldFreshness||typeof fieldFreshness.evaluateField!=='function')return null;
   const picker=doc.getElementById('gfxCockpitDevice');
@@ -28,6 +28,7 @@ function mount({document:doc,fieldFreshness,onLocate}={}){
   const locate=doc.getElementById('gfxCockpitLocate');
   if(!picker||!status||!locate)return null;
   let selected=null;
+  let previousMapSelection=null;
   let signature='';
   let current=null;
   picker.addEventListener('change',()=>{
@@ -56,7 +57,7 @@ function mount({document:doc,fieldFreshness,onLocate}={}){
       current.telemetryTimeVerified===false?'OSD empfangen · Gesamtzeit ungeprüft; Felder separat bewerten.':
       'Gerätemesswerte · Frische je Feld separat angegeben.';
     if(nextStatus!==lastStatus){status.textContent=nextStatus;lastStatus=nextStatus;}
-    locate.disabled=!current||
+    locate.disabled=!mapAvailable||!current||
       current.positionUnavailable===true||
       !current.telemetry||
       !Number.isFinite(current.telemetry.latitude)||
@@ -84,7 +85,7 @@ function mount({document:doc,fieldFreshness,onLocate}={}){
     state=listState||'loading';
     // The command instrument has its own explicit selection; nothing is stored.
     const ordered=devices.map(d=>d.sn);
-    const nextSignature=ordered.map(sn=>JSON.stringify(sn)).join('|');
+    const nextSignature=devices.map(d=>JSON.stringify([d.sn,d.modelName])).join('|');
     if(signature!==nextSignature){
       const fragment=doc.createDocumentFragment();
       for(const d of devices){
@@ -97,6 +98,8 @@ function mount({document:doc,fieldFreshness,onLocate}={}){
       picker.replaceChildren(fragment);
       signature=nextSignature;
     }
+    if(ignoredMapSelection&&ignoredMapSelection!==previousMapSelection&&devices.some(d=>d.sn===ignoredMapSelection))selected=ignoredMapSelection;
+    previousMapSelection=ignoredMapSelection||null;
     if(!devices.some(d=>d.sn===selected))selected=devices.length?devices[0].sn:null;
     picker.value=selected||'';
     picker.disabled=!devices.length;
