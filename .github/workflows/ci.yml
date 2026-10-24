@@ -12,9 +12,11 @@ on:
 permissions:
   contents: read
 
-# Pull requests and their branch pushes should not consume two runners indefinitely.
+# Keep PR and branch-push runs in separate groups so a stalled cancelled
+# push worker cannot starve the required PR checks. Supersede older runs
+# within each event/ref group only.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
