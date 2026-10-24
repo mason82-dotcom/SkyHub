@@ -106,4 +106,44 @@ Vor einer Serverfreigabe sind zwingend:
   Flugfreigabe, einschließlich Höhen-, Payload- und Kamerasemantik;
 - gesondertes Pi-Preflight, Konfigurationsabnahme und Rollback.
 
+## Nichtprivilegierter SQL-RLS-Test (Phase 3)
+
+Der zusätzliche Test `backend/test/wpml-central-rls.integration.test.js`
+läuft ausschließlich auf der ausdrücklich angegebenen
+`skyhub_test`-Datenbank am lokalen Loopback-Host. Er erstellt drei
+temporäre **`NOLOGIN NOSUPERUSER NOBYPASSRLS`**-Rollen und ein
+zufällig benanntes, temporäres Schema. Er kontrolliert:
+
+- Bereits vergebene `USAGE`- und `SELECT`-Rechte führen unter
+  `FORCE ROW LEVEL SECURITY` **ohne erlaubende Policies zu null sichtbaren
+  Datensätzen**, einschließlich Routen, Revisionen und Audit.
+- Ausschließlich **im CI-Schema** erzeugte SELECT-Policies gewähren
+  je einer Testrolle Sicht auf genau einen fest zugewiesenen Workspace.
+  Andere Workspaces bleiben auch bei direkter SQL-Abfrage unsichtbar.
+- Eine dritte nicht zugewiesene Rolle liest auch nach Einrichtung
+  der beiden Test-Policies **nichts**.
+- Selbst nach einem reinen `GRANT INSERT` blockiert die Datenbank ohne
+  `FOR INSERT`-Policy den Schreibversuch. Audit und Revisionen
+  werden nicht verändert.
+- Rollen und Schema werden im Test-Finalizer bereinigt.
+
+Diese Test-Policies sind **nicht Teil der Migrationsdateien**, begründen
+keine produktiven SQL-Zugriffe und sind **kein Entwurf für eine
+später kopierbare, fest an Workspace-UUIDs gekoppelte Laufzeit-Rolle**.
+Die Verwendung privilegierter Datenbankadministration für temporäre
+Testrollen dient ausschließlich dem CI-Beweis. Eine echte Rollenzuordnung
+zu Operator-Sessions, Tokenwiderruf, DB-Transaktionskontext und
+tenant-sichere Policy-Auswertung müssen gesondert entworfen werden.
+
+**Wichtig:** PostgreSQL Custom-GUC-Werte, die ein normaler
+DB-Client mittels `SET` selbst festlegen kann, dürfen **nicht**
+als vertrauenswürdige alleinige Grundlage einer Workspace-Policy
+dienen. Ein Request-Parameter wie `workspaceId` oder
+`role:'operator'` ist **niemals** ein Authentifizierungsbeweis.
+
+```bash
+# Nur im eigens bereitgestellten isolierten Testsystem:
+node --test backend/test/wpml-central-rls.integration.test.js
+```
+
 **Keine der P0-Datenbankoperationen autorisiert Flüge.**
