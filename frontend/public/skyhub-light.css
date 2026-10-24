@@ -35,7 +35,7 @@
   --accent: var(--sky-primary);
   --danger: var(--sky-warning);
 }
-html { color-scheme: light; }
+html { color-scheme: light; background: var(--sky-bg); color: var(--sky-ink); }
 html, body { min-width: 320px; }
 body {
   background: var(--sky-bg);
@@ -196,7 +196,7 @@ body[data-skyhub-page="dashboard"] .map-shell {
   border-right: 1px solid var(--sky-border);
 }
 body[data-skyhub-page="dashboard"] .map-title {
-  position: absolute; z-index: 500; left: 16px; top: 16px;
+  position: absolute; z-index: 500; left: 16px; bottom: 16px;
   display: grid; gap: 3px; min-width: 210px;
   padding: 12px 16px; border: 1px solid #e0e7ef;
   background: rgba(255,255,255,.94); border-radius: 13px;
@@ -410,6 +410,7 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
 @media (max-width: 900px) {
   .skyhub-global-nav { flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
   .skyhub-global-nav a { flex-shrink: 0; min-height: 44px; }
+  button, input:not([type=checkbox]):not([type=radio]), select { min-height: 44px; }
   body[data-skyhub-page="dashboard"] #operationsPanel { display: grid; grid-template-columns: minmax(0,1fr); height: auto; }
   body[data-skyhub-page="dashboard"] .map-shell { height: min(52vh,520px); min-height: 330px; border-right: 0; border-bottom: 1px solid var(--sky-border); }
   body[data-skyhub-page="dashboard"] #map { min-height: 330px; }
@@ -434,7 +435,7 @@ body[data-skyhub-page="pilot"] .warning { color: var(--sky-warning); }
   body[data-skyhub-page="dashboard"] #message { max-width: none; width: 100%; }
   body[data-skyhub-page="dashboard"] .workspace-tabs { padding: 8px 14px; }
   body[data-skyhub-page="dashboard"] .workspace-tab { flex: 1; min-width: 0; padding: 8px 10px; }
-  body[data-skyhub-page="dashboard"] .map-title { left: 10px; top: 10px; min-width: 0; padding: 9px 10px; max-width: 48%; }
+  body[data-skyhub-page="dashboard"] .map-title { left: 10px; bottom: 10px; min-width: 0; padding: 9px 10px; max-width: 65%; }
   body[data-skyhub-page="dashboard"] .map-tools { right: 10px; top: 10px; max-width: 48%; }
   body[data-skyhub-page="dashboard"] .map-tools button { font-size: 11px; padding: 7px 8px; }
   body[data-skyhub-page="dashboard"] aside { padding: 14px; }
