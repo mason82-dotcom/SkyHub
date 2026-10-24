@@ -78,3 +78,7 @@ Der Branch `feature/hyperframes-gfx-ui-rework-20261024` enthält eine rein optis
 - **Layout:** gut sichtbarer Fokus, Skip-Links, bedienbare Seitenleiste im Karten-Fokusmodus; unter 961 px Dokumentenscroll statt aufgezwungenem Layout.
 
 Vor einer Produktivübernahme sind reale Browser- und Hardware-Abnahmen erforderlich.
+
+### Kursinstrument (GFX-Variante)
+
+Die 48px-Kursrose im Heading-Instrument nutzt Cyan/Lime-Kontrast gegen Deep-Panel. Die 0°-Nordreferenz ist als N markiert, die aus DJI-Heading abgeleitete Richtung wird nur bei explizit aktueller, zeitgeprüfter Meldung dargestellt. Keine flugbereitschaftssignalisierende Bewegung; unbekannte/stale Quelle blendet die Rose aus. Im High-Contrast-Modus kommen `Canvas` und `CanvasText` zum Einsatz. Fachliche Zustandskommunikation bleibt textbasiert und gehört dem Telemetrie-Zeitprüfer.

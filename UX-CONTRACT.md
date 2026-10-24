@@ -65,3 +65,7 @@ Diese Ergänzung gilt ausschließlich für `feature/hyperframes-gfx-ui-rework-20
 ## SKY//PULSE · Fluginstrumente (Branch-spezifisch)
 
 Im GFX-Branch dürfen Instrumente nur reale, normalisierte Werte aus dem bestehenden Gerätesnapshot darstellen. Jedes Instrument verwendet denselben `SkyHubTelemetryFreshness.evaluateField`-Status wie die Original-Gerätekarte. Null gilt als gemeldene Zahl, fehlende/ungültige Werte als „Nicht empfangen“. Die optionale Instrumenten-Geräteauswahl bleibt bei laufenden OSD-Updates stabil. Ein verringertes Balkendiagramm darf nie als Live-Nachweis gelten: Nur `current` erzeugt eine Füllung. Kein Instrument ist Flugsteuerung, Missionsfreigabe oder Vorhersage.
+
+## SKY//PULSE · Kursrose (experimenteller Branch)
+
+Die Kursrose im Heading-Instrument ist ein sekundäres grafisches Hilfsmittel. Sie darf nur nach bestätigter, einzelwertbezogener DJI-Zeitprüfung `current` sichtbar sein. Ein stale/unverified/missing/unknown Heading darf keinen dynamischen Zeiger anzeigen. Die Richtung wird aus dem gemeldeten Winkel normalisiert, nicht aus letzter Kartenbewegung, angenommener Flugrichtung oder anderen Feldern geschätzt. Die numerische Heading-Anzeige und ihr Feldalter bleiben unabhängig davon zugänglich. Die Richtungsnadel bleibt dekorativ (Screenreader ignorieren sie); sie besitzt keine Animation oder Übergangsinterpolation.

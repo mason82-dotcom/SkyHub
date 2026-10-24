@@ -81,3 +81,13 @@ Die drei Screenshots werden unter dem GitHub-Actions-Artefaktnamen `gfx-browser-
 **Lokale Reproduktion:** Playwright 1.56.0 und Chromium installieren, Leaflet 1.9.4 lokal bereitstellen, `SKYHUB_TEST_LEAFLET_DIST` auf dessen `dist`-Ordner setzen, dann `python tests/gfx_browser_acceptance.py` starten.
 
 **Abnahmegrenzen:** Die CI prüft Chromium auf Ubuntu, nicht die echten Android-WebView-Versionen, keine Hardwareintegration, keinen HyperFrames-Render und keine Flugfreigabe. Ein grüner automatisierter Test ersetzt keinen manuellen visuellen Review.
+
+## Phase 5 · Provenienzgebundene Kursrose (24.10.2026)
+
+- In der Operations-Fluginstrumentenkarte besitzt das Heading-Feld eine rein dekorative, kleine Kursrose mit Nordmarke. Der dynamische Zeiger folgt ausschließlich dem tatsächlich im bestehenden Gerätesnapshot gemeldeten DJI-Wert. Die sichtbare Zahl bleibt die primäre barrierefreie Information.
+- `frontend/public/gfx-cockpit.js` berechnet den Bearing via `bearingFor(device, SkyHubTelemetryFreshness, now)`. Ein Zeiger wird nur bei `kind=current` gezeigt – zeitverifiziert, jünger als 15 Sekunden, kein ausdrücklich getrenntes Fluggerät.
+- Die akzeptierte Heading-Eingabe liegt im dokumentierten Rundlauf `[-360,360]`. Negative Winkel werden für die Darstellung modulo 360 normalisiert (z. B. −90° → 270°); 360° → 0°. Nichtfinite oder außerhalb liegende Werte erzeugen weder aktive Kursrose noch scheinbaren Kurs.
+- Bei fehlendem, unbestätigtem, in der Zukunft datiertem oder veraltetem Wert wird `#gfxCockpitCompass` per `hidden` aus der visuellen Anzeige genommen. Das numerische Feld und sein vorhandener Frischehinweis bleiben getrennt sichtbar, auch wenn die Quelle veraltet ist.
+- `aria-hidden=true` für die Grafik: keine doppelten Screenreader-Ansagen und kein behaupteter Flugmodus. Zeigerrotation hat ausdrücklich **keine CSS-Animation**, um Richtungswechsel und Datenalter nicht als simulierte Bewegung erscheinen zu lassen.
+- `forced-colors` erzwingt klare Systemfarben für Kursrose, Zeiger und Nordmarkierung. Die grafische Anzeige fügt keine neue Datenquelle oder Netzwerkverbindung hinzu.
+- Abnahme: `backend/test/gfx-cockpit.test.js` testet negative Heading-Werte, 360°-Wrap, veraltete/ungeprüfte und getrennte Verbindungen; `tests/gfx_browser_acceptance.py` prüft echten Renderingzustand und Zeigerwinkel im isolierten Chromium. CI 5/5 am Implementierungscommit `348945aef82a` bestanden.
