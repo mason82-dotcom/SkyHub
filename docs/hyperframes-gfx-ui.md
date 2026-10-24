@@ -62,3 +62,22 @@ Implementiert im selben experimentellen Branch:
 - Der Button „Letzten Kartenstandort zeigen“ ist nur aktiv, wenn eine Karte existiert und eine gültige WGS84-Position inklusive Positionstimestamp vorliegt. `0/0` und explizit `positionUnavailable` sind ausgeschlossen. Dies ist eine reine Karten-Navigation.
 - Der Instrumentenstatus ist ausdrücklich `Nur lesend`, ohne DJI-Befehl, Start-/Stopp- oder Missionsfreigabe.
 - Regressionstests: `backend/test/gfx-cockpit.test.js` und die bisherigen Dashboard-/TAK-/WPML-Tests. GPU/GSAP ist für die Instrumente nicht erforderlich.
+
+## Phase 4 · Isolierte Chromium-Abnahme (24.10.2026)
+
+Der experimentelle Branch besitzt mit `.github/workflows/gfx-browser-acceptance.yml` einen dedizierten GitHub-Actions-Workflow, der bei relevanten Frontend- oder Teständerungen läuft und auch manuell ausgelöst werden kann.
+
+`tests/gfx_browser_acceptance.py` nutzt echtes Chromium und Leaflet 1.9.4, aber ausschließlich synthetische DJI-Gerätesnapshots, lokal ausgelieferte 1×1-Kartenkacheln und einen simulierten Socket.IO-Client. Alle anderen Netzwerkadressen werden blockiert; es gibt keine Produktiv-API-, Raspberry-Pi- oder DJI-Verbindung.
+
+**Abgedeckte Browserfälle:**
+- Desktop 1365 × 850, Mobilansichten 375 × 812 und 320 × 640, horizontaler Dokumentüberlauf
+- Feldfrische und Telemetriewerte inklusive veralteter Höhe, Nullwerten und inkrementellen OSD-Updates
+- Manuelle Geräteauswahl, Karten-Fokus, Leaflet, Operations/TAK-Tabs und `/`-Tastaturkürzel
+- Nur einmal vorhandene Modulnavigation und die No-JS-Headerlinks als Fallback
+- `prefers-reduced-motion`, `forced-colors: active`, JavaScript-Laufzeitfehler und Netzwerksperre
+
+Die drei Screenshots werden unter dem GitHub-Actions-Artefaktnamen `gfx-browser-synthetic-screenshots` mit einer ausdrücklichen SYNTHETIC-Kennzeichnung gespeichert. Sie enthalten keine echten DJI-Flüge und sind ausschließlich für eine separate visuelle Beurteilung gedacht.
+
+**Lokale Reproduktion:** Playwright 1.56.0 und Chromium installieren, Leaflet 1.9.4 lokal bereitstellen, `SKYHUB_TEST_LEAFLET_DIST` auf dessen `dist`-Ordner setzen, dann `python tests/gfx_browser_acceptance.py` starten.
+
+**Abnahmegrenzen:** Die CI prüft Chromium auf Ubuntu, nicht die echten Android-WebView-Versionen, keine Hardwareintegration, keinen HyperFrames-Render und keine Flugfreigabe. Ein grüner automatisierter Test ersetzt keinen manuellen visuellen Review.
