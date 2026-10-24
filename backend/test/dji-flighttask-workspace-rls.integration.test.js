@@ -66,6 +66,11 @@ test('real PostgreSQL: enforced RLS, forced role, local scope and policy-bound r
     }
     await admin.query(fs.readFileSync(path.resolve(__dirname,
       '../db/offline/dji-flighttask-workspace-rls.sql'),'utf8'));
+    // Simulate another broad SELECT policy: a RESTRICTIVE tenant gate
+    // must remain effective rather than being OR-ed away.
+    await admin.query('CREATE POLICY skyhub_ci_extra_permissive '+
+      'ON dji_flighttask_observation_snapshots AS PERMISSIVE FOR SELECT '+
+      'TO PUBLIC USING (true)');
     await admin.query('CREATE ROLE '+q(role)+' NOLOGIN NOSUPERUSER NOBYPASSRLS');
     createdRole=true;
     await admin.query('GRANT USAGE ON SCHEMA '+q(schema)+' TO '+q(role));
