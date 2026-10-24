@@ -106,7 +106,7 @@ Die drei Screenshots werden unter dem GitHub-Actions-Artefaktnamen `gfx-browser-
 
 ## Phase 7 · Manuelle Screenshot-Abnahme und Mobile-Karten-Überlagerung
 
-Die realen Chromium-Screenshots mit ausschließlich synthetischen DJI-Gerätedaten vom Commit `733fae8558d1` wurden visuell geprüft. Bei 320 und 375 Pixeln überlappten Leaflets Zoomtasten die Kartenwerkzeugleiste. Die GFX-CSS-Ansicht setzt auf Viewports bis 640px die Kartenwerkzeuge auf `top:70px` und trennt diese von Leaflet.
+Die realen Chromium-Screenshots mit ausschließlich synthetischen DJI-Gerätedaten vom Commit `733fae8558d1` wurden visuell geprüft. Bei 320 und 375 Pixeln überlappten Leaflets Zoomtasten die Kartenwerkzeugleiste. Die GFX-CSS-Ansicht setzt auf Viewports bis 640px die Kartenwerkzeuge auf `top:96px` und trennt diese von Leaflet.
 
 Der isolierte Browser-Test prüft die tatsächlichen `getBoundingClientRect()`-Rechtecke auf Überlappung. Zusätzlich werden Desktop- und Mobil-Screenshots eines nach Einzelwert-Zeitprüfung gültigen künstlichen Horizonts aufgenommen. Die bereits vorhandenen Screenshots des veralteten Rollwinkels bleiben erhalten, sodass beide Zustände beurteilt werden können. Alle Artefakte tragen ausdrücklich die Kennzeichnung `SYNTHETIC / OFFLINE BROWSER TEST`.
 

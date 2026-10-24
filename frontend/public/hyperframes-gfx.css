@@ -632,5 +632,5 @@ body.skyhub-gfx .gfx-attitude-note{
 
 /* Keep mobile Leaflet zoom separate from the overlay action toolbar. */
 @media(max-width:640px){
-  body.skyhub-gfx.gfx-page-dashboard .map-tools { top: 70px; }
+  body.skyhub-gfx.gfx-page-dashboard .map-tools { top: 96px; }
 }

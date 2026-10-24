@@ -224,13 +224,20 @@ def main():
                 page.screenshot(path=str(ARTIFACTS/"gfx-1365-synthetic.png"),full_page=True)
                 for width,height in ((375,812),(320,640)):
                     page.set_viewport_size({"width":width,"height":height})
-                    check(page.evaluate("""() => {
-                      const zoom=document.querySelector('.leaflet-control-zoom')?.getBoundingClientRect();
-                      const tools=document.querySelector('.map-tools')?.getBoundingClientRect();
-                      if(!zoom||!tools)return false;
-                      return zoom.bottom <= tools.top || tools.bottom <= zoom.top ||
-                             zoom.right <= tools.left || tools.right <= zoom.left;
-                    }"""),"Leaflet zoom button overlaps map toolbar at "+str(width))
+                    geo=page.evaluate("""() => {
+                      const z=document.querySelector('.leaflet-control-zoom')?.getBoundingClientRect();
+                      const t=document.querySelector('.map-tools')?.getBoundingClientRect();
+                      if(!z||!t)return {separate:false,reason:'missing-rect'};
+                      const rect=r=>({top:Math.round(r.top),bottom:Math.round(r.bottom),
+                                     left:Math.round(r.left),right:Math.round(r.right)});
+                      return {separate:z.bottom <= t.top || t.bottom <= z.top ||
+                               z.right <= t.left || t.right <= z.left,
+                              zoom:rect(z),toolbar:rect(t),
+                              toolbarTop:getComputedStyle(document.querySelector('.map-tools')).top};
+                    }""")
+                    check(geo["separate"],
+                          "Leaflet zoom and map tools intersect at "+str(width)+
+                          " / geometry="+repr(geo))
                     check(page.locator("#gfxCockpit").is_visible(),"Cockpit absent on mobile")
                     check(page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 2"),
                           "Horizontal document overflow at "+str(width))
