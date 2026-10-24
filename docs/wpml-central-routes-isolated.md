@@ -181,4 +181,38 @@ Ablauf und Widerruf sowie einen isolierten Ende-zu-Ende-Test mit
 Workspace-Berechtigung. Testsignaturschlüssel sind rein zufällig erzeugt
 und werden weder in Dateien noch in Produktionsschlüsselmaterial übernommen.
 
+## Redis-Sessionprüfung – nur lesend, ohne Provisionierung (Phase 5)
+
+`backend/wpml-operator-session-redis.js` ist ein strikt isolierter
+`isActiveSession`-Adapter für den ebenfalls isolierten
+Ed25519-Verifier. Er nutzt ausschließlich `redis.get`; **kein**
+Schreiben, Verlängern, Ausstellen oder Widerrufen von Sitzungen.
+
+- Er verlangt ein **eigenes** zufällig erzeugtes 32+-Byte-HMAC-Geheimnis,
+  das **nicht** der Dashboard-Token, Pilot-2-Schlüssel oder MQTT-Credential
+  sein darf. Der Redis-Key enthält ausschließlich den HMAC-SHA-256-Wert
+  der Sitzungs-UUID, keine Rohkennung oder GPS-Daten.
+- Ein zukünftiger, **unabhängig gesicherter Provisionierungsdienst**
+  müsste nach erfolgreicher IdP-Anmeldung ein strikt versioniertes
+  Redis-Dokument mit `issuer`, `subject`, `workspaceId`, `role`,
+  `sessionId`, `expiresAt` und `status:'active'` speichern. Die
+  Implementierung dieses vertrauenswürdigen Ausstellungs-/Widerrufsprozesses,
+  Redis-ACL und TLS-Verbindung fehlen weiterhin.
+- Der Prüfer akzeptiert nur exakt diese Felder, lehnt doppelte
+  JSON-Attribute ab und bindet jeden Wert an die vorher überprüfte
+  JWT-Identität. Abgelaufene, ausstehende, gesperrte, fremde oder
+  unvollständige Sitzungen werden zurückgewiesen.
+- Ein Redis-Ausfall verweigert jeden Zugriff. **Keine**
+  Dashboard-/DJI-/MQTT-Identität wird dadurch automatisch zum Operator.
+- Der kombinierte Unit-Test
+  `backend/test/wpml-operator-session-redis.test.js` verwendet
+  ausschließlich synthetische Sitzungen und temporäre Ed25519-Schlüssel.
+
+Auch mit diesem zusätzlichen Baustein existiert **noch keine
+produktionsfähige Operator-Anmeldung**: Ein Session-Provisionierer,
+glaubwürdige IdP-Gruppen- und Workspace-Mitgliedschaft, Redis-ACL,
+Schlüsselverwaltung, ein unabhängiger Audit-Leser, sichere
+RLS-Laufzeitrollen und eine Freigabe von Cookie-/CSRF-/Rate-Limit-/TLS-
+Policies fehlen weiterhin. Es gibt keinen Live-HTTP-Pfad.
+
 **Keine der P0-Datenbankoperationen autorisiert Flüge.**
