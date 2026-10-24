@@ -326,6 +326,8 @@ body[data-skyhub-page="survey"] .instructions {
   background: rgba(255,255,255,.96); color: var(--sky-ink);
   border: 1px solid var(--sky-border); border-radius: 13px;
   box-shadow: var(--sky-shadow); padding: 14px; line-height: 1.5;
+  /* Keep the instruction card clear of the top-left Leaflet zoom controls. */
+  left: 64px; right: 12px; max-width: min(380px, calc(100% - 76px));
 }
 body[data-skyhub-page="wpml-editor"] .waypoint {
   background: var(--sky-soft); border: 1px solid var(--sky-border); border-radius: 12px;
