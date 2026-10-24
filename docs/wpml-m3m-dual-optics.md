@@ -110,6 +110,21 @@ Der GeoJSON-Export enthält nur berechnete Kennzahlen sowie
 den bisherigen Export; deaktivieren der Dualoptik schaltet zurück
 auf die bisherige Einzelkamera-Vorschau.
 
+Der lokale GeoJSON-Export enthält für aktive Doppeloptik
+`cameraReferenceMode:m3m-rgb-ms-tiff` und das separat versionierte
+`dualSensorComparison.schema:skyhub-wpml-dual-optics-inspection-v1`.
+Die Prüfung hält getrennt RGB-/MS-GSD quer und längs, die rechnerischen
+Mindestabstände, Referenzintervall, Ereignis- und TIFF/JPEG-Dateizahlen
+sowie `photoActionsGenerated:false`, `coRegistrationVerified:false`,
+`actualCaptureSupported:null` und `dispatchAllowed:false` fest.
+Es handelt sich ausdrücklich um **kein freigabefähiges
+Kalibrierungs- oder Flugprotokoll**.
+
+Das Abschalten der Doppeloptik oder Umschalten des Kameramodus
+invalidiert den vorherigen Export. Die Einzeloptik-Vorschau behält
+den gemischten M3M-Referenzmodus, ohne ältere RGB-Zweitkamera-Schätzungen
+in die neuen Ergebnisse zu übernehmen.
+
 Der Browser-CI-Test prüft fehlende RGB-Eingaben, korrekt angezeigte
 duale GSD, die gesperrten Fotomarker, ausgelöste Kadenzwarnungen,
 die unveränderte Offline-/Nur-GET-Grenze und die sicheren
