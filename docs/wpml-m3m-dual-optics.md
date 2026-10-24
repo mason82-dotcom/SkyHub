@@ -54,6 +54,24 @@ Anschließen an den operativen Flugmissionsgenerator. Das Modul ist
 vorerst nur eine **separat importierbare Offline-JavaScript/Node-Komponente**
 ohne neue HTML-Bedienelemente.
 
+## Zusätzliche Geometrie-Integritätsprüfung
+
+Die reine Ereignis- und Dateizählung akzeptiert nicht mehr allein eine
+behauptete Segmentlänge oder das Flag `flightReady:false`. Vor jeder
+Zählung erzeugt das Modul die Survey-Vorschau **erneut aus dem vorhandenen
+Polygon/MultiPolygon inklusive Löchern** mit dem angegebenen Streifenabstand
+und der angegebenen Richtung. Es vergleicht alle Capture-Segmentkoordinaten,
+Segmentlängen, Streifenindizes, Anzahl und aufsummierte Fläche/Länge.
+
+Ein manipuliertes Segment, ein verschobener Start-/Endpunkt, ein ausgelassenes
+Polygonloch oder eine abweichende Streifenrichtung wird verworfen. Die
+Replay-Prüfung ist eine **Integritätsprüfung einer synthetischen Vorschau**,
+keine unabhängige Vermessung und kein Nachweis von tatsächlicher
+Kameraabdeckung oder realen Hindernissen. Im Browser muss neben
+`wpml-camera-reference-core.js` auch
+`wpml-survey-preview-core.js` vor
+`wpml-m3m-dual-optics-core.js` geladen werden.
+
 ## Verifikation
 
 Tests:
