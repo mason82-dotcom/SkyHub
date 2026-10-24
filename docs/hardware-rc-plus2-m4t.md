@@ -55,7 +55,7 @@ Ab dem zusätzlichen Preflight-Zweig wird zuerst geprüft, ob der **laufende** P
 cd ~/Projekte/SkyHub-RCPlus2-M4T-Test || exit 1
 SKYHUB_COMPOSE_DIR="$HOME/Projekte/SkyHub-Next" \
   node scripts/pi-rc-plus2-m4t-check.js --preflight
-printf 'Exitstatus: %s\\n' "$?"
+printf 'Exitstatus: %s\n' "$?"
 ```
 
 Nur acht festgelegte **Boolesche Statuswerte** verlassen bei `--preflight` den Backend-Container: GET-Health, GET-Devices, GET-MQTT-Shapes und GET-Pairings erreichbar, MQTT verbunden/subscribed und Topologie-ACK aktiviert/Publisher verbunden. Geräte-Snapshots, private Pairing-Einträge und MQTT-Rohwerte werden in diesem Modus **nicht** an die Host-Pipe weitergegeben. `0` = diese Pi-Backend-Voraussetzungen vorhanden; `3` = unvollständig (etwa lesende Pairing-API fehlt, MQTT nicht verbunden); `1` = Docker/API unerreichbar oder fehlerhafte Antwort; `2` = ungültiger Aufruf. **Ein Preflight mit Exit 0 ist ausdrücklich kein Live-Hardware-, DJI-Pilot-2-, M4T-Feld- oder Flugnachweis.**
