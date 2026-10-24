@@ -55,7 +55,7 @@ h2 { font-weight: 750; }
 :focus-visible,
 button:focus-visible, a:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible, summary:focus-visible {
-  outline: 3px solid #7e9cf5;
+  outline: 3px solid var(--sky-primary);
   outline-offset: 3px;
 }
 ::selection { background: #cfdaff; color: #142b61; }
@@ -67,7 +67,7 @@ input:not([type=checkbox]):not([type=radio]), select, textarea {
   min-height: 42px;
   box-shadow: 0 1px 2px rgba(36, 54, 82, .03);
 }
-input::placeholder, textarea::placeholder { color: #6f8096; opacity: 1; }
+input::placeholder, textarea::placeholder { color: #586b84; opacity: 1; }
 input:focus, select:focus, textarea:focus { border-color: var(--sky-primary); }
 input[type=checkbox], input[type=radio] { accent-color: var(--sky-primary); }
 input[type=file] { max-width: 100%; }
